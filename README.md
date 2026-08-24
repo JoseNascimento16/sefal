@@ -34,6 +34,9 @@ php artisan serve   # http://localhost:8000
 npm run dev         # Vite HMR
 ```
 
+Vai trabalhar contra o **Oracle** (extensão `oci8` + Instant Client)? O setup dessa parte está em
+[`docs/ambiente/dev-windows.md`](docs/ambiente/dev-windows.md).
+
 ## Rodando os testes
 
 ```bash
@@ -43,7 +46,8 @@ php artisan test --compact
 
 **O `npm run build` é pré-requisito da suíte.** Os testes renderizam as páginas Inertia de verdade, e a build é quem gera (a) o **manifest do Vite** em `public/build/` e (b) os arquivos de rota do **Wayfinder** em `resources/js/{actions,routes,wayfinder}` — os três caminhos são gitignorados, então num clone novo eles simplesmente não existem. Sem a build, a suíte quebra com **`ViteManifestNotFoundException: Vite manifest not found at: public/build/manifest.json`**. Repita a build sempre que apagar `public/build/` ou puxar mudanças no front.
 
-Gate local completo antes de cada push (não há runner no GitLab):
+Gate local completo antes de cada push — obrigatório, porque não há runner no GitLab (o
+`.gitlab-ci.yml` já existe, mas nasce dormente; como ligar está no próprio arquivo):
 
 ```bash
 vendor/bin/pint --dirty

@@ -1,0 +1,70 @@
+# =================================================================================================
+# Rota ALTERNATIVA de homologação: servidor Linux dedicado do cliente (Docker, sem OKD).
+#
+# ⚠️ NÃO ATIVO (24/08/2026) e SECUNDÁRIO. A rota escolhida para este sistema é o OKD/S2I
+#    (`dockerfile_redhat` + docs/deploy/okd.md). Este arquivo existe porque o mesmo cliente já
+#    hospedou sistema assim (servidor com Tomcat do legado + Docker ao lado), e a receita é útil se
+#    o OKD não estiver disponível. Nunca foi executado aqui.
+#
+# O QUE FALTA para esta rota funcionar (decidir no dia em que for usada):
+#   - a imagem `fiscalizacao-app:homolog` (PHP-FPM + oci8 + LibreOffice). Ela NÃO é construída aqui:
+#     o servidor do cliente não builda (o firewall de saída bloqueia pecl.php.net/github.com), então
+#     o caminho é `docker build` numa máquina com internet -> `docker save | gzip` -> transferir por
+#     WinSCP -> `docker load` no servidor. O Dockerfile PHP-FPM correspondente ainda não existe neste
+#     repositório (a rota ativa é a do OKD, que usa `dockerfile_redhat`).
+#   - o código no servidor: chega por zip/WinSCP, não por git (github.com/gitlab bloqueados lá).
+#
+# Por que um arquivo À PARTE, e não um override `-f` de um compose de dev: as diferenças não são
+# ajustes pontuais (sem build, sem bind mount de código, volume extra para uploads), e merge de
+# `volumes:`/`build:` entre arquivos Compose é fonte de confusão. Autocontido é mais fácil de revisar
+# num servidor onde nenhum outro dev tem acesso.
+#
+# Subir:    docker compose -f docker-compose.homolog.yml up -d
+# Artisan:  docker compose -f docker-compose.homolog.yml exec app php artisan ...
+# Logs:     docker compose -f docker-compose.homolog.yml logs -f app
+# =================================================================================================
+
+services:
+  # Aplicação PHP-FPM — roda 100% a partir da imagem (sem bind mount de código). O `.env` entra só
+  # via `env_file`, então `php artisan key:generate --show` + colar a chave no .env do host.
+  app:
+    image: fiscalizacao-app:homolog
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /var/www/html/vendor
+      - fiscalizacao_public_build:/var/www/html/public/build
+      # Uploads em runtime (Storage::disk('public') -> storage/app/public). SEM este volume, o
+      # container `web` — que monta o diretório do HOST, não o do container `app` — nunca vê o
+      # arquivo enviado, e o link devolve 403/404 com cara de erro de Nginx (é o Laravel).
+      - fiscalizacao_storage_public:/var/www/html/storage/app/public
+      - /var/www/html/bootstrap/cache
+    expose:
+      - "9000"
+
+  # Servidor web — serve os estáticos do diretório do host (o código chega por zip/WinSCP) e faz
+  # proxy FastCGI para o app. A porta externa é interna ao servidor: um Nginx do SISTEMA (na única
+  # porta liberada) roteia para cá; o domínio público do legado continua indo para o Tomcat.
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - fiscalizacao_public_build:/var/www/html/public/build:ro
+      # Mesmo volume do app, montado direto em public/storage — não depende do symlink, que não
+      # sobrevive ao empacotamento por zip no Windows.
+      - fiscalizacao_storage_public:/var/www/html/public/storage:ro
+    depends_on:
+      - app
+
+# Não há serviço de agendador (`schedule:work`) porque o sistema ainda não tem rotina agendada.
+# Ao criar a primeira, acrescente um serviço com a MESMA imagem/env_file, `command: php artisan
+# schedule:work` e SEMPRE uma única réplica — duas rodariam cada tarefa em dobro.
+
+volumes:
+  fiscalizacao_public_build:
+  fiscalizacao_storage_public:
