@@ -52,7 +52,9 @@ php artisan test --compact
 
 ## Seletor de banco (`DB_DRIVER`)
 
-O `.env` terá a chave **`DB_DRIVER`** para escolher onde o app roda: `oracle` (Oracle real, exige `oci8` + Instant Client) ou `sqlite` (arquivo `database/database.sqlite`, para quem está sem acesso ao Oracle). O mesmo código serve os dois. _Chega na Task 2 da Fase 0._
+O `.env` tem a chave **`DB_DRIVER`** para escolher onde o app roda: `oracle` (Oracle real, exige `oci8` + Instant Client), `sqlite` (arquivo `database/fiscalizacao_dev.sqlite`, para quem está sem acesso ao Oracle) ou `auto` — o padrão, que usa o Oracle quando há `oci8` **e** `DB_HOST` preenchido, e cai no SQLite caso contrário. O mesmo código serve os dois.
+
+**Máquina sem `oci8` roda normalmente**: fica em SQLite e o `composer install` não exige a extensão, porque o `composer.json` declara `config.platform.ext-oci8` — o Composer assume a extensão só na resolução de dependências. Em tempo de execução ela é necessária apenas se a conexão `oracle` for de fato usada.
 
 ## Material interno
 
