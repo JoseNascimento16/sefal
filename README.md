@@ -19,6 +19,7 @@ Sistema da SEMOP (Prefeitura de Salvador) para fiscalização de **permissionár
 ```bash
 composer install
 npm install
+npm run build
 cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
@@ -30,6 +31,23 @@ Depois, em dois terminais:
 ```bash
 php artisan serve   # http://localhost:8000
 npm run dev         # Vite HMR
+```
+
+## Rodando os testes
+
+```bash
+npm run build            # obrigatório antes da 1ª execução dos testes
+php artisan test --compact
+```
+
+**O `npm run build` é pré-requisito da suíte.** Os testes renderizam as páginas Inertia de verdade, e a build é quem gera (a) o **manifest do Vite** em `public/build/` e (b) os arquivos de rota do **Wayfinder** em `resources/js/{actions,routes,wayfinder}` — os três caminhos são gitignorados, então num clone novo eles simplesmente não existem. Sem a build, a suíte quebra com **`ViteManifestNotFoundException: Vite manifest not found at: public/build/manifest.json`**. Repita a build sempre que apagar `public/build/` ou puxar mudanças no front.
+
+Gate local completo antes de cada push (não há runner no GitLab):
+
+```bash
+vendor/bin/pint --dirty
+npx tsc --noEmit
+php artisan test --compact
 ```
 
 ## Seletor de banco (`DB_DRIVER`)
