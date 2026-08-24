@@ -27,6 +27,24 @@ test('comando fp:criar-usuario-dev cria admin com senha conhecida', function () 
         ->and($u->ehAdmin())->toBeTrue();
 });
 
+test('fp:criar-usuario-dev recusa rodar em producao e nao cria o usuario', function () {
+    $this->app['env'] = 'production';
+
+    $this->artisan('fp:criar-usuario-dev')
+        ->expectsOutputToContain('produção')
+        ->assertFailed();
+
+    expect(User::where('login', 'admin')->exists())->toBeFalse();
+});
+
+test('fp:criar-usuario-dev roda em producao quando o --force e explicito', function () {
+    $this->app['env'] = 'production';
+
+    $this->artisan('fp:criar-usuario-dev --force')->assertSuccessful();
+
+    expect(User::where('login', 'admin')->first()?->ehAdmin())->toBeTrue();
+});
+
 test('comando fp:atribuir-setor adiciona e remove o setor do usuario', function () {
     User::factory()->create(['login' => 'F2222']);
 
@@ -35,6 +53,52 @@ test('comando fp:atribuir-setor adiciona e remove o setor do usuario', function 
 
     $this->artisan('fp:atribuir-setor F2222 fiscal --remover')->assertSuccessful();
     expect(User::where('login', 'F2222')->first()->setores)->toBeEmpty();
+});
+
+test('atribuir o setor administrador liga a flag de admin e diz isso na saida', function () {
+    User::factory()->create(['login' => 'A1000', 'admin' => false]);
+
+    $this->artisan('fp:atribuir-setor A1000 administrador')
+        ->expectsOutputToContain('vínculo criado; flag de administrador ligada')
+        ->assertSuccessful();
+
+    expect(User::where('login', 'A1000')->first()->admin)->toBeTrue();
+});
+
+test('remover o setor administrador desliga a flag e o vinculo, dizendo as duas coisas', function () {
+    $u = User::factory()->create(['login' => 'A2000', 'admin' => true]);
+    $u->setores()->attach(Setor::where('slug', 'administrador')->first());
+
+    // As duas coisas numa frase só: o `expectsOutputToContain` casa uma expectativa
+    // por linha escrita, e o comando relata vínculo e flag na mesma linha.
+    $this->artisan('fp:atribuir-setor A2000 administrador --remover')
+        ->expectsOutputToContain('vínculo removido; flag de administrador desligada')
+        ->assertSuccessful();
+
+    $u = User::where('login', 'A2000')->first();
+    expect($u->admin)->toBeFalse()
+        ->and($u->setores)->toBeEmpty();
+});
+
+test('remover o setor administrador de quem so tem a flag desliga o papel sem acao silenciosa', function () {
+    // O usuário tem a flag mas nunca teve o vínculo: o comando derruba o papel de
+    // qualquer jeito, e a saída precisa dizer isso — antes ela dizia só "não estava
+    // atribuído", como se nada tivesse acontecido.
+    User::factory()->create(['login' => 'A3000', 'admin' => true]);
+
+    $this->artisan('fp:atribuir-setor A3000 administrador --remover')
+        ->expectsOutputToContain('não havia vínculo; flag de administrador desligada')
+        ->assertSuccessful();
+
+    expect(User::where('login', 'A3000')->first()->admin)->toBeFalse();
+});
+
+test('atribuir setor comum nao mexe na flag de admin', function () {
+    User::factory()->create(['login' => 'A4000', 'admin' => false]);
+
+    $this->artisan('fp:atribuir-setor A4000 fiscal')->assertSuccessful();
+
+    expect(User::where('login', 'A4000')->first()->admin)->toBeFalse();
 });
 
 test('comando fp:atribuir-setor recusa setor fora do catalogo e login inexistente', function () {

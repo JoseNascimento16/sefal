@@ -41,25 +41,32 @@ class AtribuirSetor extends Command
             return self::FAILURE;
         }
 
+        // O papel de administrador tem duas portas: a flag `admin` na conta e o
+        // vínculo com o setor `administrador`. O comando SEMPRE alinha a flag ao
+        // estado final do vínculo — inclusive quando não havia vínculo nenhum e só
+        // a flag segurava o papel — e a saída relata as DUAS coisas que ele fez.
+        // Papel de administrador nunca cai (nem sobe) em silêncio.
         if ($this->option('remover')) {
             $removidos = $user->setores()->detach($setor->id);
-            // A flag `admin` é a outra porta para o mesmo papel: deixá-la ligada
-            // faria o usuário continuar administrador depois de perder o setor.
+            $feito = [$removidos > 0 ? 'vínculo removido' : 'não havia vínculo'];
+
             if ($slug === 'administrador') {
                 $user->update(['admin' => false]);
+                $feito[] = $removidos > 0
+                    ? 'flag de administrador desligada'
+                    : 'flag de administrador desligada por alinhamento';
             }
-
-            $this->info($removidos > 0
-                ? "Setor '{$slug}' removido de '{$user->login}' ({$user->name})."
-                : "Setor '{$slug}' não estava atribuído a '{$user->login}'.");
         } else {
-            $user->setores()->syncWithoutDetaching([$setor->id]);
+            $resultado = $user->setores()->syncWithoutDetaching([$setor->id]);
+            $feito = [$resultado['attached'] === [] ? 'vínculo já existia' : 'vínculo criado'];
+
             if ($slug === 'administrador') {
                 $user->update(['admin' => true]);
+                $feito[] = 'flag de administrador ligada';
             }
-
-            $this->info("Setor '{$slug}' atribuído a '{$user->login}' ({$user->name}).");
         }
+
+        $this->info("Setor '{$slug}' em '{$user->login}' ({$user->name}): ".implode('; ', $feito).'.');
 
         $atuais = $user->setores()->pluck('slug')->all();
         $this->line('Setores atuais: '.($atuais === [] ? '(nenhum)' : implode(', ', $atuais)));

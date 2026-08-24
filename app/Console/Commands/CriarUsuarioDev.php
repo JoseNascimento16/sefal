@@ -15,12 +15,22 @@ class CriarUsuarioDev extends Command
                             {--senha=admin123 : Senha (default: admin123)}
                             {--nome=Administrador Dev : Nome completo}
                             {--email= : E-mail (default: <login>@semop.local)}
-                            {--setor=administrador : Setores separados por vírgula (default: administrador)}';
+                            {--setor=administrador : Setores separados por vírgula (default: administrador)}
+                            {--force : Permite rodar em produção — cria conta com senha conhecida}';
 
     protected $description = 'Cria/atualiza um usuário local com senha conhecida para testar o login da Retaguarda em desenvolvimento.';
 
     public function handle(): int
     {
+        // A conta sai com senha conhecida e papel de administrador: em produção isso
+        // é uma porta aberta, não uma conveniência. Recusa dizendo o porquê.
+        if (app()->isProduction() && ! $this->option('force')) {
+            $this->error('Recusado: este comando cria uma conta com senha conhecida e o ambiente é produção.');
+            $this->line('Se é mesmo o que você quer, repita com --force e troque a senha em seguida.');
+
+            return self::FAILURE;
+        }
+
         $login = trim((string) $this->option('login'));
         $senha = (string) $this->option('senha');
         $nome = (string) $this->option('nome');
@@ -38,7 +48,12 @@ class CriarUsuarioDev extends Command
 
         // Comando de bootstrap: garante o catálogo antes de vincular, para funcionar
         // num banco recém-migrado. O seeder é idempotente e é a fonte única do catálogo.
-        $this->callSilent('db:seed', ['--class' => SetoresSeeder::class, '--force' => true]);
+        // O `--force` vai adiante em vez de ser fixado aqui: quem desarma a confirmação
+        // do Laravel em produção é a decisão consciente de quem chamou o comando.
+        $this->callSilent('db:seed', [
+            '--class' => SetoresSeeder::class,
+            '--force' => (bool) $this->option('force'),
+        ]);
 
         $user = User::updateOrCreate(
             ['login' => $login],
