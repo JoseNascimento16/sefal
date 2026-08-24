@@ -21,6 +21,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Seletor de Banco (DB_DRIVER)
+    |--------------------------------------------------------------------------
+    |
+    | Decide, em tempo de boot, se o app fala com o Oracle real (via extensão oci8)
+    | ou com o SQLite local de desenvolvimento. Valores: oracle | sqlite | auto.
+    | Quem aplica a decisão é App\Providers\AppServiceProvider.
+    |
+    */
+
+    'seletor' => env('DB_DRIVER', 'auto'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
     |
@@ -35,7 +48,10 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            // `?:` (e não o default do env) porque DB_DATABASE serve ao Oracle e costuma
+            // vir vazio no .env — vazio aqui significa "usa o banco de desenvolvimento".
+            // A suíte define DB_DATABASE=:memory: no phpunit.xml e este valor é preservado.
+            'database' => env('DB_DATABASE') ?: database_path('fiscalizacao_dev.sqlite'),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,
@@ -97,6 +113,27 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
+        // oracle — banco de verdade do sistema (Oracle 19c da Prefeitura). Todas as tabelas
+        // próprias nascem com o prefixo LRV_ (DB_PREFIX), padrão herdado do CODECON.
+        // Só é usada quando o seletor DB_DRIVER resolve para Oracle — ver AppServiceProvider.
+        'oracle' => [
+            'driver' => 'oracle',
+            'tns' => env('DB_TNS', ''),
+            'host' => env('DB_HOST', ''),
+            'port' => env('DB_PORT', '1521'),
+            'database' => env('DB_DATABASE', ''),
+            'service_name' => env('DB_SERVICE_NAME', ''),
+            'username' => env('DB_USERNAME', ''),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'AL32UTF8'),
+            'prefix' => env('DB_PREFIX', 'LRV_'),
+            'prefix_schema' => env('DB_SCHEMA_PREFIX', ''),
+            'server_version' => env('DB_SERVER_VERSION', '19c'),
+            // Oracle 12.2+ aceita identificadores de até 128 chars, liberando os nomes
+            // longos de índice/constraint que o Laravel gera.
+            'max_name_len' => env('ORA_MAX_NAME_LEN', 128),
         ],
 
         'sqlsrv' => [
