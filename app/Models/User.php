@@ -63,7 +63,9 @@ class User extends Authenticatable implements PasskeyUser
      */
     public function setores(): BelongsToMany
     {
-        return $this->belongsToMany(Setor::class, 'user_setores', 'user_id', 'setor_id')->withTimestamps();
+        return $this->belongsToMany(Setor::class, 'user_setores', 'user_id', 'setor_id')
+            ->using(UserSetor::class)
+            ->withTimestamps();
     }
 
     /**

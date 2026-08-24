@@ -2,6 +2,7 @@
 
 use App\Models\Setor;
 use App\Models\User;
+use App\Models\UserSetor;
 use Database\Seeders\SetoresSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Hash;
@@ -66,6 +67,16 @@ test('usuario comum sem setor administrador nao e admin', function () {
     $u->setores()->attach(Setor::where('slug', 'fiscal')->first());
 
     expect($u->fresh()->ehAdmin())->toBeFalse();
+});
+
+test('o vinculo usuario-setor registra quando o acesso foi concedido', function () {
+    $u = User::factory()->create(['login' => 'F8888']);
+    $u->setores()->attach(Setor::where('slug', 'gestor')->first());
+
+    $vinculo = $u->fresh()->setores->first()->pivot;
+
+    expect($vinculo)->toBeInstanceOf(UserSetor::class)
+        ->and($vinculo->created_at)->not->toBeNull();
 });
 
 test('a matricula e unica entre usuarios', function () {

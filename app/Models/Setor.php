@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -21,12 +20,4 @@ use Illuminate\Support\Carbon;
 class Setor extends Model
 {
     protected $table = 'setores';
-
-    /**
-     * @return BelongsToMany<User, $this>
-     */
-    public function usuarios(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'user_setores', 'setor_id', 'user_id')->withTimestamps();
-    }
 }

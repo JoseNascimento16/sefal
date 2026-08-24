@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Carbon;
 
 /**
- * Vínculo usuário ↔ setor. Existe como model próprio (e não só como tabela de
- * pivô anônima) porque os comandos de bootstrap manipulam o vínculo direto.
+ * Vínculo usuário ↔ setor. É o pivô de User::setores() — existe como classe
+ * própria para o vínculo ter identidade (id e timestamps de quando o acesso
+ * foi concedido), e não só um par anônimo de chaves.
  *
  * @property int $id
  * @property int $user_id
@@ -16,8 +16,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'setor_id'])]
-class UserSetor extends Model
+class UserSetor extends Pivot
 {
     protected $table = 'user_setores';
+
+    public $incrementing = true;
 }
