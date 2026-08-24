@@ -31,7 +31,10 @@ class CriarUsuarioDev extends Command
             return self::FAILURE;
         }
 
-        $login = trim((string) $this->option('login'));
+        // A matrícula entra já na forma canônica: sem isto, `--login=ADMIN` procuraria
+        // por 'ADMIN', não acharia o 'admin' que ele mesmo criou antes e tentaria
+        // criar uma segunda conta.
+        $login = User::normalizarMatricula((string) $this->option('login'));
         $senha = (string) $this->option('senha');
         $nome = (string) $this->option('nome');
         $email = strtolower(trim((string) ($this->option('email') ?: "{$login}@semop.local")));
@@ -66,9 +69,11 @@ class CriarUsuarioDev extends Command
             ],
         );
 
-        // Quem cria a conta por aqui é quem administra o sistema — o e-mail já vem
-        // conferido por ele. Sem isto a conta entra na Retaguarda mas esbarra na
-        // exigência de verificação nas telas que a pedem, e ninguém entende por quê.
+        // Higiene de dado, não regra de acesso: hoje o sistema não exige e-mail
+        // verificado (o model não implementa MustVerifyEmail), mas quem cria a conta
+        // por aqui é quem administra o sistema e responde pelo endereço. Se um dia a
+        // verificação for adotada, a conta de bootstrap já nasce coerente em vez de
+        // travar sem explicação.
         $user->forceFill(['email_verified_at' => $user->email_verified_at ?? now()])->save();
 
         // `sync` deixa o usuário exatamente com os setores pedidos — o comando é de

@@ -19,7 +19,7 @@ class SetarSenha extends Command
         $login = (string) $this->argument('login');
         $senha = (string) $this->argument('senha');
 
-        $user = User::where('login', $login)->first();
+        $user = User::porMatricula($login);
         if (! $user) {
             $this->error("Usuário com matrícula '{$login}' não encontrado.");
 

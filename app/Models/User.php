@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -33,6 +34,43 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * A matrícula é sempre guardada em minúsculo e sem espaço nas pontas.
+     *
+     * É a normalização na ESCRITA que sustenta o login sem caixa: com ela,
+     * 'ADMIN' e 'admin' disputam a MESMA linha e a chave única faz o seu papel.
+     * Sem ela, a unicidade da coluna (que, tanto no SQLite quanto no Oracle, é
+     * sensível à caixa) deixaria as duas contas coexistirem — e a busca do login
+     * escolheria uma delas na sorte.
+     *
+     * @return Attribute<string, string>
+     */
+    protected function login(): Attribute
+    {
+        return Attribute::set(fn (string $valor) => self::normalizarMatricula($valor));
+    }
+
+    /**
+     * A forma canônica de uma matrícula — use ao gravar ou ao procurar.
+     */
+    public static function normalizarMatricula(string $matricula): string
+    {
+        return mb_strtolower(trim($matricula));
+    }
+
+    /**
+     * Acha o usuário pela matrícula, sem se importar com a caixa digitada.
+     *
+     * O `lower()` na leitura é redundante (a escrita já normaliza) e fica de
+     * propósito: cobre qualquer linha que tenha sido gravada por fora do model.
+     */
+    public static function porMatricula(string $matricula): ?self
+    {
+        return static::query()
+            ->whereRaw('lower(login) = ?', [self::normalizarMatricula($matricula)])
+            ->first();
+    }
 
     /**
      * Get the attributes that should be cast.

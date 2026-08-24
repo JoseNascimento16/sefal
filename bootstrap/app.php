@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\GarantirUsuarioAtivo;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -17,8 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // A guarda de usuário ativo vai no grupo `web` inteiro, e não numa rota ou
+        // outra: assim vale para QUALQUER tela autenticada, inclusive as que ainda
+        // vão nascer, sem depender de alguém lembrar de pendurá-la lá.
         $middleware->web(append: [
             HandleAppearance::class,
+            GarantirUsuarioAtivo::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

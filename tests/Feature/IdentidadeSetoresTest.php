@@ -21,7 +21,7 @@ test('usuario pertence a N setores e ehAdmin reconhece o setor administrador', f
 
 test('comando fp:criar-usuario-dev cria admin com senha conhecida', function () {
     $this->artisan('fp:criar-usuario-dev')->assertSuccessful();
-    $u = User::where('login', 'admin')->first();
+    $u = User::porMatricula('admin');
     expect($u)->not->toBeNull()
         ->and(Hash::check('admin123', $u->password))->toBeTrue()
         ->and($u->ehAdmin())->toBeTrue();
@@ -34,7 +34,7 @@ test('fp:criar-usuario-dev recusa rodar em producao e nao cria o usuario', funct
         ->expectsOutputToContain('produção')
         ->assertFailed();
 
-    expect(User::where('login', 'admin')->exists())->toBeFalse();
+    expect(User::porMatricula('admin') !== null)->toBeFalse();
 });
 
 test('fp:criar-usuario-dev roda em producao quando o --force e explicito', function () {
@@ -42,17 +42,17 @@ test('fp:criar-usuario-dev roda em producao quando o --force e explicito', funct
 
     $this->artisan('fp:criar-usuario-dev --force')->assertSuccessful();
 
-    expect(User::where('login', 'admin')->first()?->ehAdmin())->toBeTrue();
+    expect(User::porMatricula('admin')?->ehAdmin())->toBeTrue();
 });
 
 test('comando fp:atribuir-setor adiciona e remove o setor do usuario', function () {
     User::factory()->create(['login' => 'F2222']);
 
     $this->artisan('fp:atribuir-setor F2222 fiscal')->assertSuccessful();
-    expect(User::where('login', 'F2222')->first()->setores->pluck('slug')->all())->toBe(['fiscal']);
+    expect(User::porMatricula('F2222')->setores->pluck('slug')->all())->toBe(['fiscal']);
 
     $this->artisan('fp:atribuir-setor F2222 fiscal --remover')->assertSuccessful();
-    expect(User::where('login', 'F2222')->first()->setores)->toBeEmpty();
+    expect(User::porMatricula('F2222')->setores)->toBeEmpty();
 });
 
 test('atribuir o setor administrador liga a flag de admin e diz isso na saida', function () {
@@ -62,7 +62,7 @@ test('atribuir o setor administrador liga a flag de admin e diz isso na saida', 
         ->expectsOutputToContain('vínculo criado; flag de administrador ligada')
         ->assertSuccessful();
 
-    expect(User::where('login', 'A1000')->first()->admin)->toBeTrue();
+    expect(User::porMatricula('A1000')->admin)->toBeTrue();
 });
 
 test('remover o setor administrador desliga a flag e o vinculo, dizendo as duas coisas', function () {
@@ -75,7 +75,7 @@ test('remover o setor administrador desliga a flag e o vinculo, dizendo as duas 
         ->expectsOutputToContain('vínculo removido; flag de administrador desligada')
         ->assertSuccessful();
 
-    $u = User::where('login', 'A2000')->first();
+    $u = User::porMatricula('A2000');
     expect($u->admin)->toBeFalse()
         ->and($u->setores)->toBeEmpty();
 });
@@ -90,7 +90,7 @@ test('remover o setor administrador de quem so tem a flag desliga o papel sem ac
         ->expectsOutputToContain('não havia vínculo; flag de administrador desligada')
         ->assertSuccessful();
 
-    expect(User::where('login', 'A3000')->first()->admin)->toBeFalse();
+    expect(User::porMatricula('A3000')->admin)->toBeFalse();
 });
 
 test('atribuir setor comum nao mexe na flag de admin', function () {
@@ -98,7 +98,7 @@ test('atribuir setor comum nao mexe na flag de admin', function () {
 
     $this->artisan('fp:atribuir-setor A4000 fiscal')->assertSuccessful();
 
-    expect(User::where('login', 'A4000')->first()->admin)->toBeFalse();
+    expect(User::porMatricula('A4000')->admin)->toBeFalse();
 });
 
 test('comando fp:atribuir-setor recusa setor fora do catalogo e login inexistente', function () {
@@ -113,7 +113,7 @@ test('comando fp:setar-senha troca a senha do usuario', function () {
 
     $this->artisan('fp:setar-senha F4444 novaSenha123')->assertSuccessful();
 
-    expect(Hash::check('novaSenha123', User::where('login', 'F4444')->first()->password))->toBeTrue();
+    expect(Hash::check('novaSenha123', User::porMatricula('F4444')->password))->toBeTrue();
 });
 
 test('comando fp:setar-senha falha para login inexistente', function () {
@@ -154,8 +154,8 @@ test('fp:criar-usuario-dev rodado duas vezes nao duplica usuario nem vinculo', f
     $this->artisan('fp:criar-usuario-dev')->assertSuccessful();
     $this->artisan('fp:criar-usuario-dev')->assertSuccessful();
 
-    expect(User::where('login', 'admin')->count())->toBe(1)
-        ->and(User::where('login', 'admin')->first()->setores)->toHaveCount(1);
+    expect(User::query()->count())->toBe(1)
+        ->and(User::porMatricula('admin')->setores)->toHaveCount(1);
 });
 
 test('seeder de setores e idempotente', function () {

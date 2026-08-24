@@ -6,10 +6,8 @@ use App\Models\User;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Fortify;
-use Laravel\Fortify\LoginRateLimiter;
 
 /**
  * Autenticação da Retaguarda: entra-se pela matrícula, não pelo e-mail.
@@ -29,8 +27,6 @@ class AutenticarPorMatricula
 
     public const USUARIO_INATIVO = 'Usuário inativo — procure o administrador.';
 
-    public function __construct(private readonly LoginRateLimiter $limiter) {}
-
     /**
      * @throws ValidationException
      */
@@ -38,13 +34,9 @@ class AutenticarPorMatricula
     {
         $matricula = trim((string) $request->input(Fortify::username()));
 
-        // A matrícula é gravada como o administrador digitou ('F1000', 'admin'),
-        // mas quem entra não deveria tropeçar em caixa alta/baixa — daí o lower()
-        // dos dois lados. A unicidade da coluna é que impede duas matrículas que
-        // só diferem na caixa.
-        $user = User::query()
-            ->whereRaw('lower(login) = ?', [Str::lower($matricula)])
-            ->first();
+        // Quem entra não tropeça em caixa alta/baixa: a matrícula é gravada
+        // normalizada (ver `User::normalizarMatricula`) e procurada do mesmo jeito.
+        $user = User::porMatricula($matricula);
 
         if (! $user || ! Hash::check((string) $request->input('password'), $user->password)) {
             // A senha tentada NÃO vai no evento: qualquer ouvinte que registre em
@@ -52,7 +44,7 @@ class AutenticarPorMatricula
             // certa de outra conta, quando alguém erra a matrícula.
             $this->falhou($matricula, $user);
 
-            $this->recusar($request, self::CREDENCIAL_INVALIDA);
+            $this->recusar(self::CREDENCIAL_INVALIDA);
         }
 
         // A conta existe e a senha confere: aqui já dá para ser específico sem
@@ -60,7 +52,7 @@ class AutenticarPorMatricula
         if (! $user->ativo) {
             $this->falhou($matricula, $user);
 
-            $this->recusar($request, self::USUARIO_INATIVO);
+            $this->recusar(self::USUARIO_INATIVO);
         }
 
         return $user;
@@ -79,15 +71,16 @@ class AutenticarPorMatricula
     /**
      * Recusa com motivo visível no campo da matrícula.
      *
-     * O contador de tentativas é incrementado à mão porque, ao devolver a recusa
-     * daqui, o Fortify não chega no ponto em que ele mesmo faria isso.
+     * Quem segura a força bruta é o `throttle:login` da rota — o limitador
+     * declarado em `fortify.limiters.login`, que conta TODA tentativa, não só as
+     * que falham. Não há contador para incrementar aqui: enquanto esse limitador
+     * estiver configurado, o Fortify nem coloca o `EnsureLoginIsNotThrottled` no
+     * pipeline, e o balde dele ficaria escrito sem nunca ser lido.
      *
      * @throws ValidationException
      */
-    private function recusar(Request $request, string $motivo): never
+    private function recusar(string $motivo): never
     {
-        $this->limiter->increment($request);
-
         throw ValidationException::withMessages([
             Fortify::username() => [$motivo],
         ]);

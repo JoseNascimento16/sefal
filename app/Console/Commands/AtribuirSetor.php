@@ -27,7 +27,7 @@ class AtribuirSetor extends Command
             return self::FAILURE;
         }
 
-        $user = User::where('login', $login)->first();
+        $user = User::porMatricula($login);
         if (! $user) {
             $this->error("Usuário com matrícula '{$login}' não encontrado.");
 
