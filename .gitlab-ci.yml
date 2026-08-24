@@ -4,9 +4,15 @@
 # Sem runners nesta instância (2026-08) — o gate real é local (hooks de git +
 # `composer`/`npm` na mão); este arquivo fica pronto para ativação.
 #
-# Por que os jobs nascem DORMENTES (variável `CI_ATIVO`):
+# Por que a pipeline nasce DORMENTE (variável `CI_ATIVO`):
 #   job sem runner que case fica "stuck" e deixa TODO Merge Request com pipeline
 #   pendente — atrapalha mais do que protege. Então nada roda até alguém ligar.
+#
+# A dormência é no `workflow:` (nível da PIPELINE), não em `rules:` de cada job:
+# barrando job por job, a pipeline nasceria VAZIA e o GitLab recusaria a criação
+# com "No stages / jobs for this pipeline" — um ERRO visível no push e no MR,
+# exatamente o barulho que se quer evitar. Com `workflow:`, a pipeline
+# simplesmente não é criada, em silêncio.
 #
 # COMO LIGAR, no dia em que houver runner:
 #   1. Settings > CI/CD > Variables: criar `CI_ATIVO` = `on` (NÃO-protected, para
@@ -24,17 +30,16 @@
 #   testes     — a suíte Pest em SQLite
 # =============================================================================
 
+# Interruptor geral: enquanto `CI_ATIVO` não existir, pipeline nenhuma é criada.
+workflow:
+  rules:
+    - if: '$CI_ATIVO == "on"'
+    - when: never
+
 stages:
   - higiene
   - qualidade
   - testes
-
-# Interruptor geral: enquanto `CI_ATIVO` não existir, nenhum job entra na pipeline.
-.ativacao:
-  rules:
-    - if: '$CI_ATIVO == "on"'
-      when: always
-    - when: never
 
 # Ambiente PHP + Node.
 #
@@ -78,7 +83,6 @@ stages:
 # os MESMOS que os hooks locais e o HigieneDoRepositorioTest usam. Sem PHP nem Node:
 # é git puro, então roda em segundos.
 higiene-do-repositorio:
-  extends: .ativacao
   stage: higiene
   image: alpine:latest
   script:
@@ -91,9 +95,7 @@ higiene-do-repositorio:
 # =============================================================================
 # `pint --test` só acusa (não reescreve): quem formata é o dev, com `pint --dirty`.
 qualidade:
-  extends:
-    - .ativacao
-    - .php-node
+  extends: .php-node
   stage: qualidade
   script:
     - vendor/bin/pint --test
@@ -106,9 +108,7 @@ qualidade:
 # `DB_DRIVER=sqlite` com `force`, para a suíte nunca tocar o Oracle — nem aqui, nem
 # na máquina de um dev com `DB_DRIVER=oracle` no `.env`.
 testes:
-  extends:
-    - .ativacao
-    - .php-node
+  extends: .php-node
   stage: testes
   script:
     - php artisan test --compact

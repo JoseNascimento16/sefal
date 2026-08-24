@@ -54,8 +54,13 @@ a rede dele**:
   termina e o pod continua com a imagem antiga.
 - Volume do `.env` montado com `subPath` **e** o PVC em `/opt/app-root/src/storage/app/public`.
 
-**Route:** `tls: edge` (o HTTPS termina no router; o pod recebe HTTP na 8080). O Laravel confia no
-proxy via `trustProxies` + `APP_URL=https://...`, senão os links de e-mail saem em `http://`.
+**Route:** `tls: edge` — o HTTPS termina no router e o pod recebe **HTTP puro** na 8080.
+
+> ⚠️ **PASSO OBRIGATÓRIO antes do primeiro deploy:** configurar **`trustProxies`** no
+> `bootstrap/app.php` (hoje o projeto **não** configura). Sem isso, atrás do router com `tls: edge` o
+> Laravel enxerga a requisição como `http` e os links gerados — **e-mail de convite e de reset de
+> senha, redirects** — saem em `http://`, quebrando ou expondo o acesso. Junto com ele,
+> `APP_URL=https://<host público>` no `.env` do ambiente.
 
 ## 3. O `.env` do ambiente (o que não pode estar errado)
 
@@ -71,18 +76,29 @@ proxy via `trustProxies` + `APP_URL=https://...`, senão os links de e-mail saem
 > ⚠️ **Editou o secret do `.env`?** Ele é montado por `subPath` e **não recarrega sozinho**. Faça
 > **Restart rollout** no Deployment — todas as vezes.
 
-## 4. `migrate` é MANUAL — regra de equipe
+## 4. `migrate` é MANUAL — e no PRIMEIRO deploy o sistema não sobe sem ele
 
 **O deploy não roda `migrate`.** No cluster deste cliente o initContainer de migrate foi removido de
-propósito pelo DevOps — **não recrie**. Então, a cada versão que traz migration:
+propósito pelo DevOps — **não recrie**. Depois de cada deploy, no terminal do pod:
 
 ```
-php artisan migrate:status      # no terminal do pod
-php artisan migrate --force     # se listar Pending
+php artisan migrate:status      # lista o que está Pending
+php artisan migrate --force     # aplica
 ```
 
-Sem isso, a tela que usa a coluna nova quebra com `ORA-00904`/`ORA-00942`. Por isso: **todo MR com
-migration avisa o dono** de forma explícita.
+> ### 🔴 No PRIMEIRO deploy, antes do `migrate` o sistema não serve NENHUMA página
+>
+> Não é "a tela nova quebra": é **500 em tudo**, inclusive no login. O motivo é a configuração de
+> `SESSION_DRIVER=database` e `CACHE_STORE=database` — sessão e cache moram **em tabela**, e a tabela
+> `sessions` nasce na migration inicial. Sem `migrate`, a primeira requisição já morre ao tentar
+> gravar a sessão (`ORA-00942: table or view does not exist`), e o pod fica **verde** enquanto isso —
+> não há sintoma no cluster que aponte para a causa.
+>
+> Portanto, o primeiro deploy tem **dois** passos: subir o Deployment **e** rodar o `migrate --force`
+> no pod. Só depois vale abrir a URL.
+
+Nos deploys seguintes, esquecer o `migrate` faz a tela que usa a coluna nova quebrar com
+`ORA-00904`/`ORA-00942`. Por isso: **todo MR com migration avisa o dono** de forma explícita.
 
 ## 5. Erros reais desse cluster (economizam horas)
 
@@ -90,7 +106,9 @@ migration avisa o dono** de forma explícita.
 |---|---|---|
 | A web mostra o código / o `.env` | falta `DOCUMENTROOT=/public` | env no Deployment |
 | Editei o `.env` e nada mudou | secret por `subPath` não recarrega | Restart rollout |
+| **Pod verde, mas 500 em TODA página (inclusive o login)** | primeiro deploy sem `migrate`: sessão e cache são em tabela e a `sessions` ainda não existe | `migrate --force` no pod (§4) |
 | Tela nova dá `ORA-00904`/`00942` | migration pendente | `migrate --force` no pod |
+| E-mail de reset chega com link `http://` | falta `trustProxies` (e/ou `APP_URL` errado) | configurar `trustProxies` no `bootstrap/app.php` (§2) |
 | Build falha no `curl` do LibreOffice / Oracle | egress da build bloqueado para o host | testar egress com um pod sonda; pedir liberação |
 | Build falha em `liberation-fonts` | pacote não existe no UBI | não instalar: o LibreOffice já embute as fontes |
 | Upload grande estoura só aqui | o pod herdou os limites default do PHP (2M/8M) | limites gravados em `/etc/php.d` pelo `dockerfile_redhat` |
@@ -105,7 +123,8 @@ migration avisa o dono** de forma explícita.
 - **Carimbo de versão:** quando a Retaguarda exibir a versão no rodapé, grave um `version.txt` no
   build (`date` no `dockerfile_redhat`) e leia o arquivo. Não dependa de
   `getenv('OPENSHIFT_BUILD_COMMIT')`: essa env não chega ao contexto web do S2I.
-- **Produção:** namespace e branch próprios, outro `.env`, `APP_ENV=production` e — se houver 2+
-  réplicas — sessão compartilhada (não `file`). O agendador, quando existir, fica sempre em 1 réplica.
+- **Produção:** namespace e branch próprios, outro `.env` e `APP_ENV=production`. Réplicas 2+ já são
+  possíveis porque sessão e cache são em banco (compartilhados entre os pods) — só não troque esses
+  drivers para `file`. O agendador, quando existir, fica sempre em 1 réplica.
 - **Rota alternativa** (servidor Docker do cliente, sem OKD): `docker-compose.homolog.yml`, também
   não ativo, com o que falta anotado no topo do arquivo.
