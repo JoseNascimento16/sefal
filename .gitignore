@@ -28,9 +28,22 @@ yarn-error.log
 /.vscode
 /.zed
 
-# Banco SQLite de desenvolvimento (regenerável via migrate)
+# Banco SQLite de desenvolvimento (regenerável via migrate) — cobre .sqlite, .sqlite-wal e .sqlite-shm
 /database/*.sqlite*
 
-# Material interno do projeto — vive na branch `ferramental`, nunca em `develop`
-/.superpowers/
-/docs/superpowers/
+# Ferramental — vive na branch `ferramental`, nunca no repositório de produto.
+# A MESMA lista, com o motivo de cada caminho, está em `.higiene-proibidos`: é ela que os hooks
+# de git e o teste `HigieneDoRepositorioTest` aplicam. Mexeu aqui? Mexa lá também.
+/CLAUDE.md
+/.claude
+# Soletrado à parte de propósito: se algum dia a pasta `.claude` passar a ser compartilhada,
+# a configuração PESSOAL de cada máquina continua fora.
+/.claude/settings.local.json
+/.aicr.json
+/.aicr
+/tests/Browser
+/.superpowers
+/docs/superpowers
+/docs/PENDENCIAS.md
+/scripts/internos
+/referencia-design
