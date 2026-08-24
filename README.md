@@ -24,6 +24,7 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
+git config core.hooksPath .githooks   # ativa os hooks de git (uma vez por clone)
 ```
 
 Depois, em dois terminais:
@@ -59,3 +60,7 @@ O `.env` tem a chave **`DB_DRIVER`** para escolher onde o app roda: `oracle` (Or
 ## Material interno
 
 Instruções de IA, skills, specs, planos e documentação interna **não vivem aqui** — este repositório é entregue ao cliente. Esse material fica na branch **`ferramental`**.
+
+A lista desses caminhos, com o motivo de cada um, está em **`.higiene-proibidos`** — fonte única aplicada por três guardas: o `.gitignore` (o arquivo nem aparece no `git status`), os hooks `pre-commit`/`pre-push` de `.githooks/` (reprovam antes de subir) e o teste `HigieneDoRepositorioTest` (entra na validação com os demais). Precisa versionar algo que está na lista? Ajuste a lista no **mesmo commit**, com o motivo — não afrouxe o guarda.
+
+O `pre-push` também bloqueia push direto em `main`, `develop` e `homolog`: trabalho entra por Merge Request. Bypass consciente, em emergência: `git push --no-verify`.
