@@ -14,9 +14,16 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            // Matrícula do servidor — é por ela que se entra na Retaguarda, não pelo
+            // e-mail. Nula só na conta criada pelo auto-cadastro que o starter kit
+            // ainda expõe em /register: ela não tem matrícula e, por isso, não entra
+            // na Retaguarda. Quando esse cadastro público sair, a coluna vira NOT NULL.
+            $table->string('login', 30)->nullable()->unique();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->boolean('admin')->default(false);
+            $table->boolean('ativo')->default(true);
             $table->rememberToken();
             $table->timestamps();
         });
