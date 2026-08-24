@@ -28,10 +28,19 @@ class AppServiceProvider extends ServiceProvider
      * A checagem do host no modo automático evita que uma máquina com oci8 instalado, mas
      * sem credenciais no .env, tente abrir uma conexão Oracle vazia. O caminho do arquivo
      * SQLite é decidido em config/database.php — nunca aqui, para não atropelar o
-     * `:memory:` que a suíte de testes usa.
+     * `:memory:` que a suíte de testes usa. Durante os testes o seletor não roda: quem
+     * decide o banco é o phpunit.xml.
      */
     protected function configurarConexaoDeBanco(): void
     {
+        // A suíte manda no próprio banco: o phpunit.xml fixa sqlite `:memory:` e o seletor não
+        // tem voz aqui. Sem esta saída, um dev com DB_DRIVER=oracle no .env (ou `auto` com
+        // DB_HOST preenchido — a configuração-alvo do projeto) rodaria os testes contra o
+        // Oracle 19c de verdade, criando e derrubando tabelas LRV_.
+        if ($this->app->runningUnitTests()) {
+            return;
+        }
+
         $driver = strtolower(trim((string) config('database.seletor')));
 
         $usarOracle = match ($driver) {
@@ -43,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
 
         config(['database.default' => $usarOracle ? 'oracle' : 'sqlite']);
 
-        if ($usarOracle || $this->app->runningUnitTests()) {
+        if ($usarOracle) {
             return;
         }
 
