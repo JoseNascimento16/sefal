@@ -33,9 +33,6 @@ class UserFactory extends Factory
             'admin' => false,
             'ativo' => true,
             'remember_token' => Str::random(10),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
         ];
     }
 
@@ -50,14 +47,12 @@ class UserFactory extends Factory
     }
 
     /**
-     * Indicate that the model has two-factor authentication configured.
+     * Indicate that the user is inactive — it exists but cannot log in.
      */
-    public function withTwoFactor(): static
+    public function inativo(): static
     {
         return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
-            'two_factor_confirmed_at' => now(),
+            'ativo' => false,
         ]);
     }
 }

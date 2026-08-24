@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             // Matrícula do servidor — é por ela que se entra na Retaguarda, não pelo
-            // e-mail. Nula só na conta criada pelo auto-cadastro que o starter kit
-            // ainda expõe em /register: ela não tem matrícula e, por isso, não entra
-            // na Retaguarda. Quando esse cadastro público sair, a coluna vira NOT NULL.
-            $table->string('login', 30)->nullable()->unique();
+            // e-mail. Obrigatória: com o auto-cadastro público fora do ar, toda conta
+            // nasce por comando ou pela mão de um administrador, e conta sem matrícula
+            // seria conta que ninguém consegue usar.
+            $table->string('login', 30)->unique();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');

@@ -66,6 +66,11 @@ class CriarUsuarioDev extends Command
             ],
         );
 
+        // Quem cria a conta por aqui é quem administra o sistema — o e-mail já vem
+        // conferido por ele. Sem isto a conta entra na Retaguarda mas esbarra na
+        // exigência de verificação nas telas que a pedem, e ninguém entende por quê.
+        $user->forceFill(['email_verified_at' => $user->email_verified_at ?? now()])->save();
+
         // `sync` deixa o usuário exatamente com os setores pedidos — o comando é de
         // bootstrap, então rodar de novo corrige o vínculo em vez de acumular.
         $user->setores()->sync(Setor::whereIn('slug', $slugs)->pluck('id'));
