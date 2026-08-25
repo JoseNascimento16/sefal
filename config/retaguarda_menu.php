@@ -88,6 +88,26 @@ return [
                     'setores' => ['administrador', 'gestor'],
                 ],
                 [
+                    'rotulo' => 'Monitoramento',
+                    'rota' => 'retaguarda.monitoramento.index',
+                    'icone' => 'monitoramento',
+                    'slug' => 'monitoramento',
+                    // Diagnóstico do ambiente: quem responde por "o sistema está
+                    // de pé?" é quem administra e quem gerencia a operação. O
+                    // fiscal trabalha em rua, pelo aplicativo.
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Logs',
+                    'rota' => 'retaguarda.logs.index',
+                    'icone' => 'logs',
+                    'slug' => 'logs',
+                    // Só o administrador: a ocorrência guarda o endereço e o verbo
+                    // de uma requisição que deu errado, e isso conta bastante
+                    // sobre o que existe do outro lado.
+                    'setores' => ['administrador'],
+                ],
+                [
                     'rotulo' => 'Modo Gerente',
                     'rota' => 'retaguarda.modo-gerente.index',
                     'icone' => 'permissoes',

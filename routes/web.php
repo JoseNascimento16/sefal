@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
+use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
+use App\Http\Controllers\Retaguarda\MonitoramentoParametrizacoesController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +46,31 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('retaguarda/relatorios')->name('retaguarda.relatorios.')->group(function () {
         Route::get('/', [RelatoriosController::class, 'index'])->name('index');
         Route::post('gerar', [RelatoriosController::class, 'gerar'])->name('gerar');
+    });
+
+    /*
+     * Logs — as exceções capturadas, consultáveis em tela.
+     *
+     * Só GET: log de erro é a prova do que aconteceu, e uma tela que permitisse
+     * apagar linha daqui apagaria a única trilha de um defeito de produção.
+     * `ObservabilidadeTest` reprova se alguma mutação nascer sob este caminho.
+     */
+    Route::prefix('retaguarda/logs')->name('retaguarda.logs.')->group(function () {
+        Route::get('/', [LogsController::class, 'index'])->name('index');
+        // O rastro de UMA ocorrência, que a listagem não carrega (campo longo).
+        Route::get('{log}', [LogsController::class, 'detalhe'])->name('detalhe');
+    });
+
+    /*
+     * Monitoramento — as verificações de "tudo verde, sistema operacional".
+     *
+     * As profundas (escrita real em disco, serviço externo) ficam numa rota à
+     * parte, chamada só pelo botão: a tela de diagnóstico não pode depender do
+     * que está diagnosticando para conseguir abrir.
+     */
+    Route::prefix('retaguarda/monitoramento')->name('retaguarda.monitoramento.')->group(function () {
+        Route::get('/', [MonitoramentoParametrizacoesController::class, 'index'])->name('index');
+        Route::get('profundo', [MonitoramentoParametrizacoesController::class, 'profundo'])->name('profundo');
     });
 
     /*

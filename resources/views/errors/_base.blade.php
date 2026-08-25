@@ -59,6 +59,16 @@
             <a class="btn secundario" href="/login">Entrar no sistema</a>
         </div>
 
+        {{--
+            O CÓDIGO DESTE ERRO. Ele não vem de quem incluiu esta página: é
+            compartilhado com todas as views pelo middleware `RequestId`, que roda
+            no início do encadeamento global justamente para existir mesmo quando
+            a falha acontece antes de a aplicação ficar de pé.
+
+            O MESMO código está gravado na ocorrência (Sistema › Logs), e é isso
+            que faz "deu erro" virar uma ocorrência específica: a pessoa dita o
+            código, o suporte acha a linha.
+        --}}
         @if(! empty($referencia))
             <div class="referencia">
                 Código deste erro: <strong>{{ $referencia }}</strong>

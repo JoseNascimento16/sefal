@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+    Activity,
     CircleDot,
     ClipboardCheck,
     FileBarChart,
@@ -8,6 +9,7 @@ import {
     Map,
     ScrollText,
     Store,
+    TriangleAlert,
     UserRound,
     Users,
 } from 'lucide-react';
@@ -29,6 +31,8 @@ const ICONES: Record<string, LucideIcon> = {
     usuarios: Users,
     documentos: ScrollText,
     relatorios: FileBarChart,
+    monitoramento: Activity,
+    logs: TriangleAlert,
     permissoes: KeyRound,
     padrao: CircleDot,
 };
