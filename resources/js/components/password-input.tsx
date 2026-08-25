@@ -1,6 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react';
 import type { ComponentProps, Ref } from 'react';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * Campo de senha do Design System, com o olho que revela o que foi digitado.
@@ -21,7 +22,7 @@ export default function PasswordInput({
         <div style={{ position: 'relative' }}>
             <input
                 type={revelada ? 'text' : 'password'}
-                className={`form-control ${className}`.trim()}
+                className={cn('form-control', className)}
                 style={{ paddingRight: 44 }}
                 ref={ref}
                 {...props}

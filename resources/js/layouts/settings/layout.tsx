@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { cn } from '@/lib/utils';
 import { edit as editarAparencia } from '@/routes/appearance';
 import { edit as editarPerfil } from '@/routes/profile';
 import { edit as editarSenha } from '@/routes/security';
@@ -55,7 +56,10 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                         <Link
                             key={aba.titulo}
                             href={aba.href}
-                            className={`rt-menu-item${isCurrentUrl(aba.href) ? 'ativo' : ''}`}
+                            className={cn(
+                                'rt-menu-item',
+                                isCurrentUrl(aba.href) && 'ativo',
+                            )}
                         >
                             {aba.titulo}
                         </Link>

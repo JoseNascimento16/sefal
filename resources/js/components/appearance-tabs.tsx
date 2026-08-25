@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import type { Appearance } from '@/hooks/use-appearance';
 import { useAppearance } from '@/hooks/use-appearance';
+import { cn } from '@/lib/utils';
 
 /**
  * Escolha do tema: claro, escuro ou o que o aparelho estiver usando.
@@ -39,7 +40,10 @@ export default function AppearanceToggleTab() {
                         type="button"
                         onClick={() => updateAppearance(valor)}
                         aria-pressed={ativo}
-                        className={`btn btn-sm ${ativo ? 'btn-primary' : 'btn-secondary'}`}
+                        className={cn(
+                            'btn btn-sm',
+                            ativo ? 'btn-primary' : 'btn-secondary',
+                        )}
                         style={
                             ativo ? undefined : { borderColor: 'transparent' }
                         }

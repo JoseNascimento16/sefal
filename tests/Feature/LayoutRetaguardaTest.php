@@ -169,3 +169,45 @@ test('as telas de erro falam portugues e nao mostram rastro de pilha', function 
         ->assertSee('Ir para o início')
         ->assertDontSee('Stack trace', false);
 });
+
+test('nenhuma classe de tela depende de espaco dentro de texto de classe', function () {
+    /*
+     * Teste de FONTE, e não de comportamento, porque o gate não executa o
+     * JavaScript — e a armadilha aqui é silenciosa.
+     *
+     * O formatador do projeto (prettier com o plugin de classes do Tailwind)
+     * NORMALIZA o conteúdo de qualquer texto de classe, e nisso ele come o espaço
+     * de início. Quem escreve
+     *
+     *     className={`rt-menu-item${ativo ? ' ativo' : ''}`}
+     *
+     * vê o formatador transformar em `'ativo'` sem o espaço, e a classe passa a
+     * sair grudada ("rt-menu-itemativo"): o item ativo perde o destaque, o menu
+     * some no celular, e nada quebra nem acusa. Aconteceu exatamente assim nesta
+     * entrega.
+     *
+     * A forma que resiste é `cn('rt-menu-item', ativo && 'ativo')`, que junta as
+     * classes com espaço fora do texto.
+     */
+    $suspeitos = [];
+
+    $arquivos = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(resource_path('js'), FilesystemIterator::SKIP_DOTS)
+    );
+
+    foreach ($arquivos as $arquivo) {
+        if ($arquivo->getExtension() !== 'tsx') {
+            continue;
+        }
+
+        $conteudo = file_get_contents($arquivo->getPathname());
+
+        // Texto de classe cujo trecho condicional começa (ou termina) em espaço
+        // dentro das aspas: é o padrão que o formatador desmonta.
+        if (preg_match('/className=\{`[^`]*\$\{[^}]*?\'(?: [^\']*|[^\']* )\'/', $conteudo)) {
+            $suspeitos[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $arquivo->getPathname());
+        }
+    }
+
+    expect($suspeitos)->toBe([]);
+});

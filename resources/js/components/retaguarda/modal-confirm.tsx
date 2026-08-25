@@ -2,6 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Spinner } from '@/components/retaguarda/acao';
 import { useScrollLock } from '@/hooks/use-scroll-lock';
+import { cn } from '@/lib/utils';
 
 /**
  * Confirmação de ação — o ÚNICO jeito de perguntar "tem certeza?" na Retaguarda.
@@ -91,7 +92,10 @@ export function ModalConfirm({
 
                     <button
                         type="button"
-                        className={`btn btn-sm ${destrutiva ? 'btn-perigo' : 'btn-primary'}`}
+                        className={cn(
+                            'btn btn-sm',
+                            destrutiva ? 'btn-perigo' : 'btn-primary',
+                        )}
                         onClick={onConfirmar}
                         disabled={processando}
                         aria-busy={processando || undefined}

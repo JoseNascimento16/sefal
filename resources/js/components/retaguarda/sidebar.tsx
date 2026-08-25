@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { iconeDoMenu } from '@/lib/icones-menu';
+import { cn } from '@/lib/utils';
 import { inicio } from '@/routes/retaguarda';
 
 /**
@@ -27,7 +28,7 @@ export function Sidebar({
     const { isCurrentUrl } = useCurrentUrl();
 
     return (
-        <aside className={`rt-sidebar${aberta ? 'aberta' : ''}`}>
+        <aside className={cn('rt-sidebar', aberta && 'aberta')}>
             <Link
                 href={inicio()}
                 className="rt-marca"
@@ -59,7 +60,10 @@ export function Sidebar({
                                     key={item.url}
                                     href={item.url}
                                     onClick={onFechar}
-                                    className={`rt-menu-item${ativo ? 'ativo' : ''}`}
+                                    className={cn(
+                                        'rt-menu-item',
+                                        ativo && 'ativo',
+                                    )}
                                     aria-current={ativo ? 'page' : undefined}
                                 >
                                     <Icone size={18} aria-hidden />

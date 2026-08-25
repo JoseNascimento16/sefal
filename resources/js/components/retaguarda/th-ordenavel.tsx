@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode, ThHTMLAttributes } from 'react';
 import { useCallback, useId, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 /*
 |------------------------------------------------------------------------------
@@ -365,7 +366,7 @@ export function ThOrdenavel<T>({
     return (
         <th
             {...resto}
-            className={`ord${ativo ? 'ord-ativa' : ''}${className ? ` ${className}` : ''}`}
+            className={cn('ord', ativo && 'ord-ativa', className)}
             onClick={() => ord.ordenarPor(campo, acessor)}
             aria-sort={
                 ativo
