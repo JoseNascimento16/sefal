@@ -281,7 +281,11 @@ test('a tela que distribui acesso e barrada mesmo com o rollout em observacao', 
             ->assertSessionHas('flash.erro');
     }
 
-    expect(PermissaoSetor::count())->toBe(0);
+    // Nada foi gravado PARA ESTA TELA. A conta é por slug, e não a da tabela
+    // inteira: o seeder semeia a concessão inicial das outras telas do menu, e
+    // uma contagem global passaria a reprovar a cada tela nova — sem que nada
+    // tivesse a ver com o que este teste garante.
+    expect(PermissaoSetor::where('slug', 'modo-gerente')->count())->toBe(0);
 });
 
 test('quem recebe a concessao abre a tela de verdade', function () {
