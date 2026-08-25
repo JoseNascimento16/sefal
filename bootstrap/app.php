@@ -21,6 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // quem usa o tema escuro vê um lampejo branco a cada visita).
         $middleware->encryptCookies(except: ['appearance']);
 
+        // Para onde vai quem JÁ está autenticado e abre uma tela de visitante
+        // (a de entrar, por exemplo). O padrão do framework é a raiz — e a raiz
+        // manda para a tela de entrar, o que fecharia um LOOP de
+        // redirecionamento: a pessoa logada digitaria o endereço nu e o
+        // navegador morreria em "too many redirects", sem dizer o porquê.
+        // O destino é o mesmo do fim do login (`fortify.home`), lido no momento
+        // da requisição para não haver dois lugares dizendo onde é a casa.
+        $middleware->redirectUsersTo(fn () => config('fortify.home'));
+
         // A guarda de usuário ativo vai no grupo `web` inteiro, e não numa rota ou
         // outra: assim vale para QUALQUER tela autenticada, inclusive as que ainda
         // vão nascer, sem depender de alguém lembrar de pendurá-la lá.

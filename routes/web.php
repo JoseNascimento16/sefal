@@ -2,10 +2,16 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+/*
+ * A raiz não tem conteúdo próprio: este sistema é ferramenta de trabalho, não
+ * site. Quem chega pelo endereço nu vai direto para a entrada — e quem já está
+ * autenticado é levado do login para a tela inicial pela própria autenticação.
+ *
+ * O nome `home` fica: é o destino a que o Fortify manda quem sai do sistema.
+ */
+Route::redirect('/', '/login')->name('home');
 
-// Tela inicial da Retaguarda: é para cá que o login joga quem entrou. Por ora é
-// uma página de espera — o layout de verdade chega com o menu da Retaguarda.
+// Tela inicial da Retaguarda: é para cá que o login joga quem entrou.
 Route::middleware(['auth'])->group(function () {
     Route::inertia('retaguarda/inicio', 'Retaguarda/Inicio')->name('retaguarda.inicio');
 });

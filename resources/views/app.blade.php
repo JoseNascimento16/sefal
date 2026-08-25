@@ -4,18 +4,21 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
+        {{-- Marca o tema ANTES da primeira pintura, para não haver lampejo claro
+             em quem usa o tema escuro. Marca os DOIS marcadores a partir do mesmo
+             booleano — a classe `.dark` (que as utilidades do Tailwind leem) e o
+             atributo `data-theme` (que os tokens do Design System também aceitam)
+             —, exatamente como faz o `applyTheme` depois que o JavaScript assume.
+             Um decidindo, dois marcadores: eles não podem discordar em momento
+             nenhum, nem neste instante antes da hidratação. --}}
         <script>
             (function() {
                 const appearance = '{{ $appearance ?? "system" }}';
+                const escuro = appearance === 'dark'
+                    || (appearance === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-                if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
-                    }
-                }
+                document.documentElement.classList.toggle('dark', escuro);
+                document.documentElement.dataset.theme = escuro ? 'dark' : 'light';
             })();
         </script>
 

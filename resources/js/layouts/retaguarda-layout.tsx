@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Sidebar } from '@/components/retaguarda/sidebar';
 import { Topbar } from '@/components/retaguarda/topbar';
-import { useAppearance } from '@/hooks/use-appearance';
 import { useFlashToast } from '@/hooks/use-flash-toast';
 import type { BreadcrumbItem } from '@/types';
 
@@ -21,22 +20,17 @@ export default function RetaguardaLayout({
     children: ReactNode;
 }) {
     const [menuAberto, setMenuAberto] = useState(false);
-    const { resolvedAppearance } = useAppearance();
 
     // Os recados do servidor (`flash.sucesso` / `flash.erro`) aparecem aqui, uma
     // vez só, para toda a Retaguarda — nenhuma tela precisa se lembrar disso.
     useFlashToast();
 
     /*
-     * O tema tem DOIS marcadores no <html>, escritos pela MESMA fonte (o
-     * `useAppearance`): a classe `.dark`, que o Tailwind usa nas suas utilidades,
-     * e o atributo `data-theme`, que os tokens do Design System também aceitam e
-     * que permite inverter o tema de um trecho isolado (uma prévia de documento,
-     * por exemplo). São dois marcadores, uma decisão — nunca duas decisões.
+     * O tema NÃO é escrito aqui. Quem marca o <html> (classe `.dark` e atributo
+     * `data-theme`, juntos) é o `applyTheme` do `use-appearance` — um só dono,
+     * para os dois marcadores nunca discordarem e para valerem também nas telas
+     * que ficam fora desta casca, como a de entrar.
      */
-    useEffect(() => {
-        document.documentElement.dataset.theme = resolvedAppearance;
-    }, [resolvedAppearance]);
 
     return (
         <div className="rt-shell">
