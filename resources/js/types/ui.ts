@@ -1,10 +1,4 @@
 import type { ReactNode } from 'react';
-import type { BreadcrumbItem } from '@/types/navigation';
-
-export type AppLayoutProps = {
-    children: ReactNode;
-    breadcrumbs?: BreadcrumbItem[];
-};
 
 /**
  * O recado do servidor para a tela — ver `HandleInertiaRequests::recado()`.

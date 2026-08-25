@@ -16,7 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        // O cookie de tema fica em texto claro porque a página precisa lê-lo no
+        // servidor para pintar o fundo certo já na primeira renderização (sem ele,
+        // quem usa o tema escuro vê um lampejo branco a cada visita).
+        $middleware->encryptCookies(except: ['appearance']);
 
         // A guarda de usuário ativo vai no grupo `web` inteiro, e não numa rota ou
         // outra: assim vale para QUALQUER tela autenticada, inclusive as que ainda

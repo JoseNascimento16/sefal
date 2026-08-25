@@ -19,14 +19,16 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Cor de fundo da PRIMEIRA pintura, antes de o CSS carregar: são os
+             mesmos valores de `--sm-app` (claro e escuro) do Design System. Sem
+             isto, quem usa o tema escuro vê um lampejo branco a cada visita. --}}
         <style>
             html {
-                background-color: oklch(1 0 0);
+                background-color: #f7f8f8;
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: #0a1214;
             }
         </style>
 
