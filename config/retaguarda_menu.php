@@ -69,6 +69,68 @@ return [
             'itens' => [],
         ],
 
+        /*
+         * Parametrização — as listas que o resto do sistema oferece para
+         * escolher, e que o gestor mantém.
+         *
+         * As seis telas declaram o MESMO `slug`, e isso é deliberado: elas moram
+         * sob o mesmo primeiro trecho do caminho (`/retaguarda/parametrizacao/…`),
+         * que é de onde as guardas deduzem a tela — a permissão é uma só, para o
+         * conjunto, e aparece no Modo Gerente com o nome da seção. Separar a
+         * permissão de "motivos de recusa" da de "tipos de operação" seria uma
+         * decisão que ninguém precisa tomar e seis linhas a mais na matriz.
+         *
+         * Gestor e administrador: manter estas listas é ato de gestão da
+         * operação. O fiscal as CONSOME em rua, pelo aplicativo — não as edita.
+         */
+        [
+            'rotulo' => 'Parametrização',
+            'itens' => [
+                [
+                    'rotulo' => 'Tipos de Infração',
+                    'rota' => 'retaguarda.parametrizacao.tipos-de-infracao.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Atividades do Ambulante',
+                    'rota' => 'retaguarda.parametrizacao.atividades-do-ambulante.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Unidades de Medida',
+                    'rota' => 'retaguarda.parametrizacao.unidades-de-medida.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Tipos de Operação',
+                    'rota' => 'retaguarda.parametrizacao.tipos-de-operacao.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Origens de Operação',
+                    'rota' => 'retaguarda.parametrizacao.origens-de-operacao.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Motivos de Recusa',
+                    'rota' => 'retaguarda.parametrizacao.motivos-de-recusa.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+            ],
+        ],
+
         [
             'rotulo' => 'Sistema',
             'itens' => [

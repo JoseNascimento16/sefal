@@ -381,6 +381,45 @@ table.data-table tbody tr.clicavel {
     font-size: 13.5px;
 }
 
+/* ============================ ABAS ============================ */
+/* Abas de uma tela de cadastro: "Localizar" (a lista) e o registro aberto.
+   São duas VISTAS da mesma tela, não navegação — por isso ficam dentro do
+   cartão, e não na trilha do topo. */
+.abas {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--sm-borda);
+    margin-bottom: 18px;
+}
+.aba {
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sm-texto-fraco);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: var(--sm-transicao);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 320px;
+}
+.aba:hover {
+    color: var(--sm-texto);
+}
+.aba[aria-selected='true'] {
+    color: var(--sm-primaria);
+    border-bottom-color: var(--sm-primaria);
+}
+.aba-rotulo {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ============================ SELOS ============================ */
 .selo {
     display: inline-flex;

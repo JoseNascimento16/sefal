@@ -34,6 +34,19 @@ class CatalogoFuncionalidades
                     continue;
                 }
 
+                /*
+                 * Várias telas sob o MESMO slug (é o caso da Parametrização, em
+                 * que seis telas dividem o caminho `/retaguarda/parametrizacao/…`):
+                 * a permissão cobre o CONJUNTO, então quem a concede tem de ler
+                 * o nome do conjunto. Ver ali o nome de uma das seis faria
+                 * parecer que as outras cinco ficaram de fora da concessão.
+                 */
+                if (isset($itens[$slug])) {
+                    $itens[$slug]['rotulo'] = (string) ($secao['rotulo'] ?? $itens[$slug]['rotulo']);
+
+                    continue;
+                }
+
                 $itens[$slug] = [
                     'slug' => $slug,
                     'rotulo' => (string) ($item['rotulo'] ?? $slug),

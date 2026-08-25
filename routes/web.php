@@ -5,6 +5,12 @@ use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
 use App\Http\Controllers\Retaguarda\MonitoramentoParametrizacoesController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\AtividadesDoAmbulanteController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\MotivosDeRecusaController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\OrigensDeOperacaoController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeInfracaoController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
 use Illuminate\Support\Facades\Route;
 
@@ -83,6 +89,42 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::get('retaguarda/acompanhamento-de-requisitos', [AcompanhamentoRequisitosController::class, 'index'])
         ->name('retaguarda.acompanhamento-de-requisitos.index');
+
+    /*
+     * Parametrização — as listas de escolha que o resto do sistema oferece.
+     *
+     * As seis têm o mesmo desenho de rotas (listar, incluir, alterar, excluir),
+     * então o registro é um laço: seis famílias escritas à mão seriam seis
+     * chances de uma delas nascer sem a rota de exclusão.
+     *
+     * O primeiro trecho do caminho é `parametrizacao` para as seis, e é dele que
+     * as guardas de acesso deduzem a tela: a permissão é UMA, para o conjunto —
+     * ver o cabeçalho do `ControllerDeLookup`.
+     *
+     * O identificador do registro vai como NÚMERO no caminho, e não o nome: o
+     * WAF da Prefeitura barra assinatura de SQL na URL, e nome de lista é texto
+     * livre digitado por gente.
+     */
+    $telasDeParametrizacao = [
+        'tipos-de-infracao' => TiposDeInfracaoController::class,
+        'atividades-do-ambulante' => AtividadesDoAmbulanteController::class,
+        'unidades-de-medida' => UnidadesDeMedidaController::class,
+        'tipos-de-operacao' => TiposDeOperacaoController::class,
+        'origens-de-operacao' => OrigensDeOperacaoController::class,
+        'motivos-de-recusa' => MotivosDeRecusaController::class,
+    ];
+
+    Route::prefix('retaguarda/parametrizacao')->name('retaguarda.parametrizacao.')
+        ->group(function () use ($telasDeParametrizacao) {
+            foreach ($telasDeParametrizacao as $caminho => $controlador) {
+                Route::prefix($caminho)->name($caminho.'.')->group(function () use ($controlador) {
+                    Route::get('/', [$controlador, 'index'])->name('index');
+                    Route::post('/', [$controlador, 'store'])->name('store');
+                    Route::put('{item}', [$controlador, 'update'])->name('update')->whereNumber('item');
+                    Route::delete('{item}', [$controlador, 'destroy'])->name('destroy')->whereNumber('item');
+                });
+            }
+        });
 
     /*
      * Exportação de LISTAGEM — o ponto único de PDF/XLSX/DOCX de toda grade e de

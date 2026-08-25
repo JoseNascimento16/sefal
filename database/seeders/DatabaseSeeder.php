@@ -21,6 +21,10 @@ class DatabaseSeeder extends Seeder
         // têm de existir.
         $this->call(PermissoesSetorSeeder::class);
 
+        // As listas de escolha e os parâmetros da fiscalização. Não é dado de
+        // demonstração: sem elas o formulário de rua abre sem o que escolher.
+        $this->call(ParametrizacaoFiscalizacaoSeeder::class);
+
         User::factory()->create([
             'name' => 'Test User',
             'login' => 'F0001',

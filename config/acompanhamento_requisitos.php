@@ -152,6 +152,85 @@ return [
                 .'escrito.',
         ],
 
+        /*
+         * Parametrização — as seis listas de escolha. São a MESMA tela seis
+         * vezes (listar, incluir, alterar, inativar, excluir), então a nota de
+         * cada uma diz o que muda: para que serve a lista e quem a consome.
+         */
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Tipos de Infração',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.tipos-de-infracao.index',
+            'breadcrumb' => 'Parametrização › Tipos de Infração',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Lista do que o fiscal enquadra ao autuar, com descrição de apoio '
+                .'à escolha em rua. Valor em uso é inativado, não excluído — registro antigo continua '
+                .'legível.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Atividades do Ambulante',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.atividades-do-ambulante.index',
+            'breadcrumb' => 'Parametrização › Atividades do Ambulante',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Ramo autorizado na permissão — o que a pessoa vende ou faz no '
+                .'ponto. Será a primeira lista apontada por cadastro de permissionário, e a exclusão '
+                .'passa a ser barrada quando esse vínculo existir.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Unidades de Medida',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.unidades-de-medida.index',
+            'breadcrumb' => 'Parametrização › Unidades de Medida',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Como se conta a mercadoria em apreensão ou vistoria. A sigla é '
+                .'obrigatória: é ela que sai no documento impresso em rua.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Tipos de Operação',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.tipos-de-operacao.index',
+            'breadcrumb' => 'Parametrização › Tipos de Operação',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' O feitio do trabalho em campo (rotina, mutirão, operação '
+                .'conjunta) — é o que agrupa as fiscalizações quando se olha o período inteiro.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Origens de Operação',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.origens-de-operacao.index',
+            'breadcrumb' => 'Parametrização › Origens de Operação',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Por que a equipe foi até lá (denúncia, cobrança de outro órgão, '
+                .'planejamento) — é o que permite responder ao demandante depois.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Motivos de Recusa',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.motivos-de-recusa.index',
+            'breadcrumb' => 'Parametrização › Motivos de Recusa',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' O que o Gestor responde ao devolver um cadastro feito em campo. '
+                .'O fiscal lê esse texto no aparelho, então ele precisa dizer o que corrigir.',
+        ],
+
     ],
 
 ];
