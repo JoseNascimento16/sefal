@@ -21,6 +21,9 @@ import { index, salvar } from '@/routes/retaguarda/modo-gerente';
 
 type Acoes = Record<string, boolean>;
 
+/** As que gravam — e que "Só consulta" derruba. */
+const ACOES_DE_ESCRITA = ['habilitado', 'incluir', 'excluir'];
+
 interface Setor {
     slug: string;
     nome: string;
@@ -87,13 +90,24 @@ export default function ModoGerente({
         acao: string,
         valor: boolean,
     ) {
-        setRascunho((atual) => ({
-            ...atual,
-            [tela]: {
-                ...atual[tela],
-                [setor]: { ...atual[tela][setor], [acao]: valor },
-            },
-        }));
+        setRascunho((atual) => {
+            const linha = { ...atual[tela][setor], [acao]: valor };
+
+            // "Só consulta" derruba na hora o que grava — a mesma regra que o
+            // servidor aplica ao gravar. Sem isto, a tela mostraria por um
+            // instante um estado que o servidor vai recusar, e quem marcou
+            // pensaria que concedeu.
+            if (acao === 'apenas_leitura' && valor) {
+                for (const escrita of ACOES_DE_ESCRITA) {
+                    linha[escrita] = false;
+                }
+            }
+
+            return {
+                ...atual,
+                [tela]: { ...atual[tela], [setor]: linha },
+            };
+        });
     }
 
     function gravar(tela: Funcionalidade) {
@@ -211,29 +225,56 @@ export default function ModoGerente({
                                                     </span>
                                                 )}
                                             </td>
-                                            {acoes.map((acao) => (
-                                                <td key={acao.chave}>
-                                                    <input
-                                                        type="checkbox"
-                                                        aria-label={`${acao.rotulo} — ${setor.nome} em ${tela.rotulo}`}
-                                                        checked={Boolean(
-                                                            rascunho[tela.slug][
-                                                                setor.slug
-                                                            ][acao.chave],
-                                                        )}
-                                                        disabled={setor.travado}
-                                                        onChange={(e) =>
-                                                            marcar(
-                                                                tela.slug,
-                                                                setor.slug,
-                                                                acao.chave,
-                                                                e.target
-                                                                    .checked,
-                                                            )
-                                                        }
-                                                    />
-                                                </td>
-                                            ))}
+                                            {acoes.map((acao) => {
+                                                const linha =
+                                                    rascunho[tela.slug][
+                                                        setor.slug
+                                                    ];
+
+                                                // Marca que grava fica
+                                                // indisponível enquanto "Só
+                                                // consulta" está ligada: é a
+                                                // regra do servidor visível na
+                                                // tela, em vez de uma recusa
+                                                // depois do clique.
+                                                const impedida =
+                                                    linha.apenas_leitura &&
+                                                    ACOES_DE_ESCRITA.includes(
+                                                        acao.chave,
+                                                    );
+
+                                                return (
+                                                    <td key={acao.chave}>
+                                                        <input
+                                                            type="checkbox"
+                                                            aria-label={`${acao.rotulo} — ${setor.nome} em ${tela.rotulo}`}
+                                                            checked={Boolean(
+                                                                linha[
+                                                                    acao.chave
+                                                                ],
+                                                            )}
+                                                            disabled={
+                                                                setor.travado ||
+                                                                impedida
+                                                            }
+                                                            title={
+                                                                impedida
+                                                                    ? 'Indisponível: o setor está marcado como "Só consulta".'
+                                                                    : undefined
+                                                            }
+                                                            onChange={(e) =>
+                                                                marcar(
+                                                                    tela.slug,
+                                                                    setor.slug,
+                                                                    acao.chave,
+                                                                    e.target
+                                                                        .checked,
+                                                                )
+                                                            }
+                                                        />
+                                                    </td>
+                                                );
+                                            })}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -242,8 +283,8 @@ export default function ModoGerente({
 
                         <p className="form-ajuda" style={{ marginTop: 12 }}>
                             &quot;Vê&quot; é pré-requisito das demais: sem ele,
-                            nada mais vale. &quot;Só consulta&quot; derruba
-                            incluir e excluir.
+                            nada mais vale. &quot;Só consulta&quot; derruba tudo
+                            que grava — operar, incluir e excluir.
                         </p>
 
                         <div

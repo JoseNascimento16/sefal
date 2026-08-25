@@ -6,6 +6,7 @@ use App\Models\Setor;
 use App\Models\User;
 use App\Services\PermissaoService;
 use Database\Seeders\PermissoesSetorSeeder;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,6 +45,7 @@ function usuarioDoSetor(string $slug, array $atributos = []): User
 function telaControlavel(string $slug): void
 {
     Route::middleware(['web', 'auth'])->get("retaguarda/{$slug}", fn () => 'ok')->name("teste.{$slug}");
+    Route::middleware(['web', 'auth'])->put("retaguarda/{$slug}", fn () => 'ok')->name("teste.{$slug}.update");
     Route::getRoutes()->refreshNameLookups();
 
     config()->set('retaguarda_menu.secoes', [[
@@ -111,6 +113,15 @@ test('fiscal sem permissao de tela e redirecionado ao inicio com mensagem, nunca
         ->assertSessionHas('flash.erro');
 });
 
+test('HEAD e barrado como o GET — e a mesma leitura', function () {
+    // Conferir só o GET deixaria a tela acessível por HEAD, e cabeçalho e código
+    // de status já contam bastante sobre o que existe do outro lado.
+    config(['retaguarda.permissao_enforce' => 'block']);
+
+    $this->actingAs(usuarioDoSetor('fiscal'))->head('/retaguarda/modo-gerente')
+        ->assertRedirect('/retaguarda/inicio');
+});
+
 test('a tela inicial nunca e barrada — nao ha loop de redirecionamento', function () {
     // A lei: o destino do login jamais pode ser uma tela controlada por
     // permissão. Se fosse, quem não a tivesse cairia em redirecionamento
@@ -173,6 +184,74 @@ test('o rollout observa antes de barrar: off e log passam, block barra', functio
     $this->actingAs(usuarioDoSetor('fiscal'))->get('/retaguarda/vistorias')
         ->assertRedirect('/retaguarda/inicio')
         ->assertSessionHas('flash.erro');
+});
+
+test('no modo log a leitura barrada fica REGISTRADA, com o que se precisa para conferir', function () {
+    /*
+     * O modo `log` não vale nada se não registrar: sem este teste, apagar o
+     * registro deixaria a suíte verde — e o rollout ficaria sem o rastro que é a
+     * única razão de ele existir. O que se confere antes de virar a chave é
+     * exatamente este log.
+     */
+    config(['retaguarda.permissao_enforce' => 'log']);
+    telaControlavel('vistorias');
+
+    Log::spy();
+
+    $fiscal = usuarioDoSetor('fiscal');
+
+    $this->actingAs($fiscal)->get('/retaguarda/vistorias')->assertOk();
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        function (string $mensagem, array $contexto) use ($fiscal): bool {
+            expect($mensagem)->toContain('Modo Gerente')
+                ->and($contexto['tela'])->toBe('vistorias')
+                ->and($contexto['rota'])->toBe('teste.vistorias')
+                ->and($contexto['caminho'])->toBe('retaguarda/vistorias')
+                ->and($contexto['user_id'])->toBe($fiscal->id);
+
+            return true;
+        },
+    );
+});
+
+test('no modo log a mutacao barrada fica REGISTRADA, com a acao inferida', function () {
+    config(['retaguarda.permissao_enforce' => 'log']);
+    telaControlavel('vistorias');
+
+    Log::spy();
+
+    $fiscal = usuarioDoSetor('fiscal');
+
+    $this->actingAs($fiscal)->put('/retaguarda/vistorias')->assertOk();
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        function (string $mensagem, array $contexto) use ($fiscal): bool {
+            expect($mensagem)->toContain('Modo Gerente')
+                ->and($contexto['tela'])->toBe('vistorias')
+                // PUT não é `.store` nem exclusão: a ação inferida é operar.
+                ->and($contexto['acao'])->toBe('habilitado')
+                ->and($contexto['metodo'])->toBe('PUT')
+                ->and($contexto['rota'])->toBe('teste.vistorias.update')
+                ->and($contexto['user_id'])->toBe($fiscal->id);
+
+            return true;
+        },
+    );
+});
+
+test('quem tem a permissao nao gera registro — o log e do que SERIA barrado', function () {
+    // Registrar quem passou legitimamente afogaria o rastro no próprio volume.
+    config(['retaguarda.permissao_enforce' => 'log']);
+    telaControlavel('vistorias');
+
+    PermissaoSetor::create(['setor' => 'fiscal', 'slug' => 'vistorias', 'visivel' => true, 'habilitado' => true]);
+
+    Log::spy();
+
+    $this->actingAs(usuarioDoSetor('fiscal'))->get('/retaguarda/vistorias')->assertOk();
+
+    Log::shouldNotHaveReceived('warning');
 });
 
 test('a tela que distribui acesso e barrada mesmo com o rollout em observacao', function () {
@@ -284,6 +363,110 @@ test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', fu
         ->and($log->funcionalidade_slug)->toBe('modo-gerente');
 });
 
+test('o rastro diz o QUE mudou, por setor — concessao e revogacao', function () {
+    /*
+     * "Permissões alteradas" não responde a pergunta que se faz depois de um
+     * incidente. O rastro tem de dizer qual porta se abriu, e para quem.
+     */
+    $admin = User::factory()->create(['admin' => true]);
+
+    // Estado de partida: gestor já operava, fiscal não tinha nada.
+    PermissaoSetor::create([
+        'setor' => 'gestor',
+        'slug' => 'modo-gerente',
+        'visivel' => true,
+        'habilitado' => true,
+    ]);
+
+    $this->actingAs($admin)->post(route('retaguarda.modo-gerente.salvar'), [
+        'slug' => 'modo-gerente',
+        'matriz' => [
+            // Concessão nova.
+            ['setor' => 'fiscal', 'visivel' => true, 'habilitado' => true],
+            // Revogação: perde o operar, mantém o ver.
+            ['setor' => 'gestor', 'visivel' => true, 'habilitado' => false],
+        ],
+    ]);
+
+    $descricao = PermissaoLog::latest('id')->firstOrFail()->descricao;
+
+    expect($descricao)->toContain('Modo Gerente')
+        ->and($descricao)->toContain('fiscal: +visivel, +habilitado')
+        ->and($descricao)->toContain('gestor: -habilitado');
+});
+
+test('setor que nao mudou fica FORA do rastro', function () {
+    // Rastro que repete o estado inteiro a cada gravação some no próprio volume.
+    $admin = User::factory()->create(['admin' => true]);
+
+    PermissaoSetor::create([
+        'setor' => 'gestor',
+        'slug' => 'modo-gerente',
+        'visivel' => true,
+        'habilitado' => true,
+    ]);
+
+    $this->actingAs($admin)->post(route('retaguarda.modo-gerente.salvar'), [
+        'slug' => 'modo-gerente',
+        'matriz' => [
+            ['setor' => 'gestor', 'visivel' => true, 'habilitado' => true],
+            ['setor' => 'fiscal', 'visivel' => true],
+        ],
+    ]);
+
+    $descricao = PermissaoLog::latest('id')->firstOrFail()->descricao;
+
+    expect($descricao)->toContain('fiscal: +visivel')
+        ->and($descricao)->not->toContain('gestor');
+});
+
+test('gravar sem mexer em nada diz isso, em vez de fingir alteracao', function () {
+    $admin = User::factory()->create(['admin' => true]);
+
+    $this->actingAs($admin)->post(route('retaguarda.modo-gerente.salvar'), [
+        'slug' => 'modo-gerente',
+        'matriz' => [['setor' => 'fiscal', 'visivel' => false]],
+    ]);
+
+    expect(PermissaoLog::latest('id')->firstOrFail()->descricao)->toContain('nada mudou');
+});
+
+test('so consulta e operar nao convivem — a linha contraditoria e normalizada', function () {
+    /*
+     * A coluna promete "abre para olhar"; deixar `habilitado` de pé junto com
+     * `apenas_leitura` permitia gravar por PUT/PATCH. A promessa da tela e o que
+     * o servidor faz têm de ser a mesma coisa.
+     */
+    $admin = User::factory()->create(['admin' => true]);
+
+    $this->actingAs($admin)->post(route('retaguarda.modo-gerente.salvar'), [
+        'slug' => 'modo-gerente',
+        'matriz' => [[
+            'setor' => 'gestor',
+            'visivel' => true,
+            'habilitado' => true,
+            'apenas_leitura' => true,
+            'incluir' => true,
+            'excluir' => true,
+        ]],
+    ]);
+
+    $linha = PermissaoSetor::where('setor', 'gestor')->where('slug', 'modo-gerente')->firstOrFail();
+
+    expect($linha->visivel)->toBeTrue()
+        ->and($linha->apenas_leitura)->toBeTrue()
+        ->and($linha->habilitado)->toBeFalse()
+        ->and($linha->incluir)->toBeFalse()
+        ->and($linha->excluir)->toBeFalse();
+
+    // E o efeito prático: quem só consulta não opera.
+    $gestor = usuarioDoSetor('gestor');
+    $servico = app(PermissaoService::class);
+
+    expect($servico->pode($gestor, 'modo-gerente', 'visivel'))->toBeTrue()
+        ->and($servico->pode($gestor, 'modo-gerente', 'habilitado'))->toBeFalse();
+});
+
 test('a matriz recusa setor de fora do catalogo e tela fora do catalogo', function () {
     $admin = User::factory()->create(['admin' => true]);
 
@@ -318,9 +501,37 @@ test('o administrador nao aparece na matriz como editavel — ele e desvio, nao 
         ->and(PermissaoSetor::where('setor', 'administrador')->exists())->toBeFalse();
 });
 
+test('o menu obedece o rollout: fora do modo block, o item continua a vista', function () {
+    /*
+     * Some do menu sem recado é a barrada em silêncio que o `log` existe para
+     * evitar: o item desapareceria, ninguém saberia por quê, nada seria
+     * registrado — e a tela abriria pelo endereço. Enquanto o bloqueio não está
+     * ligado, o item fica; quem visita sem permissão passa e vira registro.
+     */
+    telaControlavel('vistorias');
+
+    $fiscal = usuarioDoSetor('fiscal');
+
+    // Uma asserção só, com os três modos lado a lado: assim a falha diz QUAL
+    // modo saiu do combinado, em vez de apontar para uma volta de laço.
+    $apareceNoMenu = [];
+
+    foreach (['off', 'log', 'block'] as $modo) {
+        config(['retaguarda.permissao_enforce' => $modo]);
+
+        $menu = $this->actingAs($fiscal)->get('/retaguarda/inicio')->viewData('page')['props']['menu'];
+
+        $apareceNoMenu[$modo] = collect($menu)->pluck('itens')->flatten(1)
+            ->pluck('rotulo')->contains('Vistorias');
+    }
+
+    expect($apareceNoMenu)->toBe(['off' => true, 'log' => true, 'block' => false]);
+});
+
 test('item de menu que o usuario nao pode ver nao aparece no menu', function () {
     // Menu e guarda de acesso leem a MESMA regra: se cada um tivesse a sua, um
-    // dia o menu ofereceria uma tela que a guarda barra.
+    // dia o menu ofereceria uma tela que a guarda barra. A tela do Modo Gerente
+    // não espera o rollout, então some do menu em qualquer modo.
     $gestor = usuarioDoSetor('gestor');
 
     $this->actingAs($gestor)->get('/retaguarda/inicio')

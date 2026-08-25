@@ -33,7 +33,10 @@ class Permissao
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->isMethod('GET')) {
+        // HEAD é a MESMA leitura de um GET, sem corpo na resposta — é assim que o
+        // roteador a trata. Conferir só o GET deixaria a tela inteira acessível
+        // por HEAD, e dá para ler bastante coisa em cabeçalho e código de status.
+        if (! $request->isMethod('GET') && ! $request->isMethod('HEAD')) {
             return $next($request);
         }
 

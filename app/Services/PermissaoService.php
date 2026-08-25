@@ -35,13 +35,26 @@ class PermissaoService
     public const SETOR_ADMIN = 'administrador';
 
     /**
-     * Memória do mapa por usuário, dentro da requisição. Uma tela desenha o menu,
-     * passa por duas guardas e ainda checa botões: sem isto, a mesma consulta
-     * repetiria meia dúzia de vezes por página.
+     * Memória do mapa por usuário. Numa mesma requisição a pergunta é feita por
+     * três consumidores — as duas guardas e a montagem do menu —, e sem isto a
+     * consulta de permissões repetiria a cada um.
      *
      * @var array<string, array<string, array<string, bool>>>
      */
     private array $memoria = [];
+
+    /**
+     * Descarta a memória. Chamado quando a matriz muda (ver `AppServiceProvider`).
+     *
+     * Cache sem invalidação explícita é bomba de relógio: em qualquer contexto que
+     * atenda duas coisas com o mesmo objeto — um teste que grava entre duas
+     * visitas, um servidor persistente — o mapa antigo continuaria respondendo,
+     * e a permissão recém-concedida pareceria não ter pegado.
+     */
+    public function esquecer(): void
+    {
+        $this->memoria = [];
+    }
 
     /** Pode o usuário executar esta ação nesta tela? */
     public function pode(?User $usuario, string $slug, string $acao = 'visivel'): bool
@@ -54,24 +67,11 @@ class PermissaoService
      *
      * @return array<string, array<string, bool>>
      */
-    public function mapa(?User $usuario): array
+    private function mapa(?User $usuario): array
     {
         $chave = $usuario === null ? 'visitante' : (string) $usuario->getKey();
 
         return $this->memoria[$chave] ??= $this->calcular($usuario);
-    }
-
-    /**
-     * As telas que o usuário pode abrir — é com isto que o menu é montado.
-     *
-     * @return list<string>
-     */
-    public function slugsVisiveis(?User $usuario): array
-    {
-        return array_keys(array_filter(
-            $this->mapa($usuario),
-            static fn (array $acoes): bool => $acoes['visivel'],
-        ));
     }
 
     /**
@@ -90,6 +90,16 @@ class PermissaoService
      * Item restrito a setor SEM `slug` escaparia do controle — `ModoGerenteTest`
      * reprova essa configuração no gate.
      *
+     * ── Por que o menu OBEDECE o modo de rollout ────────────────────────────
+     *
+     * Fora do modo `block`, o item CONTINUA aparecendo. Some do menu é
+     * exatamente o tipo de barrada em silêncio que o rollout existe para
+     * evitar: quem perdesse o item não veria recado nenhum, não geraria registro
+     * nenhum e ainda assim abriria a tela digitando o endereço — o pior dos dois
+     * mundos, e o oposto do que "observar antes de barrar" quer dizer. Em `log`,
+     * quem visita a tela sem permissão passa e fica REGISTRADO; é esse registro
+     * que se confere antes de virar a chave.
+     *
      * @param  array<string, mixed>  $item
      */
     public function podeVerItemDoMenu(?User $usuario, array $item): bool
@@ -100,9 +110,15 @@ class PermissaoService
 
         $slug = $item['slug'] ?? null;
 
-        return is_string($slug) && $slug !== ''
-            ? $this->pode($usuario, $slug)
-            : true;
+        if (! is_string($slug) || $slug === '') {
+            return true;
+        }
+
+        if (self::modoPara($slug) !== 'block') {
+            return true;
+        }
+
+        return $this->pode($usuario, $slug);
     }
 
     /**
@@ -139,9 +155,14 @@ class PermissaoService
 
     /**
      * Normaliza uma linha da matriz antes de gravar. Duas regras de negócio:
-     * "visível" é pré-requisito de todo o resto (sem ele, nada vale), e "apenas
-     * leitura" derruba incluir e excluir — para não existir linha que diz, ao
-     * mesmo tempo, que o setor só olha e que ele pode apagar.
+     *
+     *  1. "vê" é pré-requisito de todo o resto — sem ele, nada mais vale;
+     *  2. "só consulta" derruba TUDO que grava: operar, incluir e excluir.
+     *
+     * A segunda vale para `habilitado` também, e isso importa: "só consulta"
+     * convivendo com "opera" deixava o setor gravar por PUT/PATCH — a coluna
+     * dizia "abre para olhar" e o servidor deixava alterar. Linha que se
+     * contradiz é linha que alguém vai ler errado.
      *
      * @param  array<string, mixed>  $linha
      * @return array<string, bool>
@@ -156,7 +177,7 @@ class PermissaoService
 
         return [
             'visivel' => true,
-            'habilitado' => (bool) ($linha['habilitado'] ?? false),
+            'habilitado' => ! $apenasLeitura && (bool) ($linha['habilitado'] ?? false),
             'apenas_leitura' => $apenasLeitura,
             'incluir' => ! $apenasLeitura && (bool) ($linha['incluir'] ?? false),
             'excluir' => ! $apenasLeitura && (bool) ($linha['excluir'] ?? false),
@@ -198,10 +219,12 @@ class PermissaoService
             }
         }
 
-        // "Apenas leitura" só vale se NENHUM dos setores tiver concedido escrita:
-        // a união deu poder de gravar, então a tela não é de leitura para ele.
+        // "Só consulta" só vale se NENHUM dos setores tiver concedido escrita: a
+        // união deu poder de gravar, então a tela não é de leitura para ele.
+        // Inclui `habilitado` pelo mesmo motivo da normalização — operar é
+        // gravar.
         foreach ($mapa as $slug => $acoes) {
-            if ($acoes['incluir'] || $acoes['excluir']) {
+            if ($acoes['habilitado'] || $acoes['incluir'] || $acoes['excluir']) {
                 $mapa[$slug]['apenas_leitura'] = false;
             }
         }

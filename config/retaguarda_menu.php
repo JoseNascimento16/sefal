@@ -27,7 +27,10 @@ return [
     |
     | Declarar `slug` coloca a tela sob o Modo Gerente: o slug é a chave dela na
     | matriz `setor × tela × ação`, e daí em diante quem manda é a MATRIZ — tanto
-    | para o menu quanto para as guardas de leitura e de ação. O `slug` tem de
+    | para o menu quanto para as guardas de leitura e de ação. (Enquanto o
+    | bloqueio não está ligado — ver `retaguarda.permissao_enforce` —, o item
+    | continua à vista para quem ainda não tem a concessão: sumir do menu sem
+    | recado nem registro é justamente o que o rollout evita.) O `slug` tem de
     | ser o primeiro trecho do caminho da rota (`/retaguarda/<slug>/...`), porque
     | é assim que a guarda de leitura descobre a que tela um endereço pertence;
     | `ModoGerenteTest` reprova se os dois discordarem.

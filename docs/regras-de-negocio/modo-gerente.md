@@ -19,18 +19,24 @@ Cada tela controlável tem, para cada setor, cinco marcas:
 |---|---|
 | **Vê** (`visivel`) | A tela aparece no menu e abre. |
 | **Opera** (`habilitado`) | Pode usar as ações da tela e alterar o que já existe. |
-| **Só consulta** (`apenas_leitura`) | Abre para olhar, sem incluir nem excluir. |
+| **Só consulta** (`apenas_leitura`) | Abre para olhar: sem operar, sem incluir e sem excluir. |
 | **Inclui** (`incluir`) | Pode criar registro novo. |
 | **Exclui** (`excluir`) | Pode excluir registro. |
 
 A lógica é **positiva**: a marca presente concede; a ausência nega. Não existe
 regra de "negar explicitamente" — negar é não conceder.
 
-### RN-02 — "Vê" é pré-requisito; "Só consulta" derruba escrita
+### RN-02 — "Vê" é pré-requisito; "Só consulta" derruba TUDO que grava
 
 Ao gravar, a linha é normalizada: sem **Vê**, todas as demais caem; com **Só
-consulta**, *Inclui* e *Exclui* caem. Assim não existe linha que diga, ao mesmo
-tempo, que o setor só olha e que ele pode apagar.
+consulta**, caem **Opera, Inclui e Exclui** — as três. Assim não existe linha que
+diga, ao mesmo tempo, que o setor só olha e que ele pode alterar.
+
+*Opera* está incluído de propósito: enquanto ele sobrevivia ao lado de *Só
+consulta*, o setor "só consulta" ainda gravava por `PUT`/`PATCH` — a coluna
+prometia "abre para olhar" e o servidor deixava alterar. A tela reflete a mesma
+regra: marcar *Só consulta* desmarca e indisponibiliza as três na hora, em vez de
+aceitar o clique e recusar depois.
 
 ### RN-03 — Quem tem vários setores soma o que cada um concede
 
@@ -88,6 +94,13 @@ Quem foge da convenção é declarado em `config/permissao_acoes.php`, **com o
 motivo escrito ao lado**; a cobertura no gate reprova mutação que não seja
 derivável nem declarada.
 
+E porque a tela é deduzida do caminho, **mutação fora do prefixo `/retaguarda`
+não pertence a tela nenhuma** — nasceria fora do alcance do controle. O gate
+mantém uma lista fechada do que legitimamente fica fora (autenticação, o
+redirecionamento da raiz, a rota de disco local do framework) e reprova qualquer
+rota de escrita nova fora dela — inclusive entrada morta na própria lista, que
+seria a brecha seguinte.
+
 ### RN-09 — A concessão inicial vem do menu; depois, quem manda é a matriz
 
 `config/retaguarda_menu.php` declara, por tela, os setores que a usam. Essa
@@ -96,11 +109,23 @@ destrutivo: rodar de novo cria só o que falta e nunca desfaz decisão de
 gerente). Depois disso, mudar a lista não muda nada — quem concede e quem tira é
 esta tela.
 
-### RN-10 — Toda alteração de permissão deixa rastro
+### RN-10 — Toda alteração de permissão deixa rastro do que MUDOU
 
-Quem salvou, quando e em qual tela ficam registrados, e o **nome** de quem
-alterou vai gravado no registro — não só a chave da conta, que pode ser
-renomeada ou desligada. A tela mostra as últimas alterações.
+Quem salvou, quando, em qual tela — e **o que mudou, por setor**:
+
+```
+Tela "Vistorias": fiscal: +visivel, +habilitado | gestor: -excluir
+```
+
+O **nome** de quem alterou vai gravado no registro, não só a chave da conta (que
+pode ser renomeada ou desligada). Setor sem mudança é **omitido**, e gravação que
+não alterou nada diz isso ("nada mudou"): rastro que repete o estado inteiro a
+cada salvamento some no próprio volume, e a pergunta que se faz depois de um
+incidente é "quem abriu qual porta, para quem?".
+
+Quando o detalhe não cabe no registro, o corte é por **setor inteiro** e o que
+sobrou é contado (`(+3 setores)`) — meia mudança gravada seria pior que uma
+contagem honesta. A tela mostra as últimas alterações.
 
 ### RN-11 — O bloqueio tem três estágios
 
@@ -115,6 +140,17 @@ seria estrear a fechadura antes de saber quantas portas a casa tem: cada tela da
 próximas entregas entra na matriz, e um esquecimento de concessão viraria gente
 sem acesso ao próprio trabalho. A tela avisa, em voz alta, quando o modo não é
 `block` — senão quem configura acha que tirou um acesso e não tirou.
+
+Em `log`, cada leitura e cada mutação que **seria** barrada gera um registro no
+log da aplicação com tela, ação, rota, caminho e usuário. É esse registro que se
+confere antes de virar a chave — quem passa legitimamente não gera nada, para o
+rastro não afogar no próprio volume.
+
+**O menu obedece o modo.** Fora do `block`, o item **continua aparecendo** para
+quem ainda não tem a concessão. Sumir do menu seria a barrada em silêncio que o
+rollout existe justamente para evitar: o item desapareceria sem recado, sem
+registro, e a tela abriria pelo endereço de todo jeito. No `block`, o item some —
+e aí a régua é a mesma do guarda, então menu e acesso nunca discordam.
 
 ### RN-12 — A tela que distribui acesso não espera o rollout
 
@@ -133,3 +169,6 @@ do bloqueio.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 25/08/2026 | José Nascimento | Modo Gerente | Criação do controle de acesso por setor: matriz `setor × tela × ação`, guarda de leitura, guarda de ação derivada do caminho, semeadura a partir do menu, rastro de alterações e a tela de administração. Enforcement em `log`, com a própria tela do Modo Gerente barrada em qualquer modo (RN-12). | A Retaguarda conferia apenas login: quem soubesse o endereço abria qualquer tela. |
+| 25/08/2026 | José Nascimento | Modo Gerente | O menu passa a obedecer o modo de rollout: fora do `block`, o item continua à vista (RN-11). | Sumir do menu em modo de observação era barrada em silêncio — sem recado, sem registro, e com a URL funcionando. |
+| 25/08/2026 | José Nascimento | Modo Gerente | "Só consulta" passa a derrubar também "Opera", na gravação e na tela (RN-02). | O setor "só consulta" ainda gravava por `PUT`/`PATCH`: a coluna prometia uma coisa e o servidor fazia outra. |
+| 25/08/2026 | José Nascimento | Modo Gerente | O rastro passa a registrar o delta por setor, omitindo quem não mudou (RN-10). | "Permissões alteradas" não respondia "quem abriu qual porta, para quem?". |

@@ -75,6 +75,10 @@ test('item de menu restrito a um setor nao aparece para quem nao pertence a ele'
     // e é por isso que o item declara `slug`: a concessão é a linha da matriz,
     // semeada a partir de `setores`. A lista sozinha não filtra nada — se ela
     // também filtrasse, a mesma decisão teria dois donos.
+    //
+    // O modo `block` é explícito porque o menu obedece o rollout: fora dele o
+    // item continua à vista de propósito (ver ModoGerenteTest).
+    config()->set('retaguarda.permissao_enforce', 'block');
     config()->set('retaguarda_menu.secoes', [[
         'rotulo' => 'Fiscalização',
         'itens' => [[
@@ -106,7 +110,10 @@ test('item de menu restrito a um setor nao aparece para quem nao pertence a ele'
 
 test('o administrador ve o item de qualquer setor', function () {
     // E sem precisar de concessão nenhuma: o acesso total do administrador é
-    // desvio no código, não linha de matriz que alguém possa desmarcar.
+    // desvio no código, não linha de matriz que alguém possa desmarcar. Com o
+    // bloqueio ligado, para a asserção valer algo (fora dele o item apareceria
+    // para qualquer um).
+    config()->set('retaguarda.permissao_enforce', 'block');
     config()->set('retaguarda_menu.secoes', [[
         'rotulo' => 'Fiscalização',
         'itens' => [[

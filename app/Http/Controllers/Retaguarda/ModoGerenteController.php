@@ -50,7 +50,7 @@ class ModoGerenteController extends Controller
     private const ACOES_NA_TELA = [
         ['chave' => 'visivel', 'rotulo' => 'Vê', 'ajuda' => 'A tela aparece no menu e abre. É pré-requisito de todo o resto.'],
         ['chave' => 'habilitado', 'rotulo' => 'Opera', 'ajuda' => 'Pode usar as ações da tela e alterar o que já existe.'],
-        ['chave' => 'apenas_leitura', 'rotulo' => 'Só consulta', 'ajuda' => 'Abre para olhar, sem incluir nem excluir.'],
+        ['chave' => 'apenas_leitura', 'rotulo' => 'Só consulta', 'ajuda' => 'Abre para olhar: sem operar, sem incluir e sem excluir. Marcar aqui derruba as três.'],
         ['chave' => 'incluir', 'rotulo' => 'Inclui', 'ajuda' => 'Pode criar registro novo.'],
         ['chave' => 'excluir', 'rotulo' => 'Exclui', 'ajuda' => 'Pode excluir registro.'],
     ];
@@ -74,6 +74,13 @@ class ModoGerenteController extends Controller
         $rotulo = CatalogoFuncionalidades::rotulo($slug) ?? $slug;
         $setoresValidos = array_keys((array) config('retaguarda.setores', []));
 
+        // O estado ANTES, para o rastro poder dizer o que mudou. Sem isto o
+        // histórico responde "alguém mexeu", que é quase nada: a pergunta que se
+        // faz depois de um incidente é "quem abriu qual porta, para quem?".
+        $antes = PermissaoSetor::query()->where('slug', $slug)->get()->keyBy('setor');
+
+        $mudancas = [];
+
         foreach ($dados['matriz'] as $linha) {
             $setor = (string) $linha['setor'];
 
@@ -85,10 +92,15 @@ class ModoGerenteController extends Controller
                 continue;
             }
 
-            PermissaoSetor::updateOrCreate(
-                ['setor' => $setor, 'slug' => $slug],
-                PermissaoService::normalizar($linha),
-            );
+            $depois = PermissaoService::normalizar($linha);
+
+            $delta = $this->delta($antes->get($setor), $depois);
+
+            if ($delta !== '') {
+                $mudancas[] = "{$setor}: {$delta}";
+            }
+
+            PermissaoSetor::updateOrCreate(['setor' => $setor, 'slug' => $slug], $depois);
         }
 
         PermissaoLog::create([
@@ -97,13 +109,81 @@ class ModoGerenteController extends Controller
             // ou desligada, e o histórico tem de continuar legível.
             'user_nome' => $request->user()?->name,
             'funcionalidade_slug' => $slug,
-            'descricao' => "Permissões da tela \"{$rotulo}\" alteradas.",
+            'descricao' => $this->descricao($rotulo, $mudancas),
         ]);
 
         return back()->with(
             'flash.sucesso',
             "Permissões de \"{$rotulo}\" salvas. Quem já está no sistema vê a mudança na próxima navegação.",
         );
+    }
+
+    /**
+     * O que mudou para UM setor, em texto curto: `+habilitado, -excluir`.
+     *
+     * Só o que mudou entra — setor sem mudança é omitido. Um rastro que repete o
+     * estado inteiro a cada gravação some no próprio volume; o que se procura
+     * depois é a linha em que a porta se abriu.
+     *
+     * Ausência de linha anterior conta como tudo negado, que é exatamente o que
+     * a ausência significa para o controle de acesso.
+     *
+     * @param  array<string, bool>  $depois
+     */
+    private function delta(?PermissaoSetor $antes, array $depois): string
+    {
+        $partes = [];
+
+        foreach (PermissaoService::ACOES as $acao) {
+            $tinha = (bool) $antes?->{$acao};
+            $tem = (bool) $depois[$acao];
+
+            if ($tinha !== $tem) {
+                $partes[] = ($tem ? '+' : '-').$acao;
+            }
+        }
+
+        return implode(', ', $partes);
+    }
+
+    /**
+     * O texto do rastro, cortado no limite da coluna.
+     *
+     * O corte é por SETOR inteiro, não no meio de uma palavra: meia mudança
+     * gravada é pior que uma contagem honesta do que não caberia.
+     *
+     * @param  list<string>  $mudancas
+     */
+    private function descricao(string $rotulo, array $mudancas): string
+    {
+        $prefixo = "Tela \"{$rotulo}\": ";
+
+        if ($mudancas === []) {
+            return $prefixo.'nada mudou.';
+        }
+
+        $limite = 500 - mb_strlen($prefixo);
+        $texto = '';
+        $cabem = 0;
+
+        foreach ($mudancas as $mudanca) {
+            $candidato = $texto === '' ? $mudanca : $texto.' | '.$mudanca;
+
+            if (mb_strlen($candidato) > $limite - 20) {
+                break;
+            }
+
+            $texto = $candidato;
+            $cabem++;
+        }
+
+        $restantes = count($mudancas) - $cabem;
+
+        if ($texto === '') {
+            return $prefixo.count($mudancas).' setores alterados (detalhe longo demais para caber).';
+        }
+
+        return $prefixo.$texto.($restantes > 0 ? " (+{$restantes} setores)" : '');
     }
 
     /**
