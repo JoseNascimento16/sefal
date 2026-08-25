@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
+use App\Http\Controllers\Retaguarda\RelatoriosController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,6 +32,28 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ModoGerenteController::class, 'index'])->name('index');
         Route::post('/', [ModoGerenteController::class, 'salvar'])->name('salvar');
     });
+
+    /*
+     * Relatórios — documento oficial, pedido de propósito, com período e totais.
+     *
+     * A emissão é POST, e não GET: os filtros carregam texto livre e datas, e o
+     * WAF da Prefeitura barra assinatura de SQL na URL — a falha voltaria
+     * disfarçada de erro de CORS. O nome `gerar` cai na ação "opera" da guarda,
+     * que é o que emitir um documento é: usar a tela, não incluir registro.
+     */
+    Route::prefix('retaguarda/relatorios')->name('retaguarda.relatorios.')->group(function () {
+        Route::get('/', [RelatoriosController::class, 'index'])->name('index');
+        Route::post('gerar', [RelatoriosController::class, 'gerar'])->name('gerar');
+    });
+
+    /*
+     * Exportação de LISTAGEM — o ponto único de PDF/XLSX/DOCX de toda grade e de
+     * toda aba "Localizar". Não é tela: é serviço que qualquer listagem usa, com
+     * o recorte visível no CORPO do POST (ver o cabeçalho do controller e a
+     * declaração em `config/permissao_acoes.php`).
+     */
+    Route::post('retaguarda/exportar-listagem', [ExportacaoListagemController::class, 'exportar'])
+        ->name('retaguarda.exportar-listagem');
 });
 
 require __DIR__.'/settings.php';

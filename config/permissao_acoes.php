@@ -45,4 +45,37 @@ return [
     'profile.update' => $livre('Dados da própria conta — não é decisão de gestor.'),
     'user-password.update' => $livre('Senha da própria conta — não é decisão de gestor.'),
 
+    /*
+     * (a) Emitir relatório é LEITURA, e a ação que a governa é a que abre a tela.
+     *
+     * A inferência leria "opera" (é POST e não é `.store`), e aí um setor com
+     * "Vê" + "Só consulta" abriria a tela de Relatórios e teria recusado o único
+     * botão que ela tem. Tela que abre para não fazer nada é pior que tela
+     * fechada: a pessoa clica, é barrada e não entende por quê.
+     *
+     * É POST por causa do WAF (filtros e datas viajam no corpo), não porque
+     * grave algo — nada é alterado ao emitir um documento.
+     */
+    'retaguarda.relatorios.gerar' => [
+        'slug' => 'relatorios',
+        'acao' => 'visivel',
+        'motivo' => 'Emitir relatório é leitura: quem pode abrir a tela pode emitir. O POST existe por causa do WAF, não porque grave algo.',
+    ],
+
+    /*
+     * (d) Exportação de listagem. É POST por causa do WAF (o recorte vai no
+     * corpo), mas o que ela faz é LEITURA: recebe de volta as linhas que a tela
+     * já entregou e as embala em PDF/XLSX/DOCX. A autorização aconteceu no GET
+     * que montou a listagem — não há dado novo a alcançar aqui.
+     *
+     * Também não pertence a tela nenhuma: é disparada de qualquer grade do
+     * sistema, então não há slug a que atribuí-la. Colocá-la na matriz criaria
+     * uma segunda permissão para a MESMA decisão ("quem vê esta listagem"), e um
+     * dia as duas discordariam — a tela abriria e o botão de exportar recusaria,
+     * ou o contrário.
+     */
+    'retaguarda.exportar-listagem' => $livre(
+        'Exporta o recorte que a tela já autorizou no GET; não é fronteira de dados nem pertence a uma tela.',
+    ),
+
 ];

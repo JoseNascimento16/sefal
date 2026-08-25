@@ -79,6 +79,15 @@ return [
                     'setores' => [],
                 ],
                 [
+                    'rotulo' => 'Relatórios',
+                    'rota' => 'retaguarda.relatorios.index',
+                    'icone' => 'relatorios',
+                    'slug' => 'relatorios',
+                    // Gestão da operação: o gestor emite; o fiscal, que trabalha
+                    // em rua pelo aplicativo, não tem o que fazer aqui.
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
                     'rotulo' => 'Modo Gerente',
                     'rota' => 'retaguarda.modo-gerente.index',
                     'icone' => 'permissoes',
