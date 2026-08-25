@@ -37,14 +37,17 @@ return new class extends Migration
             $table->text('stack')->nullable();
 
             /*
-             * O CAMINHO da requisição — nunca o endereço completo.
+             * O CAMINHO da requisição — nunca o endereço completo, e é por isso
+             * que a coluna se chama `caminho` e não `url`: o nome do campo tem de
+             * dizer o que ele guarda. Com "url", o próximo dev grava o endereço
+             * inteiro achando que está cumprindo o contrato da coluna.
              *
              * A consulta (o que vem depois do `?`) fica de fora por decisão de
              * segurança, e o último trecho de caminhos sensíveis entra mascarado:
              * o token de redefinição de senha viaja no próprio caminho, e quem o
              * tivesse trocaria a senha da conta alheia. Ver `LogErro`.
              */
-            $table->string('url', 500)->nullable();
+            $table->string('caminho', 500)->nullable();
             $table->string('metodo', 10)->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
 

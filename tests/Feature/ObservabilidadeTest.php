@@ -71,7 +71,7 @@ test('o registro guarda o caminho, o verbo e quem estava logado', function () {
 
     $log = LogErro::latest('id')->first();
 
-    expect($log->url)->toContain('teste/estoura')
+    expect($log->caminho)->toContain('teste/estoura')
         ->and($log->metodo)->toBe('GET')
         ->and($log->user_id)->toBe($usuario->id);
 });
@@ -101,9 +101,60 @@ test('o registro NAO guarda token de redefinicao nem e-mail na consulta', functi
 
     $log = LogErro::latest('id')->first();
 
-    expect($log->url)->not->toContain($token)
-        ->and($log->url)->not->toContain('fiscal@')
-        ->and($log->url)->toBe('reset-password/[token]');
+    expect($log->caminho)->not->toContain($token)
+        ->and($log->caminho)->not->toContain('fiscal@')
+        ->and($log->caminho)->toBe('reset-password/[token]');
+});
+
+test('TODO caminho que carrega segredo entra mascarado — a lista nao pode envelhecer', function () {
+    /*
+     * Teste-LEI sobre as rotas REAIS. A lista de caminhos sensíveis do `LogErro`
+     * é escrita à mão, e lista escrita à mão envelhece calada: basta uma rota
+     * nova com token no endereço — confirmação de e-mail, link assinado de
+     * validação por QR — para o segredo passar a ser gravado sem ninguém notar.
+     *
+     * Em vez de conferir a lista, confere-se o UNIVERSO: toda rota cujo endereço
+     * tem `{token}`, `{hash}` ou `{signature}` é exercitada com um segredo de
+     * amostra, e o que ficou gravado não pode conter esse segredo.
+     *
+     * O caminho é exercitado por `registrar()`, e não pelo método de máscara
+     * direto: o que interessa provar é o que CHEGA À TABELA — é dali que o
+     * segredo sairia para a tela de Logs e para o PDF exportado.
+     */
+    $marca = 'segredodeamostra';
+
+    $sensiveis = collect(Route::getRoutes()->getRoutes())
+        ->map(fn ($r): string => $r->uri())
+        ->filter(fn (string $uri): bool => preg_match('/\{(token|hash|signature)\??\}/', $uri) === 1)
+        ->unique()
+        ->values();
+
+    // Hoje é o `reset-password/{token}` do Fortify. Vazio aqui significaria que o
+    // teste deixou de exercitar coisa alguma e passaria a dar falso verde.
+    expect($sensiveis)->not->toBeEmpty();
+
+    $desprotegidos = [];
+
+    foreach ($sensiveis as $uri) {
+        LogErro::registrar(
+            new RuntimeException('estouro no caminho sensível'),
+            Request::create('/'.preg_replace('/\{[^}]+\}/', $marca, $uri), 'GET'),
+        );
+
+        $caminho = (string) LogErro::latest('id')->first()->caminho;
+
+        if (str_contains($caminho, $marca)) {
+            $desprotegidos[] = $uri.' (gravou o segredo)';
+        }
+
+        // Caminho vazio passaria na conferência acima sem provar nada: seria a
+        // asserção verde de um teste que deixou de exercitar o que promete.
+        if (trim($caminho) === '') {
+            $desprotegidos[] = $uri.' (não gravou caminho algum — o teste não exercitou nada)';
+        }
+    }
+
+    expect($desprotegidos)->toBe([]);
 });
 
 test('a consulta NUNCA e gravada, nem em caminho comum', function () {
@@ -115,7 +166,7 @@ test('a consulta NUNCA e gravada, nem em caminho comum', function () {
         Request::create('/retaguarda/logs?de=2026-01-01&segredo=nao-deve-aparecer', 'GET'),
     );
 
-    expect(LogErro::latest('id')->first()->url)->toBe('retaguarda/logs');
+    expect(LogErro::latest('id')->first()->caminho)->toBe('retaguarda/logs');
 });
 
 test('o rastro NAO carrega os argumentos passados as funcoes', function () {
@@ -134,21 +185,30 @@ test('o rastro NAO carrega os argumentos passados as funcoes', function () {
      * para quem tenta adivinhar o resto), mas faria a asserção mentir se o texto
      * do teste fosse mais longo que isso.
      */
+    // A ini volta ao valor anterior no fim: ela é estado GLOBAL do processo, e o
+    // Pest roda os testes todos no mesmo. Deixá-la ligada aqui mudaria, em
+    // silêncio, o comportamento de qualquer teste seguinte que inspecione rastro
+    // — e o pior tipo de falha é a que depende da ORDEM dos testes.
+    $anterior = ini_get('zend.exception_ignore_args');
     ini_set('zend.exception_ignore_args', '0');
 
-    $entrar = function (string $senha) {
-        throw new RuntimeException('falha ao autenticar');
-    };
-
     try {
-        $entrar('p4ssw0rd-real');
-    } catch (Throwable $e) {
-        expect($e->getTraceAsString())->toContain('p4ssw0rd-real');
+        $entrar = function (string $senha) {
+            throw new RuntimeException('falha ao autenticar');
+        };
 
-        report($e);
+        try {
+            $entrar('p4ssw0rd-real');
+        } catch (Throwable $e) {
+            expect($e->getTraceAsString())->toContain('p4ssw0rd-real');
+
+            report($e);
+        }
+
+        expect(LogErro::latest('id')->first()->stack)->not->toContain('p4ssw0rd-real');
+    } finally {
+        ini_set('zend.exception_ignore_args', $anterior === false ? '1' : $anterior);
     }
-
-    expect(LogErro::latest('id')->first()->stack)->not->toContain('p4ssw0rd-real');
 });
 
 test('nem gravar no arquivo de log pode derrubar o pedido', function () {
@@ -210,7 +270,7 @@ test('a tela lista as ocorrencias com o contexto de cada uma', function () {
         'request_id' => 'REQ-abc123',
         'classe' => 'RuntimeException',
         'mensagem' => 'falha ao gravar a vistoria',
-        'url' => 'http://localhost/retaguarda/vistorias',
+        'caminho' => 'retaguarda/vistorias',
         'metodo' => 'POST',
         'stack' => '#0 /app/Http/Controllers/X.php(10)',
     ]);

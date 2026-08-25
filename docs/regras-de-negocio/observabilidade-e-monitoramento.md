@@ -65,9 +65,18 @@ um depósito de credenciais, e duas decisões garantem isso por construção:
 **(a) grava-se o CAMINHO, nunca o endereço completo.** O que viaja depois do `?` é escolha de quem
 escreveu a tela — hoje uma data, amanhã um e-mail, um documento ou um termo de busca. Guardar só o
 caminho tira essa decisão do caminho do erro: ninguém consegue, sem perceber, mandar segredo para
-cá. Além disso, o **último trecho de caminhos sensíveis entra mascarado**
-(`reset-password/[token]`, `verify-email/[id]/[assinatura]`): esses segredos viajam no próprio
+cá. A coluna se chama **`caminho`**, e não `url`, justamente por isso: o nome do campo tem de dizer
+o que ele guarda, senão o próximo dev grava o endereço inteiro achando que cumpre o contrato.
+
+Além disso, o **último trecho de caminhos sensíveis entra mascarado**
+(`reset-password/[token]`, `email/verify/[id]/[assinatura]`): esses segredos viajam no próprio
 caminho, e quem tem o token de redefinição troca a senha da conta alheia sem saber a antiga.
+
+A lista de caminhos sensíveis é escrita à mão, e lista escrita à mão envelhece calada — aqui,
+envelhecer significa gravar credencial. Por isso ela **não é conferida contra si mesma**: o teste
+percorre as **rotas reais** do sistema, pega toda aquela cujo endereço tem `{token}`, `{hash}` ou
+`{signature}`, e exige que o caminho gravado não carregue o valor. Rota nova de segredo reprova a
+suíte até entrar na lista.
 
 **(b) o rastro é montado quadro a quadro, sem os argumentos das chamadas.** O PHP guarda os
 argumentos escalares de cada quadro quando `zend.exception_ignore_args` está **desligado** — e
@@ -185,5 +194,6 @@ a sensação de sistema saudável justamente quando ele não está.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 25/08/2026 | José Nascimento | Logs | A coluna do endereço passa a se chamar **`caminho`** (banco, model e tela com o mesmo nome), a máscara do link de confirmação de e-mail passa a apontar o caminho real do Fortify (`email/verify/{id}/{hash}`), e a lista de caminhos sensíveis passa a ser conferida contra as **rotas reais** do sistema. | O nome `url` prometia o endereço inteiro numa coluna que guarda só o caminho; o padrão antigo (`verify-email/*/*`) nunca casaria com rota nenhuma; e a lista escrita à mão envelheceria calada, gravando credencial de rota nova. |
 | 25/08/2026 | José Nascimento | Logs | A ocorrência passa a guardar o **caminho** (sem a consulta, com os trechos sensíveis mascarados) em vez do endereço completo, e o **rastro é montado sem os argumentos** das chamadas. | O endereço completo levava o token de redefinição de senha e o e-mail para uma tabela que qualquer administrador lê e exporta; o rastro do PHP levava os argumentos — a senha digitada no login em texto claro. |
 | 25/08/2026 | José Nascimento | Logs / Monitoramento | Criação do registro central de exceções (com código de requisição compartilhado com a página de erro), da tela de consulta só-leitura e do motor de verificações com os dois primeiros checks (conta de administrador ativa e armazenamento gravável). | O sistema não tinha como responder "o que aconteceu com esse usuário" sem entrar no servidor, e nada avisava quando uma condição mínima de funcionamento deixava de valer. |

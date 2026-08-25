@@ -25,13 +25,13 @@ use Throwable;
  * @property string $classe
  * @property string $mensagem
  * @property string|null $stack
- * @property string|null $url
+ * @property string|null $caminho
  * @property string|null $metodo
  * @property int|null $user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['request_id', 'classe', 'mensagem', 'stack', 'url', 'metodo', 'user_id'])]
+#[Fillable(['request_id', 'classe', 'mensagem', 'stack', 'caminho', 'metodo', 'user_id'])]
 class LogErro extends Model
 {
     /**
@@ -51,7 +51,7 @@ class LogErro extends Model
 
     public const LIMITE_CLASSE = 200;
 
-    public const LIMITE_URL = 500;
+    public const LIMITE_CAMINHO = 500;
 
     /**
      * Caminhos cujo ÚLTIMO trecho é segredo, e a máscara que entra no lugar.
@@ -65,6 +65,13 @@ class LogErro extends Model
      * NUNCA ser gravada (ver {@see self::caminhoSeguro()}), o que já cobre todo
      * segredo que viaje como parâmetro. Aqui ficam só os que viajam no caminho.
      *
+     * ⚠️ Lista escrita à mão envelhece calada — e envelhecer aqui significa
+     * gravar credencial. Por isso ela NÃO é conferida contra si mesma:
+     * `ObservabilidadeTest` percorre as rotas REAIS do sistema, pega toda aquela
+     * cujo endereço tem `{token}`, `{hash}` ou `{signature}` e exige que o
+     * caminho gravado não carregue o valor. Rota nova de segredo, portanto,
+     * reprova a suíte até entrar aqui.
+     *
      * @var array<string, string> padrão de caminho => o que gravar no lugar
      */
     private const CAMINHOS_SENSIVEIS = [
@@ -72,8 +79,13 @@ class LogErro extends Model
         // e-mail na consulta.
         'reset-password/*' => 'reset-password/[token]',
         'password/reset/*' => 'password/reset/[token]',
-        // Link assinado de confirmação de e-mail: o último trecho é a assinatura.
-        'verify-email/*/*' => 'verify-email/[id]/[assinatura]',
+        /*
+         * Link assinado de confirmação de e-mail: os dois últimos trechos são o
+         * identificador e a assinatura. O caminho é o do Fortify de verdade
+         * (`email/verify/{id}/{hash}`) — a verificação de e-mail está desligada
+         * neste sistema, e o padrão fica pronto para o dia em que ligar.
+         */
+        'email/verify/*/*' => 'email/verify/[id]/[assinatura]',
     ];
 
     protected $table = 'log_erros';
@@ -129,7 +141,7 @@ class LogErro extends Model
                 'classe' => mb_substr($e::class, 0, self::LIMITE_CLASSE),
                 'mensagem' => mb_substr($e->getMessage(), 0, self::LIMITE_MENSAGEM),
                 'stack' => mb_substr(self::rastroDe($e), 0, self::LIMITE_STACK),
-                'url' => $deRequisicao ? mb_substr(self::caminhoSeguro($request), 0, self::LIMITE_URL) : null,
+                'caminho' => $deRequisicao ? mb_substr(self::caminhoSeguro($request), 0, self::LIMITE_CAMINHO) : null,
                 'metodo' => $deRequisicao ? $request->method() : null,
                 'user_id' => self::identificarUsuario(),
             ]);

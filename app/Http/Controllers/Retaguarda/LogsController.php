@@ -40,7 +40,7 @@ class LogsController extends Controller
      *
      * @var list<string>
      */
-    private const COLUNAS_DA_LISTA = ['id', 'request_id', 'classe', 'mensagem', 'url', 'metodo', 'user_id', 'created_at'];
+    private const COLUNAS_DA_LISTA = ['id', 'request_id', 'classe', 'mensagem', 'caminho', 'metodo', 'user_id', 'created_at'];
 
     public function index(Request $request): Response
     {
@@ -77,7 +77,7 @@ class LogsController extends Controller
                 'mensagem' => $log->mensagem,
                 // Já gravado como CAMINHO, sem a consulta e com os trechos
                 // sensíveis mascarados — ver `LogErro::caminhoSeguro()`.
-                'caminho' => $log->url,
+                'caminho' => $log->caminho,
                 'metodo' => $log->metodo,
                 'usuario' => $log->usuario?->name,
             ]);
