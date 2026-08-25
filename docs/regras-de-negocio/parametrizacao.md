@@ -95,7 +95,7 @@ número sem fluxo que o leia não muda nada, e ninguém saberia dizer o efeito d
 - **Bloqueio de exclusão por vínculo.** Nenhuma das seis listas é apontada por registro de operação
   ainda. A primeira será **Atividades do Ambulante**, quando o cadastro de permissionário existir: aí
   excluir uma atividade em uso deixaria os cadastros apontando para o nada, e a recusa entra no
-  `impedimentoParaExcluir()` do controller — que já é o ponto por onde a base pergunta.
+  `destroy()` daquela tela — dizendo o motivo em tela, como manda a lei de nunca barrar em silêncio.
 - **Verificação no Monitoramento de Parametrizações.** "Lista de escolha vazia" só quebra um fluxo
   quando existe fluxo que a consome; a verificação nasce junto com ele, para poder dizer o que
   exatamente parou.

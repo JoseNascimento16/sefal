@@ -12,7 +12,8 @@ use App\Support\Parametrizacao\DefinicaoLookup;
  * operação: o cadastro de permissionário guarda a atividade autorizada. Quando
  * ele existir, excluir uma atividade em uso deixaria esses cadastros apontando
  * para o nada — e a resposta certa passa a ser inativar. O lugar de barrar isso
- * é o `impedimentoParaExcluir()` da base, sobrescrito aqui.
+ * é o `destroy()` DESTA classe, recusando com o motivo em tela e delegando o
+ * resto a `parent::destroy()`.
  *
  * Hoje ninguém aponta para cá, então não há o que barrar: uma checagem contra
  * uma tabela que não existe seria código morto tratando de um caso impossível.

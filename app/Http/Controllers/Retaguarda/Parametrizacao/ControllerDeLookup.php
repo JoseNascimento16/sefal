@@ -77,38 +77,26 @@ abstract class ControllerDeLookup extends Controller
             ->with('flash.sucesso', 'Alterações salvas.');
     }
 
+    /**
+     * Exclui o registro.
+     *
+     * Hoje nada aponta para estas listas, então não há vínculo a conferir. Quando
+     * houver — a primeira será a atividade do ambulante, apontada pelo cadastro
+     * de permissionário —, a tela dona sobrescreve este método, recusa com
+     * `back()->with('flash.erro', …)` (a recusa tem de DIZER o motivo, na tela de
+     * onde a pessoa clicou) e delega o resto com `parent::destroy()`. Excluir um
+     * valor em uso deixaria o histórico apontando para o nada; o certo, aí, é
+     * inativar.
+     */
     public function destroy(int $item): RedirectResponse
     {
         $definicao = $this->definicao();
-        $registro = $this->localizar($definicao, $item);
 
-        $impedimento = $this->impedimentoParaExcluir($registro);
-
-        if ($impedimento !== null) {
-            // Recusa EXPLÍCITA, na tela de onde a pessoa clicou: exclusão que
-            // simplesmente não acontece parece o sistema travado.
-            return back()->with('flash.erro', $impedimento);
-        }
-
-        $registro->delete();
+        $this->localizar($definicao, $item)->delete();
 
         return redirect()
             ->route($definicao->rota('index'))
             ->with('flash.sucesso', $definicao->mensagem('excluído'));
-    }
-
-    /**
-     * O que impede a exclusão deste registro, ou null quando não há impedimento.
-     *
-     * Ponto de extensão para quando uma lista passar a ser APONTADA por registros
-     * de operação: aí excluir o valor deixaria o histórico apontando para o nada,
-     * e a resposta certa é inativar. Hoje nenhuma das seis é apontada por
-     * ninguém — a primeira será a atividade do ambulante, quando o cadastro de
-     * permissionário existir.
-     */
-    protected function impedimentoParaExcluir(ListaDeEscolha $registro): ?string
-    {
-        return null;
     }
 
     /**
