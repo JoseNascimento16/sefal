@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -51,6 +52,29 @@ class LogErro extends Model
     public const LIMITE_CLASSE = 200;
 
     public const LIMITE_URL = 500;
+
+    /**
+     * Caminhos cujo ÚLTIMO trecho é segredo, e a máscara que entra no lugar.
+     *
+     * O endereço de uma requisição pode ser a credencial em si: quem tem o token
+     * de `reset-password/{token}` troca a senha da conta alheia sem saber a
+     * antiga. Guardado aqui, ele ficaria à vista de qualquer administrador que
+     * abrisse a tela de Logs — e sairia junto na exportação em PDF.
+     *
+     * A lista é curta de propósito. A defesa principal não é ela: é a consulta
+     * NUNCA ser gravada (ver {@see self::caminhoSeguro()}), o que já cobre todo
+     * segredo que viaje como parâmetro. Aqui ficam só os que viajam no caminho.
+     *
+     * @var array<string, string> padrão de caminho => o que gravar no lugar
+     */
+    private const CAMINHOS_SENSIVEIS = [
+        // Fortify: o formulário de redefinição recebe o token no caminho e o
+        // e-mail na consulta.
+        'reset-password/*' => 'reset-password/[token]',
+        'password/reset/*' => 'password/reset/[token]',
+        // Link assinado de confirmação de e-mail: o último trecho é a assinatura.
+        'verify-email/*/*' => 'verify-email/[id]/[assinatura]',
+    ];
 
     protected $table = 'log_erros';
 
@@ -104,22 +128,115 @@ class LogErro extends Model
                 'request_id' => $requestId,
                 'classe' => mb_substr($e::class, 0, self::LIMITE_CLASSE),
                 'mensagem' => mb_substr($e->getMessage(), 0, self::LIMITE_MENSAGEM),
-                'stack' => mb_substr($e->getTraceAsString(), 0, self::LIMITE_STACK),
-                'url' => $deRequisicao ? mb_substr($request->fullUrl(), 0, self::LIMITE_URL) : null,
+                'stack' => mb_substr(self::rastroDe($e), 0, self::LIMITE_STACK),
+                'url' => $deRequisicao ? mb_substr(self::caminhoSeguro($request), 0, self::LIMITE_URL) : null,
                 'metodo' => $deRequisicao ? $request->method() : null,
                 'user_id' => self::identificarUsuario(),
             ]);
         } catch (Throwable $falha) {
-            // O cenário que isto cobre é o pior de todos: o PRÓPRIO banco fora do
-            // ar. Aí não há onde gravar a linha, e o rastro volta a ser o arquivo
-            // de log — que continua existindo exatamente para isso.
-            Log::error('[log-erros] não foi possível gravar a ocorrência; erro original: '.$e->getMessage(), [
-                'request_id' => $requestId,
-                'falha_ao_gravar' => $falha->getMessage(),
-            ]);
+            try {
+                // O cenário que isto cobre é o pior de todos: o PRÓPRIO banco fora
+                // do ar. Aí não há onde gravar a linha, e o rastro volta a ser o
+                // arquivo de log — que continua existindo exatamente para isso.
+                Log::error('[log-erros] não foi possível gravar a ocorrência; erro original: '.$e->getMessage(), [
+                    'request_id' => $requestId,
+                    'falha_ao_gravar' => $falha->getMessage(),
+                ]);
+            } catch (Throwable) {
+                /*
+                 * Nem a reserva deu certo — disco cheio, diretório de log sem
+                 * permissão, driver de log mal configurado. Não há terceira
+                 * opção, e deixar a exceção escapar daqui derrubaria o `report()`
+                 * e, com ele, a própria página amigável que o usuário veria. O
+                 * silêncio aqui é a decisão certa: este método promete não lançar,
+                 * e é essa promessa que segura o pedido de pé.
+                 */
+            }
         } finally {
             self::$registrando = false;
         }
+    }
+
+    /**
+     * O endereço da requisição, sem nada que possa ser segredo.
+     *
+     * Duas decisões, e as duas custam pouco e resolvem muito:
+     *
+     *  1. **a consulta nunca é gravada.** O que viaja depois do `?` é escolha de
+     *     quem escreveu a tela, e amanhã pode ser um documento, um termo de busca
+     *     ou um e-mail. Guardar só o caminho tira essa decisão do caminho do erro:
+     *     ninguém consegue, sem perceber, mandar segredo para esta tabela;
+     *  2. **o último trecho de caminho sensível vira máscara.** Alguns segredos
+     *     viajam no próprio caminho — o token de redefinição de senha é o
+     *     arquétipo, e quem o tem troca a senha da conta alheia.
+     *
+     * O que se perde é pouco (dois erros na mesma tela ficam com o mesmo
+     * endereço); o que se evita é uma tabela de credenciais que qualquer
+     * administrador lê e exporta em PDF.
+     */
+    private static function caminhoSeguro(Request $request): string
+    {
+        $caminho = $request->path();
+
+        foreach (self::CAMINHOS_SENSIVEIS as $padrao => $mascara) {
+            if (Str::is($padrao, $caminho)) {
+                return $mascara;
+            }
+        }
+
+        return $caminho;
+    }
+
+    /**
+     * O rastro da exceção, montado quadro a quadro e SEM os argumentos.
+     *
+     * `getTraceAsString()` imprime os argumentos escalares de cada chamada quando
+     * `zend.exception_ignore_args` está desligado — e desligado é o default do
+     * PHP fora do `php.ini-production`. Numa falha durante o login, a senha
+     * digitada entraria no rastro em texto claro e apareceria no detalhe da tela
+     * para quem abrisse a ocorrência.
+     *
+     * Montar o rastro aqui, em vez de confiar na configuração do servidor, tira a
+     * segurança do dado das mãos do ambiente: seja qual for o `php.ini` da máquina
+     * onde o sistema rodar, argumento nenhum passa por este método. (A ini
+     * continua ligada na imagem publicada, como segunda camada — ver o
+     * `dockerfile_redhat`.)
+     *
+     * A exceção ANTERIOR entra junto: quase sempre é ela que diz a causa real, e
+     * sem ela o rastro mostra só o embrulho.
+     */
+    private static function rastroDe(Throwable $e, int $profundidade = 0): string
+    {
+        // O ponto onde a exceção nasceu NÃO está no rastro (nem no do PHP): ele
+        // vive em `getFile()`/`getLine()`. Sem esta linha, a primeira moldura é
+        // quem CHAMOU o código que quebrou, e a origem some.
+        $linhas = ['em '.$e->getFile().'('.$e->getLine().')'];
+        $n = 0;
+
+        foreach ($e->getTrace() as $quadro) {
+            $origem = isset($quadro['file'])
+                ? $quadro['file'].'('.($quadro['line'] ?? '?').')'
+                : '[função interna]';
+
+            $chamada = ($quadro['class'] ?? '').($quadro['type'] ?? '').$quadro['function'];
+
+            // Os parênteses ficam VAZIOS: é exatamente onde os argumentos
+            // apareceriam, e é o que este método existe para não gravar.
+            $linhas[] = '#'.$n++.' '.$origem.': '.$chamada.'()';
+        }
+
+        $linhas[] = '#'.$n.' {main}';
+
+        // O teto de profundidade não é zelo excessivo: um embrulho sobre embrulho
+        // sobre embrulho encheria o corte de texto com camadas e empurraria para
+        // fora justamente a origem, que está no topo.
+        if (($anterior = $e->getPrevious()) !== null && $profundidade < 3) {
+            $linhas[] = '';
+            $linhas[] = 'Causada por '.$anterior::class.': '.$anterior->getMessage();
+            $linhas[] = self::rastroDe($anterior, $profundidade + 1);
+        }
+
+        return implode("\n", $linhas);
     }
 
     /**

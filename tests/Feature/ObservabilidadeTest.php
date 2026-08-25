@@ -4,6 +4,8 @@ use App\Models\LogErro;
 use App\Models\PermissaoSetor;
 use App\Models\Setor;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -81,6 +83,93 @@ test('sem ninguem autenticado, o registro nasce sem dono — e nao inventa um', 
 
     expect(LogErro::latest('id')->first()->user_id)->toBeNull();
 });
+
+test('o registro NAO guarda token de redefinicao nem e-mail na consulta', function () {
+    /*
+     * O caso concreto: uma exceção em `GET /reset-password/{token}?email=…`.
+     * O endereço completo levaria o TOKEN de redefinição e o e-mail para uma
+     * tabela que qualquer administrador lê — e exporta em PDF. Quem tivesse o
+     * token trocaria a senha da conta alheia.
+     */
+    $token = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4';
+    $email = 'fiscal@salvador.ba.gov.br';
+
+    LogErro::registrar(
+        new RuntimeException('falhou ao redefinir'),
+        Request::create("/reset-password/{$token}?email=".urlencode($email), 'GET'),
+    );
+
+    $log = LogErro::latest('id')->first();
+
+    expect($log->url)->not->toContain($token)
+        ->and($log->url)->not->toContain('fiscal@')
+        ->and($log->url)->toBe('reset-password/[token]');
+});
+
+test('a consulta NUNCA e gravada, nem em caminho comum', function () {
+    // O que vai na consulta é escolha de quem escreveu a tela, e amanhã pode ser
+    // um documento ou um termo de busca. Guardar só o caminho tira a decisão do
+    // caminho do erro — não há como alguém, sem perceber, mandar segredo para cá.
+    LogErro::registrar(
+        new RuntimeException('qualquer'),
+        Request::create('/retaguarda/logs?de=2026-01-01&segredo=nao-deve-aparecer', 'GET'),
+    );
+
+    expect(LogErro::latest('id')->first()->url)->toBe('retaguarda/logs');
+});
+
+test('o rastro NAO carrega os argumentos passados as funcoes', function () {
+    /*
+     * O PHP guarda os argumentos de cada quadro da pilha quando
+     * `zend.exception_ignore_args` está desligado — e desligado é o default fora
+     * do php.ini de produção. Aí a senha digitada no login entra no rastro em
+     * texto claro e aparece no detalhe da tela para quem abrir a ocorrência.
+     *
+     * A ini é ajustada aqui de propósito, para o teste exercitar o pior caso: a
+     * primeira asserção prova que o ajuste pegou (o rastro CRU tem o segredo), e
+     * a segunda prova que o que gravamos não tem.
+     *
+     * O segredo é curto porque o PHP corta o argumento em 15 caracteres no rastro
+     * — o que NÃO diminui o vazamento (os 15 primeiros de uma senha já bastam
+     * para quem tenta adivinhar o resto), mas faria a asserção mentir se o texto
+     * do teste fosse mais longo que isso.
+     */
+    ini_set('zend.exception_ignore_args', '0');
+
+    $entrar = function (string $senha) {
+        throw new RuntimeException('falha ao autenticar');
+    };
+
+    try {
+        $entrar('p4ssw0rd-real');
+    } catch (Throwable $e) {
+        expect($e->getTraceAsString())->toContain('p4ssw0rd-real');
+
+        report($e);
+    }
+
+    expect(LogErro::latest('id')->first()->stack)->not->toContain('p4ssw0rd-real');
+});
+
+test('nem gravar no arquivo de log pode derrubar o pedido', function () {
+    /*
+     * O cenário duplo: o banco fora do ar E o arquivo de log inacessível (disco
+     * cheio, diretório sem permissão). A captura cai na reserva, e a reserva
+     * também falha — sem a segunda guarda, a exceção escaparia daqui e derrubaria
+     * até a página amigável que existe justamente para esse momento.
+     *
+     * Chama-se `registrar()` direto, e não `report()`: a promessa sob teste é a
+     * DESTE método ("nunca lança"). O `report()` do framework grava no log por
+     * conta própria depois de nós, e com o log quebrado ele estouraria de
+     * qualquer jeito — isso não está sob o nosso controle e não é o que a guarda
+     * promete.
+     */
+    Schema::drop('log_erros');
+
+    Log::shouldReceive('error')->andThrow(new RuntimeException('storage ilegível'));
+
+    LogErro::registrar(new RuntimeException('erro com tudo fora'));
+})->throwsNoExceptions();
 
 test('mensagem e rastro sao cortados no limite declarado', function () {
     // Sem corte, a mensagem de um erro de banco (que carrega o SQL inteiro) e o

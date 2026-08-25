@@ -35,7 +35,12 @@ interface Ocorrencia {
     ocorridoEm: string | null;
     classe: string;
     mensagem: string;
-    url: string | null;
+    /**
+     * O CAMINHO da requisição, já sem a consulta e com os trechos sensíveis
+     * mascarados pelo servidor (`reset-password/[token]`). Nunca o endereço
+     * completo: a consulta poderia carregar e-mail, documento ou termo de busca.
+     */
+    caminho: string | null;
     metodo: string | null;
     usuario: string | null;
 }
@@ -50,19 +55,6 @@ const FACETAS = [
         valor: 'sem-usuario' as const,
     },
 ];
-
-/** Só o caminho do endereço: o domínio se repete em toda linha e não informa nada. */
-function caminho(url: string | null): string {
-    if (!url) {
-        return VAZIO;
-    }
-
-    try {
-        return new URL(url).pathname;
-    } catch {
-        return url;
-    }
-}
 
 export default function Logs({
     logs,
@@ -105,7 +97,7 @@ export default function Logs({
                 log.requestId,
                 log.classe,
                 log.mensagem,
-                log.url,
+                log.caminho,
                 log.metodo,
                 log.usuario,
             ]);
@@ -177,7 +169,7 @@ export default function Logs({
         requestId: log.requestId ?? VAZIO,
         classe: log.classe,
         mensagem: log.mensagem,
-        caminho: caminho(log.url),
+        caminho: log.caminho ?? VAZIO,
         metodo: log.metodo ?? VAZIO,
         usuario: log.usuario ?? 'sem usuário',
     }));
@@ -328,8 +320,8 @@ export default function Logs({
                                     Mensagem
                                 </ThOrdenavel>
                                 <ThOrdenavel
-                                    campo="url"
-                                    acessor={(log) => caminho(log.url)}
+                                    campo="caminho"
+                                    acessor="caminho"
                                     ord={ord}
                                 >
                                     Caminho
@@ -390,7 +382,7 @@ export default function Logs({
                                             <span className="selo selo-neutro">
                                                 {log.metodo ?? VAZIO}
                                             </span>{' '}
-                                            {caminho(log.url)}
+                                            {log.caminho ?? VAZIO}
                                         </td>
                                         <td>
                                             {log.usuario ?? (

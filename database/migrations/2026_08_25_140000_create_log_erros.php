@@ -36,6 +36,14 @@ return new class extends Migration
             $table->text('mensagem');
             $table->text('stack')->nullable();
 
+            /*
+             * O CAMINHO da requisição — nunca o endereço completo.
+             *
+             * A consulta (o que vem depois do `?`) fica de fora por decisão de
+             * segurança, e o último trecho de caminhos sensíveis entra mascarado:
+             * o token de redefinição de senha viaja no próprio caminho, e quem o
+             * tivesse trocaria a senha da conta alheia. Ver `LogErro`.
+             */
             $table->string('url', 500)->nullable();
             $table->string('metodo', 10)->nullable();
             $table->unsignedBigInteger('user_id')->nullable();

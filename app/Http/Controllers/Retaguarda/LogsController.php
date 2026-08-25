@@ -75,7 +75,9 @@ class LogsController extends Controller
                 'ocorridoEm' => $log->created_at?->format('Y-m-d\TH:i:s'),
                 'classe' => $log->classe,
                 'mensagem' => $log->mensagem,
-                'url' => $log->url,
+                // Já gravado como CAMINHO, sem a consulta e com os trechos
+                // sensíveis mascarados — ver `LogErro::caminhoSeguro()`.
+                'caminho' => $log->url,
                 'metodo' => $log->metodo,
                 'usuario' => $log->usuario?->name,
             ]);
