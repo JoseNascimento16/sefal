@@ -108,6 +108,17 @@ return [
                     'setores' => ['administrador'],
                 ],
                 [
+                    'rotulo' => 'Acompanhamento de Requisitos',
+                    'rota' => 'retaguarda.acompanhamento-de-requisitos.index',
+                    'icone' => 'requisitos',
+                    'slug' => 'acompanhamento-de-requisitos',
+                    // Só o administrador: a tela é o retrato da CONSTRUÇÃO do
+                    // sistema (o que tem requisito escrito, o que divergiu), não
+                    // da operação. Quem fiscaliza e quem gerencia a fiscalização
+                    // não têm decisão a tomar a partir dela.
+                    'setores' => ['administrador'],
+                ],
+                [
                     'rotulo' => 'Modo Gerente',
                     'rota' => 'retaguarda.modo-gerente.index',
                     'icone' => 'permissoes',

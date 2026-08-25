@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
@@ -72,6 +73,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [MonitoramentoParametrizacoesController::class, 'index'])->name('index');
         Route::get('profundo', [MonitoramentoParametrizacoesController::class, 'profundo'])->name('profundo');
     });
+
+    /*
+     * Acompanhamento de Requisitos — o que está construído bate com o escrito?
+     *
+     * Só GET: o mapa vive em `config/acompanhamento_requisitos.php`, versionado
+     * junto com o código que ele descreve. Editar por tela daria dois donos à
+     * mesma informação, e um dia os dois discordariam.
+     */
+    Route::get('retaguarda/acompanhamento-de-requisitos', [AcompanhamentoRequisitosController::class, 'index'])
+        ->name('retaguarda.acompanhamento-de-requisitos.index');
 
     /*
      * Exportação de LISTAGEM — o ponto único de PDF/XLSX/DOCX de toda grade e de
