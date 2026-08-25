@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
     CircleDot,
     ClipboardCheck,
+    FileBarChart,
     KeyRound,
     LayoutGrid,
     Map,
@@ -27,6 +28,7 @@ const ICONES: Record<string, LucideIcon> = {
     areas: Map,
     usuarios: Users,
     documentos: ScrollText,
+    relatorios: FileBarChart,
     permissoes: KeyRound,
     padrao: CircleDot,
 };

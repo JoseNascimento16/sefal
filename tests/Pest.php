@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Tests\TestCase;
 
 /*
@@ -44,7 +45,35 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Grava o conteúdo de um XLSX exportado num arquivo temporário — o
+ * PhpSpreadsheet lê de caminho, não de string.
+ */
+function arquivoTemporarioXlsx(string $conteudo): string
 {
-    // ..
+    $caminho = tempnam(sys_get_temp_dir(), 'exp').'.xlsx';
+    file_put_contents($caminho, $conteudo);
+
+    return $caminho;
+}
+
+/**
+ * O texto de uma aba, achatado — o que uma pessoa leria ao abrir o arquivo.
+ *
+ * Mora aqui porque dois arquivos de teste inspecionam planilha exportada, e duas
+ * cópias do mesmo leitor divergiriam no primeiro ajuste.
+ */
+function textoDaAba(?Worksheet $aba): string
+{
+    if ($aba === null) {
+        return '';
+    }
+
+    $texto = '';
+
+    foreach ($aba->toArray(null, false, false, false) as $linha) {
+        $texto .= implode(' | ', array_map(fn ($v) => (string) $v, $linha))."\n";
+    }
+
+    return $texto;
 }
