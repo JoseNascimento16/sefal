@@ -39,10 +39,13 @@ export function Sidebar({
                     <ShieldCheck size={22} aria-hidden />
                 </span>
                 <span>
-                    <span className="rt-marca-nome">Fiscalização</span>
-                    <span className="rt-marca-sub">
-                        SEMOP · Permissionários
-                    </span>
+                    <span className="rt-marca-nome">SEFAL</span>
+                    {/* O selo é estreito (272px de menu, menos o brasão): a
+                        linha de apoio tem de caber em uma linha em maiúsculas.
+                        Daí o recorte — "SEMOP · Fiscalização" —, com o órgão
+                        por extenso no pé do menu e o nome do sistema por
+                        extenso na tela de entrar, onde há espaço para ele. */}
+                    <span className="rt-marca-sub">SEMOP · Fiscalização</span>
                 </span>
             </Link>
 

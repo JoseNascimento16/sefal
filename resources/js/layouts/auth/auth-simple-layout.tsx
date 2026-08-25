@@ -38,8 +38,21 @@ export default function AuthSimpleLayout({
                     <span className="rt-marca-selo">
                         <ShieldCheck size={22} aria-hidden />
                     </span>
-                    <span className="rt-marca-nome" style={{ fontSize: 17 }}>
-                        Fiscalização de Permissionários
+                    <span
+                        className="rt-marca-nome"
+                        style={{ fontSize: 24, letterSpacing: '0.02em' }}
+                    >
+                        SEFAL
+                    </span>
+                    <span
+                        style={{
+                            marginTop: -6,
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: 'var(--sm-texto-fraco)',
+                        }}
+                    >
+                        Sistema de Fiscalização de Ambulantes
                     </span>
                     <span className="rt-marca-sub">
                         SEMOP · Prefeitura de Salvador

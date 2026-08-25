@@ -19,7 +19,7 @@ use Tests\TestCase;
  * tela de entrar e fecharia um LOOP de redirecionamento — a pessoa logada
  * digitaria o endereço nu e o navegador morreria sem dizer o porquê.
  */
-class ExampleTest extends TestCase
+class PortaDeEntradaTest extends TestCase
 {
     use RefreshDatabase;
 

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Fiscalização de Permissionários'),
+    'name' => env('APP_NAME', 'SEFAL'),
 
     /*
     |--------------------------------------------------------------------------

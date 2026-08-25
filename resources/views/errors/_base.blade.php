@@ -14,7 +14,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $titulo ?? 'Erro' }} — Fiscalização de Permissionários</title>
+    <title>{{ $titulo ?? 'Erro' }} — SEFAL</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -66,7 +66,7 @@
             </div>
         @endif
 
-        <div class="rodape">SEMOP · Fiscalização de Permissionários — Prefeitura de Salvador</div>
+        <div class="rodape">SEMOP · SEFAL — Prefeitura de Salvador</div>
     </main>
 </body>
 </html>

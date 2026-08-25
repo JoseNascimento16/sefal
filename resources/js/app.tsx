@@ -6,8 +6,7 @@ import AuthLayout from '@/layouts/auth-layout';
 import RetaguardaLayout from '@/layouts/retaguarda-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
-const appName =
-    import.meta.env.VITE_APP_NAME || 'Fiscalização de Permissionários';
+const appName = import.meta.env.VITE_APP_NAME || 'SEFAL';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
