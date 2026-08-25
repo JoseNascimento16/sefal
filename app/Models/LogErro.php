@@ -75,10 +75,18 @@ class LogErro extends Model
      * @var array<string, string> padrão de caminho => o que gravar no lugar
      */
     private const CAMINHOS_SENSIVEIS = [
-        // Fortify: o formulário de redefinição recebe o token no caminho e o
-        // e-mail na consulta.
+        /*
+         * Fortify: o formulário de redefinição recebe o token no caminho e o
+         * e-mail na consulta.
+         *
+         * Só o caminho REAL entra. O endereço do Fortify é configurável, e havia
+         * aqui um segundo padrão (`password/reset/*`) para a variante que este
+         * sistema não usa — padrão que nunca casaria com rota alguma e que, de
+         * quebra, dava a impressão de que a lista cobre variantes hipotéticas.
+         * Ela não cobre: quem cobre é o teste, que confere as rotas de verdade e
+         * reprova se o endereço mudar sem a máscara acompanhar.
+         */
         'reset-password/*' => 'reset-password/[token]',
-        'password/reset/*' => 'password/reset/[token]',
         /*
          * Link assinado de confirmação de e-mail: os dois últimos trechos são o
          * identificador e a assinatura. O caminho é o do Fortify de verdade

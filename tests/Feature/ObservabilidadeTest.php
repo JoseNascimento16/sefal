@@ -113,9 +113,16 @@ test('TODO caminho que carrega segredo entra mascarado — a lista nao pode enve
      * nova com token no endereço — confirmação de e-mail, link assinado de
      * validação por QR — para o segredo passar a ser gravado sem ninguém notar.
      *
-     * Em vez de conferir a lista, confere-se o UNIVERSO: toda rota cujo endereço
-     * tem `{token}`, `{hash}` ou `{signature}` é exercitada com um segredo de
-     * amostra, e o que ficou gravado não pode conter esse segredo.
+     * ⚠️ O QUE ESTE TESTE ALCANÇA, e o que não alcança. Ele não conhece "segredo":
+     * ele reconhece os NOMES de parâmetro que o framework usa para segredo —
+     * `{token}`, `{hash}`, `{signature}`. É heurística, e por isso uma rota que
+     * chame o parâmetro de `{codigo}`, `{assinatura}` ou `{chave}` passa por
+     * baixo dele sem acusar nada. Quem escreve rota com segredo no caminho
+     * continua responsável por batizar o parâmetro com um desses nomes (o que já
+     * é o hábito do framework) ou por acrescentar o padrão à máscara à mão.
+     *
+     * Dentro desse alcance, cada rota é exercitada com um segredo de amostra, e o
+     * que ficou gravado não pode conter esse segredo.
      *
      * O caminho é exercitado por `registrar()`, e não pelo método de máscara
      * direto: o que interessa provar é o que CHEGA À TABELA — é dali que o
@@ -136,12 +143,30 @@ test('TODO caminho que carrega segredo entra mascarado — a lista nao pode enve
     $desprotegidos = [];
 
     foreach ($sensiveis as $uri) {
+        /*
+         * O registro lido tem de ser NOVO, e essa exigência não é zelo: por
+         * contrato, `registrar()` engole qualquer falha (ver a promessa "nunca
+         * lança"). Sem esta trava, uma gravação que falhasse em silêncio faria o
+         * teste ler de novo o registro MASCARADO da rota anterior e passar — e
+         * isso aconteceria justamente no dia em que a rota nova nascesse, que é o
+         * dia para o qual este teste existe.
+         */
+        $antes = (int) (LogErro::max('id') ?? 0);
+
         LogErro::registrar(
             new RuntimeException('estouro no caminho sensível'),
             Request::create('/'.preg_replace('/\{[^}]+\}/', $marca, $uri), 'GET'),
         );
 
-        $caminho = (string) LogErro::latest('id')->first()->caminho;
+        $registro = LogErro::where('id', '>', $antes)->latest('id')->first();
+
+        if ($registro === null) {
+            $desprotegidos[] = $uri.' (não gerou registro novo — o teste não exercitou nada)';
+
+            continue;
+        }
+
+        $caminho = (string) $registro->caminho;
 
         if (str_contains($caminho, $marca)) {
             $desprotegidos[] = $uri.' (gravou o segredo)';
@@ -150,7 +175,7 @@ test('TODO caminho que carrega segredo entra mascarado — a lista nao pode enve
         // Caminho vazio passaria na conferência acima sem provar nada: seria a
         // asserção verde de um teste que deixou de exercitar o que promete.
         if (trim($caminho) === '') {
-            $desprotegidos[] = $uri.' (não gravou caminho algum — o teste não exercitou nada)';
+            $desprotegidos[] = $uri.' (gravou o registro sem caminho algum)';
         }
     }
 
