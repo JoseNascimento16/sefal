@@ -56,6 +56,53 @@ test('a desativacao vale para qualquer tela autenticada, nao so para a inicial',
     $this->assertGuest();
 });
 
+test('quem grava algo depois de ser desativado cai na tela de login, e nao num erro de metodo', function () {
+    // Um PATCH/PUT/DELETE barrado com 302 faria o navegador REPETIR o mesmo verbo
+    // contra /login — que não o aceita — e a pessoa levaria um 405 no lugar da
+    // mensagem. Por isso a guarda responde 303 ("See Other"), que manda repetir
+    // como GET. É a lei do projeto: ninguém é barrado em silêncio.
+    $u = User::factory()->create(['ativo' => true]);
+
+    $this->actingAs($u);
+    $u->update(['ativo' => false]);
+
+    $this->patch(route('profile.update'), ['name' => 'Novo Nome', 'email' => $u->email])
+        ->assertStatus(303)
+        ->assertRedirect(route('login'))
+        ->assertSessionHasErrors(['login' => 'Usuário inativo — procure o administrador.']);
+
+    $this->assertGuest();
+    expect($u->refresh()->name)->not->toBe('Novo Nome');
+});
+
+test('o mesmo vale para a requisicao vinda do Inertia', function () {
+    $u = User::factory()->create(['ativo' => true]);
+
+    $this->actingAs($u);
+    $u->update(['ativo' => false]);
+
+    $this->withHeaders(['X-Inertia' => 'true'])
+        ->patch(route('profile.update'), ['name' => 'Novo Nome', 'email' => $u->email])
+        ->assertStatus(303)
+        ->assertRedirect(route('login'));
+
+    $this->assertGuest();
+});
+
+test('a tela de login abre de verdade depois do bloqueio numa gravacao', function () {
+    $u = User::factory()->create(['ativo' => true]);
+
+    $this->actingAs($u);
+    $u->update(['ativo' => false]);
+
+    // Seguindo o redirecionamento (o navegador refaz como GET), a pessoa vê a
+    // tela de login — não uma página de erro.
+    $this->followingRedirects()
+        ->patch(route('profile.update'), ['name' => 'Novo Nome', 'email' => $u->email])
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('auth/login'));
+});
+
 test('nem o continuar conectado mantem dentro quem foi desativado', function () {
     $u = User::factory()->create(['login' => 'F3000', 'password' => bcrypt('segredo1'), 'ativo' => true]);
 

@@ -154,12 +154,15 @@ return [
     | - `twoFactorAuthentication` e `passkeys`: o acesso pedido é matrícula +
     |   senha, com redefinição por e-mail. Enquanto ninguém pedir segundo fator
     |   ou chave de acesso, eles ficam fora — inclusive das rotas e das telas.
+    | - `emailVerification`: a conta não nasce de um formulário público, e sim
+    |   pelas mãos de um administrador, que já informa o e-mail funcional do
+    |   servidor. Não há o que confirmar: pedir confirmação só criaria um
+    |   pedágio a mais entre a pessoa e o trabalho dela.
     |
     */
 
     'features' => [
         Features::resetPasswords(),
-        Features::emailVerification(),
     ],
 
 ];

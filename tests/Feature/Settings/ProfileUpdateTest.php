@@ -6,6 +6,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * "Meu Perfil" — o que a própria pessoa mantém: nome e e-mail.
+ *
+ * Os testes de verificação de e-mail e de autoexclusão de conta que vinham do
+ * starter kit saíram: os dois caminhos não existem neste sistema, e a prova
+ * disso vive em `tests/Feature/Auth/RecursosDesligadosTest.php`.
+ */
 class ProfileUpdateTest extends TestCase
 {
     use RefreshDatabase;
@@ -28,8 +35,8 @@ class ProfileUpdateTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->patch(route('profile.update'), [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
+                'name' => 'Fiscal de Teste',
+                'email' => 'fiscal@salvador.ba.gov.br',
             ]);
 
         $response
@@ -38,62 +45,40 @@ class ProfileUpdateTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertSame('Fiscal de Teste', $user->name);
+        $this->assertSame('fiscal@salvador.ba.gov.br', $user->email);
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()
+    public function test_the_matricula_is_not_changed_by_the_user()
     {
-        $user = User::factory()->create();
+        // A matrícula identifica o servidor e é dada pela administração: mandá-la
+        // no formulário não muda nada (o `validated()` só traz nome e e-mail).
+        $user = User::factory()->create(['login' => 'f7001']);
 
-        $response = $this
+        $this
             ->actingAs($user)
             ->patch(route('profile.update'), [
-                'name' => 'Test User',
+                'name' => $user->name,
                 'email' => $user->email,
-            ]);
+                'login' => 'f9999',
+            ])
+            ->assertSessionHasNoErrors();
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
-
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $this->assertSame('f7001', $user->refresh()->login);
     }
 
-    public function test_user_can_delete_their_account()
+    public function test_the_email_must_be_unique()
     {
+        $outro = User::factory()->create();
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->delete(route('profile.destroy'), [
-                'password' => 'password',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('home'));
-
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
-    }
-
-    public function test_correct_password_must_be_provided_to_delete_account()
-    {
-        $user = User::factory()->create();
-
-        $response = $this
+        $this
             ->actingAs($user)
             ->from(route('profile.edit'))
-            ->delete(route('profile.destroy'), [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrors('password')
-            ->assertRedirect(route('profile.edit'));
-
-        $this->assertNotNull($user->fresh());
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $outro->email,
+            ])
+            ->assertSessionHasErrors('email');
     }
 }

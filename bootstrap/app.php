@@ -21,10 +21,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // A guarda de usuário ativo vai no grupo `web` inteiro, e não numa rota ou
         // outra: assim vale para QUALQUER tela autenticada, inclusive as que ainda
         // vão nascer, sem depender de alguém lembrar de pendurá-la lá.
+        //
+        // A POSIÇÃO importa: a guarda vem DEPOIS do middleware do Inertia, para que a
+        // resposta dela passe pelo tratamento de redirecionamento dele (é o Inertia que
+        // transforma 302 em 303 nas requisições PUT/PATCH/DELETE). Se ela viesse antes,
+        // envolveria o Inertia em vez de ser envolvida por ele: o navegador repetiria o
+        // PATCH contra a tela de login e receberia 405 no lugar da tela — barrado em
+        // silêncio, exatamente o que a lei do projeto proíbe.
         $middleware->web(append: [
             HandleAppearance::class,
-            GarantirUsuarioAtivo::class,
             HandleInertiaRequests::class,
+            GarantirUsuarioAtivo::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
     })

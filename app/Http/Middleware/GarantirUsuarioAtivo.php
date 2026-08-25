@@ -33,7 +33,15 @@ class GarantirUsuarioAtivo
                 $request->session()->regenerateToken();
             }
 
-            return redirect()->route('login')->withErrors([
+            // 303 ("See Other") quando o método não é GET: o navegador tem de repetir o
+            // caminho como GET. Com 302 ele repetiria o PUT/PATCH/DELETE contra a tela de
+            // login, que não aceita esses verbos — a pessoa levaria um 405 no lugar da
+            // mensagem. O middleware do Inertia já faz essa troca nas requisições dele;
+            // aqui ela é explícita para valer também fora do Inertia (formulário comum,
+            // requisição de fora da tela), sem depender da ordem em que as guardas rodam.
+            $status = $request->isMethod('GET') ? 302 : 303;
+
+            return redirect()->route('login', status: $status)->withErrors([
                 'login' => AutenticarPorMatricula::USUARIO_INATIVO,
             ]);
         }
