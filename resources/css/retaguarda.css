@@ -1,0 +1,841 @@
+/* ============================================================================
+   SEMOP · Fiscalização de Permissionários — Design System da Retaguarda
+   ----------------------------------------------------------------------------
+   Identidade própria: PETRÓLEO (#0d5c63) como cor institucional e ÂMBAR
+   (#f4a300) como cor de ação e de sinalização — a dupla que a fiscalização de
+   rua usa em placa, cone e faixa. A tipografia é a mesma do resto do app
+   (nenhuma fonte nova é carregada; o `body` já aplica a família).
+
+   COMO ESTE ARQUIVO CONVIVE COM O TAILWIND
+   Os tokens são prefixados `--sm-*` de propósito. O tema do Tailwind/shadcn usa
+   nomes genéricos (`--accent`, `--border`, `--radius-lg`); redefini-los aqui
+   mudaria o significado das utilidades (`bg-accent`, `rounded-lg`) em todo o
+   sistema. Com o prefixo, as duas linguagens coexistem sem uma pisar na outra.
+
+   TEMA ESCURO — DOIS GATILHOS
+   `.dark` no <html> (é o que o hook `use-appearance` liga, seguindo o sistema
+   operacional) e `[data-theme="dark"]` (chave explícita, usada pelo botão de
+   tema da barra superior e por qualquer contêiner que precise inverter só um
+   trecho). Os dois trocam os MESMOS tokens: nenhuma cor pode ter valor único
+   dentro de um só gatilho, senão o outro caminho mostra a tela pela metade.
+
+   @keyframes ficam no FIM e no NÍVEL RAIZ: aninhados em @layer, o minificador
+   da build de produção (lightningcss) os descarta em silêncio.
+   ============================================================================ */
+
+:root {
+    /* --- Marca --- */
+    --sm-primaria: #0d5c63;
+    --sm-primaria-forte: #0a474d;
+    --sm-primaria-suave: rgba(13, 92, 99, 0.1);
+    --sm-primaria-brilho: rgba(13, 92, 99, 0.18);
+    --sm-acao: #f4a300;
+    --sm-acao-forte: #d68f00;
+    --sm-acao-suave: rgba(244, 163, 0, 0.14);
+
+    /* --- Superfícies e texto (tema claro) --- */
+    --sm-app: #f7f8f8;
+    --sm-superficie: #ffffff;
+    --sm-superficie-2: #fbfcfc;
+    --sm-muted: #eef1f1;
+    --sm-texto: #15292b;
+    --sm-texto-corpo: #35494b;
+    --sm-texto-fraco: #6b8082;
+    --sm-borda: #dfe5e5;
+    --sm-borda-forte: #c3cfcf;
+
+    /* --- Sinalização --- */
+    --sm-perigo: #b3261e;
+    --sm-perigo-suave: rgba(179, 38, 30, 0.1);
+    --sm-ok: #0f7a52;
+    --sm-ok-suave: rgba(15, 122, 82, 0.12);
+    --sm-aviso: #8a5300;
+    --sm-aviso-suave: rgba(244, 163, 0, 0.16);
+    --sm-info: #0b6f8c;
+    --sm-info-suave: rgba(11, 111, 140, 0.12);
+
+    /* --- Formas --- */
+    --sm-raio-sm: 8px;
+    --sm-raio-md: 12px;
+    --sm-raio-lg: 20px;
+    --sm-raio-full: 9999px;
+
+    --sm-sombra-sm: 0 2px 8px rgba(15, 41, 43, 0.06);
+    --sm-sombra-md: 0 10px 24px rgba(15, 41, 43, 0.09);
+    --sm-sombra-lg: 0 24px 48px rgba(15, 41, 43, 0.16);
+
+    --sm-transicao: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --sm-menu-largura: 272px;
+    --sm-topbar-altura: 68px;
+}
+
+.dark,
+[data-theme='dark'] {
+    --sm-primaria: #4cb3ba;
+    --sm-primaria-forte: #6ec7cd;
+    --sm-primaria-suave: rgba(76, 179, 186, 0.16);
+    --sm-primaria-brilho: rgba(76, 179, 186, 0.24);
+    --sm-acao: #f7b733;
+    --sm-acao-forte: #ffc857;
+    --sm-acao-suave: rgba(247, 183, 51, 0.18);
+
+    --sm-app: #0a1214;
+    --sm-superficie: #111d1f;
+    --sm-superficie-2: #16262a;
+    --sm-muted: #16262a;
+    --sm-texto: #e8f1f1;
+    --sm-texto-corpo: #c3d4d5;
+    --sm-texto-fraco: #8ba4a6;
+    --sm-borda: #23383b;
+    --sm-borda-forte: #33504f;
+
+    --sm-perigo: #f28b84;
+    --sm-perigo-suave: rgba(242, 139, 132, 0.16);
+    --sm-ok: #4ddba4;
+    --sm-ok-suave: rgba(77, 219, 164, 0.16);
+    --sm-aviso: #f7b733;
+    --sm-aviso-suave: rgba(247, 183, 51, 0.18);
+    --sm-info: #57c4e3;
+    --sm-info-suave: rgba(87, 196, 227, 0.16);
+
+    --sm-sombra-sm: 0 2px 8px rgba(0, 0, 0, 0.34);
+    --sm-sombra-md: 0 12px 28px rgba(0, 0, 0, 0.42);
+    --sm-sombra-lg: 0 24px 48px rgba(0, 0, 0, 0.5);
+
+    /* Controles nativos do navegador (lista do <select>, barra de rolagem,
+       seletor de data) desenhados no escuro. Sem isto o Chromium abre a lista
+       com fundo claro e o nosso texto claro por cima: ilegível. */
+    color-scheme: dark;
+}
+
+/* ============================ BOTÕES ============================ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: var(--sm-raio-sm);
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+    white-space: nowrap;
+}
+.btn-sm {
+    padding: 8px 15px;
+    font-size: 13px;
+}
+.btn-block {
+    width: 100%;
+}
+
+/* Primário = petróleo com um fio de âmbar embaixo: a assinatura visual do
+   sistema aparece já no botão principal. */
+.btn-primary {
+    background: var(--sm-primaria);
+    color: #fff;
+    box-shadow: inset 0 -2px 0 var(--sm-acao);
+}
+.btn-primary:hover {
+    background: var(--sm-primaria-forte);
+    box-shadow:
+        inset 0 -2px 0 var(--sm-acao),
+        var(--sm-sombra-md);
+}
+.dark .btn-primary,
+[data-theme='dark'] .btn-primary {
+    color: #06181a;
+}
+
+.btn-secondary {
+    background: var(--sm-superficie);
+    color: var(--sm-texto);
+    border-color: var(--sm-borda-forte);
+}
+.btn-secondary:hover {
+    border-color: var(--sm-primaria);
+    color: var(--sm-primaria);
+}
+
+.btn-perigo {
+    background: var(--sm-perigo);
+    color: #fff;
+}
+.btn-perigo:hover {
+    filter: brightness(0.92);
+}
+.dark .btn-perigo,
+[data-theme='dark'] .btn-perigo {
+    color: #2a0a08;
+}
+
+.btn:disabled,
+.btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+    filter: none;
+}
+.btn:disabled:hover,
+.btn[disabled]:hover {
+    background: inherit;
+}
+
+.icon-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--sm-raio-sm);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie);
+    color: var(--sm-texto-corpo);
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.icon-btn:hover {
+    color: var(--sm-primaria);
+    border-color: var(--sm-primaria);
+}
+.icon-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.icon-btn .ponto {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--sm-acao);
+    border: 2px solid var(--sm-superficie);
+}
+
+/* ============================ FORMULÁRIO ============================ */
+.form-group {
+    margin-bottom: 18px;
+}
+.form-label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sm-texto);
+}
+.form-control {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--sm-texto-corpo);
+    background: var(--sm-superficie);
+    border: 1px solid var(--sm-borda-forte);
+    border-radius: var(--sm-raio-sm);
+    transition: var(--sm-transicao);
+}
+.form-control::placeholder {
+    color: var(--sm-texto-fraco);
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--sm-primaria);
+    box-shadow: 0 0 0 4px var(--sm-primaria-suave);
+}
+.form-control:disabled {
+    background: var(--sm-muted);
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+select.form-control {
+    cursor: pointer;
+}
+.form-ajuda {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--sm-texto-fraco);
+}
+/* Campo com erro: a borda vermelha vem do contêiner marcado, para a tela não
+   precisar espalhar classe condicional em cada input. */
+[data-erro='1'] .form-control {
+    border-color: var(--sm-perigo);
+}
+[data-erro='1'] .form-control:focus {
+    box-shadow: 0 0 0 4px var(--sm-perigo-suave);
+}
+.form-erro {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--sm-perigo);
+}
+
+/* ============================ CARTÕES ============================ */
+.card-premium {
+    background: var(--sm-superficie);
+    border: 1px solid var(--sm-borda);
+    border-radius: var(--sm-raio-lg);
+    box-shadow: var(--sm-sombra-sm);
+    padding: 24px;
+}
+.card-interativo {
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.card-interativo:hover {
+    transform: translateY(-4px);
+    border-color: var(--sm-primaria);
+    box-shadow: var(--sm-sombra-md);
+}
+.card-titulo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sm-texto);
+}
+.card-sub {
+    margin-top: 6px;
+    font-size: 13.5px;
+    color: var(--sm-texto-fraco);
+}
+
+/* ============================ TABELA ============================ */
+.table-wrap {
+    overflow-x: auto;
+}
+table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+table.data-table th {
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--sm-texto-fraco);
+    padding: 0 14px 12px;
+    border-bottom: 1px solid var(--sm-borda);
+}
+table.data-table th.ord {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+table.data-table th.ord:hover {
+    color: var(--sm-texto);
+}
+table.data-table th.ord .ord-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+table.data-table th.ord .ord-ico {
+    opacity: 0.4;
+    transition: var(--sm-transicao);
+}
+table.data-table th.ord:hover .ord-ico {
+    opacity: 0.75;
+}
+table.data-table th.ord.ord-ativa,
+table.data-table th.ord.ord-ativa .ord-ico {
+    color: var(--sm-primaria);
+    opacity: 1;
+}
+table.data-table td {
+    padding: 14px;
+    border-bottom: 1px solid var(--sm-borda);
+    color: var(--sm-texto-corpo);
+    vertical-align: middle;
+    overflow-wrap: break-word;
+}
+table.data-table tbody tr:hover {
+    background: var(--sm-muted);
+}
+table.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+table.data-table tbody tr.clicavel {
+    cursor: pointer;
+}
+/* Protocolo, número e documento não se quebram no meio: com a quebra, o texto
+   fica ilegível e impossível de copiar. A largura sobra rolando o .table-wrap. */
+.cell-id {
+    white-space: nowrap;
+}
+.tabela-vazia {
+    padding: 34px 14px;
+    text-align: center;
+    color: var(--sm-texto-fraco);
+    font-size: 13.5px;
+}
+
+/* ============================ SELOS ============================ */
+.selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: var(--sm-raio-full);
+    font-size: 12px;
+    font-weight: 700;
+}
+.selo-neutro {
+    background: var(--sm-muted);
+    color: var(--sm-texto-fraco);
+}
+.selo-ok {
+    background: var(--sm-ok-suave);
+    color: var(--sm-ok);
+}
+.selo-aviso {
+    background: var(--sm-aviso-suave);
+    color: var(--sm-aviso);
+}
+.selo-perigo {
+    background: var(--sm-perigo-suave);
+    color: var(--sm-perigo);
+}
+.selo-info {
+    background: var(--sm-info-suave);
+    color: var(--sm-info);
+}
+
+/* ============================ ESTRUTURA DA RETAGUARDA ============================ */
+.rt-shell {
+    display: flex;
+    min-height: 100vh;
+    background: var(--sm-app);
+    color: var(--sm-texto-corpo);
+}
+.rt-sidebar {
+    width: var(--sm-menu-largura);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 16px;
+    background: var(--sm-superficie);
+    border-right: 1px solid var(--sm-borda);
+}
+@media (max-width: 900px) {
+    .rt-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 60;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: var(--sm-sombra-lg);
+    }
+    .rt-sidebar.aberta {
+        transform: translateX(0);
+    }
+}
+.rt-veu {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(10, 18, 20, 0.5);
+}
+/* O botão que abre o menu e o ponto em que a barra passa a deslizar por cima do
+   conteúdo compartilham ESTE limite. Com dois valores diferentes (por exemplo o
+   `md` do Tailwind, 768px, e os 900px da barra), sobra uma faixa de larguras em
+   que a barra está escondida e o botão de abrir também: o menu fica inalcançável. */
+.rt-menu-botao {
+    display: none;
+}
+@media (max-width: 900px) {
+    .rt-menu-botao {
+        display: inline-flex;
+    }
+}
+.rt-marca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.rt-marca-selo {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: var(--sm-raio-md);
+    background: linear-gradient(
+        140deg,
+        var(--sm-primaria),
+        var(--sm-primaria-forte)
+    );
+    color: #fff;
+    box-shadow: inset 0 -3px 0 var(--sm-acao);
+}
+.rt-marca-nome {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--sm-texto);
+    line-height: 1.15;
+}
+.rt-marca-sub {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--sm-texto-fraco);
+}
+.rt-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+.rt-menu-secao-titulo {
+    padding: 0 10px 6px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--sm-texto-fraco);
+}
+.rt-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border-radius: var(--sm-raio-sm);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sm-texto-corpo);
+    transition: var(--sm-transicao);
+}
+.rt-menu-item:hover {
+    background: var(--sm-muted);
+    color: var(--sm-texto);
+}
+.rt-menu-item.ativo {
+    background: var(--sm-primaria);
+    color: #fff;
+    box-shadow: var(--sm-sombra-sm);
+}
+.dark .rt-menu-item.ativo,
+[data-theme='dark'] .rt-menu-item.ativo {
+    color: #06181a;
+}
+.rt-menu-vazio {
+    padding: 8px 12px 10px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--sm-texto-fraco);
+}
+.rt-sidebar-pe {
+    padding-top: 14px;
+    border-top: 1px solid var(--sm-borda);
+    font-size: 11.5px;
+    color: var(--sm-texto-fraco);
+}
+
+.rt-principal {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.rt-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: var(--sm-topbar-altura);
+    padding: 12px 26px;
+    background: var(--sm-superficie);
+    border-bottom: 1px solid var(--sm-borda);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+.rt-trilha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--sm-texto-fraco);
+    flex-wrap: wrap;
+}
+.rt-trilha-atual {
+    font-weight: 700;
+    color: var(--sm-texto);
+}
+.rt-topbar-acoes {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+.rt-usuario {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 12px 5px 6px;
+    border-radius: var(--sm-raio-full);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie);
+}
+.rt-avatar {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(
+        140deg,
+        var(--sm-primaria),
+        var(--sm-primaria-forte)
+    );
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 800;
+}
+.rt-usuario-nome {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--sm-texto);
+    line-height: 1.15;
+}
+.rt-usuario-matricula {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--sm-texto-fraco);
+}
+.rt-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 50;
+    min-width: 250px;
+    padding: 14px 16px;
+    background: var(--sm-superficie);
+    border: 1px solid var(--sm-borda);
+    border-radius: var(--sm-raio-md);
+    box-shadow: var(--sm-sombra-lg);
+    text-align: left;
+}
+.rt-conteudo {
+    flex: 1;
+    padding: 26px;
+}
+.rt-page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+}
+.rt-page-head .sobrancelha {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--sm-acao-forte);
+}
+.rt-page-head h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--sm-texto);
+    line-height: 1.15;
+}
+.rt-page-head p {
+    margin-top: 6px;
+    font-size: 14.5px;
+    color: var(--sm-texto-fraco);
+}
+.rt-grid-atalhos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+}
+.rt-atalho {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+}
+.rt-atalho-ico {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--sm-raio-md);
+    background: var(--sm-primaria-suave);
+    color: var(--sm-primaria);
+}
+.rt-atalho.em-breve {
+    opacity: 0.62;
+}
+
+/* ============================ BUSCA INTELIGENTE ============================ */
+.busca-campo {
+    position: relative;
+}
+.busca-campo .busca-marca {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--sm-acao);
+}
+.busca-campo input {
+    width: 100%;
+    padding: 15px 84px 15px 46px;
+    font-size: 15.5px;
+    font-family: inherit;
+    color: var(--sm-texto-corpo);
+    background: var(--sm-superficie);
+    border: 1px solid var(--sm-borda-forte);
+    border-radius: 14px;
+    box-shadow: var(--sm-sombra-sm);
+}
+.busca-campo input:focus {
+    outline: none;
+    border-color: var(--sm-primaria);
+    box-shadow: 0 0 0 4px var(--sm-primaria-suave);
+}
+.busca-campo-acoes {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.busca-exemplos {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--sm-texto-fraco);
+}
+.busca-exemplo {
+    padding: 4px 12px;
+    border: 1px solid var(--sm-borda);
+    border-radius: var(--sm-raio-full);
+    background: var(--sm-superficie);
+    color: var(--sm-texto-corpo);
+    font-size: 12px;
+    cursor: pointer;
+}
+.busca-exemplo:hover {
+    border-color: var(--sm-primaria);
+    color: var(--sm-primaria);
+}
+
+/* ============================ CAMADA SOBREPOSTA ============================ */
+.sobreposicao {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(10, 18, 20, 0.55);
+}
+.sobreposicao-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+.sobreposicao-texto {
+    font-size: 14px;
+    color: var(--sm-texto-corpo);
+    margin-bottom: 20px;
+    overflow-wrap: anywhere;
+}
+.sobreposicao-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* ============================ PAGINAÇÃO ============================ */
+.paginacao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 4px 0;
+    font-size: 13px;
+    color: var(--sm-texto-fraco);
+}
+.paginacao strong {
+    color: var(--sm-texto);
+}
+.paginacao-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.paginacao-pagina {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: var(--sm-raio-sm);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie);
+    color: var(--sm-texto-corpo);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.paginacao-pagina[aria-current='page'] {
+    background: var(--sm-primaria);
+    border-color: var(--sm-primaria);
+    color: #fff;
+}
+.dark .paginacao-pagina[aria-current='page'],
+[data-theme='dark'] .paginacao-pagina[aria-current='page'] {
+    color: #06181a;
+}
+
+/* ============================ ANIMAÇÕES ============================ */
+/* Nível raiz, nunca dentro de @layer — ver o cabeçalho do arquivo. */
+@keyframes girar-acao {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner-acao {
+    display: inline-block;
+    animation: girar-acao 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner-acao {
+        animation-duration: 2s;
+    }
+}

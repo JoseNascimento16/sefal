@@ -1,35 +1,67 @@
-import { Link } from '@inertiajs/react';
-import AppLogoIcon from '@/components/app-logo-icon';
-import { home } from '@/routes';
+import { ShieldCheck } from 'lucide-react';
 import type { AuthLayoutProps } from '@/types';
 
+/**
+ * Casca das telas de acesso (entrar, esqueci minha senha, definir senha).
+ *
+ * Mesma identidade da Retaguarda — petróleo com o fio âmbar —, para quem entra
+ * reconhecer o sistema antes de digitar a matrícula. Sem link para o site: aqui
+ * só se entra.
+ */
 export default function AuthSimpleLayout({
     children,
     title,
     description,
 }: AuthLayoutProps) {
     return (
-        <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col items-center gap-4">
-                        <Link
-                            href={home()}
-                            className="flex flex-col items-center gap-2 font-medium"
-                        >
-                            <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                <AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                            </div>
-                            <span className="sr-only">{title}</span>
-                        </Link>
+        <div
+            style={{
+                minHeight: '100svh',
+                display: 'grid',
+                placeItems: 'center',
+                padding: 24,
+                background:
+                    'radial-gradient(circle at 20% 0%, var(--sm-primaria-suave), transparent 55%), var(--sm-app)',
+            }}
+        >
+            <div style={{ width: '100%', maxWidth: 420 }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 10,
+                        marginBottom: 22,
+                        textAlign: 'center',
+                    }}
+                >
+                    <span className="rt-marca-selo">
+                        <ShieldCheck size={22} aria-hidden />
+                    </span>
+                    <span className="rt-marca-nome" style={{ fontSize: 17 }}>
+                        Fiscalização de Permissionários
+                    </span>
+                    <span className="rt-marca-sub">
+                        SEMOP · Prefeitura de Salvador
+                    </span>
+                </div>
 
-                        <div className="space-y-2 text-center">
-                            <h1 className="text-xl font-medium">{title}</h1>
-                            <p className="text-center text-sm text-muted-foreground">
-                                {description}
-                            </p>
-                        </div>
-                    </div>
+                <div className="card-premium">
+                    <h1
+                        style={{
+                            fontSize: 20,
+                            fontWeight: 800,
+                            color: 'var(--sm-texto)',
+                        }}
+                    >
+                        {title}
+                    </h1>
+                    {description && (
+                        <p className="card-sub" style={{ marginBottom: 22 }}>
+                            {description}
+                        </p>
+                    )}
+
                     {children}
                 </div>
             </div>

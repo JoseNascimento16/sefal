@@ -2,6 +2,11 @@
 
 @import 'tw-animate-css';
 
+/* Design System da Retaguarda (paleta SEMOP + classes de contrato). Tokens
+   prefixados `--sm-*` para não colidir com o tema do Tailwind — ver o cabeçalho
+   do arquivo. */
+@import './retaguarda.css';
+
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 

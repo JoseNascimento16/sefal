@@ -1,12 +1,8 @@
 import { Form, Head } from '@inertiajs/react';
-import InputError from '@/components/input-error';
+import { LogIn } from 'lucide-react';
 import PasswordInput from '@/components/password-input';
+import { BotaoAcao } from '@/components/retaguarda/acao';
 import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -20,75 +16,113 @@ export default function Login({ status, canResetPassword }: Props) {
         <>
             <Head title="Entrar" />
 
-            <Form
-                {...store.form()}
-                resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
-            >
+            {status && (
+                <p
+                    className="selo selo-ok"
+                    style={{ marginBottom: 16, display: 'inline-flex' }}
+                >
+                    {status}
+                </p>
+            )}
+
+            <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="login">Matrícula</Label>
-                                <Input
-                                    id="login"
-                                    type="text"
-                                    name="login"
-                                    required
-                                    autoFocus
-                                    tabIndex={1}
-                                    autoComplete="username"
-                                    placeholder="Sua matrícula"
-                                />
-                                <InputError message={errors.login} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Senha</Label>
-                                    {canResetPassword && (
-                                        <TextLink
-                                            href={request()}
-                                            className="ml-auto text-sm"
-                                            tabIndex={5}
-                                        >
-                                            Esqueci minha senha
-                                        </TextLink>
-                                    )}
-                                </div>
-                                <PasswordInput
-                                    id="password"
-                                    name="password"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="current-password"
-                                    placeholder="Senha"
-                                />
-                                <InputError message={errors.password} />
-                            </div>
-
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    tabIndex={3}
-                                />
-                                <Label htmlFor="remember">
-                                    Continuar conectado
-                                </Label>
-                            </div>
-
-                            <Button
-                                type="submit"
-                                className="mt-4 w-full"
-                                tabIndex={4}
-                                disabled={processing}
-                                data-test="login-button"
-                            >
-                                {processing && <Spinner />}
-                                Entrar
-                            </Button>
+                        <div
+                            className="form-group"
+                            data-erro={errors.login ? '1' : undefined}
+                        >
+                            <label className="form-label" htmlFor="login">
+                                Matrícula
+                            </label>
+                            <input
+                                id="login"
+                                name="login"
+                                type="text"
+                                className="form-control"
+                                required
+                                autoFocus
+                                tabIndex={1}
+                                autoComplete="username"
+                                placeholder="Sua matrícula"
+                            />
+                            {errors.login && (
+                                <p className="form-erro">{errors.login}</p>
+                            )}
                         </div>
+
+                        <div
+                            className="form-group"
+                            data-erro={errors.password ? '1' : undefined}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'baseline',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                }}
+                            >
+                                <label
+                                    className="form-label"
+                                    htmlFor="password"
+                                >
+                                    Senha
+                                </label>
+                                {canResetPassword && (
+                                    <TextLink
+                                        href={request()}
+                                        className="text-sm"
+                                        tabIndex={5}
+                                    >
+                                        Esqueci minha senha
+                                    </TextLink>
+                                )}
+                            </div>
+                            <PasswordInput
+                                id="password"
+                                name="password"
+                                required
+                                tabIndex={2}
+                                autoComplete="current-password"
+                                placeholder="Senha"
+                            />
+                            {errors.password && (
+                                <p className="form-erro">{errors.password}</p>
+                            )}
+                        </div>
+
+                        <label
+                            className="form-group"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 9,
+                                fontSize: 13.5,
+                                color: 'var(--sm-texto-corpo)',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                id="remember"
+                                name="remember"
+                                tabIndex={3}
+                            />
+                            Continuar conectado
+                        </label>
+
+                        <BotaoAcao
+                            type="submit"
+                            icone={<LogIn size={16} aria-hidden />}
+                            carregando={processing}
+                            rotuloCarregando="Entrando…"
+                            className="btn btn-primary btn-block"
+                            tabIndex={4}
+                            data-test="login-button"
+                        >
+                            Entrar
+                        </BotaoAcao>
 
                         {/*
                             Não há link de cadastro: a conta do servidor é criada
@@ -96,23 +130,20 @@ export default function Login({ status, canResetPassword }: Props) {
                             primeira vez define a senha por "Esqueci minha senha".
                         */}
                         {canResetPassword && (
-                            <div className="text-center text-sm text-muted-foreground">
+                            <p
+                                className="form-ajuda"
+                                style={{ marginTop: 18, textAlign: 'center' }}
+                            >
                                 Primeiro acesso? Use{' '}
                                 <TextLink href={request()} tabIndex={5}>
                                     Esqueci minha senha
                                 </TextLink>{' '}
-                                para definir sua senha.
-                            </div>
+                                para definir a sua.
+                            </p>
                         )}
                     </>
                 )}
             </Form>
-
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
         </>
     );
 }

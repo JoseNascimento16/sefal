@@ -1,43 +1,48 @@
 import { Form, Head } from '@inertiajs/react';
-import InputError from '@/components/input-error';
+import { LockKeyhole } from 'lucide-react';
 import PasswordInput from '@/components/password-input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
+import { BotaoAcao } from '@/components/retaguarda/acao';
 import { store } from '@/routes/password/confirm';
 
 export default function ConfirmPassword() {
     return (
         <>
-            <Head title="Confirm password" />
+            <Head title="Confirmar a senha" />
 
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                    <>
+                        <div
+                            className="form-group"
+                            data-erro={errors.password ? '1' : undefined}
+                        >
+                            <label className="form-label" htmlFor="password">
+                                Senha
+                            </label>
                             <PasswordInput
                                 id="password"
                                 name="password"
-                                placeholder="Password"
+                                placeholder="Sua senha"
                                 autoComplete="current-password"
                                 autoFocus
+                                required
                             />
-
-                            <InputError message={errors.password} />
+                            {errors.password && (
+                                <p className="form-erro">{errors.password}</p>
+                            )}
                         </div>
 
-                        <div className="flex items-center">
-                            <Button
-                                className="w-full"
-                                disabled={processing}
-                                data-test="confirm-password-button"
-                            >
-                                {processing && <Spinner />}
-                                Confirm password
-                            </Button>
-                        </div>
-                    </div>
+                        <BotaoAcao
+                            type="submit"
+                            icone={<LockKeyhole size={16} aria-hidden />}
+                            carregando={processing}
+                            rotuloCarregando="Confirmando…"
+                            className="btn btn-primary btn-block"
+                            data-test="confirm-password-button"
+                        >
+                            Confirmar
+                        </BotaoAcao>
+                    </>
                 )}
             </Form>
         </>
@@ -45,7 +50,7 @@ export default function ConfirmPassword() {
 }
 
 ConfirmPassword.layout = {
-    title: 'Confirm password',
+    title: 'Confirmar a senha',
     description:
-        'This is a secure area of the application. Please confirm your password before continuing.',
+        'Esta é uma área protegida do sistema. Confirme a sua senha para continuar.',
 };
