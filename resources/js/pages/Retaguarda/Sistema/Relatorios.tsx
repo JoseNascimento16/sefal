@@ -1,14 +1,10 @@
 import { Head } from '@inertiajs/react';
-import {
-    FileBarChart,
-    FileSpreadsheet,
-    FileText,
-    FileType2,
-    TriangleAlert,
-} from 'lucide-react';
+import { FileBarChart, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Spinner } from '@/components/retaguarda/acao';
 import { baixarDocumento } from '@/lib/baixar-documento';
+import type { FormatoExportacao } from '@/lib/formatos-exportacao';
+import { FORMATOS_DE_DOCUMENTO } from '@/lib/formatos-exportacao';
 import { gerar, index } from '@/routes/retaguarda/relatorios';
 
 /**
@@ -44,19 +40,6 @@ interface RelatorioDoCatalogo {
     filtros: FiltroDoRelatorio[];
 }
 
-type Formato = 'pdf' | 'xlsx' | 'docx';
-
-const FORMATOS: {
-    chave: Formato;
-    rotulo: string;
-    Icone: typeof FileText;
-    cor: string;
-}[] = [
-    { chave: 'pdf', rotulo: 'PDF', Icone: FileText, cor: '#b3261e' },
-    { chave: 'xlsx', rotulo: 'EXCEL', Icone: FileSpreadsheet, cor: '#0f7a52' },
-    { chave: 'docx', rotulo: 'WORD', Icone: FileType2, cor: '#0b6f8c' },
-];
-
 /** Como cada modo se chama para quem emite — jargão de sistema não explica nada. */
 const MODOS: Record<string, string> = {
     analitico: 'Analítico (relação nominal)',
@@ -74,7 +57,7 @@ export default function Relatorios({
     );
     const [modo, setModo] = useState<string>(relatorios[0]?.modos[0] ?? '');
     const [valores, setValores] = useState<Record<string, string>>({});
-    const [gerando, setGerando] = useState<Formato | null>(null);
+    const [gerando, setGerando] = useState<FormatoExportacao | null>(null);
     const [erro, setErro] = useState<string | null>(null);
 
     function escolher(relatorio: RelatorioDoCatalogo) {
@@ -86,7 +69,7 @@ export default function Relatorios({
         setErro(null);
     }
 
-    async function emitir(formato: Formato) {
+    async function emitir(formato: FormatoExportacao) {
         if (!escolhido) {
             return;
         }
@@ -344,7 +327,7 @@ export default function Relatorios({
                                     marginTop: 18,
                                 }}
                             >
-                                {FORMATOS.filter((f) =>
+                                {FORMATOS_DE_DOCUMENTO.filter((f) =>
                                     escolhido.formatos.includes(f.chave),
                                 ).map(({ chave, rotulo, Icone, cor }) => (
                                     <button

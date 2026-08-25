@@ -47,15 +47,22 @@ class ExportadorXlsx
         }
         $ultimaCol = self::col($maxColunas);
 
-        // Título e resumo do recorte, cada um numa faixa mesclada do topo.
-        $sheet->setCellValue('A1', (string) ($dados['metadados']['titulo'] ?? 'Relatório'));
+        /*
+         * Título e resumo do recorte, cada um numa faixa mesclada do topo.
+         *
+         * Escritos por `escreverCelula`, como TODA célula desta planilha: o título
+         * e o recorte vêm da tela (nome do documento, caminho no menu, busca
+         * digitada), e a promessa de que nada aqui vira fórmula não tem ressalva
+         * de "só no corpo da tabela".
+         */
+        $this->escreverCelula($sheet, 'A1', (string) ($dados['metadados']['titulo'] ?? 'Relatório'));
         $sheet->mergeCells("A1:{$ultimaCol}1");
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(15);
 
         $geradoEm = ($dados['metadados']['gerado_em'] ?? '') !== ''
             ? 'Gerado em '.(string) $dados['metadados']['gerado_em']
             : '';
-        $sheet->setCellValue('A2', implode('  ·  ', array_filter([
+        $this->escreverCelula($sheet, 'A2', implode('  ·  ', array_filter([
             (string) ($dados['metadados']['filtros_resumo'] ?? ''),
             $geradoEm,
         ])));
@@ -70,7 +77,7 @@ class ExportadorXlsx
 
         foreach ($dados['secoes'] as $secao) {
             if (! empty($secao['titulo'])) {
-                $sheet->setCellValue('A'.$linha, (string) $secao['titulo']);
+                $this->escreverCelula($sheet, 'A'.$linha, (string) $secao['titulo']);
                 $sheet->mergeCells('A'.$linha.":{$ultimaCol}".$linha);
                 $sheet->getStyle('A'.$linha)->getFont()->setBold(true)->setSize(12);
                 $linha++;
@@ -82,7 +89,8 @@ class ExportadorXlsx
 
             foreach ($secao['colunas'] as $i => $c) {
                 $celula = self::col($i + 1).$linha;
-                $sheet->setCellValue($celula, (string) $c['titulo']);
+                // O título da coluna também é texto da tela — mesma porta, mesma trava.
+                $this->escreverCelula($sheet, $celula, (string) $c['titulo']);
                 $sheet->getStyle($celula)->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
                 $sheet->getStyle($celula)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(self::COR_CABECALHO);
                 // Título centralizado; as células de dados seguem o alinhamento da coluna.
@@ -146,7 +154,8 @@ class ExportadorXlsx
     }
 
     /**
-     * Grava o CONTEÚDO de uma célula sem deixar o Excel interpretá-lo como fórmula.
+     * A ÚNICA porta de escrita de célula desta classe — nada aqui chama
+     * `setCellValue()` direto, e é isso que faz a promessa valer.
      *
      * ⚠️ SEGURANÇA. `setCellValue()` passa pelo `DefaultValueBinder` do
      * PhpSpreadsheet, que converte qualquer string começando com `=` em fórmula de
@@ -158,6 +167,9 @@ class ExportadorXlsx
      * Só o caso perigoso é desviado: valor textual que começa com `=`, `+`, `-` ou
      * `@` vai como TEXTO explícito. Número continua número (`-5` e `+3` caem no
      * ramo numérico antes daqui), para não quebrar soma e ordenação.
+     *
+     * Por isso até o que hoje é inteiro (as contagens do pivô) passa por aqui:
+     * uma porta só não se esquece quando o valor mudar de tipo amanhã.
      */
     private function escreverCelula(Worksheet $sheet, string $celula, mixed $valor): void
     {
@@ -180,7 +192,9 @@ class ExportadorXlsx
      */
     private function escreverTotal(Worksheet $sheet, int $linha, array $colunas, array $total, int $maxColunas, string $ultimaCol): int
     {
-        $sheet->setCellValue('A'.$linha, $total['rotulo']);
+        // O rótulo de um total pode carregar dado de cadastro (o nome de um setor,
+        // de uma pessoa) — daí passar pela mesma trava das células de dados.
+        $this->escreverCelula($sheet, 'A'.$linha, $total['rotulo']);
         $sheet->getStyle('A'.$linha)->getFont()->setBold(true);
 
         if ($total['celulas'] !== []) {
@@ -241,21 +255,21 @@ class ExportadorXlsx
 
             foreach ($pivot['categorias'] as $i => $categoria) {
                 $valor = (int) ($registro['valores'][$categoria] ?? 0);
-                $aba->setCellValue(self::col($i + 2).$linha, $valor);
+                $this->escreverCelula($aba, self::col($i + 2).$linha, $valor);
                 $totaisPorCategoria[$categoria] += $valor;
             }
 
-            $aba->setCellValue(self::col(count($pivot['categorias']) + 2).$linha, (int) $registro['total']);
+            $this->escreverCelula($aba, self::col(count($pivot['categorias']) + 2).$linha, (int) $registro['total']);
             $linha++;
         }
 
         $this->escreverCelula($aba, 'A'.$linha, 'TOTAL');
         $geral = 0;
         foreach ($pivot['categorias'] as $i => $categoria) {
-            $aba->setCellValue(self::col($i + 2).$linha, $totaisPorCategoria[$categoria]);
+            $this->escreverCelula($aba, self::col($i + 2).$linha, $totaisPorCategoria[$categoria]);
             $geral += $totaisPorCategoria[$categoria];
         }
-        $aba->setCellValue(self::col(count($pivot['categorias']) + 2).$linha, $geral);
+        $this->escreverCelula($aba, self::col(count($pivot['categorias']) + 2).$linha, $geral);
         $aba->getStyle('A'.$linha.":{$ultimaCol}".$linha)->getFont()->setBold(true);
 
         foreach (range(1, count($cabecalho)) as $i) {

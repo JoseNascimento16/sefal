@@ -1,14 +1,9 @@
-import {
-    Download,
-    FileSpreadsheet,
-    FileText,
-    FileType2,
-    TriangleAlert,
-    X,
-} from 'lucide-react';
+import { Download, TriangleAlert, X } from 'lucide-react';
 import { useState } from 'react';
 import { Spinner } from '@/components/retaguarda/acao';
 import { baixarDocumento } from '@/lib/baixar-documento';
+import type { FormatoExportacao } from '@/lib/formatos-exportacao';
+import { FORMATOS_DE_DOCUMENTO } from '@/lib/formatos-exportacao';
 
 /**
  * Exportação de LISTAGEM — botão discreto + a escolha do formato.
@@ -60,19 +55,6 @@ interface Props {
     orientacao?: 'portrait' | 'landscape';
 }
 
-type Formato = 'pdf' | 'xlsx' | 'docx';
-
-const FORMATOS: {
-    chave: Formato;
-    rotulo: string;
-    Icone: typeof FileText;
-    cor: string;
-}[] = [
-    { chave: 'pdf', rotulo: 'PDF', Icone: FileText, cor: '#b3261e' },
-    { chave: 'xlsx', rotulo: 'EXCEL', Icone: FileSpreadsheet, cor: '#0f7a52' },
-    { chave: 'docx', rotulo: 'WORD', Icone: FileType2, cor: '#0b6f8c' },
-];
-
 export default function BotaoExportar({
     titulo,
     subtitulo,
@@ -82,10 +64,10 @@ export default function BotaoExportar({
     orientacao,
 }: Props) {
     const [aberto, setAberto] = useState(false);
-    const [gerando, setGerando] = useState<Formato | null>(null);
+    const [gerando, setGerando] = useState<FormatoExportacao | null>(null);
     const [erro, setErro] = useState<string | null>(null);
 
-    async function exportar(formato: Formato) {
+    async function exportar(formato: FormatoExportacao) {
         setGerando(formato);
         setErro(null);
 
@@ -198,33 +180,38 @@ export default function BotaoExportar({
                                 flexWrap: 'wrap',
                             }}
                         >
-                            {FORMATOS.map(({ chave, rotulo, Icone, cor }) => (
-                                <button
-                                    key={chave}
-                                    type="button"
-                                    className="btn btn-sm"
-                                    onClick={() => exportar(chave)}
-                                    disabled={gerando !== null}
-                                    aria-busy={gerando === chave || undefined}
-                                    style={{
-                                        flex: 1,
-                                        minWidth: 120,
-                                        background: cor,
-                                        color: '#fff',
-                                    }}
-                                >
-                                    {gerando === chave ? (
-                                        <>
-                                            <Spinner tamanho={15} /> Gerando…
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Icone size={15} aria-hidden />{' '}
-                                            {rotulo}
-                                        </>
-                                    )}
-                                </button>
-                            ))}
+                            {FORMATOS_DE_DOCUMENTO.map(
+                                ({ chave, rotulo, Icone, cor }) => (
+                                    <button
+                                        key={chave}
+                                        type="button"
+                                        className="btn btn-sm"
+                                        onClick={() => exportar(chave)}
+                                        disabled={gerando !== null}
+                                        aria-busy={
+                                            gerando === chave || undefined
+                                        }
+                                        style={{
+                                            flex: 1,
+                                            minWidth: 120,
+                                            background: cor,
+                                            color: '#fff',
+                                        }}
+                                    >
+                                        {gerando === chave ? (
+                                            <>
+                                                <Spinner tamanho={15} />{' '}
+                                                Gerando…
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Icone size={15} aria-hidden />{' '}
+                                                {rotulo}
+                                            </>
+                                        )}
+                                    </button>
+                                ),
+                            )}
                         </div>
                     </div>
                 </div>

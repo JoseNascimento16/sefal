@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Relatorios\Exportadores\ExportadorXlsx;
+use App\Relatorios\Suporte\ResultadoRelatorio;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -49,6 +51,35 @@ function textoDoXlsx(string $conteudo): string
 function admGerador(): User
 {
     return User::factory()->create(['name' => 'Ana Admin', 'admin' => true]);
+}
+
+/**
+ * As células gravadas como FÓRMULA em qualquer aba da planilha.
+ *
+ * ⚠️ Olhar o texto não serve: uma célula de TEXTO que contém "=…" é lida de volta
+ * como a mesma string de uma fórmula. O que distingue é o tipo gravado.
+ *
+ * @return list<string>
+ */
+function celulasFormula(string $conteudo): array
+{
+    $planilha = IOFactory::createReader('Xlsx')->load(arquivoTemporarioXlsx($conteudo));
+    $formulas = [];
+
+    foreach ($planilha->getAllSheets() as $aba) {
+        foreach ($aba->getRowIterator() as $linha) {
+            $iterador = $linha->getCellIterator();
+            $iterador->setIterateOnlyExistingCells(true);
+
+            foreach ($iterador as $celula) {
+                if ($celula->getDataType() === DataType::TYPE_FORMULA) {
+                    $formulas[] = $aba->getTitle().'!'.$celula->getCoordinate().' = '.(string) $celula->getValue();
+                }
+            }
+        }
+    }
+
+    return $formulas;
 }
 
 test('exporta nos tres formatos, com o nome e o tipo certos no download', function () {
@@ -110,6 +141,58 @@ test('conteudo que parece formula vai como texto', function () {
     expect($formulas)->toBe([], 'célula gravada como fórmula: '.implode(' | ', $formulas));
     // E o texto original não pode ter sido perdido — só neutralizado.
     expect(textoDoXlsx($conteudo))->toContain('HYPERLINK');
+});
+
+test('a moldura do documento tambem nao vira formula', function () {
+    /*
+     * A promessa não tem ressalva: NENHUMA célula da planilha vira fórmula. E o
+     * corpo da tabela não é a única coisa que a tela envia — título, recorte,
+     * caminho no menu e o título de cada coluna também vêm do cliente. Escapar só
+     * as células de dados deixaria quatro portas abertas na mesma parede.
+     */
+    $r = $this->actingAs(admGerador())->post(route('retaguarda.exportar-listagem'), payloadExportacao([
+        'formato' => 'xlsx',
+        'titulo' => '=1+1',                                  // vira o título do documento (A1)
+        'subtitulo' => '=HYPERLINK("http://mal.example")',   // vira o título da seção e abre o recorte (A2)
+        'contexto' => '=SUM(A1:A9)',                          // entra no recorte impresso
+        'colunas' => [
+            ['chave' => 'nome', 'titulo' => '=1+1'],          // vira a linha de CABEÇALHO
+            ['chave' => 'situacao', 'titulo' => 'Situação'],
+        ],
+        'linhas' => [['nome' => 'Ana Fiscal', 'situacao' => 'Ativo']],
+    ]));
+
+    $r->assertOk();
+    $formulas = celulasFormula($r->streamedContent());
+
+    expect($formulas)->toBe([], 'célula gravada como fórmula: '.implode(' | ', $formulas));
+});
+
+test('o rotulo de um total tambem nao vira formula', function () {
+    /*
+     * O quinto ponto de escrita. Este não vem do endpoint de listagem, mas o
+     * exportador é compartilhado com os relatórios — e ali o rótulo de um total
+     * pode carregar dado de cadastro (o nome de um setor, de uma pessoa). A
+     * defesa fica no ponto de ESCRITA, não em quem chama.
+     */
+    $resultado = new ResultadoRelatorio;
+    $resultado->metadados = ['titulo' => 'Teste', 'gerado_em' => '25/08/2026'];
+
+    $secao = $resultado->secao('Seção');
+    $secao->coluna('nome', 'Nome');
+    $secao->coluna('valor', 'Valor');
+    $secao->linha(['nome' => 'Ana', 'valor' => '1']);
+    $secao->total('=1+1', '', ['valor' => '=2+2']);
+
+    $resposta = app(ExportadorXlsx::class)->baixar($resultado, 'teste');
+
+    ob_start();
+    $resposta->sendContent();
+    $conteudo = (string) ob_get_clean();
+
+    $formulas = celulasFormula($conteudo);
+
+    expect($formulas)->toBe([], 'célula gravada como fórmula: '.implode(' | ', $formulas));
 });
 
 test('campo nao declarado nao entra no arquivo', function () {
