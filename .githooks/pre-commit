@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Barra arquivo PROIBIDO antes de entrar no commit — a hora mais barata de pegar.
+# Lista em `.higiene-proibidos`; a checagem em `.githooks/checar-higiene.sh`.
+#
+# Ativar (uma vez por clone):  git config core.hooksPath .githooks
+# Emergencia (burlar):         git commit --no-verify
+
+RAIZ=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+
+[ -f "$RAIZ/.githooks/checar-higiene.sh" ] || exit 0
+
+sh "$RAIZ/.githooks/checar-higiene.sh" --staged || {
+    echo "  Commit abortado. (Emergencia: git commit --no-verify)" 1>&2
+    exit 1
+}
+
+exit 0

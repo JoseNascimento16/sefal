@@ -1,0 +1,29 @@
+# Caminhos que NUNCA podem ser versionados neste repositório.
+#
+# Este repositório é ENTREGUE ao cliente e AUDITADO pelo setor de Qualidade. O ferramental de
+# trabalho (instruções de IA, skills, scripts de máquina), a documentação interna e o backlog
+# vivem na branch `ferramental` — não aqui.
+#
+# FONTE ÚNICA: esta lista é lida por TRÊS guardas, para não divergir entre eles:
+#   1. .githooks/pre-commit → barra o arquivo antes de entrar no commit
+#   2. .githooks/pre-push   → barra antes de subir (confere o RASTREADO, não só o staged)
+#   3. tests/Feature/HigieneDoRepositorioTest.php → entra na validação com os demais testes
+#
+# Formato: <caminho> | <motivo>   (o motivo aparece na mensagem de erro)
+# O caminho vale para o arquivo, para a pasta inteira (`pasta` cobre `pasta/...`) e aceita glob.
+
+# ── Ferramental de IA e de revisão ───────────────────────────────────────────────────────────
+CLAUDE.md | instruções de IA — vivem na branch `ferramental`
+.claude | skills, hooks e configuração pessoal de IA — vivem na branch `ferramental`
+.aicr.json | revisão de código por IA — vive na branch `ferramental`
+.aicr | artefatos da revisão de código por IA — vivem na branch `ferramental`
+tests/Browser | testes de navegador são instrumento INTERNO do time; no repo entregue virariam matéria-prima para cards da Qualidade
+
+# ── Planejamento e método de trabalho ────────────────────────────────────────────────────────
+.superpowers | planos e brief de tarefa do método interno — vivem na branch `ferramental`
+docs/superpowers | idem, a versão em documentação — vive na branch `ferramental`
+docs/PENDENCIAS.md | backlog interno (o que ainda não está pronto) — vive na branch `ferramental`
+
+# ── Ferramental de máquina e referência ──────────────────────────────────────────────────────
+scripts/internos | scripts de máquina de dev (setup de ambiente, worktrees) — vivem na branch `ferramental`
+referencia-design | protótipo antigo e material de apoio de layout — vive na branch `ferramental`

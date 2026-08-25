@@ -1,0 +1,49 @@
+/.phpunit.cache
+/bootstrap/ssr
+/node_modules
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/resources/js/actions
+/resources/js/routes
+/resources/js/wayfinder
+/vendor
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+
+# Banco SQLite de desenvolvimento (regenerável via migrate) — cobre .sqlite, .sqlite-wal e .sqlite-shm
+/database/*.sqlite*
+
+# Ferramental — vive na branch `ferramental`, nunca no repositório de produto.
+# A MESMA lista, com o motivo de cada caminho, está em `.higiene-proibidos`: é ela que os hooks
+# de git e o teste `HigieneDoRepositorioTest` aplicam. Mexeu aqui? Mexa lá também.
+/CLAUDE.md
+/.claude
+# Soletrado à parte de propósito: se algum dia a pasta `.claude` passar a ser compartilhada,
+# a configuração PESSOAL de cada máquina continua fora.
+/.claude/settings.local.json
+/.aicr.json
+/.aicr
+/tests/Browser
+/.superpowers
+/docs/superpowers
+/docs/PENDENCIAS.md
+/scripts/internos
+/referencia-design

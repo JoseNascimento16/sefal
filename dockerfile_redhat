@@ -1,0 +1,77 @@
+# =================================================================================================
+# Imagem de HOMOLOGAÇÃO/PRODUÇÃO no OKD (OpenShift) do cliente — formato S2I, 1 container.
+#
+# ⚠️ NÃO ATIVO (24/08/2026): o ambiente ainda não existe (sem namespace e sem banco). Este arquivo
+#    é a receita pronta, transplantada de um deploy que já roda nesse mesmo cluster. Nunca foi
+#    construído aqui — ao subir o ambiente pela primeira vez, siga docs/deploy/okd.md e espere
+#    ajustar a imagem base e as versões abaixo.
+#
+# É este arquivo que o BuildConfig aponta (`dockerfilePath: dockerfile_redhat`). O build roda DENTRO
+# do cluster, a partir do GitLab interno do cliente. O container final é um só: Apache + PHP da
+# imagem S2I, na porta 8080 (não há nginx sidecar, não há php-fpm separado, não há initContainer).
+# =================================================================================================
+
+# Imagem base: construída no próprio cluster por um BuildConfig do DevOps do cliente (UBI + PHP 8.4
+# + Node). Ao replicar em outro namespace, troque o caminho. Requisitos da base, sem os quais o
+# build falha: PHP 8.3+, Node (o `npm run build` do Vite roda aqui dentro) e os scripts S2I
+# (`/usr/libexec/s2i/assemble` e `/usr/libexec/s2i/run`).
+FROM image-registry.openshift-image-registry.svc:5000/fiscalizacao-homolog/php:latest
+USER 0
+
+# -------------------------------------------------------------------------------------------------
+# Dependências de SISTEMA primeiro (não dependem do código). Ficam ANTES do `ADD . /tmp/src` para
+# virarem camadas de cache estáveis: não re-executam a cada commit, só quando este arquivo muda.
+# -------------------------------------------------------------------------------------------------
+
+# Oracle: oci8 + Instant Client (o app fala com o Oracle do cliente).
+RUN yum install -y php-pear php-devel && \
+    yum install -y https://download.oracle.com/otn_software/linux/instantclient/2350000/oracle-instantclient-basic-23.5.0.24.07-1.el9.x86_64.rpm && \
+    yum install -y https://download.oracle.com/otn_software/linux/instantclient/2350000/oracle-instantclient-devel-23.5.0.24.07-1.el9.x86_64.rpm && \
+    rm -f *.rpm && \
+    yum clean all
+RUN pecl install oci8
+RUN echo "extension=oci8.so" > /etc/php.d/50-oci8.ini
+
+# ---- Limites de upload e erros do PHP ----
+# SEM isto o pod herda os defaults do PHP (upload_max_filesize 2M / post_max_size 8M) e o envio de
+# foto de vistoria estoura SÓ neste ambiente, com o warning cru vazando na tela. `/etc/php.d` é o
+# conf.d desta imagem (o mesmo do 50-oci8.ini acima); o prefixo `zz` faz ser o último aplicado, para
+# vencer o php.ini da base. Preferido a `oc set env PHP_UPLOAD_MAX_FILESIZE=...` no Deployment porque
+# fica VERSIONADO — sobrevive à recriação do Deployment.
+RUN { \
+      echo "post_max_size = 48M"; \
+      echo "upload_max_filesize = 20M"; \
+      echo "memory_limit = 256M"; \
+      echo "display_errors = Off"; \
+      echo "display_startup_errors = Off"; \
+      echo "log_errors = On"; \
+    } > /etc/php.d/60-fiscalizacao-uploads.ini
+
+# ---- LibreOffice headless (Writer + Calc) — converte Office -> PDF nos relatórios ----
+# Removido dos repositórios do RHEL 10/UBI 10 -> instala os RPMs oficiais da The Document Foundation.
+# O LibreOffice já traz as fontes Liberation embutidas (NÃO instalar fontes do sistema: o pacote
+# `liberation-fonts` não existe no UBI e derruba o build).
+# ⚠️ O download.documentfoundation.org REDIRECIONA para um espelho "próximo" a cada build (loteria);
+#    um espelho com DNS instável derruba o build. O --retry re-tenta, re-sorteando o espelho.
+ARG LO_VER=25.8.7
+RUN set -eux; \
+    curl -fsSL --retry 5 --retry-delay 4 --retry-all-errors \
+      "https://download.documentfoundation.org/libreoffice/stable/${LO_VER}/rpm/x86_64/LibreOffice_${LO_VER}_Linux_x86-64_rpm.tar.gz" -o /tmp/lo.tar.gz; \
+    mkdir -p /tmp/lo && tar -xzf /tmp/lo.tar.gz -C /tmp/lo --strip-components=1; \
+    dnf install -y /tmp/lo/RPMS/*.rpm; \
+    ln -sf /opt/libreoffice*/program/soffice /usr/local/bin/soffice; \
+    rm -rf /tmp/lo /tmp/lo.tar.gz && yum clean all
+
+# -------------------------------------------------------------------------------------------------
+# Código da aplicação: muda a cada commit -> invalida daqui para baixo (os installs acima ficam
+# cacheados). O `assemble` do S2I lê de /tmp/src e move para /opt/app-root/src.
+# -------------------------------------------------------------------------------------------------
+ADD . /tmp/src
+RUN chown -R 1001:0 /tmp/src
+
+USER 1001
+RUN /usr/libexec/s2i/assemble
+# `npm ci` (não `npm install`): instala exatamente o que o package-lock.json fixa.
+RUN npm ci
+RUN npm run build
+CMD /usr/libexec/s2i/run

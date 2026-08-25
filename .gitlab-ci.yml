@@ -1,0 +1,114 @@
+# =============================================================================
+# Pipeline de validação — ESCRITA, MAS INATIVA (agosto/2026)
+# =============================================================================
+# Sem runners nesta instância (2026-08) — o gate real é local (hooks de git +
+# `composer`/`npm` na mão); este arquivo fica pronto para ativação.
+#
+# Por que a pipeline nasce DORMENTE (variável `CI_ATIVO`):
+#   job sem runner que case fica "stuck" e deixa TODO Merge Request com pipeline
+#   pendente — atrapalha mais do que protege. Então nada roda até alguém ligar.
+#
+# A dormência é no `workflow:` (nível da PIPELINE), não em `rules:` de cada job:
+# barrando job por job, a pipeline nasceria VAZIA e o GitLab recusaria a criação
+# com "No stages / jobs for this pipeline" — um ERRO visível no push e no MR,
+# exatamente o barulho que se quer evitar. Com `workflow:`, a pipeline
+# simplesmente não é criada, em silêncio.
+#
+# COMO LIGAR, no dia em que houver runner:
+#   1. Settings > CI/CD > Variables: criar `CI_ATIVO` = `on` (NÃO-protected, para
+#      valer também em branch de tarefa).
+#   2. Se o runner exigir tag, acrescentar `tags:` em cada job com a tag dele.
+#   3. Rodar um pipeline manual (Run pipeline) e conferir os três jobs.
+#
+# ⚠️ Este arquivo nunca foi executado (não há runner). Ao ligar, espere ajustar o
+#    `before_script`: ele monta PHP + Node do zero na imagem oficial do PHP, e uma
+#    imagem já pronta (com PHP, Composer e Node) sai mais rápido, se o cliente tiver.
+#
+# O que cada job garante (os mesmos três gates que rodamos na mão hoje):
+#   higiene    — nenhum caminho de `.higiene-proibidos` versionado
+#   qualidade  — Pint (estilo PHP) + TypeScript sem erro de tipo
+#   testes     — a suíte Pest em SQLite
+# =============================================================================
+
+# Interruptor geral: enquanto `CI_ATIVO` não existir, pipeline nenhuma é criada.
+workflow:
+  rules:
+    - if: '$CI_ATIVO == "on"'
+    - when: never
+
+stages:
+  - higiene
+  - qualidade
+  - testes
+
+# Ambiente PHP + Node.
+#
+# PHP 8.4 é a versão da imagem base do deploy (S2I do cliente, ver docs/deploy/okd.md).
+# O `composer.json` aceita `^8.3` e a máquina de dev roda 8.5 — o CI fica na versão do
+# ambiente que recebe o código, que é a que precisa passar.
+#
+# `composer install` funciona SEM a extensão oci8 porque o `composer.json` declara
+# `config.platform.ext-oci8` (a extensão só é exigida em tempo de execução, quando a
+# conexão `oracle` é de fato usada). Não é preciso `--ignore-platform-req`.
+#
+# O `npm run build` é pré-requisito dos dois jobs, por motivos diferentes:
+#   - o Wayfinder gera `resources/js/{actions,routes,wayfinder}` (gitignorados), de onde
+#     o front importa as rotas — sem eles o `tsc` não resolve os imports;
+#   - a suíte renderiza páginas Inertia de verdade, e isso exige o manifest do Vite em
+#     `public/build/`.
+# ⚠️ A build baixa fontes (plugin de fontes do Vite): o runner precisa de saída para a
+#    internet, ou a build falha na etapa das fontes.
+.php-node:
+  image: php:8.4-cli
+  before_script:
+    # `unzip` é o que o Composer usa para abrir os pacotes; `gnupg` é exigido pelo script do Node.
+    - apt-get update -qq && apt-get install -qq -y git unzip ca-certificates curl gnupg > /dev/null
+    - curl -fsSL https://deb.nodesource.com/setup_22.x | bash - > /dev/null
+    - apt-get install -qq -y nodejs > /dev/null
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --no-interaction --prefer-dist --no-progress
+    - cp .env.example .env
+    - php artisan key:generate
+    # `npm ci` (e não `npm install`): instalação LIMPA, exatamente o que o
+    # package-lock.json fixa. É também onde uma regressão da trava de supply-chain
+    # (`ignore-scripts=true` no .npmrc) apareceria.
+    - npm ci
+    - npm run build
+
+# =============================================================================
+# Higiene do repositório — barreira de servidor
+# =============================================================================
+# Reprova se um caminho PROIBIDO estiver versionado. A lista está em
+# `.higiene-proibidos` (fonte única) e a checagem em `.githooks/checar-higiene.sh` —
+# os MESMOS que os hooks locais e o HigieneDoRepositorioTest usam. Sem PHP nem Node:
+# é git puro, então roda em segundos.
+higiene-do-repositorio:
+  stage: higiene
+  image: alpine:latest
+  script:
+    - apk add --no-cache git > /dev/null
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - sh .githooks/checar-higiene.sh
+
+# =============================================================================
+# Qualidade — estilo do PHP e tipos do TypeScript
+# =============================================================================
+# `pint --test` só acusa (não reescreve): quem formata é o dev, com `pint --dirty`.
+qualidade:
+  extends: .php-node
+  stage: qualidade
+  script:
+    - vendor/bin/pint --test
+    - npx tsc --noEmit
+
+# =============================================================================
+# Testes — a suíte Pest
+# =============================================================================
+# O banco é decidido pelo `phpunit.xml` do repositório: SQLite em `:memory:` e
+# `DB_DRIVER=sqlite` com `force`, para a suíte nunca tocar o Oracle — nem aqui, nem
+# na máquina de um dev com `DB_DRIVER=oracle` no `.env`.
+testes:
+  extends: .php-node
+  stage: testes
+  script:
+    - php artisan test --compact

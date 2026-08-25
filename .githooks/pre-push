@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Duas guardas antes do push:
+#   1. Nenhum arquivo PROIBIDO versionado (repositorio entregue ao cliente / auditado).
+#   2. Nada de push direto em branch protegida — trabalho entra por Merge Request.
+#
+# Ativar (uma vez por clone):  git config core.hooksPath .githooks
+# Emergencia (burlar):         git push --no-verify
+
+RAIZ=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+
+# ── 1. Higiene do repositorio ────────────────────────────────────────────────
+# Confere o RASTREADO (nao so o staged): um arquivo proibido pode ter entrado em
+# commit anterior, por outra maquina, ou com --no-verify.
+if [ -f "$RAIZ/.githooks/checar-higiene.sh" ]; then
+    sh "$RAIZ/.githooks/checar-higiene.sh" || {
+        echo "  Push abortado. (Emergencia: git push --no-verify)" 1>&2
+        exit 1
+    }
+fi
+
+# ── 2. Branches protegidas ───────────────────────────────────────────────────
+# Estrutura: main < homolog < develop < branch de tarefa. So o dono mergeia.
+protegidas="main develop homolog"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    branch=$(printf '%s' "$remote_ref" | sed 's#^refs/heads/##')
+    for p in $protegidas; do
+        if [ "$branch" = "$p" ]; then
+            echo "" 1>&2
+            echo "  Push direto para '$p' bloqueado." 1>&2
+            echo "  Use uma branch de tarefa (feature/fix/chore/docs-<desc>) e abra um MR." 1>&2
+            echo "  Emergencia: git push --no-verify" 1>&2
+            echo "" 1>&2
+            exit 1
+        fi
+    done
+done
+
+# ── 3. Lembrete do gate local ────────────────────────────────────────────────
+# Nao roda o gate (push nao e hora de esperar minutos) — so lembra qual e.
+echo "" 1>&2
+echo "  Antes do MR, rode o gate local:" 1>&2
+echo "    vendor/bin/pint --dirty" 1>&2
+echo "    php artisan test --compact" 1>&2
+echo "    npx tsc --noEmit" 1>&2
+echo "" 1>&2
+
+exit 0
