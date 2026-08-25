@@ -1,35 +1,57 @@
 import { Eye, EyeOff } from 'lucide-react';
 import type { ComponentProps, Ref } from 'react';
 import { useState } from 'react';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
+/**
+ * Campo de senha do Design System, com o olho que revela o que foi digitado.
+ *
+ * O olho existe porque senha digitada às cegas é a causa nº 1 de "minha senha não
+ * funciona" — e, num aparelho em rua, com teclado pequeno, mais ainda. O botão
+ * fica fora da ordem de tabulação: quem navega pelo teclado passa direto para o
+ * próximo campo.
+ */
 export default function PasswordInput({
-    className,
+    className = '',
     ref,
     ...props
 }: Omit<ComponentProps<'input'>, 'type'> & { ref?: Ref<HTMLInputElement> }) {
-    const [showPassword, setShowPassword] = useState(false);
+    const [revelada, setRevelada] = useState(false);
 
     return (
-        <div className="relative">
-            <Input
-                type={showPassword ? 'text' : 'password'}
-                className={cn('pr-10', className)}
+        <div style={{ position: 'relative' }}>
+            <input
+                type={revelada ? 'text' : 'password'}
+                className={cn('form-control', className)}
+                style={{ paddingRight: 44 }}
                 ref={ref}
                 {...props}
             />
             <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-3 text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setRevelada((v) => !v)}
+                aria-label={revelada ? 'Esconder a senha' : 'Mostrar a senha'}
+                title={revelada ? 'Esconder a senha' : 'Mostrar a senha'}
                 tabIndex={-1}
+                style={{
+                    position: 'absolute',
+                    right: 4,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    width: 34,
+                    height: 34,
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--sm-texto-fraco)',
+                    cursor: 'pointer',
+                }}
             >
-                {showPassword ? (
-                    <EyeOff className="size-4" />
+                {revelada ? (
+                    <EyeOff size={16} aria-hidden />
                 ) : (
-                    <Eye className="size-4" />
+                    <Eye size={16} aria-hidden />
                 )}
             </button>
         </div>

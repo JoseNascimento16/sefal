@@ -1,4 +1,6 @@
 import type { Auth } from '@/types/auth';
+import type { MenuSecao } from '@/types/navigation';
+import type { Recado } from '@/types/ui';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -12,7 +14,8 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             auth: Auth;
-            sidebarOpen: boolean;
+            menu: MenuSecao[];
+            flash: Recado;
             [key: string]: unknown;
         };
     }

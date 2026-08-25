@@ -1,6 +1,8 @@
-# SEMOP — Fiscalização de Permissionários
+# SEFAL — Sistema de Fiscalização de Ambulantes
 
-Sistema da SEMOP (Prefeitura de Salvador) para fiscalização de **permissionários** (comerciantes ambulantes de rua). App Laravel único com a **Retaguarda** (gestão, Inertia/React) e, adiante, o **PWA do Fiscal** (SPA offline-first para uso em rua).
+**SEFAL** é o sistema da SEMOP (Prefeitura de Salvador) para fiscalização de **permissionários** (comerciantes ambulantes de rua). App Laravel único com a **Retaguarda** (gestão, Inertia/React) e, adiante, o **PWA do Fiscal** (SPA offline-first para uso em rua).
+
+> O nome do sistema é **SEFAL**; o termo de domínio **permissionário** segue como está em tabelas, rotas e telas até a área de negócio decidir Permissionário × Ambulante (PEND-010).
 
 ## Stack
 

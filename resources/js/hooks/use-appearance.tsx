@@ -41,15 +41,28 @@ const isDarkMode = (appearance: Appearance): boolean => {
     return appearance === 'dark' || (appearance === 'system' && prefersDark());
 };
 
+/**
+ * Escreve o tema no <html>. É o ÚNICO lugar do cliente que faz isso.
+ *
+ * São dois marcadores, porque as duas linguagens de estilo do sistema leem
+ * coisas diferentes: a classe `.dark` é o que as utilidades do Tailwind
+ * enxergam, e `data-theme` é o que os tokens do Design System também aceitam
+ * (e o que permite inverter o tema de um trecho isolado). Os dois são escritos
+ * aqui, na mesma linha de raciocínio e a partir do mesmo booleano — se cada um
+ * tivesse o seu escritor, um dia a tela apareceria com token escuro e utilidade
+ * clara ao mesmo tempo (e nas telas fora da Retaguarda um deles nunca chegaria).
+ */
 const applyTheme = (appearance: Appearance): void => {
     if (typeof document === 'undefined') {
         return;
     }
 
     const isDark = isDarkMode(appearance);
+    const html = document.documentElement;
 
-    document.documentElement.classList.toggle('dark', isDark);
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    html.classList.toggle('dark', isDark);
+    html.dataset.theme = isDark ? 'dark' : 'light';
+    html.style.colorScheme = isDark ? 'dark' : 'light';
 };
 
 const subscribe = (callback: () => void) => {
@@ -68,7 +81,18 @@ const mediaQuery = (): MediaQueryList | null => {
     return window.matchMedia('(prefers-color-scheme: dark)');
 };
 
-const handleSystemThemeChange = (): void => applyTheme(currentAppearance);
+/**
+ * O aparelho trocou de tema (anoiteceu no celular do fiscal, por exemplo).
+ *
+ * Repinta o <html> e AVISA quem está ouvindo: sem o aviso, o React continuaria
+ * com o tema anterior na mão e a tela ficaria dizendo o contrário do que mostra
+ * — o botão da barra superior, por exemplo, ainda oferecendo "usar o tema
+ * escuro" com a tela já escura.
+ */
+const handleSystemThemeChange = (): void => {
+    applyTheme(currentAppearance);
+    notify();
+};
 
 export function initializeTheme(): void {
     if (typeof window === 'undefined') {

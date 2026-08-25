@@ -1,3 +1,4 @@
+import { useFlashToast } from '@/hooks/use-flash-toast';
 import AuthLayoutTemplate from '@/layouts/auth/auth-simple-layout';
 
 export default function AuthLayout({
@@ -9,6 +10,10 @@ export default function AuthLayout({
     description?: string;
     children: React.ReactNode;
 }) {
+    // Também nas telas de acesso: um recado do servidor não pode se perder por
+    // falta de quem o mostre.
+    useFlashToast();
+
     return (
         <AuthLayoutTemplate title={title} description={description}>
             {children}

@@ -1,10 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
-import InputError from '@/components/input-error';
+import { KeyRound } from 'lucide-react';
 import PasswordInput from '@/components/password-input';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
+import { BotaoAcao } from '@/components/retaguarda/acao';
 import { update } from '@/routes/password';
 
 type Props = {
@@ -16,7 +13,7 @@ type Props = {
 export default function ResetPassword({ token, email, passwordRules }: Props) {
     return (
         <>
-            <Head title="Reset password" />
+            <Head title="Definir a senha" />
 
             <Form
                 {...update.form()}
@@ -24,66 +21,86 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                 resetOnSuccess={['password', 'password_confirmation']}
             >
                 {({ processing, errors }) => (
-                    <div className="grid gap-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
+                    <>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="email">
+                                E-mail
+                            </label>
+                            {/* Só leitura: o e-mail vem do link recebido, e mudá-lo
+                                aqui invalidaria o próprio link. */}
+                            <input
                                 id="email"
-                                type="email"
                                 name="email"
+                                type="email"
+                                className="form-control"
                                 autoComplete="email"
                                 value={email}
-                                className="mt-1 block w-full"
                                 readOnly
                             />
-                            <InputError
-                                message={errors.email}
-                                className="mt-2"
-                            />
+                            {errors.email && (
+                                <p className="form-erro">{errors.email}</p>
+                            )}
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                        <div
+                            className="form-group"
+                            data-erro={errors.password ? '1' : undefined}
+                        >
+                            <label className="form-label" htmlFor="password">
+                                Senha nova
+                            </label>
                             <PasswordInput
                                 id="password"
                                 name="password"
                                 autoComplete="new-password"
-                                className="mt-1 block w-full"
                                 autoFocus
-                                placeholder="Password"
+                                required
+                                placeholder="Senha nova"
                                 passwordrules={passwordRules}
                             />
-                            <InputError message={errors.password} />
+                            {errors.password && (
+                                <p className="form-erro">{errors.password}</p>
+                            )}
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="password_confirmation">
-                                Confirm password
-                            </Label>
+                        <div
+                            className="form-group"
+                            data-erro={
+                                errors.password_confirmation ? '1' : undefined
+                            }
+                        >
+                            <label
+                                className="form-label"
+                                htmlFor="password_confirmation"
+                            >
+                                Repita a senha nova
+                            </label>
                             <PasswordInput
                                 id="password_confirmation"
                                 name="password_confirmation"
                                 autoComplete="new-password"
-                                className="mt-1 block w-full"
-                                placeholder="Confirm password"
+                                required
+                                placeholder="Repita a senha nova"
                                 passwordrules={passwordRules}
                             />
-                            <InputError
-                                message={errors.password_confirmation}
-                                className="mt-2"
-                            />
+                            {errors.password_confirmation && (
+                                <p className="form-erro">
+                                    {errors.password_confirmation}
+                                </p>
+                            )}
                         </div>
 
-                        <Button
+                        <BotaoAcao
                             type="submit"
-                            className="mt-4 w-full"
-                            disabled={processing}
+                            icone={<KeyRound size={16} aria-hidden />}
+                            carregando={processing}
+                            rotuloCarregando="Salvando…"
+                            className="btn btn-primary btn-block"
                             data-test="reset-password-button"
                         >
-                            {processing && <Spinner />}
-                            Reset password
-                        </Button>
-                    </div>
+                            Salvar a senha e entrar
+                        </BotaoAcao>
+                    </>
                 )}
             </Form>
         </>
@@ -91,6 +108,6 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
 }
 
 ResetPassword.layout = {
-    title: 'Reset password',
-    description: 'Please enter your new password below',
+    title: 'Definir a senha',
+    description: 'Escolha a senha que você vai usar para entrar no sistema',
 };

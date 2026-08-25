@@ -43,9 +43,12 @@ return [
     | requests to have a field named 'email'. If the application uses
     | another name for the field you may define it below as needed.
     |
+    | Aqui se entra pela MATRÍCULA (`login`), não pelo e-mail. O e-mail segue
+    | sendo o canal do "esqueci minha senha" — por isso `email` continua abaixo.
+    |
     */
 
-    'username' => 'email',
+    'username' => 'login',
 
     'email' => 'email',
 
@@ -57,6 +60,10 @@ return [
     | This value defines whether usernames should be lowercased before saving
     | them in the database, as some database system string fields are case
     | sensitive. You may disable this for your application if necessary.
+    |
+    | A matrícula digitada chega minúscula ao pipeline por causa disto; quem
+    | casa com a coluna sem se importar com a caixa é a busca em
+    | `App\Actions\Fortify\AutenticarPorMatricula`.
     |
     */
 
@@ -73,7 +80,7 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    'home' => '/retaguarda/inicio',
 
     /*
     |--------------------------------------------------------------------------
@@ -116,8 +123,6 @@ return [
 
     'limiters' => [
         'login' => 'login',
-        'two-factor' => 'two-factor',
-        'passkeys' => 'passkeys',
     ],
 
     /*
@@ -135,22 +140,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Passkeys
-    |--------------------------------------------------------------------------
-    |
-    | These settings configure Fortify's passkey (WebAuthn) support.
-    |
-    */
-
-    'passkeys' => [
-        'relying_party_id' => parse_url(config('app.url'), PHP_URL_HOST),
-        'allowed_origins' => [config('app.url')],
-        'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET', config('app.key')),
-        'timeout' => 60000,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Features
     |--------------------------------------------------------------------------
     |
@@ -158,20 +147,22 @@ return [
     | by removing them from this array. You're free to only remove some of
     | these features, or you can even remove all of these if you need to.
     |
+    | O que está de fora, e por quê:
+    |
+    | - `registration`: sistema de governo não tem auto-cadastro. A conta do
+    |   servidor nasce por comando (`fp:*`) ou pelas mãos de um administrador.
+    | - `twoFactorAuthentication` e `passkeys`: o acesso pedido é matrícula +
+    |   senha, com redefinição por e-mail. Enquanto ninguém pedir segundo fator
+    |   ou chave de acesso, eles ficam fora — inclusive das rotas e das telas.
+    | - `emailVerification`: a conta não nasce de um formulário público, e sim
+    |   pelas mãos de um administrador, que já informa o e-mail funcional do
+    |   servidor. Não há o que confirmar: pedir confirmação só criaria um
+    |   pedágio a mais entre a pessoa e o trabalho dela.
+    |
     */
 
     'features' => [
-        Features::registration(),
         Features::resetPasswords(),
-        Features::emailVerification(),
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-            // 'window' => 0
-        ]),
-        Features::passkeys([
-            'confirmPassword' => true,
-        ]),
     ],
 
 ];

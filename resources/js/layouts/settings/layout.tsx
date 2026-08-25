@@ -1,78 +1,78 @@
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
-import Heading from '@/components/heading';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
-import { cn, toUrl } from '@/lib/utils';
-import { edit as editAppearance } from '@/routes/appearance';
-import { edit } from '@/routes/profile';
-import { edit as editSecurity } from '@/routes/security';
-import type { NavItem } from '@/types';
+import { cn } from '@/lib/utils';
+import { edit as editarAparencia } from '@/routes/appearance';
+import { edit as editarPerfil } from '@/routes/profile';
+import { edit as editarSenha } from '@/routes/security';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-        icon: null,
-    },
-    {
-        title: 'Security',
-        href: editSecurity(),
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: null,
-    },
+/**
+ * "Meu Perfil" — a área da própria conta, dentro da Retaguarda.
+ *
+ * Três assuntos, três abas: os seus dados, a sua senha e a aparência do sistema.
+ * Nada de foto de perfil nesta fase, e nada de "apagar minha conta": quem abre e
+ * quem encerra o acesso de um servidor é a administração.
+ */
+const ABAS = [
+    { titulo: 'Dados', href: editarPerfil() },
+    { titulo: 'Senha', href: editarSenha() },
+    { titulo: 'Aparência', href: editarAparencia() },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
-    const { isCurrentOrParentUrl } = useCurrentUrl();
+    // Comparação EXATA: "/retaguarda/perfil" é prefixo de
+    // "/retaguarda/perfil/senha", então uma comparação por início marcaria duas
+    // abas ao mesmo tempo.
+    const { isCurrentUrl } = useCurrentUrl();
 
     return (
-        <div className="px-4 py-6">
-            <Heading
-                title="Settings"
-                description="Manage your profile and account settings"
-            />
-
-            <div className="flex flex-col lg:flex-row lg:space-x-12">
-                <aside className="w-full max-w-xl lg:w-48">
-                    <nav
-                        className="flex flex-col space-y-1 space-x-0"
-                        aria-label="Settings"
-                    >
-                        {sidebarNavItems.map((item, index) => (
-                            <Button
-                                key={`${toUrl(item.href)}-${index}`}
-                                size="sm"
-                                variant="ghost"
-                                asChild
-                                className={cn('w-full justify-start', {
-                                    'bg-muted': isCurrentOrParentUrl(item.href),
-                                })}
-                            >
-                                <Link href={item.href}>
-                                    {item.icon && (
-                                        <item.icon className="h-4 w-4" />
-                                    )}
-                                    {item.title}
-                                </Link>
-                            </Button>
-                        ))}
-                    </nav>
-                </aside>
-
-                <Separator className="my-6 lg:hidden" />
-
-                <div className="flex-1 md:max-w-2xl">
-                    <section className="max-w-xl space-y-12">
-                        {children}
-                    </section>
+        <>
+            <div className="rt-page-head">
+                <div>
+                    <p className="sobrancelha">Minha conta</p>
+                    <h1>Meu Perfil</h1>
+                    <p>Seus dados de acesso e as suas preferências.</p>
                 </div>
             </div>
-        </div>
+
+            <div
+                style={{
+                    display: 'flex',
+                    gap: 24,
+                    flexWrap: 'wrap',
+                    alignItems: 'flex-start',
+                }}
+            >
+                <nav
+                    aria-label="Assuntos do perfil"
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                        minWidth: 180,
+                    }}
+                >
+                    {ABAS.map((aba) => (
+                        <Link
+                            key={aba.titulo}
+                            href={aba.href}
+                            className={cn(
+                                'rt-menu-item',
+                                isCurrentUrl(aba.href) && 'ativo',
+                            )}
+                        >
+                            {aba.titulo}
+                        </Link>
+                    ))}
+                </nav>
+
+                <section
+                    className="card-premium"
+                    style={{ flex: 1, minWidth: 300, maxWidth: 620 }}
+                >
+                    {children}
+                </section>
+            </div>
+        </>
     );
 }

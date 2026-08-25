@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'SEFAL'),
 
     /*
     |--------------------------------------------------------------------------
@@ -76,13 +76,18 @@ return [
     | by Laravel's translation / localization methods. This option can be
     | set to any locale for which you plan to have translation strings.
     |
+    | O sistema é de um órgão público brasileiro e fala português com quem o
+    | usa: o padrão é `pt_BR` (traduções em `lang/pt_BR`), inclusive quando o
+    | `.env` não diz nada — é o que garante que uma mensagem de validação nunca
+    | chegue em inglês na tela, em qualquer ambiente.
+    |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'pt_BR'),
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'pt_BR'),
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'pt_BR'),
 
     /*
     |--------------------------------------------------------------------------

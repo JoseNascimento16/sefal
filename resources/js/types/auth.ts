@@ -1,32 +1,20 @@
+/**
+ * O usuário como a tela o conhece — o recorte que o `HandleInertiaRequests`
+ * compartilha. Não é o registro inteiro do banco: só o que a tela precisa.
+ */
 export type User = {
     id: number;
     name: string;
     email: string;
-    avatar?: string;
-    email_verified_at: string | null;
-    two_factor_enabled?: boolean;
-    created_at: string;
-    updated_at: string;
-    [key: string]: unknown;
+    /** Matrícula, na forma canônica (minúscula). Mostre em MAIÚSCULA. */
+    login: string;
+    /** Enxerga tudo — pela marca na conta ou pelo setor `administrador`. */
+    admin: boolean;
+    /** Setores (perfis de acesso) a que a pessoa pertence, por apelido. */
+    setores: string[];
 };
 
 export type Auth = {
-    user: User;
-};
-
-export type Passkey = {
-    id: number;
-    name: string;
-    authenticator: string | null;
-    created_at_diff: string;
-    last_used_at_diff: string | null;
-};
-
-export type TwoFactorSetupData = {
-    svg: string;
-    url: string;
-};
-
-export type TwoFactorSecretKey = {
-    secretKey: string;
+    /** `null` nas telas públicas e de acesso. */
+    user: User | null;
 };

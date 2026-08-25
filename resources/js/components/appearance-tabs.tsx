@@ -1,45 +1,58 @@
 import type { LucideIcon } from 'lucide-react';
 import { Monitor, Moon, Sun } from 'lucide-react';
-import type { HTMLAttributes } from 'react';
 import type { Appearance } from '@/hooks/use-appearance';
 import { useAppearance } from '@/hooks/use-appearance';
 import { cn } from '@/lib/utils';
 
-export default function AppearanceToggleTab({
-    className = '',
-    ...props
-}: HTMLAttributes<HTMLDivElement>) {
-    const { appearance, updateAppearance } = useAppearance();
+/**
+ * Escolha do tema: claro, escuro ou o que o aparelho estiver usando.
+ *
+ * "Sistema" é a opção padrão e existe por um motivo prático: fiscal em rua com o
+ * aparelho no modo escuro à noite não deveria ter de trocar nada aqui.
+ */
+const OPCOES: { valor: Appearance; icone: LucideIcon; rotulo: string }[] = [
+    { valor: 'light', icone: Sun, rotulo: 'Claro' },
+    { valor: 'dark', icone: Moon, rotulo: 'Escuro' },
+    { valor: 'system', icone: Monitor, rotulo: 'Do aparelho' },
+];
 
-    const tabs: { value: Appearance; icon: LucideIcon; label: string }[] = [
-        { value: 'light', icon: Sun, label: 'Light' },
-        { value: 'dark', icon: Moon, label: 'Dark' },
-        { value: 'system', icon: Monitor, label: 'System' },
-    ];
+export default function AppearanceToggleTab() {
+    const { appearance, updateAppearance } = useAppearance();
 
     return (
         <div
-            className={cn(
-                'inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800',
-                className,
-            )}
-            {...props}
+            role="group"
+            aria-label="Tema do sistema"
+            style={{
+                display: 'inline-flex',
+                gap: 6,
+                padding: 5,
+                borderRadius: 'var(--sm-raio-md)',
+                background: 'var(--sm-muted)',
+            }}
         >
-            {tabs.map(({ value, icon: Icon, label }) => (
-                <button
-                    key={value}
-                    onClick={() => updateAppearance(value)}
-                    className={cn(
-                        'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
-                        appearance === value
-                            ? 'bg-white shadow-xs dark:bg-neutral-700 dark:text-neutral-100'
-                            : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60',
-                    )}
-                >
-                    <Icon className="-ml-1 h-4 w-4" />
-                    <span className="ml-1.5 text-sm">{label}</span>
-                </button>
-            ))}
+            {OPCOES.map(({ valor, icone: Icone, rotulo }) => {
+                const ativo = appearance === valor;
+
+                return (
+                    <button
+                        key={valor}
+                        type="button"
+                        onClick={() => updateAppearance(valor)}
+                        aria-pressed={ativo}
+                        className={cn(
+                            'btn btn-sm',
+                            ativo ? 'btn-primary' : 'btn-secondary',
+                        )}
+                        style={
+                            ativo ? undefined : { borderColor: 'transparent' }
+                        }
+                    >
+                        <Icone size={15} aria-hidden />
+                        {rotulo}
+                    </button>
+                );
+            })}
         </div>
     );
 }

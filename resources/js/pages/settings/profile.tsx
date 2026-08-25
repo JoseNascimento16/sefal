@@ -1,131 +1,112 @@
 import { Form, Head, usePage } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
+import { Save } from 'lucide-react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import DeleteUser from '@/components/delete-user';
-import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { BotaoAcao } from '@/components/retaguarda/acao';
 import { edit } from '@/routes/profile';
-import type { Auth } from '@/types';
-import { send } from '@/routes/verification';
 
-type PageProps = {
-    auth: Auth;
-};
+export default function Profile() {
+    const { auth } = usePage().props;
+    // Numa cópia local: dentro do corpo do formulário, o TypeScript já não sabe
+    // que a checagem acima aconteceu.
+    const usuario = auth.user;
 
-export default function Profile(
-    {
-        mustVerifyEmail,
-        status,
-    }: {
-        mustVerifyEmail: boolean;
-        status?: string;
-    },
-) {
-    const { auth } = usePage<PageProps>().props;
+    if (!usuario) {
+        return null;
+    }
 
     return (
         <>
-            <Head title="Profile settings" />
+            <Head title="Meus dados" />
 
-            <h1 className="sr-only">Profile settings</h1>
-
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Profile"
-                    description="Update your name and email address"
-                />
-
-                <Form
-                    {...ProfileController.update.form()}
-                    options={{
-                        preserveScroll: true,
-                    }}
-                    className="space-y-6"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
-
-                                <Input
-                                    id="name"
-                                    className="mt-1 block w-full"
-                                    defaultValue={auth.user.name}
-                                    name="name"
-                                    required
-                                    autoComplete="name"
-                                    placeholder="Full name"
-                                />
-
-                                <InputError
-                                    className="mt-2"
-                                    message={errors.name}
-                                />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    className="mt-1 block w-full"
-                                    defaultValue={auth.user.email}
-                                    name="email"
-                                    required
-                                    autoComplete="username"
-                                    placeholder="Email address"
-                                />
-
-                                <InputError
-                                    className="mt-2"
-                                    message={errors.email}
-                                />
-                            </div>
-
-                            {mustVerifyEmail &&
-                                auth.user.email_verified_at === null && (
-                                    <div>
-                                        <p className="-mt-4 text-sm text-muted-foreground">
-                                            Your email address is unverified.{' '}
-                                            <Link
-                                                href={send()}
-                                                as="button"
-                                                className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                                            >
-                                                Click here to re-send the
-                                                verification email.
-                                            </Link>
-                                        </p>
-
-                                        {status ===
-                                            'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                A new verification link has been
-                                                sent to your email address.
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    disabled={processing}
-                                    data-test="update-profile-button"
-                                >
-                                    Save
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </Form>
+            <div style={{ marginBottom: 20 }}>
+                <h2 className="card-titulo">Meus dados</h2>
+                <p className="card-sub">
+                    Nome e e-mail. A matrícula é definida pela administração e
+                    não muda por aqui.
+                </p>
             </div>
 
-            <DeleteUser />
+            <Form
+                {...ProfileController.update.form()}
+                options={{ preserveScroll: true }}
+            >
+                {({ processing, errors }) => (
+                    <>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="matricula">
+                                Matrícula
+                            </label>
+                            {/* Só leitura: aparece porque é o identificador de
+                                quem está logado, em MAIÚSCULA como no crachá. */}
+                            <input
+                                id="matricula"
+                                className="form-control"
+                                value={usuario.login.toUpperCase()}
+                                readOnly
+                                disabled
+                            />
+                        </div>
+
+                        <div
+                            className="form-group"
+                            data-erro={errors.name ? '1' : undefined}
+                        >
+                            <label className="form-label" htmlFor="name">
+                                Nome
+                            </label>
+                            <input
+                                id="name"
+                                name="name"
+                                className="form-control"
+                                defaultValue={usuario.name}
+                                required
+                                autoComplete="name"
+                                placeholder="Nome completo"
+                            />
+                            {errors.name && (
+                                <p className="form-erro">{errors.name}</p>
+                            )}
+                        </div>
+
+                        <div
+                            className="form-group"
+                            data-erro={errors.email ? '1' : undefined}
+                        >
+                            <label className="form-label" htmlFor="email">
+                                E-mail
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                className="form-control"
+                                defaultValue={usuario.email}
+                                required
+                                autoComplete="email"
+                                placeholder="nome@salvador.ba.gov.br"
+                            />
+                            {errors.email && (
+                                <p className="form-erro">{errors.email}</p>
+                            )}
+                            <p className="form-ajuda">
+                                É por este e-mail que chega o link para definir
+                                uma senha nova.
+                            </p>
+                        </div>
+
+                        <BotaoAcao
+                            type="submit"
+                            icone={<Save size={16} aria-hidden />}
+                            carregando={processing}
+                            rotuloCarregando="Salvando…"
+                            className="btn btn-primary"
+                            data-test="update-profile-button"
+                        >
+                            Salvar
+                        </BotaoAcao>
+                    </>
+                )}
+            </Form>
         </>
     );
 }
@@ -133,7 +114,7 @@ export default function Profile(
 Profile.layout = {
     breadcrumbs: [
         {
-            title: 'Profile settings',
+            title: 'Meu Perfil',
             href: edit(),
         },
     ],
