@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\PermissaoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Middleware;
@@ -116,15 +117,17 @@ class HandleInertiaRequests extends Middleware
      *     frente das telas, e um link para rota inexistente estouraria a
      *     renderização da barra inteira — o sistema ficaria sem menu por causa
      *     de uma linha de configuração;
-     *  2. item com `setores` só aparece para quem pertence a um deles. O
-     *     administrador enxerga tudo.
+     *  2. item que o usuário não pode ver não aparece. Quem responde isso é o
+     *     `PermissaoService` — o MESMO que as guardas de acesso consultam. Se o
+     *     menu tivesse a sua própria conta, um dia ofereceria uma tela que a
+     *     guarda barra, ou esconderia uma que ela deixa passar para quem digita
+     *     o endereço.
      *
      * @return list<array<string, mixed>>
      */
     protected function menu(User $user): array
     {
-        $ehAdmin = $user->ehAdmin();
-        $meusSetores = $user->setores->pluck('slug')->all();
+        $permissoes = app(PermissaoService::class);
 
         $secoes = [];
 
@@ -136,9 +139,7 @@ class HandleInertiaRequests extends Middleware
                     continue;
                 }
 
-                $setores = $item['setores'] ?? [];
-
-                if ($setores !== [] && ! $ehAdmin && array_intersect($setores, $meusSetores) === []) {
+                if (! $permissoes->podeVerItemDoMenu($user, $item)) {
                     continue;
                 }
 

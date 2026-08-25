@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\PermissaoSetor;
+use App\Services\PermissaoService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +18,20 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->configurarConexaoDeBanco();
+
+        /*
+         * Uma instância por requisição, e não uma por quem a injeta.
+         *
+         * Três consumidores perguntam a mesma coisa na mesma requisição — as duas
+         * guardas de acesso e a montagem do menu. Com uma instância cada, a
+         * memória interna do serviço nunca era aproveitada e a consulta de
+         * permissões repetia; com uma só, ela vale de verdade.
+         *
+         * O contêiner é reconstruído a cada requisição, então não há risco de a
+         * memória atravessar requisições. (Sob um servidor persistente — Octane,
+         * que este projeto não usa — seria preciso descartá-la entre elas.)
+         */
+        $this->app->singleton(PermissaoService::class);
     }
 
     /**
@@ -72,6 +88,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // A memória do serviço de permissão morre quando a matriz muda. A fiação
+        // fica aqui, ao lado da declaração do singleton, para as duas decisões
+        // (compartilhar a instância e invalidá-la) serem lidas juntas.
+        PermissaoSetor::saved(fn () => app(PermissaoService::class)->esquecer());
+        PermissaoSetor::deleted(fn () => app(PermissaoService::class)->esquecer());
     }
 
     /**

@@ -2,6 +2,7 @@
 
 use App\Models\Setor;
 use App\Models\User;
+use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 
 /*
@@ -69,15 +70,27 @@ test('o menu traz o inicio, o perfil e a secao ainda em construcao', function ()
 test('item de menu restrito a um setor nao aparece para quem nao pertence a ele', function () {
     // O menu é montado no servidor: se a decisão de quem vê o quê morasse na
     // tela, o item apenas ficaria escondido — mas continuaria viajando.
+    //
+    // Quem responde "este item aparece?" é o controle de acesso (Modo Gerente),
+    // e é por isso que o item declara `slug`: a concessão é a linha da matriz,
+    // semeada a partir de `setores`. A lista sozinha não filtra nada — se ela
+    // também filtrasse, a mesma decisão teria dois donos.
+    //
+    // O modo `block` é explícito porque o menu obedece o rollout: fora dele o
+    // item continua à vista de propósito (ver ModoGerenteTest).
+    config()->set('retaguarda.permissao_enforce', 'block');
     config()->set('retaguarda_menu.secoes', [[
         'rotulo' => 'Fiscalização',
         'itens' => [[
             'rotulo' => 'Só do fiscal',
             'rota' => 'retaguarda.inicio',
             'icone' => 'fiscalizacoes',
+            'slug' => 'so-do-fiscal',
             'setores' => ['fiscal'],
         ]],
     ]]);
+
+    $this->seed(PermissoesSetorSeeder::class);
 
     $gestor = User::factory()->create();
     $gestor->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
@@ -96,12 +109,18 @@ test('item de menu restrito a um setor nao aparece para quem nao pertence a ele'
 });
 
 test('o administrador ve o item de qualquer setor', function () {
+    // E sem precisar de concessão nenhuma: o acesso total do administrador é
+    // desvio no código, não linha de matriz que alguém possa desmarcar. Com o
+    // bloqueio ligado, para a asserção valer algo (fora dele o item apareceria
+    // para qualquer um).
+    config()->set('retaguarda.permissao_enforce', 'block');
     config()->set('retaguarda_menu.secoes', [[
         'rotulo' => 'Fiscalização',
         'itens' => [[
             'rotulo' => 'Só do fiscal',
             'rota' => 'retaguarda.inicio',
             'icone' => 'fiscalizacoes',
+            'slug' => 'so-do-fiscal',
             'setores' => ['fiscal'],
         ]],
     ]]);

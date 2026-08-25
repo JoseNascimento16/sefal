@@ -3,6 +3,8 @@
 use App\Http\Middleware\GarantirUsuarioAtivo;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\Permissao;
+use App\Http\Middleware\PermissaoAcao;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -40,10 +42,24 @@ return Application::configure(basePath: dirname(__DIR__))
         // envolveria o Inertia em vez de ser envolvida por ele: o navegador repetiria o
         // PATCH contra a tela de login e receberia 405 no lugar da tela — barrado em
         // silêncio, exatamente o que a lei do projeto proíbe.
+        //
+        // As guardas de permissão também vão no grupo inteiro, e pela mesma
+        // razão: é o que faz a tela nova nascer protegida, em vez de depender de
+        // alguém lembrar de pendurar a guarda na rota dela. Elas saem de cena
+        // sozinhas quando não há ninguém autenticado (aí quem responde é a
+        // guarda de autenticação) ou quando o caminho não é da Retaguarda.
+        //
+        // A ordem entre as duas é indiferente — uma cuida da leitura, a outra das
+        // mutações —, mas as duas vêm DEPOIS do middleware do Inertia, pelo mesmo
+        // motivo da guarda de usuário ativo: é ele que transforma 302 em 303 nas
+        // requisições PUT/PATCH/DELETE, e sem isso o navegador repetiria o verbo
+        // contra o destino do redirecionamento.
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
             GarantirUsuarioAtivo::class,
+            Permissao::class,
+            PermissaoAcao::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
     })

@@ -20,8 +20,32 @@ return [
     |   rotulo  — o nome que aparece na tela;
     |   rota    — nome da rota (não a URL: o endereço muda, o nome não);
     |   icone   — chave do ícone, traduzida em `resources/js/lib/icones-menu.ts`;
-    |   setores — quem vê. Lista VAZIA = todo usuário autenticado; com setores,
-    |             só quem pertence a um deles (o administrador vê tudo).
+    |   slug    — identidade da tela no CONTROLE DE ACESSO (ver abaixo);
+    |   setores — a SEMENTE da matriz de permissões (ver abaixo).
+    |
+    | ── `slug` e `setores`: quem decide o acesso ────────────────────────────
+    |
+    | Declarar `slug` coloca a tela sob o Modo Gerente: o slug é a chave dela na
+    | matriz `setor × tela × ação`, e daí em diante quem manda é a MATRIZ — tanto
+    | para o menu quanto para as guardas de leitura e de ação. (Enquanto o
+    | bloqueio não está ligado — ver `retaguarda.permissao_enforce` —, o item
+    | continua à vista para quem ainda não tem a concessão: sumir do menu sem
+    | recado nem registro é justamente o que o rollout evita.) O `slug` tem de
+    | ser o primeiro trecho do caminho da rota (`/retaguarda/<slug>/...`), porque
+    | é assim que a guarda de leitura descobre a que tela um endereço pertence;
+    | `ModoGerenteTest` reprova se os dois discordarem.
+    |
+    | `setores` é a SEMENTE dessa matriz — a concessão inicial, aplicada uma vez
+    | pelo `PermissoesSetorSeeder`. Depois disso, mudar esta lista não muda mais
+    | nada: quem concede e quem tira é a tela do Modo Gerente. (O administrador
+    | não é semeado: ele é desvio no código, não linha de matriz.)
+    |
+    | Item SEM `slug` fica fora do controle de acesso, e isso é deliberado em dois
+    | casos — a tela inicial (barrá-la fecharia um loop de redirecionamento, já
+    | que é para lá que a própria negativa manda o usuário) e a área da própria
+    | conta (senha e dados pessoais não são decisão de gestor). Fora desses, item
+    | restrito a setor SEM slug escaparia da matriz e daria dois donos à mesma
+    | decisão: `ModoGerenteTest` reprova.
     |
     */
 
@@ -53,6 +77,16 @@ return [
                     'rota' => 'profile.edit',
                     'icone' => 'perfil',
                     'setores' => [],
+                ],
+                [
+                    'rotulo' => 'Modo Gerente',
+                    'rota' => 'retaguarda.modo-gerente.index',
+                    'icone' => 'permissoes',
+                    'slug' => 'modo-gerente',
+                    // Só o administrador, e por desvio (não por linha semeada):
+                    // quem distribui acesso não pode distribuir a si mesmo o
+                    // poder de distribuir acesso.
+                    'setores' => ['administrador'],
                 ],
             ],
         ],
