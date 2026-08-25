@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import { Spinner } from '@/components/retaguarda/acao';
 import { useScrollLock } from '@/hooks/use-scroll-lock';
 import { cn } from '@/lib/utils';
@@ -49,7 +50,29 @@ export function ModalConfirm({
     onCancelar: () => void;
     onConfirmar: () => void;
 }) {
+    const voltar = useRef<HTMLButtonElement>(null);
+
     useScrollLock(true);
+
+    // O foco nasce no "Voltar", e não no botão que confirma: quem aperta Enter
+    // sem ler acaba de sair, não de apagar algo.
+    useEffect(() => {
+        voltar.current?.focus();
+    }, []);
+
+    // Esc cancela — menos no meio de uma ação em voo, para a pessoa não fechar a
+    // camada sem saber se aquilo foi ou não gravado.
+    useEffect(() => {
+        const tecla = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !processando) {
+                onCancelar();
+            }
+        };
+
+        document.addEventListener('keydown', tecla);
+
+        return () => document.removeEventListener('keydown', tecla);
+    }, [processando, onCancelar]);
 
     return (
         <div
@@ -83,6 +106,7 @@ export function ModalConfirm({
                 <div className="sobreposicao-acoes">
                     <button
                         type="button"
+                        ref={voltar}
                         className="btn btn-secondary btn-sm"
                         onClick={onCancelar}
                         disabled={processando}
