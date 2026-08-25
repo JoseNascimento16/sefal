@@ -211,7 +211,10 @@ export default function Relatorios({
                     {escolhido && (
                         <section className="card-premium">
                             <p className="card-titulo">{escolhido.titulo}</p>
-                            <p className="card-sub" style={{ marginBottom: 18 }}>
+                            <p
+                                className="card-sub"
+                                style={{ marginBottom: 18 }}
+                            >
                                 {escolhido.descricao}
                             </p>
 
@@ -364,7 +367,8 @@ export default function Relatorios({
                                     >
                                         {gerando === chave ? (
                                             <>
-                                                <Spinner tamanho={15} /> Gerando…
+                                                <Spinner tamanho={15} />{' '}
+                                                Gerando…
                                             </>
                                         ) : (
                                             <>

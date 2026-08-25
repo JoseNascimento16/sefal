@@ -76,6 +76,9 @@ export async function baixarDocumento(
 
         return { ok: true };
     } catch {
-        return { ok: false, mensagem: 'Falha de comunicação ao gerar o arquivo.' };
+        return {
+            ok: false,
+            mensagem: 'Falha de comunicação ao gerar o arquivo.',
+        };
     }
 }

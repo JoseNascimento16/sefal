@@ -91,7 +91,15 @@ export default function BotaoExportar({
 
         const resultado = await baixarDocumento(
             '/retaguarda/exportar-listagem',
-            { formato, titulo, subtitulo, contexto, colunas, linhas, orientacao },
+            {
+                formato,
+                titulo,
+                subtitulo,
+                contexto,
+                colunas,
+                linhas,
+                orientacao,
+            },
             `${titulo}.${formato}`,
         );
 
@@ -175,7 +183,10 @@ export default function BotaoExportar({
                         </p>
 
                         {erro && (
-                            <p className="form-erro" style={{ marginBottom: 14 }}>
+                            <p
+                                className="form-erro"
+                                style={{ marginBottom: 14 }}
+                            >
                                 <TriangleAlert size={15} aria-hidden /> {erro}
                             </p>
                         )}
