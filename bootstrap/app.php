@@ -5,6 +5,8 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\Permissao;
 use App\Http\Middleware\PermissaoAcao;
+use App\Http\Middleware\RequestId;
+use App\Models\LogErro;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +20,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // PRIMEIRO de tudo, no encadeamento global: o código da requisição precisa
+        // existir antes de qualquer coisa que possa falhar — inclusive a checagem
+        // de manutenção e o início da sessão. É ele que a página de erro mostra ao
+        // usuário e que o registro da exceção guarda; se nascesse dentro do grupo
+        // `web`, o erro mais grave (o que acontece antes da aplicação ficar de pé)
+        // sairia sem código nenhum.
+        $middleware->prepend(RequestId::class);
+
         // O cookie de tema fica em texto claro porque a página precisa lê-lo no
         // servidor para pintar o fundo certo já na primeira renderização (sem ele,
         // quem usa o tema escuro vê um lampejo branco a cada visita).
@@ -64,6 +74,22 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        /*
+         * Toda exceção reportável vira uma LINHA consultável em tela.
+         *
+         * O framework já não reporta 404/403/419/422 (são conversas normais com o
+         * usuário), então aqui caem só os erros de verdade. O registro carrega o
+         * mesmo código que a página de erro mostrou a quem estava usando o
+         * sistema — é ele que transforma "deu erro" numa ocorrência específica.
+         *
+         * A gravação é best-effort e nunca lança (ver `LogErro::registrar`): quem
+         * chega aqui já está com um problema, e um segundo erro por cima do
+         * primeiro custaria ao usuário até a página amigável.
+         */
+        $exceptions->report(function (Throwable $e): void {
+            LogErro::registrar($e, request(), RequestId::atual());
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

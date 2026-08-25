@@ -84,12 +84,7 @@ export default function ModoGerente({
 
     const aviso = AVISO_ENFORCE[enforce] ?? null;
 
-    function marcar(
-        tela: string,
-        setor: string,
-        acao: string,
-        valor: boolean,
-    ) {
+    function marcar(tela: string, setor: string, acao: string, valor: boolean) {
         setRascunho((atual) => {
             const linha = { ...atual[tela][setor], [acao]: valor };
 
@@ -167,10 +162,12 @@ export default function ModoGerente({
 
             {funcionalidades.length === 0 ? (
                 <div className="card-premium">
-                    <p className="card-titulo">Nenhuma tela sob controle ainda</p>
+                    <p className="card-titulo">
+                        Nenhuma tela sob controle ainda
+                    </p>
                     <p className="card-sub">
-                        As telas entram aqui à medida que são construídas. Não há
-                        nada a conceder por enquanto.
+                        As telas entram aqui à medida que são construídas. Não
+                        há nada a conceder por enquanto.
                     </p>
                 </div>
             ) : (
@@ -219,7 +216,9 @@ export default function ModoGerente({
                                                 {setor.travado && (
                                                     <span
                                                         className="selo selo-info"
-                                                        style={{ marginLeft: 8 }}
+                                                        style={{
+                                                            marginLeft: 8,
+                                                        }}
                                                     >
                                                         acesso total
                                                     </span>

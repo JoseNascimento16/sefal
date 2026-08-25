@@ -45,7 +45,14 @@ RUN { \
       echo "display_errors = Off"; \
       echo "display_startup_errors = Off"; \
       echo "log_errors = On"; \
+      echo "zend.exception_ignore_args = On"; \
     } > /etc/php.d/60-fiscalizacao-uploads.ini
+# Sobre `zend.exception_ignore_args = On` (última linha acima): sem ele o PHP guarda os ARGUMENTOS
+# de cada chamada no rastro da exceção — e desligado é o default fora do `php.ini-production`. Numa
+# falha durante o login, a senha digitada entraria em texto claro no arquivo de log do pod.
+# O rastro que o sistema grava em banco já nasce sem argumentos por construção
+# (`App\Models\LogErro::rastroDe`); esta linha é a SEGUNDA camada, e cobre o que o próprio PHP e o
+# framework escrevem — que não passa pelo nosso código.
 
 # ---- LibreOffice headless (Writer + Calc) — converte Office -> PDF nos relatórios ----
 # Removido dos repositórios do RHEL 10/UBI 10 -> instala os RPMs oficiais da The Document Foundation.
