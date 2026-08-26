@@ -36,7 +36,7 @@ exportou levaria um documento que não confere com o que viu.
 ### RN-02 — O recorte vai IMPRESSO no documento
 
 Todo arquivo carrega: título, caminho no menu, o recorte em palavras (aba + busca + filtros), o
-volume (`N registro(s) exportado(s)`), quem emitiu e quando. Sem isso, semanas depois ninguém sabe
+volume por extenso (`1 registro exportado` / `12 registros exportados`), quem emitiu e quando. Sem isso, semanas depois ninguém sabe
 se aquelas linhas eram "todas", "só as ativas" ou o resultado de uma busca.
 
 ### RN-03 — O pedido vai no CORPO do POST, nunca na URL

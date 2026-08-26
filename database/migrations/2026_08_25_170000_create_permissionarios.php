@@ -58,7 +58,9 @@ return new class extends Migration
             $table->string('documento', 14)->nullable()->unique();
             $table->string('rg', 20)->nullable();
 
-            // Caminho no disco público (`permissionarios/...`), não a imagem.
+            // Caminho no disco PRIVADO (`permissionarios/...`), não a imagem. A
+            // foto só sai pela rota autenticada do cadastro — retrato de cidadão
+            // fiscalizado não fica atrás de URL adivinhável.
             $table->string('foto', 255)->nullable();
             $table->string('telefone', 20)->nullable();
 

@@ -64,8 +64,11 @@ class CadastroPermissionarioController extends Controller
      *
      * Daqui a imagem só sai pela rota {@see foto()}, que passa pela guarda de leitura como
      * qualquer outra tela.
+     *
+     * É público de propósito: a provisão de persistência do deploy (volume/PVC) precisa cobrir
+     * a pasta deste disco, e quem confere isso lê a decisão AQUI em vez de repeti-la.
      */
-    private const DISCO_DAS_FOTOS = 'local';
+    public const DISCO_DAS_FOTOS = 'local';
 
     public function index(): Response
     {
@@ -421,7 +424,7 @@ class CadastroPermissionarioController extends Controller
         return null;
     }
 
-    /** Guarda a imagem no disco público e devolve o caminho, ou null. */
+    /** Guarda a imagem no disco privado e devolve o caminho, ou null. */
     private function guardarFoto(?UploadedFile $arquivo): ?string
     {
         if (! $arquivo instanceof UploadedFile) {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
 use App\Models\AtividadeAmbulante;
 use App\Models\Permissionario;
 use App\Models\Setor;
@@ -291,6 +292,72 @@ test('gravacao que falha na INCLUSAO nao deixa a foto orfa no disco', function (
 
     // Nenhum arquivo sobrou: a pasta está como estava antes da tentativa.
     expect(Storage::disk('local')->allFiles('permissionarios'))->toBe([]);
+});
+
+test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mora', function () {
+    /*
+     * A MESMA decisão tem três donos: o controller escolhe o disco, o compose de
+     * homologação declara o volume e o doc do OKD declara o PVC. Enquanto o
+     * disco era o público os três diziam a mesma coisa por coincidência; quando
+     * a foto passou para o disco privado — porque é retrato de cidadão
+     * fiscalizado —, a provisão continuou apontando só para `storage/app/public`.
+     *
+     * O estrago é mudo: nada quebra no deploy, nada aparece em log; as fotos
+     * simplesmente somem no `up` da imagem seguinte, e só se descobre quando um
+     * gestor abre um cadastro antigo. Por isso a amarração é asserção, e não
+     * comentário: quem trocar o disco de novo é avisado aqui.
+     */
+    $raiz = rtrim(str_replace('\\', '/', base_path()), '/');
+    $absoluto = rtrim(str_replace(
+        '\\',
+        '/',
+        Storage::disk(CadastroPermissionarioController::DISCO_DAS_FOTOS)->path(''),
+    ), '/');
+
+    expect($absoluto)->toStartWith($raiz.'/');
+
+    // Ex.: `storage/app/private` — o caminho do disco relativo à raiz do projeto,
+    // que é como o volume e o PVC o enxergam dentro do contêiner.
+    $pastaDaFoto = ltrim(substr($absoluto, strlen($raiz)), '/');
+
+    /** Um caminho declarado cobre a pasta quando é ela mesma ou um ancestral. */
+    $cobre = static fn (array $declarados): bool => (bool) array_filter(
+        $declarados,
+        static fn (string $d): bool => $d === $pastaDaFoto || str_starts_with($pastaDaFoto, rtrim($d, '/').'/'),
+    );
+
+    // 1) Compose de homologação: volume nomeado montado em algum ponto de `storage/`.
+    preg_match_all(
+        '#^\s*-\s*\w+:/var/www/html/(storage/[^:\s]+)#m',
+        (string) file_get_contents(base_path('docker-compose.homolog.yml')),
+        $noCompose,
+    );
+
+    expect($noCompose[1])->not->toBeEmpty('o compose de homolog nao declara volume nenhum sob storage/');
+    expect($cobre($noCompose[1]))->toBeTrue(
+        'nenhum volume do docker-compose.homolog.yml cobre '.$pastaDaFoto,
+    );
+
+    // 2) Doc do OKD: as linhas que declaram o PVC. Só elas — uma menção solta a
+    //    `storage/app/public` em outro contexto não é declaração de persistência.
+    $linhasDePvc = array_filter(
+        explode("\n", (string) file_get_contents(base_path('docs/deploy/okd.md'))),
+        static fn (string $l): bool => str_contains($l, 'PVC'),
+    );
+
+    expect($linhasDePvc)->not->toBeEmpty('o doc do OKD nao declara PVC nenhum');
+
+    foreach ($linhasDePvc as $linha) {
+        preg_match_all('#storage/app[a-z/]*#', $linha, $noDoc);
+
+        if ($noDoc[0] === []) {
+            continue;
+        }
+
+        expect($cobre($noDoc[0]))->toBeTrue(
+            'o PVC declarado em docs/deploy/okd.md nao cobre '.$pastaDaFoto.': '.trim($linha),
+        );
+    }
 });
 
 test('razao social com virgula e E comercial e aceita — o campo aceita CNPJ', function () {

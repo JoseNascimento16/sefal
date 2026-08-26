@@ -202,7 +202,11 @@ class PermissaoService
             }
         }
 
-        return (string) config('retaguarda.permissao_enforce', 'log');
+        // O padrão do fallback é `block`, e não `log`: config faltando é falha de
+        // provisionamento, e falha de provisionamento não pode ABRIR acesso em
+        // silêncio. Vale o mesmo valor entregue em `config/retaguarda.php` — dois
+        // padrões diferentes para a mesma decisão um dia divergem.
+        return (string) config('retaguarda.permissao_enforce', 'block');
     }
 
     /**
