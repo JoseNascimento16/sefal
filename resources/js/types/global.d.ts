@@ -1,4 +1,4 @@
-import type { Auth } from '@/types/auth';
+import type { AcoesDaTela, Auth } from '@/types/auth';
 import type { MenuSecao } from '@/types/navigation';
 import type { Recado } from '@/types/ui';
 
@@ -15,6 +15,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             menu: MenuSecao[];
+            acoes: AcoesDaTela | null;
             flash: Recado;
             [key: string]: unknown;
         };

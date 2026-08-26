@@ -1,10 +1,18 @@
 <?php
 
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
+use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
+use App\Http\Controllers\Retaguarda\InicioController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
 use App\Http\Controllers\Retaguarda\MonitoramentoParametrizacoesController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\AtividadesDoAmbulanteController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\MotivosDeRecusaController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\OrigensDeOperacaoController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeInfracaoController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
+use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,7 +30,9 @@ Route::middleware(['auth'])->group(function () {
     // para cá que a guarda de permissão manda quem foi barrado, então ela não
     // pode ser controlada por permissão (fecharia um loop). Ver o cabeçalho de
     // `config/retaguarda_menu.php`.
-    Route::inertia('retaguarda/inicio', 'Retaguarda/Inicio')->name('retaguarda.inicio');
+    // Os atalhos vêm do SERVIDOR (ver o cabeçalho do controller): escritos na
+    // tela, o cartão de uma tela pronta continuava anunciando "Em construção".
+    Route::get('retaguarda/inicio', [InicioController::class, 'index'])->name('retaguarda.inicio');
 
     /*
      * Modo Gerente — quem entra onde.
@@ -83,6 +93,68 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::get('retaguarda/acompanhamento-de-requisitos', [AcompanhamentoRequisitosController::class, 'index'])
         ->name('retaguarda.acompanhamento-de-requisitos.index');
+
+    /*
+     * Permissionários — a identidade de quem é fiscalizado.
+     *
+     * O primeiro trecho do caminho é o slug da tela (`permissionarios`), que é de
+     * onde as guardas deduzem a permissão: as rotas nascem protegidas, e a rota
+     * que vier amanhã (prontuário, validação de quarentena) já chega junto.
+     *
+     * O identificador vai como NÚMERO, e não o código nem o nome: o WAF da
+     * Prefeitura barra assinatura de SQL na URL, e nome de gente é texto livre.
+     */
+    Route::prefix('retaguarda/permissionarios')->name('retaguarda.permissionarios.')->group(function () {
+        Route::get('/', [CadastroPermissionarioController::class, 'index'])->name('index');
+
+        // A foto sai por aqui, e não por URL de disco público: é retrato de
+        // cidadão fiscalizado, e mora sob o caminho da tela justamente para a
+        // guarda de leitura conferir a permissão antes de entregar a imagem.
+        Route::get('{permissionario}/foto', [CadastroPermissionarioController::class, 'foto'])
+            ->name('foto')->whereNumber('permissionario');
+
+        Route::post('/', [CadastroPermissionarioController::class, 'store'])->name('store');
+        Route::put('{permissionario}', [CadastroPermissionarioController::class, 'update'])
+            ->name('update')->whereNumber('permissionario');
+        Route::delete('{permissionario}', [CadastroPermissionarioController::class, 'destroy'])
+            ->name('destroy')->whereNumber('permissionario');
+    });
+
+    /*
+     * Parametrização — as listas de escolha que o resto do sistema oferece.
+     *
+     * As seis têm o mesmo desenho de rotas (listar, incluir, alterar, excluir),
+     * então o registro é um laço: seis famílias escritas à mão seriam seis
+     * chances de uma delas nascer sem a rota de exclusão.
+     *
+     * O primeiro trecho do caminho é `parametrizacao` para as seis, e é dele que
+     * as guardas de acesso deduzem a tela: a permissão é UMA, para o conjunto —
+     * ver o cabeçalho do `ControllerDeLookup`.
+     *
+     * O identificador do registro vai como NÚMERO no caminho, e não o nome: o
+     * WAF da Prefeitura barra assinatura de SQL na URL, e nome de lista é texto
+     * livre digitado por gente.
+     */
+    $telasDeParametrizacao = [
+        'tipos-de-infracao' => TiposDeInfracaoController::class,
+        'atividades-do-ambulante' => AtividadesDoAmbulanteController::class,
+        'unidades-de-medida' => UnidadesDeMedidaController::class,
+        'tipos-de-operacao' => TiposDeOperacaoController::class,
+        'origens-de-operacao' => OrigensDeOperacaoController::class,
+        'motivos-de-recusa' => MotivosDeRecusaController::class,
+    ];
+
+    Route::prefix('retaguarda/parametrizacao')->name('retaguarda.parametrizacao.')
+        ->group(function () use ($telasDeParametrizacao) {
+            foreach ($telasDeParametrizacao as $caminho => $controlador) {
+                Route::prefix($caminho)->name($caminho.'.')->group(function () use ($controlador) {
+                    Route::get('/', [$controlador, 'index'])->name('index');
+                    Route::post('/', [$controlador, 'store'])->name('store');
+                    Route::put('{item}', [$controlador, 'update'])->name('update')->whereNumber('item');
+                    Route::delete('{item}', [$controlador, 'destroy'])->name('destroy')->whereNumber('item');
+                });
+            }
+        });
 
     /*
      * Exportação de LISTAGEM — o ponto único de PDF/XLSX/DOCX de toda grade e de

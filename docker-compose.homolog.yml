@@ -35,10 +35,23 @@ services:
     volumes:
       - /var/www/html/vendor
       - fiscalizacao_public_build:/var/www/html/public/build
-      # Uploads em runtime (Storage::disk('public') -> storage/app/public). SEM este volume, o
-      # container `web` — que monta o diretório do HOST, não o do container `app` — nunca vê o
-      # arquivo enviado, e o link devolve 403/404 com cara de erro de Nginx (é o Laravel).
+      # Uploads em runtime. São DOIS volumes porque são dois discos com destinos diferentes, e a
+      # imagem nasce sem nenhum deles — o que não estiver aqui é apagado a cada `docker load`/`up`
+      # da imagem nova, em silêncio.
+      #
+      #   • `public` (Storage::disk('public') -> storage/app/public): servido pela web. SEM este
+      #     volume, o container `web` — que monta o diretório do HOST, não o do container `app` —
+      #     nunca vê o arquivo enviado, e o link devolve 403/404 com cara de erro de Nginx (é o
+      #     Laravel).
+      #   • `private` (Storage::disk('local') -> storage/app/private): a FOTO do permissionário
+      #     mora aqui, retrato de cidadão fiscalizado que só sai por rota autenticada
+      #     (`CadastroPermissionarioController::DISCO_DAS_FOTOS`).
+      #
+      # Um volume só, montado em `storage/app`, cobriria os dois — e seria ERRADO nesta rota: o
+      # container `web` monta o volume público direto em `public/storage`, então a pasta privada
+      # passaria a ser servida pelo Nginx, que é exatamente o que o disco privado evita.
       - fiscalizacao_storage_public:/var/www/html/storage/app/public
+      - fiscalizacao_storage_private:/var/www/html/storage/app/private
       - /var/www/html/bootstrap/cache
     expose:
       - "9000"
@@ -68,3 +81,4 @@ services:
 volumes:
   fiscalizacao_public_build:
   fiscalizacao_storage_public:
+  fiscalizacao_storage_private:

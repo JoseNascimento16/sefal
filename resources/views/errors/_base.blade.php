@@ -54,9 +54,31 @@
         <h1>{{ $titulo ?? 'Algo não saiu como esperado' }}</h1>
         <p>{!! $mensagem ?? 'Tente novamente em alguns instantes.' !!}</p>
 
+        {{--
+            A saída depende de QUEM está lendo. Oferecer "Entrar no sistema" a
+            quem já está dentro é convidá-lo a se deslogar — e quem chegou aqui
+            por um endereço errado quer voltar ao trabalho, não recomeçar.
+
+            O `try` não é excesso de zelo: a sessão deste sistema mora no BANCO, e
+            esta página precisa desenhar justamente quando o banco não responde
+            (é a tela de 503). Sem ele, perguntar "está autenticado?" derrubaria a
+            própria página de erro. Na dúvida, trata como visitante — o pior caso
+            é oferecer o caminho de entrada a quem já entrou.
+        --}}
+        @php
+            try {
+                $autenticado = auth()->check();
+            } catch (\Throwable) {
+                $autenticado = false;
+            }
+        @endphp
+
         <div class="acoes">
-            <a class="btn principal" href="/retaguarda/inicio">Ir para o início</a>
-            <a class="btn secundario" href="/login">Entrar no sistema</a>
+            @if($autenticado)
+                <a class="btn principal" href="/retaguarda/inicio">Ir para o início</a>
+            @else
+                <a class="btn principal" href="/login">Entrar no sistema</a>
+            @endif
         </div>
 
         {{--

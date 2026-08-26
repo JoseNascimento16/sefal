@@ -38,7 +38,10 @@ class ModoGerenteController extends Controller
             // A tela diz em voz alta se o bloqueio está de fato ligado. Sem isso,
             // quem configura acha que tirou um acesso e não tirou — a matriz já
             // vale, mas o modo `log` só observa.
-            'enforce' => (string) config('retaguarda.permissao_enforce', 'log'),
+            // Config faltando cai em `block`, o mesmo padrão da guarda — a tela
+            // anunciando `log` enquanto o servidor barra seria pior que não
+            // anunciar nada.
+            'enforce' => (string) config('retaguarda.permissao_enforce', 'block'),
             'historico' => $this->historico(),
         ]);
     }

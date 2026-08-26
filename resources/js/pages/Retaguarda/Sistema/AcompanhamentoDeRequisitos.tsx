@@ -11,6 +11,7 @@ import {
 } from '@/components/retaguarda/th-ordenavel';
 import { casaTermos, parseConsulta } from '@/lib/busca';
 import { VAZIO } from '@/lib/datas';
+import { contar, plural } from '@/lib/plural';
 import { index } from '@/routes/retaguarda/acompanhamento-de-requisitos';
 
 /**
@@ -189,9 +190,10 @@ export default function AcompanhamentoDeRequisitos({
                         Cada funcionalidade entregue e o requisito escrito que a
                         especifica. A pergunta aqui não é "existe?", e sim{' '}
                         <strong>
-                            o que está construído ainda condiz com o que foi
-                            escrito?
+                            se o que está construído ainda condiz com o que foi
+                            escrito
                         </strong>
+                        .
                     </p>
                 </div>
             </div>
@@ -237,14 +239,19 @@ export default function AcompanhamentoDeRequisitos({
                 <div>
                     <p className="card-titulo">
                         {totais.desatualizada > 0
-                            ? `${totais.desatualizada} funcionalidade(s) divergindo do requisito escrito`
+                            ? `${contar(totais.desatualizada, 'funcionalidade', 'funcionalidades')} divergindo do requisito escrito`
                             : totais.nao > 0
-                              ? `${totais.nao} funcionalidade(s) ainda sem requisito escrito`
+                              ? `${contar(totais.nao, 'funcionalidade', 'funcionalidades')} ainda sem requisito escrito`
                               : 'Tudo com requisito escrito e alinhado'}
                     </p>
                     <p className="card-sub">
-                        {totais.total} funcionalidade(s) · {totais.comHu} com
-                        requisito escrito ({totais.percentComHu}%)
+                        {contar(
+                            totais.total,
+                            'funcionalidade',
+                            'funcionalidades',
+                        )}{' '}
+                        · {totais.comHu} com requisito escrito (
+                        {totais.percentComHu}%)
                         {totais.comHu > 0 &&
                             ` · ${totais.percentAlinhada}% delas ainda alinhadas`}
                     </p>
@@ -270,9 +277,15 @@ export default function AcompanhamentoDeRequisitos({
                             {m.modulo}
                         </p>
                         <p className="card-sub" style={{ marginTop: 4 }}>
-                            {m.total} funcionalidade(s) · {m.sim} alinhada(s) ·{' '}
-                            {m.desatualizada} divergente(s) · {m.nao} sem
-                            requisito
+                            {contar(m.total, 'funcionalidade', 'funcionalidades')}{' '}
+                            · {m.sim} {plural(m.sim, 'alinhada', 'alinhadas')} ·{' '}
+                            {m.desatualizada}{' '}
+                            {plural(
+                                m.desatualizada,
+                                'divergente',
+                                'divergentes',
+                            )}{' '}
+                            · {m.nao} sem requisito
                         </p>
                     </div>
                 ))}

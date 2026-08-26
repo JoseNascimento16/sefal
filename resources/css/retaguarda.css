@@ -328,24 +328,43 @@ table.data-table th {
     padding: 0 14px 12px;
     border-bottom: 1px solid var(--sm-borda);
 }
+/* O espaçamento do cabeçalho ordenável passa para DENTRO do botão, e a célula
+   fica sem o dela. Com o padding no `<th>`, a faixa de 14px nas laterais e 12px
+   embaixo mostrava ponteiro de mão e reagia ao passar o mouse, e o clique ali não
+   ordenava nada — quem mirasse a borda do cabeçalho achava que a tela travou.
+   Agora a área que responde é a mesma que se vê. */
 table.data-table th.ord {
-    cursor: pointer;
+    padding: 0;
     user-select: none;
     white-space: nowrap;
 }
-table.data-table th.ord:hover {
-    color: var(--sm-texto);
-}
+/* O acionador da ordenação é um <button> (foco e Enter, não só clique de mouse);
+   aqui ele deixa de PARECER um botão e volta a parecer o cabeçalho que é. */
 table.data-table th.ord .ord-wrap {
-    display: inline-flex;
+    display: flex;
+    width: 100%;
     align-items: center;
     gap: 4px;
+    /* O mesmo espaçamento que o `<th>` comum tem, para as colunas ordenáveis e
+       as fixas ficarem alinhadas. */
+    padding: 0 14px 12px;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-align: inherit;
+    cursor: pointer;
+}
+table.data-table th.ord .ord-wrap:hover {
+    color: var(--sm-texto);
 }
 table.data-table th.ord .ord-ico {
     opacity: 0.4;
     transition: var(--sm-transicao);
 }
-table.data-table th.ord:hover .ord-ico {
+table.data-table th.ord .ord-wrap:hover .ord-ico {
     opacity: 0.75;
 }
 table.data-table th.ord.ord-ativa,
@@ -379,6 +398,45 @@ table.data-table tbody tr.clicavel {
     text-align: center;
     color: var(--sm-texto-fraco);
     font-size: 13.5px;
+}
+
+/* ============================ ABAS ============================ */
+/* Abas de uma tela de cadastro: "Localizar" (a lista) e o registro aberto.
+   São duas VISTAS da mesma tela, não navegação — por isso ficam dentro do
+   cartão, e não na trilha do topo. */
+.abas {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--sm-borda);
+    margin-bottom: 18px;
+}
+.aba {
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sm-texto-fraco);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: var(--sm-transicao);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 320px;
+}
+.aba:hover {
+    color: var(--sm-texto);
+}
+.aba[aria-selected='true'] {
+    color: var(--sm-primaria);
+    border-bottom-color: var(--sm-primaria);
+}
+.aba-rotulo {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ============================ SELOS ============================ */
@@ -572,6 +630,11 @@ table.data-table tbody tr.clicavel {
     font-size: 13px;
     color: var(--sm-texto-fraco);
     flex-wrap: wrap;
+    /* Sem isto a trilha não encolhe abaixo do próprio conteúdo (é o mínimo
+       automático do flex), empurra as ações para fora da barra — e a barra NÃO
+       rola na horizontal, então o que sai da tela fica inalcançável. Foi assim
+       que o botão de sair desapareceu no telefone. */
+    min-width: 0;
 }
 .rt-trilha-atual {
     font-weight: 700;
@@ -582,6 +645,9 @@ table.data-table tbody tr.clicavel {
     align-items: center;
     gap: 10px;
     margin-left: auto;
+    /* Tema, avisos e SAIR não cedem espaço: são as ações que acompanham o sistema
+       inteiro, e "sair" precisa estar alcançável em qualquer largura. */
+    flex-shrink: 0;
 }
 .rt-usuario {
     display: flex;
@@ -618,6 +684,35 @@ table.data-table tbody tr.clicavel {
     font-weight: 700;
     letter-spacing: 0.4px;
     color: var(--sm-texto-fraco);
+}
+/* ── A barra superior no telefone ────────────────────────────────────────────
+   Em 375px de largura, o nome e a matrícula do usuário ocupavam 174px e jogavam
+   o botão de SAIR 93px fora da tela. E a barra não rola na horizontal, então o
+   que saía não era só deslocado: era inalcançável — a pessoa ficava sem como
+   encerrar a sessão.
+
+   A escolha é explícita: identidade é conforto, sair é função. Abaixo de 620px o
+   avatar sozinho continua dizendo de quem é a sessão (o nome inteiro está em Meu
+   Perfil), e tema, avisos e sair permanecem os três à vista. */
+@media (max-width: 620px) {
+    .rt-usuario-texto {
+        display: none;
+    }
+    /* Sem o texto, a cápsula em volta do avatar não tem mais o que emoldurar. */
+    .rt-usuario {
+        padding: 0;
+        border-color: transparent;
+        background: none;
+    }
+}
+@media (max-width: 480px) {
+    .rt-topbar {
+        gap: 8px;
+        padding: 10px 12px;
+    }
+    .rt-trilha {
+        font-size: 12px;
+    }
 }
 .rt-pop {
     position: absolute;

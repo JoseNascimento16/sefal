@@ -50,17 +50,53 @@ test('a senha nao viaja para a tela', function () {
         );
 });
 
-test('o menu traz o inicio, o perfil e a secao ainda em construcao', function () {
-    $this->actingAs(User::factory()->create())->get('/retaguarda/inicio')
+test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () {
+    /*
+     * O que se afirma aqui é a MONTAGEM do menu — as seções e os itens que o
+     * servidor entrega —, não o controle de acesso. Por isso o usuário é um
+     * fiscal COM a concessão semeada: com o bloqueio ligado (o padrão desde o
+     * fim da Fase 1), quem não tem linha na matriz não recebe item controlado
+     * nenhum, e a asserção falharia por falta de permissão em vez de por menu
+     * mal montado — trocando o defeito que este teste existe para pegar.
+     */
+    $this->seed(PermissoesSetorSeeder::class);
+
+    $fiscal = User::factory()->create();
+    $fiscal->setores()->attach(Setor::where('slug', 'fiscal')->firstOrFail());
+
+    $this->actingAs($fiscal)->get('/retaguarda/inicio')
         ->assertInertia(function ($p) {
             $menu = collect($p->toArray()['props']['menu']);
 
             $rotulos = $menu->pluck('itens')->flatten(1)->pluck('rotulo');
-            expect($rotulos)->toContain('Início')->toContain('Meu Perfil');
+            expect($rotulos)
+                ->toContain('Início')
+                ->toContain('Meu Perfil')
+                ->toContain('Permissionários');
 
-            // Seção sem tela pronta aparece com o recado do que vem por aí, em
-            // vez de sumir — quem usa o sistema enxerga o caminho.
             $fiscalizacao = $menu->firstWhere('rotulo', 'Fiscalização');
+            expect($fiscalizacao)->not->toBeNull();
+            expect(collect($fiscalizacao['itens'])->pluck('rotulo'))->toContain('Permissionários');
+        });
+});
+
+test('a secao que fica sem item visivel mostra o recado, em vez de sumir', function () {
+    /*
+     * O `vazio` da seção não é texto de placeholder que morre quando a primeira
+     * tela nasce: ele é o que aparece para quem NÃO tem nenhuma das telas
+     * daquela seção concedida. Some sem recado, a pessoa não sabe se a seção
+     * não existe ou se ela é que não pode — e a lei do projeto é que ninguém é
+     * barrado em silêncio.
+     */
+    config()->set('retaguarda.permissao_enforce', 'block');
+
+    $semNada = User::factory()->create();
+
+    $this->actingAs($semNada)->get('/retaguarda/inicio')
+        ->assertInertia(function ($p) {
+            $fiscalizacao = collect($p->toArray()['props']['menu'])
+                ->firstWhere('rotulo', 'Fiscalização');
+
             expect($fiscalizacao)->not->toBeNull();
             expect($fiscalizacao['itens'])->toBe([]);
             expect($fiscalizacao['vazio'])->not->toBeNull();
@@ -181,12 +217,30 @@ test('as telas de erro falam portugues e nao mostram rastro de pilha', function 
     // Sem depurador: é o que roda em homologação e produção.
     config()->set('app.debug', false);
 
-    $resposta = $this->get('/rota-que-nao-existe');
+    // Autenticado, porque a saída oferecida depende de quem está lendo: para
+    // quem está dentro é "Ir para o início"; para o visitante, "Entrar no
+    // sistema" (ver `ObservabilidadeTest`).
+    $resposta = $this->actingAs(User::factory()->create())->get('/rota-que-nao-existe');
 
     $resposta->assertNotFound()
         ->assertSee('Página não encontrada')
         ->assertSee('Ir para o início')
         ->assertDontSee('Stack trace', false);
+});
+
+test('lei: a marca do sistema no exemplo de ambiente e SEFAL', function () {
+    /*
+     * Teste-LEI de fonte única. O nome do produto aparece na aba do navegador e
+     * vem de `APP_NAME`. Ele tem dois lugares onde é escrito — o default do
+     * código (`SEFAL`) e o exemplo que todo ambiente novo copia —, e informação
+     * com dois donos um dia diverge.
+     *
+     * A conferência é sobre o EXEMPLO, e não sobre o `.env` de quem roda o teste:
+     * a máquina de cada um é dela. (Foi ali que a divergência apareceu — uma
+     * máquina com `APP_NAME` antigo fazia a aba anunciar um nome de produto que
+     * nenhuma tela usa. O código e o exemplo já estavam certos.)
+     */
+    expect((string) file_get_contents(base_path('.env.example')))->toContain('APP_NAME="SEFAL"');
 });
 
 test('nenhuma classe de tela depende de espaco dentro de texto de classe', function () {

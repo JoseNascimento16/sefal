@@ -36,7 +36,7 @@ exportou levaria um documento que não confere com o que viu.
 ### RN-02 — O recorte vai IMPRESSO no documento
 
 Todo arquivo carrega: título, caminho no menu, o recorte em palavras (aba + busca + filtros), o
-volume (`N registro(s) exportado(s)`), quem emitiu e quando. Sem isso, semanas depois ninguém sabe
+volume por extenso (`1 registro exportado` / `12 registros exportados`), quem emitiu e quando. Sem isso, semanas depois ninguém sabe
 se aquelas linhas eram "todas", "só as ativas" ou o resultado de uma busca.
 
 ### RN-03 — O pedido vai no CORPO do POST, nunca na URL
@@ -129,6 +129,20 @@ linhas pode, portanto, passar do total — que é o número de contas e vem da l
 setor** tem linha própria: ela não enxerga tela controlada nenhuma, e é o caso que mais importa
 nessa leitura.
 
+### RN-14 — Relatório de Permissionários: as três situações sempre aparecem, mesmo zeradas
+
+O quadro "Cadastros por situação" traz **Regular, Irregular e Cadastrado em campo** ainda que alguma
+esteja em zero: "nenhum aguardando conferência" é uma resposta de gestão, e uma linha ausente seria
+lida como "não sei". Já o quadro **por atividade** mostra só os ramos que aparecem, do maior para o
+menor — ali o zero atrapalha, porque a lista de atividades é aberta e dezenas de linhas vazias
+esconderiam as que têm gente.
+
+O documento sai **deitado** (são oito colunas), com o documento **formatado** e as datas em BR. Sem
+documento é o caso normal deste cadastro, não um defeito: sai como travessão.
+
+Ele **convive** com o de Usuários do sistema, e não substitui nenhum: um responde quem **usa** o
+sistema, o outro quem **é fiscalizado**.
+
 ---
 
 ## Changelog
@@ -136,3 +150,5 @@ nessa leitura.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 25/08/2026 | José Nascimento | Relatórios / exportação de listagens | Criação do motor de relatórios (resultado neutro + exportadores PDF/XLSX/DOCX), do endpoint único de exportação de listagem com `<BotaoExportar>`, do perfil de dados por formato e do primeiro relatório concreto (Usuários do sistema). | A Retaguarda não tinha como levar dado nenhum para fora, e cada tela que precisasse disso inventaria a sua própria geração de arquivo. |
+| 25/08/2026 | José Nascimento | Relatórios | Novo relatório "Permissionários cadastrados" (RN-14): período de cadastro, situação e atividade, com quadro por situação e por ramo. | Faltava responder "quem está na base e o que ainda espera conferência" — pergunta de gestão que o relatório de contas do sistema não responde. |
+| 26/08/2026 | José Nascimento | Relatórios / exportação de listagens | Os formatos passam a se chamar **PDF · Excel · Word** na interface (capitalização normal, sem caixa alta), e o mesmo par aparece no texto do requisito; a camada sobreposta da escolha de formato passa a neutralizar o fundo. | "XLSX"/"DOCX" são códigos técnicos e "EXCEL"/"WORD" em caixa alta soam a grito — dois vocabulários para o mesmo artefato, e nenhum deles o nome que a pessoa reconhece. E a janela era modal só para quem olha: `Tab` e leitor de tela alcançavam os botões da tela de trás. |

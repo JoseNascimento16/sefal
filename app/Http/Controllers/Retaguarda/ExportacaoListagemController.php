@@ -8,6 +8,7 @@ use App\Relatorios\Exportadores\ExportadorPdf;
 use App\Relatorios\Exportadores\ExportadorXlsx;
 use App\Relatorios\Suporte\PerfilDadosListagem;
 use App\Relatorios\Suporte\ResultadoRelatorio;
+use App\Support\Texto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -88,7 +89,7 @@ class ExportacaoListagemController extends Controller
         $resultado->metadados['filtros_resumo'] = implode(' · ', array_filter([
             $dados['subtitulo'] ?? null,
             trim((string) ($dados['contexto'] ?? '')) !== '' ? $dados['contexto'] : null,
-            count($linhas).' registro(s) exportado(s)',
+            Texto::contar(count($linhas), 'registro exportado', 'registros exportados'),
             // Só o PDF imprime `emitido_por` no cabeçalho; nos outros dois o dado
             // entra aqui, para não ficar de fora nem sair repetido no PDF.
             $formato !== 'pdf' ? 'Emitido por: '.$emitidoPor : null,
@@ -219,7 +220,7 @@ class ExportacaoListagemController extends Controller
         }
 
         $contexto = trim((string) ($dados['contexto'] ?? ''));
-        $resultado->metadados['intro'] = 'Relação de '.count($registros).' registro(s)'
+        $resultado->metadados['intro'] = 'Relação de '.Texto::contar(count($registros), 'registro', 'registros')
             .($contexto !== '' ? ' — recorte: '.$contexto : '')
             .'. Documento gerado para conferência e arquivo.';
 
@@ -231,7 +232,7 @@ class ExportacaoListagemController extends Controller
         $sintese->coluna('valor', 'Valor');
         $sintese->linha(['indicador' => 'Mais antigo'.$rotuloData, 'valor' => $docx['mais_antigo']]);
         $sintese->linha(['indicador' => 'Mais recente'.$rotuloData, 'valor' => $docx['mais_recente']]);
-        $sintese->linha(['indicador' => 'Amplitude do período', 'valor' => $docx['amplitude_dias'] !== null ? $docx['amplitude_dias'].' dia(s)' : '—']);
+        $sintese->linha(['indicador' => 'Amplitude do período', 'valor' => $docx['amplitude_dias'] !== null ? Texto::contar($docx['amplitude_dias'], 'dia', 'dias') : '—']);
         $sintese->linha(['indicador' => 'Média de registros por dia', 'valor' => $docx['media_por_dia']]);
         $sintese->linha(['indicador' => $docx['coluna_categoria'].' menos frequente', 'valor' => $docx['menos_frequente']]);
         $sintese->linha(['indicador' => 'Valores distintos de '.$docx['coluna_categoria'], 'valor' => (string) $docx['categorias_distintas']]);

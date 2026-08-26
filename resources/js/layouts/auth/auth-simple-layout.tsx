@@ -1,4 +1,5 @@
-import { ShieldCheck } from 'lucide-react';
+import { Moon, ShieldCheck, Sun } from 'lucide-react';
+import { useAppearance } from '@/hooks/use-appearance';
 import type { AuthLayoutProps } from '@/types';
 
 /**
@@ -13,9 +14,13 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: AuthLayoutProps) {
+    const { resolvedAppearance, updateAppearance } = useAppearance();
+    const escuro = resolvedAppearance === 'dark';
+
     return (
         <div
             style={{
+                position: 'relative',
                 minHeight: '100svh',
                 display: 'grid',
                 placeItems: 'center',
@@ -24,6 +29,29 @@ export default function AuthSimpleLayout({
                     'radial-gradient(circle at 20% 0%, var(--sm-primaria-suave), transparent 55%), var(--sm-app)',
             }}
         >
+            {/*
+                O tema se troca ANTES de entrar. Quem opera sob sol direto — ou de
+                noite, que é quando muita fiscalização acontece — precisava logar
+                primeiro para poder enxergar a tela: a única alternância morava na
+                barra superior, que só existe depois do login.
+                É o MESMO controle da Retaguarda (o `useAppearance` grava a
+                escolha), então a preferência atravessa a entrada.
+            */}
+            <button
+                type="button"
+                className="icon-btn"
+                onClick={() => updateAppearance(escuro ? 'light' : 'dark')}
+                title={escuro ? 'Usar o tema claro' : 'Usar o tema escuro'}
+                aria-label={escuro ? 'Usar o tema claro' : 'Usar o tema escuro'}
+                style={{ position: 'absolute', top: 18, right: 18 }}
+            >
+                {escuro ? (
+                    <Sun size={18} aria-hidden />
+                ) : (
+                    <Moon size={18} aria-hidden />
+                )}
+            </button>
+
             <div style={{ width: '100%', maxWidth: 420 }}>
                 <div
                     style={{

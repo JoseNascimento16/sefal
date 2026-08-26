@@ -34,9 +34,14 @@ diga, ao mesmo tempo, que o setor só olha e que ele pode alterar.
 
 *Opera* está incluído de propósito: enquanto ele sobrevivia ao lado de *Só
 consulta*, o setor "só consulta" ainda gravava por `PUT`/`PATCH` — a coluna
-prometia "abre para olhar" e o servidor deixava alterar. A tela reflete a mesma
-regra: marcar *Só consulta* desmarca e indisponibiliza as três na hora, em vez de
-aceitar o clique e recusar depois.
+prometia "abre para olhar" e o servidor deixava alterar.
+
+**A tela reflete a mesma regra, nos DOIS sentidos.** Marcar *Só consulta*
+desmarca e indisponibiliza as três na hora; desmarcar *Vê* desmarca e
+indisponibiliza as quatro. Sem a segunda metade, quem tirava o *Vê* continuava
+vendo *Inclui* e *Exclui* marcados, salvava, e saía convencido de ter concedido
+as duas ao setor — quando o que foi gravado nega tudo. Estado enganoso é pior que
+recusa: a recusa a pessoa vê.
 
 ### RN-03 — Quem tem vários setores soma o que cada um concede
 
@@ -109,6 +114,15 @@ destrutivo: rodar de novo cria só o que falta e nunca desfaz decisão de
 gerente). Depois disso, mudar a lista não muda nada — quem concede e quem tira é
 esta tela.
 
+O normal é o **pacote inteiro** (vê, opera, inclui e exclui): é o que "este setor
+usa esta tela" quer dizer. A declaração aceita **ajuste por setor** para o caso em
+que não é isso — `'fiscal' => ['incluir' => false, 'excluir' => false]`. Foi
+preciso justamente no cadastro de permissionário: o fiscal precisa **consultar**
+quem está cadastrado (chegar na calçada sem saber é trabalhar às cegas) e não
+cria nem apaga por lá — ele cadastra em rua, pelo aplicativo, e o que nasce em
+rua entra em quarentena para o gestor conferir. Cadastro criado de mesa por ele
+passaria ao largo dessa conferência; excluir cadastro é ato de gestão.
+
 ### RN-10 — Toda alteração de permissão deixa rastro do que MUDOU
 
 Quem salvou, quando, em qual tela — e **o que mudou, por setor**:
@@ -125,7 +139,22 @@ incidente é "quem abriu qual porta, para quem?".
 
 Quando o detalhe não cabe no registro, o corte é por **setor inteiro** e o que
 sobrou é contado (`(+3 setores)`) — meia mudança gravada seria pior que uma
-contagem honesta. A tela mostra as últimas alterações.
+contagem honesta.
+
+A seção **"Últimas alterações"** mostra esse texto numa coluna própria ("O que
+mudou"), e não só *quando · quem · tela*: sem ela o registro respondia "alguém
+mexeu nesta tela", que é quase nada — e era exatamente a pergunta que a seção
+existe para responder que ficava sem resposta. A seção aparece **também vazia**,
+com o recado de que ainda não houve alteração: numa instalação nova, sem ela
+ninguém sabe que existe trilha de auditoria.
+
+### RN-10-b — Alteração não salva é dita em voz alta
+
+Cada tela tem o seu botão (um ajuste num canto não regrava a casa toda), e por
+isso a tela precisa dizer **onde** há pendência: a seção alterada ganha o selo
+*"alteração não salva"*, o botão fica indisponível quando não há nada a gravar, e
+sair da tela com pendência **pergunta antes**. Sem isso, quem mexia em três
+seções e salvava uma perdia as outras duas sem nunca saber.
 
 ### RN-11 — O bloqueio tem três estágios
 
@@ -135,11 +164,23 @@ contagem honesta. A tela mostra as últimas alterações.
 - `log` — confere e **registra** quem seria barrado, sem barrar;
 - `block` — barra de verdade.
 
-O padrão hoje é **`log`**. Ligar o bloqueio junto com o nascimento do catálogo
-seria estrear a fechadura antes de saber quantas portas a casa tem: cada tela das
-próximas entregas entra na matriz, e um esquecimento de concessão viraria gente
-sem acesso ao próprio trabalho. A tela avisa, em voz alta, quando o modo não é
-`block` — senão quem configura acha que tirou um acesso e não tirou.
+O padrão é **`block`** desde o fechamento da Fase 1. Ele nasceu `log`: ligar o
+bloqueio junto com o nascimento do catálogo seria estrear a fechadura antes de
+saber quantas portas a casa tem — cada tela das entregas seguintes entra na
+matriz, e um esquecimento de concessão viraria gente sem acesso ao próprio
+trabalho. O modo de observação registrou o que seria barrado, a matriz foi
+conferida contra o catálogo real e a chave virou. A tela avisa, em voz alta,
+quando o modo não é `block` — senão quem configura acha que tirou um acesso e não
+tirou.
+
+**O que isso exige de toda tela nova daqui em diante:** ela entra no catálogo
+(declarando `slug` no menu) **e** nasce concedida a quem trabalha nela (a lista
+`setores` do item, que o seeder da matriz aplica). Tela controlável sem concessão
+não é tela "fechada por precaução": é tela que só o administrador abre — e o furo
+passa batido justamente porque em desenvolvimento se testa logado como
+administrador. `off` e `log` continuam existindo para diagnóstico pontual em
+ambiente controlado; não são caminho de produção, e o gate reprova quem devolver
+um deles ao padrão do código ou ao `.env.example`.
 
 Em `log`, cada leitura e cada mutação que **seria** barrada gera um registro no
 log da aplicação com tela, ação, rota, caminho e usuário. É esse registro que se
@@ -172,3 +213,6 @@ do bloqueio.
 | 25/08/2026 | José Nascimento | Modo Gerente | O menu passa a obedecer o modo de rollout: fora do `block`, o item continua à vista (RN-11). | Sumir do menu em modo de observação era barrada em silêncio — sem recado, sem registro, e com a URL funcionando. |
 | 25/08/2026 | José Nascimento | Modo Gerente | "Só consulta" passa a derrubar também "Opera", na gravação e na tela (RN-02). | O setor "só consulta" ainda gravava por `PUT`/`PATCH`: a coluna prometia uma coisa e o servidor fazia outra. |
 | 25/08/2026 | José Nascimento | Modo Gerente | O rastro passa a registrar o delta por setor, omitindo quem não mudou (RN-10). | "Permissões alteradas" não respondia "quem abriu qual porta, para quem?". |
+| 26/08/2026 | José Nascimento | Modo Gerente | O padrão do enforcement passa de `log` para **`block`**: as guardas barram de verdade, e o `.env.example` acompanha (RN-11). | O rollout em observação cumpriu o que existia para cumprir — o catálogo da Fase 1 fechou e a matriz foi conferida contra ele. Manter `log` deixaria o controle de acesso ligado no papel e desligado na prática, o pior modo de falhar: nada quebra, nada aparece em tela. |
+| 26/08/2026 | José Nascimento | Modo Gerente | A tela passa a derrubar Opera/Só consulta/Inclui/Exclui quando "Vê" é desmarcado (RN-02); o rastro passa a **exibir** o que mudou, em coluna própria, e a seção aparece também vazia (RN-10); seção com alteração pendente é sinalizada, o botão fica indisponível sem alteração e sair com pendência pergunta antes (RN-10-b); a semente aceita ajuste por setor, e o fiscal nasce sem Inclui/Exclui no cadastro de permissionário (RN-09). | A legenda prometia que sem "Vê" nada vale, e a tela deixava Inclui/Exclui marcados: o gestor saía convencido de ter concedido o que o servidor nega. O rastro gravava o delta desde o dia 25 e a tela não o mostrava — a auditoria respondia "alguém mexeu". E salvamento por seção sem aviso descartava, em silêncio, o que a pessoa acabou de marcar em outra. |
+| 26/08/2026 | José Nascimento | Modo Gerente | A **semente** passa pela mesma normalização que a tela aplica ao gravar (RN-02/RN-09); toda tela da Retaguarda passa a **receber as ações da pessoa** junto com a página, e a esconder o que ela não tem; telas que dividem o mesmo slug aparecem na matriz com o nome da **seção**, decidido numa passada só (RN-09). | A semente montava a linha somando ajustes sobre o pacote completo, sem normalizar: declarar "Só consulta" gravava uma linha que se contradiz — "só consulta" marcado ao lado de Opera/Inclui/Exclui ligados. Como a resolução lê as colunas cruas, ela dava poder de gravar a quem a config diz que só olha, e a config parecia certa. As telas, por sua vez, decidiam o que oferecer por conta própria: ofereciam a ação que a guarda barra, e a pessoa só descobria depois de preencher o formulário. E o rótulo do slug compartilhado emergia da ordem de iteração — com duas telas em seções diferentes, resolvia pelo nome da última. |

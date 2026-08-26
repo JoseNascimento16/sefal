@@ -5,6 +5,7 @@ use App\Models\PermissaoSetor;
 use App\Models\Setor;
 use App\Models\User;
 use App\Services\PermissaoService;
+use App\Support\CatalogoFuncionalidades;
 use Database\Seeders\PermissoesSetorSeeder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
@@ -161,7 +162,10 @@ test('mutacao sem permissao volta para a tela anterior com o motivo, e nao grava
         ->assertRedirect('/retaguarda/inicio')
         ->assertSessionHas('flash.erro');
 
-    expect(PermissaoSetor::where('setor', 'fiscal')->exists())->toBeFalse();
+    // A conferência é sobre a linha que a mutação TENTOU gravar: o fiscal já tem
+    // outras concessões vindas da semente, e olhar o setor inteiro faria o teste
+    // passar a acusar a semeadura em vez da gravação barrada.
+    expect(PermissaoSetor::where('setor', 'fiscal')->where('slug', 'modo-gerente')->exists())->toBeFalse();
 });
 
 test('o rollout observa antes de barrar: off e log passam, block barra', function () {
@@ -584,6 +588,183 @@ test('a semeadura nasce do menu — tela restrita a setor nasce concedida a ele'
         ->and($semeadas->first()->habilitado)->toBeTrue();
 });
 
+test('a semente pode AJUSTAR o pacote de um setor — e o fiscal apenas CONSULTA na Retaguarda', function () {
+    /*
+     * O fiscal enxerga o cadastro de permissionário (chegar na calçada sem saber
+     * quem está cadastrado é trabalhar às cegas) e não grava nada por lá: ele
+     * cadastra em RUA, pelo aplicativo, e o que nasce em rua entra em quarentena
+     * até o gestor conferir.
+     *
+     * ⚠️ O ajuste é `apenas_leitura`, e não "incluir e excluir desligados". A
+     * diferença decide se a quarentena existe: com `habilitado` ligado o fiscal
+     * ALTERAVA o cadastro, e a situação é campo do mesmo formulário — ele tirava
+     * da fila o registro que ele mesmo acabara de criar em rua.
+     *
+     * A conferência é sobre a configuração REAL do menu, e não sobre um exemplo
+     * montado no teste: é a concessão inicial entregue que se quer travar.
+     */
+    $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->firstOrFail();
+
+    expect($fiscal->visivel)->toBeTrue()
+        ->and($fiscal->apenas_leitura)->toBeTrue()
+        ->and($fiscal->habilitado)->toBeFalse()
+        ->and($fiscal->incluir)->toBeFalse()
+        ->and($fiscal->excluir)->toBeFalse();
+
+    // O gestor continua com o pacote inteiro: validar e corrigir cadastro de
+    // campo é o trabalho dele.
+    $gestor = PermissaoSetor::where('setor', 'gestor')->where('slug', 'permissionarios')->firstOrFail();
+
+    expect($gestor->incluir)->toBeTrue()
+        ->and($gestor->excluir)->toBeTrue();
+});
+
+test('a forma curta e a forma longa da semente convivem', function () {
+    // Teste-LEI do formato. A config aceita `'gestor'` (pacote inteiro) e
+    // `'fiscal' => [...]` (pacote com ajuste) na MESMA lista; se a leitura
+    // quebrasse com a mistura, a tela nasceria sem concessão nenhuma — e tela
+    // controlável sem concessão é tela que ninguém abre.
+    config()->set('retaguarda_menu.secoes', [[
+        'rotulo' => 'Fiscalização',
+        'itens' => [[
+            'rotulo' => 'Vistorias',
+            'rota' => 'retaguarda.inicio',
+            'icone' => 'fiscalizacoes',
+            'slug' => 'vistorias',
+            'setores' => ['gestor', 'fiscal' => ['excluir' => false]],
+        ]],
+    ]]);
+
+    $this->seed(PermissoesSetorSeeder::class);
+
+    $semeadas = PermissaoSetor::where('slug', 'vistorias')->get()->keyBy('setor');
+
+    expect($semeadas->keys()->sort()->values()->all())->toBe(['fiscal', 'gestor'])
+        ->and($semeadas['gestor']->excluir)->toBeTrue()
+        ->and($semeadas['fiscal']->excluir)->toBeFalse()
+        // O ajuste é PONTUAL: o que não foi declarado continua vindo do pacote.
+        ->and($semeadas['fiscal']->visivel)->toBeTrue()
+        ->and($semeadas['fiscal']->incluir)->toBeTrue();
+});
+
+test('a semente nunca grava linha que se contradiz — "so consulta" derruba o resto', function () {
+    /*
+     * Teste-LEI. A resolução em tempo de execução lê as COLUNAS CRUAS da matriz:
+     * uma linha com `apenas_leitura` marcado ao lado de `habilitado`, `incluir` e
+     * `excluir` ainda ligados daria poder de gravar a quem a config diz que só
+     * olha — e ninguém perceberia, porque a config estaria dizendo a coisa certa.
+     *
+     * Por isso a semente passa pela MESMA normalização que a tela do Modo Gerente
+     * aplica ao gravar. Declarar o ajuste é declarar a intenção; quem a torna
+     * coerente é uma regra só, em um lugar só.
+     */
+    config()->set('retaguarda_menu.secoes', [[
+        'rotulo' => 'Fiscalização',
+        'itens' => [[
+            'rotulo' => 'Vistorias',
+            'rota' => 'retaguarda.inicio',
+            'icone' => 'fiscalizacoes',
+            'slug' => 'vistorias',
+            'setores' => ['gestor', 'fiscal' => ['apenas_leitura' => true]],
+        ]],
+    ]]);
+
+    $this->seed(PermissoesSetorSeeder::class);
+
+    $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'vistorias')->firstOrFail();
+
+    expect($fiscal->visivel)->toBeTrue()
+        ->and($fiscal->apenas_leitura)->toBeTrue()
+        ->and($fiscal->habilitado)->toBeFalse()
+        ->and($fiscal->incluir)->toBeFalse()
+        ->and($fiscal->excluir)->toBeFalse();
+});
+
+test('a correcao da concessao do fiscal respeita o que o gestor decidiu na tela', function () {
+    /*
+     * A concessão nasceu larga demais (o fiscal alterava cadastro), e o seeder é
+     * `firstOrCreate` — não reescreve linha existente, de propósito, para não
+     * desfazer decisão tomada na tela. A migration é o que fecha essa porta em
+     * quem já rodou a semente antiga.
+     *
+     * Mas ela só toca a linha que AINDA ESTÁ como a semente antiga a deixou. Se
+     * alguém mexeu, a linha não casa e fica intacta: migration não desfaz decisão
+     * de gente. É o que este teste trava — nos dois sentidos.
+     */
+    $migration = require database_path('migrations/2026_08_26_120000_fiscal_apenas_consulta_permissionarios.php');
+
+    // (a) A linha intocada, com a impressão digital da semente antiga.
+    PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->update([
+        'visivel' => true,
+        'habilitado' => true,
+        'apenas_leitura' => false,
+        'incluir' => false,
+        'excluir' => false,
+    ]);
+
+    $migration->up();
+
+    $corrigida = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->firstOrFail();
+
+    expect($corrigida->habilitado)->toBeFalse()
+        ->and($corrigida->apenas_leitura)->toBeTrue();
+
+    // (b) A linha que alguém ajustou à mão — o gestor concedeu a inclusão. Não
+    // casa com a impressão digital, então a migration não a toca.
+    PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->update([
+        'visivel' => true,
+        'habilitado' => true,
+        'apenas_leitura' => false,
+        'incluir' => true,
+        'excluir' => false,
+    ]);
+
+    $migration->up();
+
+    $manual = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->firstOrFail();
+
+    expect($manual->habilitado)->toBeTrue()
+        ->and($manual->incluir)->toBeTrue()
+        ->and($manual->apenas_leitura)->toBeFalse();
+});
+
+test('slug compartilhado por varias telas aparece na matriz com o nome do CONJUNTO', function () {
+    /*
+     * Teste-LEI do rótulo. Seis telas de Parametrização dividem o mesmo caminho,
+     * logo a mesma permissão: quem concede tem de ler o nome do conjunto. Ver ali
+     * o nome de uma das seis faria parecer que as outras cinco ficaram de fora.
+     *
+     * A regra é decidida numa passada só — apurando ANTES quantas telas declaram
+     * cada slug —, e não corrigida ao encontrar a segunda tela. Emergindo da
+     * ordem de iteração, ela dependia de quem viesse depois: duas telas em SEÇÕES
+     * diferentes resolviam pelo nome da última, que é justamente a que ninguém
+     * tem em mente ao ler a matriz.
+     */
+    config()->set('retaguarda_menu.secoes', [
+        [
+            'rotulo' => 'Parametrização',
+            'itens' => [
+                ['rotulo' => 'Tipos de Infração', 'rota' => 'retaguarda.inicio', 'slug' => 'parametrizacao'],
+                ['rotulo' => 'Unidades de Medida', 'rota' => 'retaguarda.inicio', 'slug' => 'parametrizacao'],
+            ],
+        ],
+        [
+            'rotulo' => 'Outra seção',
+            'itens' => [
+                // Mesmo slug, seção diferente: resolve pela PRIMEIRA, sempre.
+                ['rotulo' => 'Motivos de Recusa', 'rota' => 'retaguarda.inicio', 'slug' => 'parametrizacao'],
+                // Slug de uma tela só continua com o nome dela.
+                ['rotulo' => 'Vistorias', 'rota' => 'retaguarda.inicio', 'slug' => 'vistorias'],
+            ],
+        ],
+    ]);
+
+    $rotulos = collect(CatalogoFuncionalidades::itens())->pluck('rotulo', 'slug');
+
+    expect($rotulos['parametrizacao'])->toBe('Parametrização')
+        ->and($rotulos['vistorias'])->toBe('Vistorias');
+});
+
 test('a semeadura e idempotente e nao desfaz o que o gerente decidiu', function () {
     config()->set('retaguarda_menu.secoes', [[
         'rotulo' => 'Fiscalização',
@@ -652,4 +833,36 @@ test('o slug declarado no menu casa com o caminho da rota', function () {
     }
 
     expect($divergentes)->toBe([]);
+});
+
+test('o sistema entregue BARRA de verdade — o rollout em observacao nao e o padrao', function () {
+    /*
+     * Teste-LEI sobre a configuração entregue.
+     *
+     * O modo `log` existiu para o rollout: enquanto o catálogo de telas crescia,
+     * ele registrava quem SERIA barrado sem barrar ninguém. Terminada a Fase 1, a
+     * chave virou. Se o padrão voltar a `log`/`off` por descuido — um merge, um
+     * `.env.example` desatualizado copiado para produção —, o controle de acesso
+     * deixa de existir sem que nada quebre nem apareça em tela: o pior modo de
+     * falhar. Este teste é o que faz esse descuido aparecer no gate.
+     *
+     * A config é lida sem `env()` de propósito: o que se afirma é o DEFAULT do
+     * código, não o que a máquina de quem roda o teste tem no `.env`.
+     */
+    $arquivo = require config_path('retaguarda.php');
+
+    expect($arquivo['permissao_enforce'])->toBe('block');
+});
+
+test('o .env.example nao oferece um modo mais fraco do que o codigo entrega', function () {
+    /*
+     * Teste-LEI de fonte única. O modo tem dois lugares onde é escrito — o
+     * default do código e o exemplo que todo ambiente novo copia — e informação
+     * com dois donos um dia diverge. Se o exemplo ficasse em `log`, cada máquina
+     * e cada deploy montado a partir dele nasceria SEM controle de acesso, com o
+     * código jurando que o padrão é barrar.
+     */
+    $exemplo = (string) file_get_contents(base_path('.env.example'));
+
+    expect($exemplo)->toContain('PERMISSAO_ENFORCE=block');
 });

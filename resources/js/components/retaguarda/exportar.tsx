@@ -1,9 +1,11 @@
 import { Download, TriangleAlert, X } from 'lucide-react';
 import { useState } from 'react';
 import { Spinner } from '@/components/retaguarda/acao';
+import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import { baixarDocumento } from '@/lib/baixar-documento';
 import type { FormatoExportacao } from '@/lib/formatos-exportacao';
 import { FORMATOS_DE_DOCUMENTO } from '@/lib/formatos-exportacao';
+import { contar } from '@/lib/plural';
 
 /**
  * Exportação de LISTAGEM — botão discreto + a escolha do formato.
@@ -112,7 +114,7 @@ export default function BotaoExportar({
                 title={
                     vazio
                         ? 'Nada a exportar com o filtro atual'
-                        : `Exportar ${linhas.length} registro(s) — o que está filtrado na tela`
+                        : `Exportar ${contar(linhas.length, 'registro', 'registros')} — o que está filtrado na tela`
                 }
                 style={{ marginLeft: 'auto' }}
             >
@@ -120,10 +122,8 @@ export default function BotaoExportar({
             </button>
 
             {aberto && (
-                <div
-                    className="sobreposicao"
-                    role="presentation"
-                    onClick={gerando ? undefined : () => setAberto(false)}
+                <Sobreposicao
+                    clicandoFora={gerando ? undefined : () => setAberto(false)}
                 >
                     <div
                         className="card-premium"
@@ -160,8 +160,9 @@ export default function BotaoExportar({
                             <strong>{titulo}</strong>
                             {contexto ? ` · ${contexto}` : ''}
                             <br />
-                            {linhas.length} registro(s) · {colunas.length}{' '}
-                            coluna(s) — exatamente o que está filtrado na tela.
+                            {contar(linhas.length, 'registro', 'registros')} ·{' '}
+                            {contar(colunas.length, 'coluna', 'colunas')} —
+                            exatamente o que está filtrado na tela.
                         </p>
 
                         {erro && (
@@ -214,7 +215,7 @@ export default function BotaoExportar({
                             )}
                         </div>
                     </div>
-                </div>
+                </Sobreposicao>
             )}
         </>
     );

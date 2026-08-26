@@ -24,8 +24,14 @@ export interface FormatoDeDocumento {
     cor: string;
 }
 
+/**
+ * O rótulo é o nome que a pessoa reconhece — "Excel", "Word" —, em capitalização
+ * normal: caixa alta em botão soa a grito, e o resto da Retaguarda não grita. Os
+ * códigos técnicos (`xlsx`, `docx`) ficam na `chave`, que é o que viaja para o
+ * servidor; nenhuma tela os mostra.
+ */
 export const FORMATOS_DE_DOCUMENTO: FormatoDeDocumento[] = [
     { chave: 'pdf', rotulo: 'PDF', Icone: FileText, cor: '#b3261e' },
-    { chave: 'xlsx', rotulo: 'EXCEL', Icone: FileSpreadsheet, cor: '#0f7a52' },
-    { chave: 'docx', rotulo: 'WORD', Icone: FileType2, cor: '#0b6f8c' },
+    { chave: 'xlsx', rotulo: 'Excel', Icone: FileSpreadsheet, cor: '#0f7a52' },
+    { chave: 'docx', rotulo: 'Word', Icone: FileType2, cor: '#0b6f8c' },
 ];

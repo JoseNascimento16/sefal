@@ -62,6 +62,30 @@ test('o codigo mostrado ao usuario e o MESMO gravado no registro', function () {
     expect(LogErro::latest('id')->first()->request_id)->toBe($codigo);
 });
 
+test('a tela de erro oferece a saida de quem esta lendo — e nunca convida o logado a sair', function () {
+    /*
+     * A página de erro oferecia "Ir para o início" E "Entrar no sistema" a todo
+     * mundo. Para quem já está autenticado, o segundo é um convite a se
+     * deslogar — ação sem sentido para o estado em que a pessoa está, e no pior
+     * momento: ela errou um endereço e quer voltar ao trabalho.
+     */
+    config(['app.debug' => false]);
+
+    // O visitante PRIMEIRO: `actingAs` vale para o resto do teste, então na ordem
+    // inversa esta metade veria a sessão da outra e o teste passaria por engano.
+    $this->get('/rota-que-nao-existe')
+        ->assertNotFound()
+        ->assertSee('Entrar no sistema')
+        ->assertDontSee('Ir para o início');
+
+    // Para quem está dentro é o contrário: o caminho útil é voltar ao trabalho.
+    $this->actingAs(User::factory()->create())
+        ->get('/retaguarda/rota-que-nao-existe')
+        ->assertNotFound()
+        ->assertSee('Ir para o início')
+        ->assertDontSee('Entrar no sistema');
+});
+
 test('o registro guarda o caminho, o verbo e quem estava logado', function () {
     config(['app.debug' => false]);
 

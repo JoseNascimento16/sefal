@@ -132,6 +132,58 @@ class PermissaoService
     }
 
     /**
+     * A tela CONTROLÁVEL a que um caminho de requisição pertence, ou null.
+     *
+     * A tela sai do PRIMEIRO trecho depois de `retaguarda` — `retaguarda/permissionarios/7/foto`
+     * é a tela `permissionarios` dois segmentos adiante. Mora aqui porque dois lugares fazem a
+     * mesma pergunta (a guarda de leitura e a montagem dos props da tela): com uma cópia em cada
+     * um, bastaria um deles mudar de ideia sobre o que é "a tela do caminho" para a tela oferecer
+     * o que a guarda barra.
+     *
+     * Recebe o CAMINHO, e não os segmentos já partidos, para o contrato não depender de quem
+     * chama ter partido a string do mesmo jeito.
+     */
+    public static function telaDoCaminho(string $caminho): ?string
+    {
+        $segmentos = array_values(array_filter(explode('/', $caminho), static fn (string $t): bool => $t !== ''));
+
+        if (($segmentos[0] ?? null) !== 'retaguarda') {
+            return null;
+        }
+
+        $slug = $segmentos[1] ?? '';
+
+        return $slug !== '' && self::ehControlavel($slug) ? $slug : null;
+    }
+
+    /**
+     * TODAS as ações do usuário numa tela — o que a própria tela precisa saber para não oferecer
+     * o que o servidor recusa.
+     *
+     * Existe porque a alternativa é pior: sem isto, a tela desenha os botões que sabe desenhar e
+     * a pessoa só descobre a recusa depois de preencher o formulário inteiro. As guardas seguem
+     * sendo a fronteira — esconder botão é conforto, nunca autorização —, mas conforto que vem da
+     * MESMA resposta que barra, e não de uma segunda conta feita no navegador.
+     *
+     * ── Por que o modo de rollout entra aqui também ──────────────────────────────
+     *
+     * Fora do modo `block` as guardas deixam passar, então a tela tem de oferecer. Esconder o
+     * botão enquanto o servidor aceita seria a mesma divergência de sempre, só na direção
+     * contrária — e em `log` ninguém veria o registro daquilo que "seria barrado", porque a ação
+     * nem teria como ser tentada. É o mesmo raciocínio de {@see podeVerItemDoMenu}.
+     *
+     * @return array<string, bool>
+     */
+    public function acoes(?User $usuario, string $slug): array
+    {
+        if (self::modoPara($slug) !== 'block') {
+            return array_fill_keys(self::ACOES, true);
+        }
+
+        return $this->mapa($usuario)[$slug] ?? array_fill_keys(self::ACOES, false);
+    }
+
+    /**
      * O quanto a guarda pode barrar NESTAS telas — `off`, `log` ou `block`.
      *
      * É o modo configurado, com uma exceção: tela listada em
@@ -150,7 +202,11 @@ class PermissaoService
             }
         }
 
-        return (string) config('retaguarda.permissao_enforce', 'log');
+        // O padrão do fallback é `block`, e não `log`: config faltando é falha de
+        // provisionamento, e falha de provisionamento não pode ABRIR acesso em
+        // silêncio. Vale o mesmo valor entregue em `config/retaguarda.php` — dois
+        // padrões diferentes para a mesma decisão um dia divergem.
+        return (string) config('retaguarda.permissao_enforce', 'block');
     }
 
     /**

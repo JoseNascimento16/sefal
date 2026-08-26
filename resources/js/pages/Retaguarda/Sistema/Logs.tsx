@@ -12,6 +12,8 @@ import {
 } from '@/components/retaguarda/th-ordenavel';
 import { casaTermos, parseConsulta } from '@/lib/busca';
 import { dataBR, dataHoraBR, hojeISO, VAZIO } from '@/lib/datas';
+import { linhaClicavel } from '@/lib/linha-clicavel';
+import { contar } from '@/lib/plural';
 import { detalhe, index } from '@/routes/retaguarda/logs';
 
 /**
@@ -234,7 +236,8 @@ export default function Logs({
                     </div>
 
                     <p className="form-ajuda" style={{ margin: '0 0 10px' }}>
-                        {logs.length} ocorrência(s) no período.
+                        {contar(logs.length, 'ocorrência', 'ocorrências')} no
+                        período.
                     </p>
                 </div>
 
@@ -354,8 +357,10 @@ export default function Logs({
                             {pag.visiveis.map((log) => (
                                 <Fragment key={log.id}>
                                     <tr
-                                        className="clicavel"
-                                        onClick={() => alternar(log)}
+                                        {...linhaClicavel(
+                                            () => alternar(log),
+                                            'Abrir ou fechar o rastro desta ocorrência',
+                                        )}
                                     >
                                         <td>
                                             {aberta === log.id ? (

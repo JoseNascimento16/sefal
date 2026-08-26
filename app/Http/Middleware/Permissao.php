@@ -48,15 +48,11 @@ class Permissao
             return $next($request);
         }
 
-        $segmentos = $request->segments();
+        // A tela sai do caminho, e quem responde isso é o serviço: é a mesma
+        // pergunta que os props da tela fazem para saber o que oferecer.
+        $slug = PermissaoService::telaDoCaminho($request->path());
 
-        if (($segmentos[0] ?? null) !== 'retaguarda') {
-            return $next($request);
-        }
-
-        $slug = $segmentos[1] ?? '';
-
-        if ($slug === '' || ! PermissaoService::ehControlavel($slug)) {
+        if ($slug === null) {
             return $next($request);
         }
 

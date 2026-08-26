@@ -92,3 +92,5 @@ interno.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 25/08/2026 | José Nascimento | Acompanhamento de Requisitos | Criação da tela e do mapa em `config/acompanhamento_requisitos.php`, com o inventário das funcionalidades já entregues (todas sem requisito escrito, declarando a spec de design como origem). | Sem esse cruzamento, a régua de cada tela some com o tempo e a divergência entre o construído e o escrito só aparece no retorno da Qualidade. |
+| 26/08/2026 | José Nascimento | Acompanhamento de Requisitos | O mapa passa a listar a **exportação de listagens**, que não tem item de menu. | O mapa é de funcionalidade entregue, não de linha do menu. Regra que vale em todas as telas é justamente a que ninguém lembra de conferir depois — e a lei que garante a cobertura só olha o menu, então essa linha nunca seria cobrada. |
+| 26/08/2026 | José Nascimento | Acompanhamento de Requisitos | Correção da frase do subtítulo, que estava sem o "se" e terminava em interrogação sobrando. | É o primeiro texto que se lê na tela — e o primeiro que a Qualidade lê. |

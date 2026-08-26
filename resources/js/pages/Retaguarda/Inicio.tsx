@@ -1,8 +1,30 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ClipboardCheck, Map, Store, UserRound } from 'lucide-react';
+import { ClipboardCheck, LayoutGrid, Map, Store, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { edit as editarPerfil } from '@/routes/profile';
 import { inicio } from '@/routes/retaguarda';
+
+/**
+ * Um atalho, como o servidor o entrega. `href` nulo = tela das próximas
+ * entregas; atalho que esta pessoa não pode abrir não chega aqui.
+ */
+interface Atalho {
+    chave: string;
+    titulo: string;
+    descricao: string;
+    href: string | null;
+}
+
+/**
+ * O ícone de cada atalho. É só isto que a tela decide sobre eles — quais existem,
+ * o que dizem e para onde levam vem do servidor, que é quem sabe se a rota
+ * existe e se a pessoa entra.
+ */
+const ICONES: Record<string, LucideIcon> = {
+    perfil: UserRound,
+    permissionarios: Store,
+    fiscalizacoes: ClipboardCheck,
+    areas: Map,
+};
 
 /** Bom dia / boa tarde / boa noite — pelo relógio de quem está olhando. */
 function saudacao(): string {
@@ -67,7 +89,7 @@ function Atalho({
     );
 }
 
-export default function Inicio() {
+export default function Inicio({ atalhos }: { atalhos: Atalho[] }) {
     const { auth } = usePage().props;
 
     return (
@@ -118,27 +140,15 @@ export default function Inicio() {
             </div>
 
             <div className="rt-grid-atalhos">
-                <Atalho
-                    icone={UserRound}
-                    titulo="Meu Perfil"
-                    descricao="Seus dados, sua senha e a aparência do sistema."
-                    href={editarPerfil().url}
-                />
-                <Atalho
-                    icone={Store}
-                    titulo="Permissionários"
-                    descricao="Cadastro, validação do que veio da rua e prontuário."
-                />
-                <Atalho
-                    icone={ClipboardCheck}
-                    titulo="Fiscalizações"
-                    descricao="O que os fiscais registraram em campo, com foto e local."
-                />
-                <Atalho
-                    icone={Map}
-                    titulo="Áreas de atuação"
-                    descricao="Os polígonos que dizem quem pertence a cada área."
-                />
+                {atalhos.map((atalho) => (
+                    <Atalho
+                        key={atalho.chave}
+                        icone={ICONES[atalho.chave] ?? LayoutGrid}
+                        titulo={atalho.titulo}
+                        descricao={atalho.descricao}
+                        href={atalho.href ?? undefined}
+                    />
+                ))}
             </div>
         </>
     );

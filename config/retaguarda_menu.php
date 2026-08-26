@@ -40,6 +40,17 @@ return [
     | nada: quem concede e quem tira é a tela do Modo Gerente. (O administrador
     | não é semeado: ele é desvio no código, não linha de matriz.)
     |
+    | Cada entrada de `setores` aceita duas formas:
+    |
+    |   'gestor'                          → o pacote da tela: vê, opera, inclui e exclui;
+    |   'fiscal' => ['excluir' => false]  → o mesmo pacote, com o ajuste declarado.
+    |
+    | A forma longa existe para o caso em que "este setor usa esta tela" NÃO quer
+    | dizer o pacote inteiro — o fiscal, que CONSULTA o cadastro de permissionário
+    | pela Retaguarda e cadastra em rua pelo aplicativo. O ajuste fica aqui, junto
+    | do resto da declaração da tela: quem lê "quem entra onde" acha tudo num só
+    | lugar (ver `CatalogoFuncionalidades::acoesSemente`).
+    |
     | Item SEM `slug` fica fora do controle de acesso, e isso é deliberado em dois
     | casos — a tela inicial (barrá-la fecharia um loop de redirecionamento, já
     | que é para lá que a própria negativa manda o usuário) e a área da própria
@@ -63,10 +74,109 @@ return [
             ],
         ],
 
+        /*
+         * Fiscalização — o trabalho em si.
+         *
+         * O fiscal entra aqui, e é o único lugar do menu em que ele entra: o
+         * cadastro é a identidade de quem ele vai fiscalizar em rua, e chegar
+         * na calçada sem saber quem está cadastrado é trabalhar às cegas.
+         *
+         * Mas ele entra para CONSULTAR, e só. Quem grava cadastro pela
+         * Retaguarda é a gestão: o fiscal cadastra em RUA, pelo aplicativo, e o
+         * que nasce em rua entra em quarentena até o gestor conferir — criar
+         * direto de mesa passaria ao largo dessa conferência, e apagar cadastro
+         * fiscalizado deixaria o histórico sem alvo. Daí o ajuste na semente
+         * (ver `CatalogoFuncionalidades::acoesSemente`).
+         *
+         * ⚠️ O ajuste é `apenas_leitura`, e NÃO "incluir e excluir desligados".
+         * A diferença é a que decide se a quarentena existe de verdade: com
+         * `habilitado` ainda ligado, o fiscal ALTERAVA o cadastro — e a situação
+         * é campo do mesmo formulário, então ele tirava da fila o registro que
+         * ele mesmo tinha acabado de criar em rua, sem ninguém conferir nada.
+         * "Só consulta" derruba operar, incluir e excluir de uma vez, que é o
+         * que a frase acima sempre quis dizer.
+         *
+         * Isto é a CONCESSÃO INICIAL. Alargar ou apertar depois é ato do gestor
+         * no Modo Gerente, e está registrado no doc de regra da tela.
+         */
         [
             'rotulo' => 'Fiscalização',
-            'vazio' => 'Permissionários, fiscalizações e áreas chegam nas próximas entregas.',
-            'itens' => [],
+            'vazio' => 'Fiscalizações, operações e áreas chegam nas próximas entregas.',
+            'itens' => [
+                [
+                    'rotulo' => 'Permissionários',
+                    'rota' => 'retaguarda.permissionarios.index',
+                    'icone' => 'permissionarios',
+                    'slug' => 'permissionarios',
+                    'setores' => [
+                        'administrador',
+                        'gestor',
+                        'fiscal' => ['apenas_leitura' => true],
+                    ],
+                ],
+            ],
+        ],
+
+        /*
+         * Parametrização — as listas que o resto do sistema oferece para
+         * escolher, e que o gestor mantém.
+         *
+         * As seis telas declaram o MESMO `slug`, e isso é deliberado: elas moram
+         * sob o mesmo primeiro trecho do caminho (`/retaguarda/parametrizacao/…`),
+         * que é de onde as guardas deduzem a tela — a permissão é uma só, para o
+         * conjunto, e aparece no Modo Gerente com o nome da seção. Separar a
+         * permissão de "motivos de recusa" da de "tipos de operação" seria uma
+         * decisão que ninguém precisa tomar e seis linhas a mais na matriz.
+         *
+         * Gestor e administrador: manter estas listas é ato de gestão da
+         * operação. O fiscal as CONSOME em rua, pelo aplicativo — não as edita.
+         */
+        [
+            'rotulo' => 'Parametrização',
+            'itens' => [
+                [
+                    'rotulo' => 'Tipos de Infração',
+                    'rota' => 'retaguarda.parametrizacao.tipos-de-infracao.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Atividades do Ambulante',
+                    'rota' => 'retaguarda.parametrizacao.atividades-do-ambulante.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Unidades de Medida',
+                    'rota' => 'retaguarda.parametrizacao.unidades-de-medida.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Tipos de Operação',
+                    'rota' => 'retaguarda.parametrizacao.tipos-de-operacao.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Origens de Operação',
+                    'rota' => 'retaguarda.parametrizacao.origens-de-operacao.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Motivos de Recusa',
+                    'rota' => 'retaguarda.parametrizacao.motivos-de-recusa.index',
+                    'icone' => 'parametrizacao',
+                    'slug' => 'parametrizacao',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+            ],
         ],
 
         [

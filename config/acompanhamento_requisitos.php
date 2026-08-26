@@ -71,7 +71,9 @@ return [
             'hus' => [],
             'nota' => $origemSpec.' Tela para onde o login leva e para onde volta, com o motivo, quem é '
                 .'barrado em outra tela. Por isso ela é a única fora do controle de acesso: barrá-la '
-                .'fecharia um laço de redirecionamento.',
+                .'fecharia um laço de redirecionamento. Os atalhos são decididos pelo servidor: levam à '
+                .'tela quando ela existe, ficam "em construção" quando ela é de entrega futura e não '
+                .'aparecem para quem não pode abri-la.',
         ],
 
         [
@@ -96,8 +98,10 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Matriz de quem entra onde: setor × tela × ação, com rastro de cada '
-                .'concessão e revogação. É a fonte única do acesso — o menu, a abertura da tela e as '
-                .'ações obedecem a ela.',
+                .'concessão e revogação — o rastro mostra em tela O QUE mudou, por setor. É a fonte '
+                .'única do acesso: o menu, a abertura da tela e as ações obedecem a ela. Cada tela é '
+                .'salva por si, e a seção com alteração pendente é sinalizada (sair sem salvar pergunta '
+                .'antes).',
         ],
 
         [
@@ -109,8 +113,28 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Emissão de documento oficial com período, totais e identificação de '
-                .'quem emitiu, em PDF, XLSX e DOCX. Não se confunde com a exportação de listagem, que '
+                .'quem emitiu, em PDF, Excel e Word. Não se confunde com a exportação de listagem, que '
                 .'entrega o recorte visível de uma grade.',
+        ],
+
+        /*
+         * Não tem item de menu porque não é uma tela: é o botão que TODA
+         * listagem carrega. Fica no mapa mesmo assim — o acompanhamento é de
+         * funcionalidade entregue, não de linha do menu, e uma regra que vale em
+         * todas as telas é justamente a que ninguém lembra de conferir depois.
+         */
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Exportação de listagens',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.exportar-listagem',
+            'breadcrumb' => 'Presente em toda listagem da Retaguarda',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Toda listagem entrega em PDF, Excel e Word exatamente o que está à '
+                .'vista — o que a busca, o filtro e a aba deixaram na tela —, nunca o universo inteiro '
+                .'nem apenas a página aberta, e sempre com o recorte declarado no documento para quem o '
+                .'receber saber do que ele fala.',
         ],
 
         [
@@ -135,8 +159,10 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Painel das condições mínimas para o sistema funcionar: o que está '
-                .'vermelho diz o que parou e leva para onde se corrige. As verificações que escrevem em '
-                .'disco ou falam com serviço externo só rodam pelo botão.',
+                .'vermelho diz o que parou e leva para onde se corrige. Vigia o ambiente (conta de '
+                .'administrador ativa, armazenamento gravável) e as listas de escolha OBRIGATÓRIAS — '
+                .'atividade do ambulante e tipo de infração. As verificações que escrevem em disco ou '
+                .'falam com serviço externo só rodam pelo botão.',
         ],
 
         [
@@ -150,6 +176,103 @@ return [
             'nota' => $origemSpec.' Esta própria tela: cruza cada funcionalidade entregue com o requisito '
                 .'escrito que a especifica, apontando o que não tem requisito e o que divergiu do que foi '
                 .'escrito.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Cadastro de Permissionário',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.permissionarios.index',
+            'breadcrumb' => 'Fiscalização › Permissionários',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Identidade de quem é fiscalizado, com documento OPCIONAL: em rua a '
+                .'pessoa é reconhecida pela foto e pelo apelido, e exigir CPF faria o cadastro de campo '
+                .'não acontecer. Quando informado, o documento é validado (CPF ou CNPJ, inclusive o '
+                .'alfanumérico) e não se repete. O cadastro nascido em campo fica marcado como '
+                .'"Cadastrado em campo" até alguém conferir — a tela de validação dessa fila é de '
+                .'entrega futura, e por ora o gestor troca a situação à mão. Nome e apelido aceitam nome '
+                .'de gente, não marcação nem símbolo. O fiscal CONSULTA o cadastro pela Retaguarda: '
+                .'incluir e excluir por lá são da gestão.',
+        ],
+
+        /*
+         * Parametrização — as seis listas de escolha. São a MESMA tela seis
+         * vezes (listar, incluir, alterar, inativar, excluir), então a nota de
+         * cada uma diz o que muda: para que serve a lista e quem a consome.
+         */
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Tipos de Infração',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.tipos-de-infracao.index',
+            'breadcrumb' => 'Parametrização › Tipos de Infração',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Lista do que o fiscal enquadra ao autuar, com descrição de apoio '
+                .'à escolha em rua. Valor em uso é inativado, não excluído — registro antigo continua '
+                .'legível.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Atividades do Ambulante',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.atividades-do-ambulante.index',
+            'breadcrumb' => 'Parametrização › Atividades do Ambulante',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Ramo autorizado na permissão — o que a pessoa vende ou faz no '
+                .'ponto. Será a primeira lista apontada por cadastro de permissionário, e a exclusão '
+                .'passa a ser barrada quando esse vínculo existir.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Unidades de Medida',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.unidades-de-medida.index',
+            'breadcrumb' => 'Parametrização › Unidades de Medida',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Como se conta a mercadoria em apreensão ou vistoria. A sigla é '
+                .'obrigatória: é ela que sai no documento impresso em rua.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Tipos de Operação',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.tipos-de-operacao.index',
+            'breadcrumb' => 'Parametrização › Tipos de Operação',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' O feitio do trabalho em campo (rotina, mutirão, operação '
+                .'conjunta) — é o que agrupa as fiscalizações quando se olha o período inteiro.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Origens de Operação',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.origens-de-operacao.index',
+            'breadcrumb' => 'Parametrização › Origens de Operação',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Por que a equipe foi até lá (denúncia, cobrança de outro órgão, '
+                .'planejamento) — é o que permite responder ao demandante depois.',
+        ],
+
+        [
+            'modulo' => 'Parametrização',
+            'tela' => 'Motivos de Recusa',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.parametrizacao.motivos-de-recusa.index',
+            'breadcrumb' => 'Parametrização › Motivos de Recusa',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' O que o gestor responde ao devolver um cadastro feito em campo. '
+                .'O fiscal lê esse texto no aparelho, então ele precisa dizer o que corrigir.',
         ],
 
     ],
