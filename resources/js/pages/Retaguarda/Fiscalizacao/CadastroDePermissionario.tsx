@@ -23,6 +23,7 @@ import {
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
+import { useAcoes } from '@/hooks/use-acoes';
 import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta, semAcento } from '@/lib/busca';
 import { dataBR, hojeISO, VAZIO } from '@/lib/datas';
@@ -284,6 +285,19 @@ export default function CadastroDePermissionario({
     const campoFoto = useRef<HTMLInputElement>(null);
     const { enviando, ocupado, enviar, guardar } = useEnvio();
 
+    /*
+     * O que esta pessoa pode fazer AQUI, respondido pelo servidor.
+     *
+     * O fiscal, por exemplo, abre esta tela para consultar — ele cadastra em RUA,
+     * pelo aplicativo, e o que nasce em rua espera a conferência do gestor. Sem
+     * isto a tela oferecia Incluir, Editar e Excluir a ele, e a recusa só aparecia
+     * depois do formulário preenchido.
+     *
+     * As guardas do servidor continuam sendo a fronteira: esconder botão é o
+     * conforto de saber antes, nunca a autorização.
+     */
+    const acoes = useAcoes();
+
     const filtrados = useMemo(() => {
         const { facetas, termos } = parseConsulta<Faceta>(busca, [
             // O vocabulário fixo do domínio primeiro: nome de atividade é texto
@@ -357,6 +371,13 @@ export default function CadastroDePermissionario({
     }
 
     function incluir() {
+        // Quem não inclui não abre o formulário em branco. A tela já esconde as
+        // duas portas (a aba e o botão); isto fecha a terceira — uma chamada que
+        // sobre de um ajuste futuro.
+        if (!acoes.incluir) {
+            return;
+        }
+
         setAberto(null);
         setForm(formularioDe(null, situacoesDeInclusao[0] ?? ''));
         limparAnexo();
@@ -461,6 +482,9 @@ export default function CadastroDePermissionario({
 
     const listaDeErros = Object.values(erros);
     const emEdicao = modo === 'edicao';
+    // Gravar um cadastro NOVO é "incluir"; gravar alteração no que já existe é
+    // "operar" — são ações diferentes na matriz, e o fiscal tem as duas negadas.
+    const podeGravar = aberto === null ? acoes.incluir : acoes.habilitado;
     const fotoAtual = aberto?.foto_url ?? null;
 
     return (
@@ -493,22 +517,27 @@ export default function CadastroDePermissionario({
                         <span className="aba-rotulo">Localizar</span>
                     </button>
 
-                    <button
-                        type="button"
-                        role="tab"
-                        className="aba"
-                        aria-selected={aba === 'registro'}
-                        onClick={aberto === null ? incluir : () => setAba('registro')}
-                    >
-                        {aberto === null ? (
-                            <Plus size={16} aria-hidden />
-                        ) : (
-                            <Eye size={16} aria-hidden />
-                        )}
-                        <span className="aba-rotulo">
-                            {aberto === null ? 'Incluir' : (aberto.apelido ?? aberto.nome)}
-                        </span>
-                    </button>
+                    {/* A aba de INCLUIR só existe para quem inclui. Com um
+                        registro aberto ela é a vista dele, e aí vale para todo
+                        mundo que chegou até aqui — inclusive quem só consulta. */}
+                    {(aberto !== null || acoes.incluir) && (
+                        <button
+                            type="button"
+                            role="tab"
+                            className="aba"
+                            aria-selected={aba === 'registro'}
+                            onClick={aberto === null ? incluir : () => setAba('registro')}
+                        >
+                            {aberto === null ? (
+                                <Plus size={16} aria-hidden />
+                            ) : (
+                                <Eye size={16} aria-hidden />
+                            )}
+                            <span className="aba-rotulo">
+                                {aberto === null ? 'Incluir' : (aberto.apelido ?? aberto.nome)}
+                            </span>
+                        </button>
+                    )}
                 </div>
 
                 {aba === 'localizar' ? (
@@ -540,14 +569,18 @@ export default function CadastroDePermissionario({
                                 marginBottom: 10,
                             }}
                         >
-                            <BotaoAcao
-                                icone={<Plus size={16} aria-hidden />}
-                                ocupado={ocupado}
-                                onClick={incluir}
-                            >
-                                Incluir
-                            </BotaoAcao>
+                            {acoes.incluir && (
+                                <BotaoAcao
+                                    icone={<Plus size={16} aria-hidden />}
+                                    ocupado={ocupado}
+                                    onClick={incluir}
+                                >
+                                    Incluir
+                                </BotaoAcao>
+                            )}
 
+                            {/* Exportar é LEITURA: sai o mesmo recorte que a tela
+                                já mostrou, então vale para quem só consulta. */}
                             <BotaoExportar
                                 titulo="Permissionários"
                                 subtitulo="Fiscalização › Permissionários"
@@ -1050,26 +1083,30 @@ export default function CadastroDePermissionario({
 
                             {aberto !== null && modo === 'navegacao' && (
                                 <>
-                                    <BotaoAcao
-                                        className="btn btn-perigo btn-sm"
-                                        icone={<Trash2 size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        onClick={() => setConfirmandoExclusao(true)}
-                                    >
-                                        Excluir
-                                    </BotaoAcao>
+                                    {acoes.excluir && (
+                                        <BotaoAcao
+                                            className="btn btn-perigo btn-sm"
+                                            icone={<Trash2 size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setConfirmandoExclusao(true)}
+                                        >
+                                            Excluir
+                                        </BotaoAcao>
+                                    )}
 
-                                    <BotaoAcao
-                                        icone={<Pencil size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        onClick={() => setModo('edicao')}
-                                    >
-                                        Editar
-                                    </BotaoAcao>
+                                    {acoes.habilitado && (
+                                        <BotaoAcao
+                                            icone={<Pencil size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setModo('edicao')}
+                                        >
+                                            Editar
+                                        </BotaoAcao>
+                                    )}
                                 </>
                             )}
 
-                            {emEdicao && (
+                            {emEdicao && podeGravar && (
                                 <BotaoAcao
                                     icone={<Check size={16} aria-hidden />}
                                     carregando={enviando === 'salvar'}

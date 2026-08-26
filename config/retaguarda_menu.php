@@ -81,12 +81,20 @@ return [
          * cadastro é a identidade de quem ele vai fiscalizar em rua, e chegar
          * na calçada sem saber quem está cadastrado é trabalhar às cegas.
          *
-         * Mas ele entra para CONSULTAR. Quem cria e apaga cadastro pela
+         * Mas ele entra para CONSULTAR, e só. Quem grava cadastro pela
          * Retaguarda é a gestão: o fiscal cadastra em RUA, pelo aplicativo, e o
          * que nasce em rua entra em quarentena até o gestor conferir — criar
          * direto de mesa passaria ao largo dessa conferência, e apagar cadastro
          * fiscalizado deixaria o histórico sem alvo. Daí o ajuste na semente
          * (ver `CatalogoFuncionalidades::acoesSemente`).
+         *
+         * ⚠️ O ajuste é `apenas_leitura`, e NÃO "incluir e excluir desligados".
+         * A diferença é a que decide se a quarentena existe de verdade: com
+         * `habilitado` ainda ligado, o fiscal ALTERAVA o cadastro — e a situação
+         * é campo do mesmo formulário, então ele tirava da fila o registro que
+         * ele mesmo tinha acabado de criar em rua, sem ninguém conferir nada.
+         * "Só consulta" derruba operar, incluir e excluir de uma vez, que é o
+         * que a frase acima sempre quis dizer.
          *
          * Isto é a CONCESSÃO INICIAL. Alargar ou apertar depois é ato do gestor
          * no Modo Gerente, e está registrado no doc de regra da tela.
@@ -103,7 +111,7 @@ return [
                     'setores' => [
                         'administrador',
                         'gestor',
-                        'fiscal' => ['incluir' => false, 'excluir' => false],
+                        'fiscal' => ['apenas_leitura' => true],
                     ],
                 ],
             ],

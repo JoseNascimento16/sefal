@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * Cadastro de Permissionário — a identidade de quem é fiscalizado.
@@ -49,8 +50,22 @@ use Inertia\Response;
  */
 class CadastroPermissionarioController extends Controller
 {
-    /** Onde as fotos moram no disco público. */
+    /** Onde as fotos moram. */
     private const PASTA_DAS_FOTOS = 'permissionarios';
+
+    /**
+     * Disco PRIVADO, e não o público.
+     *
+     * A foto é o retrato de um cidadão fiscalizado, exibida ao lado do CPF/CNPJ dele. No disco
+     * público o arquivo é servido direto pelo servidor web, fora do encadeamento de middlewares
+     * — quem tivesse a URL (histórico de estação compartilhada, log de proxy, cabeçalho de
+     * referência, print encaminhado) abriria a imagem sem estar autenticado. Nome de arquivo
+     * difícil de adivinhar reduz a chance de tropeçar nele, mas não é controle de acesso.
+     *
+     * Daqui a imagem só sai pela rota {@see foto()}, que passa pela guarda de leitura como
+     * qualquer outra tela.
+     */
+    private const DISCO_DAS_FOTOS = 'local';
 
     public function index(): Response
     {
@@ -77,8 +92,24 @@ class CadastroPermissionarioController extends Controller
         // com o que já está gravado.
         $permissionario->codigo = Protocolo::proximo('PER', null, Permissionario::class, 'codigo');
 
-        $permissionario->foto = $this->guardarFoto($request->file('foto'));
-        $permissionario->save();
+        $guardada = $this->guardarFoto($request->file('foto'));
+
+        /*
+         * O arquivo é guardado ANTES da linha (é ele que preenche a coluna), então
+         * a falha da gravação tem de levá-lo junto. Sem isto, um `save()` que
+         * estoura — colisão no índice único numa corrida, queda de conexão — deixa
+         * a imagem no disco sem nenhuma linha apontando para ela, e nada a recolhe
+         * depois. É o espelho do cuidado que a alteração e a exclusão já tomam com
+         * o arquivo ANTIGO; faltava o do arquivo novo.
+         */
+        try {
+            $permissionario->foto = $guardada;
+            $permissionario->save();
+        } catch (\Throwable $erro) {
+            $this->apagarFoto($guardada);
+
+            throw $erro;
+        }
 
         return redirect()
             ->route('retaguarda.permissionarios.index')
@@ -133,6 +164,33 @@ class CadastroPermissionarioController extends Controller
     }
 
     /**
+     * A foto de um cadastro — a única porta por onde a imagem sai.
+     *
+     * Mora sob `/retaguarda/permissionarios/…`, então a guarda de leitura confere a permissão da
+     * tela antes de qualquer coisa: quem não abre o cadastro também não vê o retrato de quem está
+     * nele. É por isso que o arquivo pode ficar no disco privado.
+     *
+     * Cadastro sem foto e arquivo que sumiu do disco respondem 404 — a tela já trata a ausência
+     * mostrando as iniciais da pessoa, e uma resposta vazia com código 200 faria o navegador
+     * desenhar uma imagem quebrada.
+     */
+    public function foto(int $permissionario): HttpResponse
+    {
+        $registro = Permissionario::query()->findOrFail($permissionario);
+
+        $disco = Storage::disk(self::DISCO_DAS_FOTOS);
+
+        abort_if($registro->foto === null || ! $disco->exists($registro->foto), 404);
+
+        return $disco->response($registro->foto, headers: [
+            // Dado pessoal não fica em cache compartilhado. `private` autoriza o
+            // navegador de quem abriu, e só ele, a guardar por pouco tempo — sem
+            // isso, cada linha da grade rebuscaria a imagem a cada rolagem.
+            'Cache-Control' => 'private, max-age=300',
+        ]);
+    }
+
+    /**
      * A base inteira como a tela precisa dela.
      *
      * Vai inteira de propósito: a tela filtra, ordena e pagina no navegador, e é
@@ -167,7 +225,12 @@ class CadastroPermissionarioController extends Controller
                 'atividade_id' => (int) $p->atividade_id,
                 'atividade' => $p->atividade->nome,
                 'situacao' => $p->situacao,
-                'foto_url' => $p->foto === null ? null : Storage::disk('public')->url($p->foto),
+                // A imagem sai por rota autenticada, não por URL de disco público
+                // (ver `DISCO_DAS_FOTOS`). O endereço leva o id, que é número —
+                // nada de texto livre no caminho, que o WAF barraria.
+                'foto_url' => $p->foto === null
+                    ? null
+                    : route('retaguarda.permissionarios.foto', $p->getKey(), absolute: false),
                 'cadastrado_em' => $p->created_at?->format('Y-m-d'),
             ])
             ->all();
@@ -365,10 +428,10 @@ class CadastroPermissionarioController extends Controller
             return null;
         }
 
-        // Nome gerado pelo framework (aleatório), não o do celular: o nome
-        // original vai para a URL, e nome de arquivo de campo carrega acento,
-        // espaço e o que mais o aparelho inventar.
-        return $arquivo->store(self::PASTA_DAS_FOTOS, 'public') ?: null;
+        // Nome gerado pelo framework (aleatório), não o do celular: nome de
+        // arquivo de campo carrega acento, espaço e o que mais o aparelho
+        // inventar.
+        return $arquivo->store(self::PASTA_DAS_FOTOS, self::DISCO_DAS_FOTOS) ?: null;
     }
 
     /** Apaga o arquivo, se houver — a linha do banco é outra história. */
@@ -378,6 +441,6 @@ class CadastroPermissionarioController extends Controller
             return;
         }
 
-        Storage::disk('public')->delete($caminho);
+        Storage::disk(self::DISCO_DAS_FOTOS)->delete($caminho);
     }
 }

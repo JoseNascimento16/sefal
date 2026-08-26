@@ -107,6 +107,24 @@ possíveis quando algo falha no meio — **arquivo sobrando no disco** ou **cada
 arquivo que não existe** —, o primeiro é lixo e o segundo é perda da identidade de campo. Por isso a
 prioridade é essa, e não a inversa.
 
+Na **inclusão** a ordem é inevitavelmente a inversa (é o arquivo que preenche a coluna), então ali
+vale o cuidado espelhado: se a gravação da linha falhar, o arquivo recém-guardado **vai junto** —
+senão a imagem fica no disco sem nada apontando para ela, e nada a recolhe depois.
+
+### RN-07-b — A foto sai por **rota autenticada**, nunca por URL de disco público
+
+O arquivo mora em disco **privado** e só é servido por `GET /retaguarda/permissionarios/{id}/foto`,
+que passa pela guarda de leitura como qualquer outra tela: **quem não abre o cadastro não vê o
+retrato de quem está nele**. Cadastro sem foto, ou com o arquivo sumido do disco, responde **404** —
+a tela já trata a ausência mostrando as iniciais (RN-01), e uma resposta vazia com código 200 faria
+o navegador desenhar imagem quebrada.
+
+O motivo é o dado, não a mecânica: é o **retrato de um cidadão fiscalizado**, exibido ao lado do
+CPF/CNPJ dele. No disco público o arquivo é servido direto pelo servidor web, **fora das guardas** —
+quem tivesse a URL (histórico de estação compartilhada, log de proxy, cabeçalho de referência, print
+encaminhado) abriria a imagem sem estar autenticado. Nome de arquivo difícil de adivinhar reduz a
+chance de tropeçar nele; **não é controle de acesso**.
+
 ### RN-08 — Busca inteligente: uma barra só
 
 O campo único interpreta a frase em facetas do domínio + termos livres, sem acento: `regular`,
@@ -142,22 +160,41 @@ A tela é controlada pela permissão **`permissionarios`** (primeiro trecho do c
 **administrador, gestor e fiscal**. O fiscal está na lista porque chegar à calçada sem saber quem está
 cadastrado é trabalhar às cegas.
 
-Mas ele entra para **consultar**: a semente concede a ele *vê* e *opera*, e **não** *inclui* nem
-*exclui*. O motivo é o desenho do fluxo, não desconfiança — o fiscal cadastra em **rua**, pelo
-aplicativo, e o que nasce em rua entra em **quarentena** até o gestor conferir (RN-03). Cadastro
-criado de mesa por ele passaria ao largo dessa conferência, entrando direto como regular; e apagar
+Mas ele entra para **consultar**, e só: a semente concede a ele **"Só consulta"**, que derruba
+*opera*, *inclui* e *exclui* de uma vez. O motivo é o desenho do fluxo, não desconfiança — o fiscal
+cadastra em **rua**, pelo aplicativo, e o que nasce em rua entra em **quarentena** até o gestor
+conferir (RN-03). Cadastro criado de mesa por ele passaria ao largo dessa conferência; apagar
 cadastro é ato de gestão, porque leva embora a identidade a que uma fiscalização se liga.
+
+⚠️ **Por que "Só consulta", e não apenas *inclui* e *exclui* desligados.** É a diferença que decide
+se a quarentena existe de verdade. Com *opera* ligado o fiscal **alterava** o cadastro — e a
+**situação é campo do mesmo formulário** (RN-03), então ele tirava da fila o registro que ele mesmo
+acabara de criar em rua, e a conferência do gestor simplesmente não acontecia, sem nada no sistema
+registrando que foi pulada. "Pode alterar" e "pode validar" são a mesma coisa aqui.
 
 O gestor mantém o pacote inteiro: validar e corrigir cadastro de campo é o trabalho dele.
 
-Isto é a **concessão inicial**. Alargar ou apertar depois é ato do gestor no Modo Gerente — inclusive
-marcar "Só consulta", que derruba também o *opera*.
+Isto é a **concessão inicial**. Alargar ou apertar depois é ato do gestor no Modo Gerente.
 
-### RN-11 — Nome e apelido são nomes de gente, não texto livre qualquer
+**A tela obedece à matriz, e não só o servidor.** O que a pessoa pode fazer chega junto com a tela
+(prop `acoes`, vinda do mesmo serviço que as guardas consultam), e os botões que ela não tem
+simplesmente não aparecem. Sem isso o fiscal via "Incluir", preenchia o formulário inteiro e só
+então era recusado. Esconder botão é **conforto, nunca fronteira** — quem barra continua sendo a
+guarda, no servidor. Fora do modo que barra, a tela oferece tudo: senão esconderia o que o servidor
+aceita, e o registro do rollout nunca existiria.
 
-Aceitam letras (com acento), números (há apelido com número), espaço e a pontuação de nome próprio —
-ponto, apóstrofo e hífen (`Ana D'Ávila`, `Maria-José`, `J. Carlos`). Recusam markup (`<img …>`), aspas,
-barras, caractere invisível e **dois hífens seguidos**.
+### RN-11 — Nome e apelido são nomes de cadastro, não texto livre qualquer
+
+Aceitam letras (com acento), números (há apelido com número), espaço e a pontuação de nome de
+cadastro — ponto, apóstrofo, hífen, **vírgula e E comercial** (`Ana D'Ávila`, `Maria-José`,
+`J. Carlos`, `Silva & Filhos Ltda`, `José da Silva, ME`). Recusam markup (`<img …>`), aspas duplas,
+ponto e vírgula, barras, caractere invisível e **dois hífens seguidos**.
+
+A vírgula e o `&` estão na lista porque o documento aceita **CNPJ** (RN-02), e portanto há
+permissionário **pessoa jurídica**: razão social é escrita com eles o tempo todo. Recusá-los
+obrigava quem cadastrava a alterar a razão social para o formulário aceitar — e aí o nome deixava de
+bater com o documento que ele representa. Nenhum dos dois é assinatura de SQL para o WAF nem abre
+marcação HTML, então admiti-los não afrouxa o que a regra existe para barrar.
 
 Não é purismo: o valor GRAVADO sai por outras portas além da tela — relatório, planilha, documento,
 nome de arquivo. E `--` é a assinatura que o WAF da Prefeitura barra na URL: gravaria sem reclamar e
@@ -194,3 +231,4 @@ identificam ninguém.
 | 25/08/2026 | José Nascimento | Parametrização → Atividades do Ambulante | Exclusão passa a ser recusada quando algum permissionário aponta a atividade, dizendo quantos são e mandando inativar. | Excluir deixaria os cadastros apontando para o nada, e quem responderia seria a chave estrangeira do banco — com um erro cru na cara de quem está na tela. |
 | 26/08/2026 | José Nascimento | Cadastro de Permissionário | Foto anterior passa a ser apagada só depois de a gravação dar certo (e a do excluído, depois de a linha sair); busca mista passa a casar termo a termo (texto ou documento); "Cadastrado em campo" sai das opções da inclusão pela Retaguarda, com recusa no servidor, e a inclusão propõe "Regular". | Apagar antes de gravar deixava o cadastro vivo apontando para arquivo inexistente — perda da identidade de campo. A busca não achava ninguém quando a frase misturava apelido e documento. E cadastro feito de mesa não é cadastro de rua: entrando em quarentena, sujava a fila de conferência. |
 | 26/08/2026 | José Nascimento | Cadastro de Permissionário | Nome e apelido passam a aceitar apenas nome de gente (RN-11); a busca por documento passa a casar pelo **começo**, não por trecho no meio (RN-08); a semente do fiscal passa a nascer sem *inclui* e sem *exclui* (RN-10); a linha da grade passa a abrir o cadastro também pelo **teclado**, com a pista dita em tela. | Markup gravava no cadastro e saía em relatório e planilha (a renderização escapava, o armazenamento não), e `--` no nome é a assinatura que o WAF barra na URL. Documento casando no meio abre o prontuário da pessoa errada — no sistema irmão isso virou card de retorno da Qualidade. O fiscal cadastra em rua, em quarentena: criar de mesa passaria ao largo da conferência do gestor. E a única porta para o registro era invisível e só existia para quem usa mouse. |
+| 26/08/2026 | José Nascimento | Cadastro de Permissionário | A concessão do fiscal passa de "sem *inclui* e sem *exclui*" para **"Só consulta"** (RN-10); a tela passa a receber do servidor o que a pessoa pode fazer e a esconder o que ela não tem (RN-10); a foto sai de disco público para **rota autenticada** em disco privado (RN-07-b); falha na gravação da inclusão passa a levar junto o arquivo recém-guardado (RN-07); nome e apelido passam a aceitar **vírgula e E comercial** (RN-11). | Com *opera* ligado, o fiscal alterava o cadastro — e a situação é campo do mesmo formulário, então ele tirava da quarentena o registro que ele mesmo criara em rua: a conferência do gestor deixava de acontecer sem nada registrar que foi pulada. A tela oferecia Incluir e Excluir a quem o servidor recusa, e a recusa só aparecia depois do formulário preenchido. A foto é retrato de cidadão fiscalizado, exibido ao lado do documento dele, e no disco público era servida fora das guardas. E o campo aceita CNPJ, mas a regra de nome recusava a pontuação de razão social — obrigando a adulterar o nome para o cadastro passar. |

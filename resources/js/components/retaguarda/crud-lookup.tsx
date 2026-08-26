@@ -22,6 +22,7 @@ import {
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
+import { useAcoes } from '@/hooks/use-acoes';
 import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta } from '@/lib/busca';
 import { VAZIO } from '@/lib/datas';
@@ -137,6 +138,14 @@ export default function CrudLookup({
 
     const { enviando, ocupado, enviar, guardar } = useEnvio();
 
+    /*
+     * O que esta pessoa pode fazer nas SEIS telas (a permissão é uma só, do
+     * conjunto). Hoje quem as recebe tem o pacote inteiro, então nada some — mas
+     * a tela passa a perguntar em vez de supor: no dia em que um setor for
+     * concedido só para consulta, ela já não oferece o que o servidor recusa.
+     */
+    const acoes = useAcoes();
+
     const filtrados = useMemo(() => {
         const { facetas, termos } = parseConsulta<Faceta>(busca, FACETAS);
 
@@ -161,6 +170,10 @@ export default function CrudLookup({
     const ord = useOrdenacao(filtrados, { campo: 'nome', acessor: 'nome' });
     const pag = usePaginacao(ord.itens);
 
+    // Gravar registro NOVO é "incluir"; gravar alteração no que já existe é
+    // "operar" — são ações distintas na matriz.
+    const podeGravar = aberto === null ? acoes.incluir : acoes.habilitado;
+
     /** Abre um registro para olhar — alterar é um clique a mais, de propósito. */
     function abrir(item: ItemLookup) {
         setAberto(item);
@@ -172,6 +185,12 @@ export default function CrudLookup({
 
     /** Formulário em branco, já em modo de edição. */
     function incluir() {
+        // Quem não inclui não abre o formulário em branco. A aba e o botão já
+        // somem; isto fecha a chamada que sobrar de um ajuste futuro.
+        if (!acoes.incluir) {
+            return;
+        }
+
         setAberto(null);
         setForm(formularioDe(definicao, null));
         setErros({});
@@ -266,22 +285,27 @@ export default function CrudLookup({
                         <span className="aba-rotulo">Localizar</span>
                     </button>
 
-                    <button
-                        type="button"
-                        role="tab"
-                        className="aba"
-                        aria-selected={aba === 'registro'}
-                        onClick={aberto === null ? incluir : () => setAba('registro')}
-                    >
-                        {aberto === null ? (
-                            <Plus size={16} aria-hidden />
-                        ) : (
-                            <Eye size={16} aria-hidden />
-                        )}
-                        <span className="aba-rotulo">
-                            {aberto === null ? 'Incluir' : aberto.nome}
-                        </span>
-                    </button>
+                    {/* A aba de INCLUIR só existe para quem inclui. Com um
+                        registro aberto ela é a vista dele, e aí vale também para
+                        quem só consulta. */}
+                    {(aberto !== null || acoes.incluir) && (
+                        <button
+                            type="button"
+                            role="tab"
+                            className="aba"
+                            aria-selected={aba === 'registro'}
+                            onClick={aberto === null ? incluir : () => setAba('registro')}
+                        >
+                            {aberto === null ? (
+                                <Plus size={16} aria-hidden />
+                            ) : (
+                                <Eye size={16} aria-hidden />
+                            )}
+                            <span className="aba-rotulo">
+                                {aberto === null ? 'Incluir' : aberto.nome}
+                            </span>
+                        </button>
+                    )}
                 </div>
 
                 {aba === 'localizar' ? (
@@ -301,14 +325,18 @@ export default function CrudLookup({
                                 marginBottom: 10,
                             }}
                         >
-                            <BotaoAcao
-                                icone={<Plus size={16} aria-hidden />}
-                                ocupado={ocupado}
-                                onClick={incluir}
-                            >
-                                Incluir
-                            </BotaoAcao>
+                            {acoes.incluir && (
+                                <BotaoAcao
+                                    icone={<Plus size={16} aria-hidden />}
+                                    ocupado={ocupado}
+                                    onClick={incluir}
+                                >
+                                    Incluir
+                                </BotaoAcao>
+                            )}
 
+                            {/* Exportar é LEITURA: sai o mesmo recorte que a tela
+                                já mostrou, então vale para quem só consulta. */}
                             <BotaoExportar
                                 titulo={definicao.titulo}
                                 subtitulo={definicao.trilha}
@@ -560,26 +588,30 @@ export default function CrudLookup({
 
                             {aberto !== null && modo === 'navegacao' && (
                                 <>
-                                    <BotaoAcao
-                                        className="btn btn-perigo btn-sm"
-                                        icone={<Trash2 size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        onClick={() => setConfirmandoExclusao(true)}
-                                    >
-                                        Excluir
-                                    </BotaoAcao>
+                                    {acoes.excluir && (
+                                        <BotaoAcao
+                                            className="btn btn-perigo btn-sm"
+                                            icone={<Trash2 size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setConfirmandoExclusao(true)}
+                                        >
+                                            Excluir
+                                        </BotaoAcao>
+                                    )}
 
-                                    <BotaoAcao
-                                        icone={<Pencil size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        onClick={() => setModo('edicao')}
-                                    >
-                                        Editar
-                                    </BotaoAcao>
+                                    {acoes.habilitado && (
+                                        <BotaoAcao
+                                            icone={<Pencil size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setModo('edicao')}
+                                        >
+                                            Editar
+                                        </BotaoAcao>
+                                    )}
                                 </>
                             )}
 
-                            {modo === 'edicao' && (
+                            {modo === 'edicao' && podeGravar && (
                                 <BotaoAcao
                                     icone={<Check size={16} aria-hidden />}
                                     carregando={enviando === 'salvar'}

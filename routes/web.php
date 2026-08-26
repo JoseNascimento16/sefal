@@ -106,6 +106,13 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::prefix('retaguarda/permissionarios')->name('retaguarda.permissionarios.')->group(function () {
         Route::get('/', [CadastroPermissionarioController::class, 'index'])->name('index');
+
+        // A foto sai por aqui, e não por URL de disco público: é retrato de
+        // cidadão fiscalizado, e mora sob o caminho da tela justamente para a
+        // guarda de leitura conferir a permissão antes de entregar a imagem.
+        Route::get('{permissionario}/foto', [CadastroPermissionarioController::class, 'foto'])
+            ->name('foto')->whereNumber('permissionario');
+
         Route::post('/', [CadastroPermissionarioController::class, 'store'])->name('store');
         Route::put('{permissionario}', [CadastroPermissionarioController::class, 'update'])
             ->name('update')->whereNumber('permissionario');

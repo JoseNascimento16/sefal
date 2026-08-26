@@ -47,8 +47,39 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user ? $this->usuario($user) : null,
             ],
             'menu' => $user ? $this->menu($user) : [],
+            'acoes' => $this->acoes($request, $user),
             'flash' => $this->recado($request),
         ];
+    }
+
+    /**
+     * O que esta pessoa pode FAZER na tela que está abrindo — para a tela não oferecer o que o
+     * servidor recusa.
+     *
+     * Sem isto, a tela desenha os botões que sabe desenhar e a pessoa só descobre a recusa depois
+     * de preencher o formulário inteiro: clica em Salvar e recebe "Você não tem permissão para
+     * esta ação". Tela que abre para não fazer nada é pior que tela fechada.
+     *
+     * Vai como prop COMPARTILHADA, e não montada em cada controller, por dois motivos. Primeiro,
+     * é a mesma pergunta em toda tela da Retaguarda — repetida em cada `Inertia::render`, uma
+     * delas ia esquecer, e a esquecida seria justamente a que ninguém abre. Segundo, quem responde
+     * é o {@see PermissaoService}, o MESMO que as guardas consultam: esconder botão é conforto,
+     * nunca fronteira, e conforto que discorda da fronteira é o defeito que ele deveria evitar.
+     *
+     * Tela fora do Modo Gerente (a inicial, a área da própria conta) e visitante não têm o que
+     * responder: vai `null`, e a tela trata como "sem restrição declarada".
+     *
+     * @return array<string, bool>|null
+     */
+    protected function acoes(Request $request, ?User $user): ?array
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        $slug = PermissaoService::telaDoCaminho($request->path());
+
+        return $slug === null ? null : app(PermissaoService::class)->acoes($user, $slug);
     }
 
     /**

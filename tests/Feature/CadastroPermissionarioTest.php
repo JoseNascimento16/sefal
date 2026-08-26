@@ -126,7 +126,7 @@ test('alterar um cadastro nao esbarra no proprio documento', function () {
 });
 
 test('foto passa por ArquivoSeguro (exe renomeado e recusado)', function () {
-    Storage::fake('public');
+    Storage::fake('local');
 
     $this->actingAs($this->admin)->post(
         caminhoDoPermissionario(),
@@ -139,7 +139,7 @@ test('foto passa por ArquivoSeguro (exe renomeado e recusado)', function () {
 });
 
 test('a foto enviada e guardada, trocada e removida — sempre sem deixar arquivo orfao', function () {
-    Storage::fake('public');
+    Storage::fake('local');
 
     $this->actingAs($this->admin)->post(
         caminhoDoPermissionario(),
@@ -152,7 +152,7 @@ test('a foto enviada e guardada, trocada e removida — sempre sem deixar arquiv
     $primeira = $p->foto;
 
     expect($primeira)->toStartWith('permissionarios/');
-    Storage::disk('public')->assertExists($primeira);
+    Storage::disk('local')->assertExists($primeira);
 
     // Trocar a foto não pode deixar a antiga ocupando disco para sempre.
     $this->actingAs($this->admin)->put(
@@ -166,8 +166,8 @@ test('a foto enviada e guardada, trocada e removida — sempre sem deixar arquiv
     $segunda = $p->fresh()->foto;
 
     expect($segunda)->not->toBe($primeira);
-    Storage::disk('public')->assertMissing($primeira);
-    Storage::disk('public')->assertExists($segunda);
+    Storage::disk('local')->assertMissing($primeira);
+    Storage::disk('local')->assertExists($segunda);
 
     // Remover a foto apaga o arquivo e devolve o cadastro às iniciais.
     $this->actingAs($this->admin)->put(
@@ -176,7 +176,7 @@ test('a foto enviada e guardada, trocada e removida — sempre sem deixar arquiv
     )->assertSessionHasNoErrors();
 
     expect($p->fresh()->foto)->toBeNull();
-    Storage::disk('public')->assertMissing($segunda);
+    Storage::disk('local')->assertMissing($segunda);
 });
 
 test('salvar sem mandar foto nenhuma NAO apaga a foto ja cadastrada', function () {
@@ -185,14 +185,14 @@ test('salvar sem mandar foto nenhuma NAO apaga a foto ja cadastrada', function (
      * "campo ausente" como "remover" apagaria a foto de quem entrou só para
      * corrigir o telefone — e a identidade de campo é justamente a foto.
      */
-    Storage::fake('public');
+    Storage::fake('local');
 
     $p = Permissionario::factory()->create([
         'atividade_id' => $this->atividade->id,
         'foto' => 'permissionarios/ja-existente.jpg',
     ]);
 
-    Storage::disk('public')->put('permissionarios/ja-existente.jpg', 'conteudo');
+    Storage::disk('local')->put('permissionarios/ja-existente.jpg', 'conteudo');
 
     $this->actingAs($this->admin)->put(
         caminhoDoPermissionario($p->id),
@@ -200,7 +200,7 @@ test('salvar sem mandar foto nenhuma NAO apaga a foto ja cadastrada', function (
     )->assertSessionHasNoErrors();
 
     expect($p->fresh()->foto)->toBe('permissionarios/ja-existente.jpg');
-    Storage::disk('public')->assertExists('permissionarios/ja-existente.jpg');
+    Storage::disk('local')->assertExists('permissionarios/ja-existente.jpg');
 });
 
 test('o codigo nasce do gerador de protocolo e nao recomeca quando o contador do dia se perde', function () {
@@ -366,21 +366,21 @@ test('a grade entrega o documento formatado e a validade em forma de data', func
 });
 
 test('excluir o cadastro leva junto o arquivo da foto', function () {
-    Storage::fake('public');
+    Storage::fake('local');
 
     $p = Permissionario::factory()->create([
         'atividade_id' => $this->atividade->id,
         'foto' => 'permissionarios/para-apagar.jpg',
     ]);
 
-    Storage::disk('public')->put('permissionarios/para-apagar.jpg', 'conteudo');
+    Storage::disk('local')->put('permissionarios/para-apagar.jpg', 'conteudo');
 
     $this->actingAs($this->admin)->delete(caminhoDoPermissionario($p->id))
         ->assertRedirect()
         ->assertSessionHas('flash.sucesso');
 
     expect(Permissionario::find($p->id))->toBeNull();
-    Storage::disk('public')->assertMissing('permissionarios/para-apagar.jpg');
+    Storage::disk('local')->assertMissing('permissionarios/para-apagar.jpg');
 });
 
 test('a atividade apontada por um cadastro nao pode mais ser excluida, e a recusa diz por que', function () {
@@ -488,14 +488,14 @@ test('gravacao que falha NAO apaga a foto antiga — o registro vivo nunca apont
      * fiscal usa para reconhecer a pessoa. O contrário (a foto nova sobrando no
      * disco) custa bytes e nada mais.
      */
-    Storage::fake('public');
+    Storage::fake('local');
 
     $p = Permissionario::factory()->create([
         'atividade_id' => $this->atividade->id,
         'foto' => 'permissionarios/original.jpg',
     ]);
 
-    Storage::disk('public')->put('permissionarios/original.jpg', 'conteudo');
+    Storage::disk('local')->put('permissionarios/original.jpg', 'conteudo');
 
     // Uma falha de gravação qualquer (constraint, indisponibilidade, gatilho).
     // Sem o tratador de exceções no caminho: o que se prova é o estado que a
@@ -520,7 +520,7 @@ test('gravacao que falha NAO apaga a foto antiga — o registro vivo nunca apont
     }
 
     expect($p->fresh()->foto)->toBe('permissionarios/original.jpg');
-    Storage::disk('public')->assertExists('permissionarios/original.jpg');
+    Storage::disk('local')->assertExists('permissionarios/original.jpg');
 });
 
 test('a inclusao pela Retaguarda nao oferece a quarentena, e o servidor recusa', function () {

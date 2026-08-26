@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Services\PermissaoService;
+
 /**
  * O que o Modo Gerente pode controlar — derivado do MENU, em tempo de execução.
  *
@@ -24,6 +26,21 @@ class CatalogoFuncionalidades
      */
     public static function itens(): array
     {
+        /*
+         * Quantas telas declaram cada slug — apurado ANTES de montar.
+         *
+         * Várias telas sob o MESMO slug é o caso da Parametrização, em que seis telas dividem o
+         * caminho `/retaguarda/parametrizacao/…`: a permissão cobre o CONJUNTO, então quem a
+         * concede tem de ler o nome do conjunto. Ver ali o nome de uma das seis faria parecer que
+         * as outras cinco ficaram de fora da concessão.
+         *
+         * A contagem primeiro, e não a correção do rótulo ao encontrar a segunda tela, porque
+         * corrigir depois só funciona quando existe uma segunda: uma seção que passasse a ter UMA
+         * tela sob slug compartilhado voltaria a exibir o nome dela na matriz, e a leitura errada
+         * reapareceria sem nada acusar.
+         */
+        $compartilhados = array_count_values(self::slugsDeclarados());
+
         $itens = [];
 
         foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
@@ -34,28 +51,44 @@ class CatalogoFuncionalidades
                     continue;
                 }
 
-                /*
-                 * Várias telas sob o MESMO slug (é o caso da Parametrização, em
-                 * que seis telas dividem o caminho `/retaguarda/parametrizacao/…`):
-                 * a permissão cobre o CONJUNTO, então quem a concede tem de ler
-                 * o nome do conjunto. Ver ali o nome de uma das seis faria
-                 * parecer que as outras cinco ficaram de fora da concessão.
-                 */
                 if (isset($itens[$slug])) {
-                    $itens[$slug]['rotulo'] = (string) ($secao['rotulo'] ?? $itens[$slug]['rotulo']);
-
                     continue;
                 }
 
                 $itens[$slug] = [
                     'slug' => $slug,
-                    'rotulo' => (string) ($item['rotulo'] ?? $slug),
+                    // Slug compartilhado usa o nome da SEÇÃO; slug de uma tela só, o dela.
+                    'rotulo' => ($compartilhados[$slug] ?? 0) > 1
+                        ? (string) ($secao['rotulo'] ?? $slug)
+                        : (string) ($item['rotulo'] ?? $slug),
                     'secao' => (string) ($secao['rotulo'] ?? ''),
                 ];
             }
         }
 
         return array_values($itens);
+    }
+
+    /**
+     * Todo slug declarado no menu, COM repetição — a matéria-prima da contagem acima.
+     *
+     * @return list<string>
+     */
+    private static function slugsDeclarados(): array
+    {
+        $slugs = [];
+
+        foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
+            foreach ((array) ($secao['itens'] ?? []) as $item) {
+                $slug = $item['slug'] ?? null;
+
+                if (is_string($slug) && $slug !== '') {
+                    $slugs[] = $slug;
+                }
+            }
+        }
+
+        return $slugs;
     }
 
     /** @return list<string> */
@@ -97,15 +130,24 @@ class CatalogoFuncionalidades
      *
      * O normal é o pacote inteiro — "este setor usa esta tela" quer dizer ver,
      * operar, incluir e excluir. Mas há caso em que o pacote inteiro não é o que
-     * se quer dizer, e aí a semente precisa saber disso: o **fiscal** enxerga o
-     * cadastro de permissionário (chegar na calçada sem saber quem está
-     * cadastrado é trabalhar às cegas) e NÃO cria nem apaga por lá — ele cadastra
-     * em rua, pelo aplicativo, e o que nasce em rua entra em quarentena para o
-     * gestor conferir. Criar direto pela Retaguarda passaria ao largo dessa
-     * conferência, e apagar cadastro é ato de gestão.
+     * se quer dizer, e aí a semente precisa saber disso: o **fiscal** apenas
+     * CONSULTA o cadastro de permissionário (chegar na calçada sem saber quem
+     * está cadastrado é trabalhar às cegas) e não grava nada por lá — ele
+     * cadastra em rua, pelo aplicativo, e o que nasce em rua entra em quarentena
+     * para o gestor conferir. Deixá-lo alterar de mesa permitiria que ele mesmo
+     * tirasse da quarentena o cadastro que acabou de criar, e a conferência que
+     * dá sentido à fila deixaria de acontecer.
      *
      * A exceção mora na config do menu, junto do resto da declaração da tela, e
      * não aqui: quem lê "quem entra onde" tem de achar tudo no mesmo lugar.
+     *
+     * ⚠️ O resultado passa pela MESMA normalização que a tela do Modo Gerente
+     * aplica ao gravar ({@see PermissaoService::normalizar}), e isso não é
+     * capricho: sem ela, declarar `['apenas_leitura' => true]` semearia uma linha
+     * que se contradiz — "só consulta" marcado ao lado de "opera", "inclui" e
+     * "exclui" ainda ligados. A resolução em tempo de execução lê as colunas
+     * cruas, então a linha incoerente daria poder de gravar a quem a config diz
+     * que só olha.
      *
      * @return array<string, bool>
      */
@@ -119,7 +161,10 @@ class CatalogoFuncionalidades
             'excluir' => true,
         ];
 
-        return [...$pacoteCompleto, ...(self::semente($slug)[$setor] ?? [])];
+        return PermissaoService::normalizar([
+            ...$pacoteCompleto,
+            ...(self::semente($slug)[$setor] ?? []),
+        ]);
     }
 
     /**

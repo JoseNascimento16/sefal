@@ -6,11 +6,20 @@ use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * Um nome de gente — nome, apelido, nome de guerra.
+ * Um nome de cadastro — nome de pessoa, apelido, nome de guerra ou razão social.
  *
  * Aceita **letras** (com acento, de qualquer alfabeto), **números** (há apelido
- * com número: "Zé 2"), **espaço** e a pontuação que nome próprio realmente usa:
- * ponto, apóstrofo e hífen (`Ana D'Ávila`, `Maria-José`, `J. Carlos`).
+ * com número: "Zé 2"), **espaço** e a pontuação que nome de cadastro realmente
+ * usa: ponto, apóstrofo e hífen (`Ana D'Ávila`, `Maria-José`, `J. Carlos`) mais
+ * **vírgula e E comercial**.
+ *
+ * ⚠️ A vírgula e o `&` estão aqui porque o campo que usa esta regra aceita
+ * **CNPJ**, e portanto guarda PESSOA JURÍDICA. Razão social é escrita com eles o
+ * tempo todo — `SILVA & FILHOS LTDA`, `JOSÉ DA SILVA, ME` —, e recusá-los
+ * obrigava quem cadastrava a alterar a razão social para o cadastro passar: o
+ * nome deixava de bater com o documento que ele representa. Nenhum dos dois é
+ * assinatura de SQL para o WAF nem abre marcação HTML, então admiti-los não
+ * afrouxa nada do que a regra existe para barrar.
  *
  * Recusa o resto — e isso não é purismo:
  *
@@ -48,10 +57,11 @@ class NomeDeCadastro implements ValidationRule
             return;
         }
 
-        if (preg_match("/^[\p{L}\p{N} .'’\\-]+$/u", $nome) !== 1) {
+        if (preg_match("/^[\p{L}\p{N} .,&'’\\-]+$/u", $nome) !== 1) {
             $fail(
-                'Use apenas letras, números, espaços e os sinais de nome próprio (ponto, apóstrofo e hífen). '
-                .'Sinais como <, >, &, aspas ou barras não entram num nome.',
+                'Use apenas letras, números, espaços e os sinais de nome ou razão social '
+                .'(ponto, vírgula, apóstrofo, hífen e &). '
+                .'Sinais como <, >, aspas, ponto e vírgula ou barras não entram num nome.',
             );
         }
     }
