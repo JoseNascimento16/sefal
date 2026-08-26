@@ -46,6 +46,15 @@ e corrompe o dado em silêncio.
 com o que a pessoa disse, e **espera conferência**. É o valor padrão da coluna — o que chega sem
 situação declarada nunca entra como regular.
 
+**A quarentena não é oferecida na INCLUSÃO pela Retaguarda**, e o servidor recusa (não é a tela
+escondendo a opção): `Cadastrado em campo` significa "isto nasceu na rua, sem conferência", e um
+cadastro feito de mesa — com o gestor lendo o documento na tela — não nasce assim. Permiti-lo
+sujaria com registros dispensáveis justamente a fila que dá sentido à quarentena. A inclusão de mesa
+**propõe `Regular`**, que é o caso comum de quem cadastra com o documento em mão.
+
+Na **alteração** as três valem: devolver à fila um cadastro que se mostrou duvidoso é exatamente o
+que o gestor precisa poder fazer.
+
 **A tela de validação dessa fila (aprovar / mesclar duplicado / recusar com motivo) é de entrega
 futura.** Hoje a situação é um valor que o gestor troca à mão nesta própria tela, e a busca sabe
 achar quem está esperando ("cadastrado em campo", "quarentena").
@@ -92,8 +101,11 @@ Três casos, e confundi-los é o erro clássico:
 Tratar "campo ausente" como remoção apagaria a foto de quem nunca pediu isso — e a foto é a
 identidade de campo (RN-01).
 
-Excluir o cadastro leva o arquivo junto, e o arquivo é apagado **antes** da linha: na ordem inversa,
-uma falha deixaria a foto órfã sem ninguém para reencontrá-la.
+**A ordem é: gravar primeiro, apagar depois.** O arquivo antigo só é removido depois de a gravação
+dar certo, e a foto de um cadastro excluído só depois de a linha sair. Entre os dois estragos
+possíveis quando algo falha no meio — **arquivo sobrando no disco** ou **cadastro vivo apontando para
+arquivo que não existe** —, o primeiro é lixo e o segundo é perda da identidade de campo. Por isso a
+prioridade é essa, e não a inversa.
 
 ### RN-08 — Busca inteligente: uma barra só
 
@@ -106,6 +118,11 @@ faceta, "bebidas" filtra pelo **ramo**, e não casa por acaso com um apelido que
 O que sobra casa contra nome, apelido, código, nº da permissão, atividade e situação — e
 **também contra o documento sem máscara**, para quem digita `123.456.789-09` achar quem está gravado
 como `12345678909`.
+
+A conferência é **termo a termo**: cada palavra digitada vale se casar no texto **ou** no documento, e
+todas precisam casar. É o que faz a consulta **mista** funcionar — `acaraje 12345678909` acha a pessoa
+cujo apelido tem "acarajé" **e** cujo documento é aquele. Exigir que todos os termos caíssem do mesmo
+lado (todos no texto, ou todos no documento) não acharia ninguém.
 
 Não há chips nem filtros paralelos: é a lei de busca do projeto.
 
@@ -150,3 +167,4 @@ operar, incluir e excluir. Não é decisão de código: quem distribui acesso é
 |---|---|---|---|---|
 | 25/08/2026 | José Nascimento | Cadastro de Permissionário | Criação da tela com listagem, inclusão, alteração e exclusão; documento opcional validado e normalizado quando informado; foto com allowlist de anexos e limpeza do arquivo anterior; situação com quarentena; código pelo gerador de protocolo; busca inteligente e exportação do recorte visível. | É a identidade de quem é fiscalizado: sem ela não há a quem ligar uma vistoria, e o cadastro precisa caber na realidade da rua, onde não há documento à mão. |
 | 25/08/2026 | José Nascimento | Parametrização → Atividades do Ambulante | Exclusão passa a ser recusada quando algum permissionário aponta a atividade, dizendo quantos são e mandando inativar. | Excluir deixaria os cadastros apontando para o nada, e quem responderia seria a chave estrangeira do banco — com um erro cru na cara de quem está na tela. |
+| 26/08/2026 | José Nascimento | Cadastro de Permissionário | Foto anterior passa a ser apagada só depois de a gravação dar certo (e a do excluído, depois de a linha sair); busca mista passa a casar termo a termo (texto ou documento); "Cadastrado em campo" sai das opções da inclusão pela Retaguarda, com recusa no servidor, e a inclusão propõe "Regular". | Apagar antes de gravar deixava o cadastro vivo apontando para arquivo inexistente — perda da identidade de campo. A busca não achava ninguém quando a frase misturava apelido e documento. E cadastro feito de mesa não é cadastro de rua: entrando em quarentena, sujava a fila de conferência. |

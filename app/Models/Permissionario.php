@@ -85,6 +85,26 @@ class Permissionario extends Model
         self::SITUACAO_CAMPO,
     ];
 
+    /**
+     * As situações com que um cadastro pode NASCER pela Retaguarda.
+     *
+     * A quarentena fica de fora, e isso é regra de negócio, não conveniência de
+     * tela: `Cadastrado em campo` significa "isto nasceu na rua, sem
+     * conferência". Um cadastro feito de mesa, com o gestor lendo o documento na
+     * tela, não nasce assim — permiti-lo sujaria a fila de conferência com
+     * registros que ninguém precisa conferir, e a fila é a razão de a quarentena
+     * existir.
+     *
+     * Na ALTERAÇÃO as três valem: devolver um cadastro duvidoso para a fila é
+     * exatamente o que o gestor precisa poder fazer.
+     *
+     * @var list<string>
+     */
+    public const SITUACOES_DE_MESA = [
+        self::SITUACAO_REGULAR,
+        self::SITUACAO_IRREGULAR,
+    ];
+
     protected $table = 'permissionarios';
 
     /**

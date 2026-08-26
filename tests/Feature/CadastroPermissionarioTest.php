@@ -260,20 +260,22 @@ test('atividade inativada continua valida no cadastro que ja a apontava', functi
     expect($p->fresh()->telefone)->toBe('(71) 98888-1111');
 });
 
-test('a situacao so aceita as tres do catalogo', function () {
+test('a situacao so aceita o que esta no catalogo', function () {
+    // Valor inventado é recusado — o catálogo é fechado, e quem o define é o
+    // servidor (a tela desenha o que ele manda).
     $this->actingAs($this->admin)->post(
         caminhoDoPermissionario(),
         cadastroMinimo($this->atividade->id, ['situacao' => 'Aprovado']),
     )->assertSessionHasErrors('situacao');
 
-    foreach (Permissionario::SITUACOES as $i => $situacao) {
+    foreach (Permissionario::SITUACOES_DE_MESA as $i => $situacao) {
         $this->actingAs($this->admin)->post(
             caminhoDoPermissionario(),
             cadastroMinimo($this->atividade->id, ['nome' => "Pessoa {$i}", 'situacao' => $situacao]),
         )->assertSessionHasNoErrors();
     }
 
-    expect(Permissionario::count())->toBe(count(Permissionario::SITUACOES));
+    expect(Permissionario::count())->toBe(count(Permissionario::SITUACOES_DE_MESA));
 });
 
 test('o nome e obrigatorio', function () {
@@ -299,7 +301,10 @@ test('a grade entrega os cadastros, as atividades e o catalogo de situacoes', fu
             // dois vêm do servidor para não haver duas verdades sobre o mesmo dado.
             ->has('permissionarios.0.documento_formatado')
             ->has('atividades')
-            ->where('situacoes', Permissionario::SITUACOES));
+            ->where('situacoes', Permissionario::SITUACOES)
+            // O que a INCLUSÃO pode oferecer vem do servidor também: escrito na
+            // tela, um dia ela ofereceria o que o servidor recusa.
+            ->where('situacoesDeInclusao', Permissionario::SITUACOES_DE_MESA));
 });
 
 test('a grade entrega o documento formatado e a validade em forma de data', function () {
@@ -430,4 +435,85 @@ test('o recorte visivel da grade vira documento pelo ponto unico de exportacao',
     $resposta->assertOk();
 
     expect((string) $resposta->getContent())->toStartWith('%PDF');
+});
+
+test('gravacao que falha NAO apaga a foto antiga — o registro vivo nunca aponta para arquivo inexistente', function () {
+    /*
+     * A ordem importa, e a prioridade é clara: **arquivo órfão é lixo, referência
+     * quebrada é perda de dado**. Se a foto anterior fosse apagada antes do
+     * `save()`, uma falha na gravação deixaria o cadastro VIVO apontando para um
+     * arquivo que não existe mais — e a foto é a identidade de campo, o que o
+     * fiscal usa para reconhecer a pessoa. O contrário (a foto nova sobrando no
+     * disco) custa bytes e nada mais.
+     */
+    Storage::fake('public');
+
+    $p = Permissionario::factory()->create([
+        'atividade_id' => $this->atividade->id,
+        'foto' => 'permissionarios/original.jpg',
+    ]);
+
+    Storage::disk('public')->put('permissionarios/original.jpg', 'conteudo');
+
+    // Uma falha de gravação qualquer (constraint, indisponibilidade, gatilho).
+    // Sem o tratador de exceções no caminho: o que se prova é o estado que a
+    // falha deixa, não a página de erro — e passar pelo registro de ocorrências
+    // tornaria o teste dez vezes mais lento por nada.
+    $this->withoutExceptionHandling();
+
+    Permissionario::saving(function (): void {
+        throw new RuntimeException('falha simulada na gravação');
+    });
+
+    try {
+        $this->actingAs($this->admin)->put(
+            caminhoDoPermissionario($p->id),
+            cadastroMinimo($this->atividade->id, [
+                'nome' => $p->nome,
+                'foto' => UploadedFile::fake()->image('nova.jpg', 200, 200),
+            ]),
+        );
+    } catch (Throwable) {
+        // A falha É o cenário; o que se prova é o estado que ela deixou.
+    }
+
+    expect($p->fresh()->foto)->toBe('permissionarios/original.jpg');
+    Storage::disk('public')->assertExists('permissionarios/original.jpg');
+});
+
+test('a inclusao pela Retaguarda nao oferece a quarentena, e o servidor recusa', function () {
+    /*
+     * "Cadastrado em campo" é estado de ORIGEM: quer dizer "isto nasceu na rua,
+     * sem conferência". Um cadastro feito de mesa, com o gestor lendo documento
+     * na tela, não nasce assim — deixar a opção aberta na inclusão sujaria a fila
+     * de conferência com registros que ninguém precisa conferir.
+     *
+     * No UPDATE ela continua disponível: é como o gestor devolve para a fila um
+     * cadastro que ele percebeu duvidoso.
+     */
+    $this->actingAs($this->admin)->post(
+        caminhoDoPermissionario(),
+        cadastroMinimo($this->atividade->id, ['situacao' => Permissionario::SITUACAO_CAMPO]),
+    )->assertSessionHasErrors('situacao');
+
+    expect(Permissionario::count())->toBe(0);
+
+    // De mesa nasce Regular ou Irregular.
+    $this->actingAs($this->admin)->post(
+        caminhoDoPermissionario(),
+        cadastroMinimo($this->atividade->id, ['situacao' => Permissionario::SITUACAO_REGULAR]),
+    )->assertSessionHasNoErrors();
+
+    $p = Permissionario::firstOrFail();
+
+    // E o gestor pode devolvê-lo à fila depois.
+    $this->actingAs($this->admin)->put(
+        caminhoDoPermissionario($p->id),
+        cadastroMinimo($this->atividade->id, [
+            'nome' => $p->nome,
+            'situacao' => Permissionario::SITUACAO_CAMPO,
+        ]),
+    )->assertSessionHasNoErrors();
+
+    expect($p->fresh()->situacao)->toBe(Permissionario::SITUACAO_CAMPO);
 });

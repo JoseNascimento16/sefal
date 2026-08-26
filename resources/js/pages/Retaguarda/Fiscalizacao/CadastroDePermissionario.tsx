@@ -118,6 +118,20 @@ function facetasDeAtividade(atividades: Atividade[]): { expressao: RegExp; valor
         }));
 }
 
+/**
+ * Um termo casa no documento da pessoa?
+ *
+ * Compara sem máscara dos dois lados (o digitado já vem limpo), e exige mais de
+ * um caractere: um dígito só casaria com quase todo mundo.
+ */
+function casaNoDocumento(termoSemMascara: string, documento: string | null): boolean {
+    return (
+        documento !== null &&
+        termoSemMascara.length > 1 &&
+        semAcento(documento).includes(termoSemMascara)
+    );
+}
+
 /** O selo de cada situação — cor com significado, não decoração. */
 function seloDaSituacao(situacao: string): { classe: string; Icone: typeof CircleCheck } {
     if (situacao === 'Regular') {
@@ -216,15 +230,27 @@ export default function CadastroDePermissionario({
     permissionarios,
     atividades,
     situacoes,
+    situacoesDeInclusao,
 }: {
     permissionarios: Permissionario[];
     atividades: Atividade[];
+    /** As três, para o registro já existente. */
     situacoes: string[];
+    /**
+     * As que um cadastro pode NASCER com, pela Retaguarda — sem a quarentena,
+     * que é estado de origem de rua. Vem do servidor: é a mesma lista que a
+     * validação exige.
+     */
+    situacoesDeInclusao: string[];
 }) {
     const [aba, setAba] = useState<Aba>('localizar');
     const [aberto, setAberto] = useState<Permissionario | null>(null);
     const [modo, setModo] = useState<Modo>('edicao');
-    const [form, setForm] = useState<Formulario>(() => formularioDe(null, situacoes[0] ?? ''));
+    // A inclusão de mesa PROPÕE "Regular": é o caso comum de quem cadastra com o
+    // documento em mão.
+    const [form, setForm] = useState<Formulario>(() =>
+        formularioDe(null, situacoesDeInclusao[0] ?? ''),
+    );
     const [foto, setFoto] = useState<File | null>(null);
     const [removerFoto, setRemoverFoto] = useState(false);
     const [erros, setErros] = useState<Record<string, string>>({});
@@ -244,8 +270,9 @@ export default function CadastroDePermissionario({
         const hoje = hojeISO();
 
         // O texto digitado pode SER um documento: comparar sem máscara faz
-        // "123.456.789-09" achar quem está gravado como "12345678909".
-        const termosDocumento = termos.map((t) => t.replace(/[^0-9a-z]/g, ''));
+        // "123.456.789-09" achar quem está gravado como "12345678909". Fica na
+        // mesma ordem dos termos, para o casamento ser por termo (ver abaixo).
+        const termosSemMascara = termos.map((t) => t.replace(/[^0-9a-z]/g, ''));
 
         return permissionarios.filter((p) => {
             for (const faceta of facetas) {
@@ -273,22 +300,23 @@ export default function CadastroDePermissionario({
                 }
             }
 
-            const casaTexto = casaTermos(termos, [
-                p.nome,
-                p.apelido,
-                p.codigo,
-                p.numero_permissao,
-                p.atividade,
-                p.situacao,
-            ]);
-
-            const casaDocumento =
-                p.documento !== null &&
-                termosDocumento.every(
-                    (t) => t.length > 1 && semAcento(p.documento).includes(t),
-                );
-
-            return casaTexto || casaDocumento;
+            /*
+             * TERMO A TERMO: cada palavra digitada casa no texto OU no documento,
+             * e todas têm de casar (E entre termos). Conferir "todos no texto OU
+             * todos no documento" quebrava a consulta MISTA — `acaraje
+             * 12345678909` não achava ninguém, porque nenhum dos dois lados tinha
+             * as duas coisas.
+             */
+            return termos.every((termo, i) =>
+                casaTermos([termo], [
+                    p.nome,
+                    p.apelido,
+                    p.codigo,
+                    p.numero_permissao,
+                    p.atividade,
+                    p.situacao,
+                ]) || casaNoDocumento(termosSemMascara[i], p.documento),
+            );
         });
     }, [permissionarios, atividades, busca]);
 
@@ -306,7 +334,7 @@ export default function CadastroDePermissionario({
 
     function incluir() {
         setAberto(null);
-        setForm(formularioDe(null, situacoes[0] ?? ''));
+        setForm(formularioDe(null, situacoesDeInclusao[0] ?? ''));
         limparAnexo();
         setErros({});
         setModo('edicao');
@@ -334,6 +362,16 @@ export default function CadastroDePermissionario({
     }
 
     function salvar() {
+        /*
+         * O mesmo piso que o `enviar()` do hook já garante — repetido aqui porque
+         * a alteração sai por `router.post` (arquivo não viaja em PUT) e passaria
+         * ao lado dessa guarda. Sem isto, dois cliques rápidos no botão de salvar
+         * mandariam duas gravações.
+         */
+        if (ocupado) {
+            return;
+        }
+
         const dados: Record<string, string | boolean | File> = {
             ...form,
             // Enviado só quando há arquivo: campo ausente significa "não mexi na
@@ -367,7 +405,9 @@ export default function CadastroDePermissionario({
     }
 
     function excluir() {
-        if (aberto === null) {
+        // Idem: `router.delete` não passa pelo `enviar()`, e exclusão disparada
+        // duas vezes é a que menos perdoa.
+        if (ocupado || aberto === null) {
             return;
         }
 
@@ -919,15 +959,25 @@ export default function CadastroDePermissionario({
                                     disabled={!emEdicao}
                                     onChange={(e) => campo('situacao', e.target.value)}
                                 >
-                                    {situacoes.map((s) => (
+                                    {/* Na inclusão, sem a quarentena: ela é o
+                                        estado de quem foi cadastrado em RUA, e o
+                                        servidor recusa (não é só a tela
+                                        escondendo). Num registro já existente as
+                                        três aparecem — é como o gestor devolve à
+                                        fila um cadastro duvidoso. */}
+                                    {(aberto === null
+                                        ? situacoesDeInclusao
+                                        : situacoes
+                                    ).map((s) => (
                                         <option key={s} value={s}>
                                             {s}
                                         </option>
                                     ))}
                                 </select>
                                 <p className="form-ajuda">
-                                    “Cadastrado em campo” é o cadastro feito em
-                                    rua, ainda sem conferência.
+                                    {aberto === null
+                                        ? 'Cadastro feito aqui nasce Regular ou Irregular. “Cadastrado em campo” é dos que chegam da rua, pelo aplicativo.'
+                                        : '“Cadastrado em campo” devolve o cadastro à fila de conferência.'}
                                 </p>
                                 {erros.situacao && (
                                     <p className="form-erro">{erros.situacao}</p>

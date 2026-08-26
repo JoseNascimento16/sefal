@@ -56,9 +56,11 @@ class CadastroPermissionarioController extends Controller
         return Inertia::render('Retaguarda/Fiscalizacao/CadastroDePermissionario', [
             'permissionarios' => $this->listagem(),
             'atividades' => $this->atividades(),
-            // O catálogo de situações vem do SERVIDOR: é o mesmo que a validação
-            // exige. Escrito também na tela, um dia os dois discordariam.
+            // Os dois catálogos de situação vêm do SERVIDOR: são os mesmos que a
+            // validação exige. Escritos também na tela, um dia discordariam — e a
+            // tela ofereceria uma opção que o servidor recusa.
             'situacoes' => Permissionario::SITUACOES,
+            'situacoesDeInclusao' => Permissionario::SITUACOES_DE_MESA,
         ]);
     }
 
@@ -88,9 +90,14 @@ class CadastroPermissionarioController extends Controller
 
         $registro->fill($this->validados($request, $registro));
 
-        $this->aplicarFoto($request, $registro);
+        $descartar = $this->aplicarFoto($request, $registro);
 
         $registro->save();
+
+        // O arquivo antigo só vai embora DEPOIS de a gravação dar certo. Apagado
+        // antes, uma falha no `save()` deixaria o cadastro VIVO apontando para um
+        // arquivo que não existe mais.
+        $this->apagarFoto($descartar);
 
         return redirect()
             ->route('retaguarda.permissionarios.index')
@@ -110,11 +117,14 @@ class CadastroPermissionarioController extends Controller
     {
         $registro = Permissionario::query()->findOrFail($permissionario);
 
-        // Primeiro o arquivo, depois a linha: na ordem inversa, uma falha na
-        // exclusão deixaria a foto órfã sem ninguém para reencontrá-la.
-        $this->apagarFoto($registro->foto);
+        $foto = $registro->foto;
 
         $registro->delete();
+
+        // Primeiro a linha, depois o arquivo: se a exclusão falhar, o cadastro
+        // continua no sistema COM a foto dele. Na ordem inversa, a falha
+        // deixaria um cadastro vivo sem o retrato que identifica a pessoa em rua.
+        $this->apagarFoto($foto);
 
         return redirect()
             ->route('retaguarda.permissionarios.index')
@@ -196,6 +206,14 @@ class CadastroPermissionarioController extends Controller
      */
     private function validados(Request $request, ?Permissionario $registro): array
     {
+        // Na INCLUSÃO a quarentena não é oferecida (ver `SITUACOES_DE_MESA`); na
+        // alteração, sim. A conferência é do servidor, e não só do `<select>`:
+        // esconder a opção na tela não impede ninguém de mandar o valor.
+        $ehInclusao = $registro === null;
+        $situacoesAceitas = $ehInclusao
+            ? Permissionario::SITUACOES_DE_MESA
+            : Permissionario::SITUACOES;
+
         $dados = $request->validate([
             'nome' => ['required', 'string', 'max:150'],
             'apelido' => ['nullable', 'string', 'max:100'],
@@ -207,7 +225,7 @@ class CadastroPermissionarioController extends Controller
             'numero_permissao' => ['nullable', 'string', 'max:30'],
             'validade_permissao' => ['nullable', 'date'],
             'atividade_id' => ['required', 'integer', $this->atividadeUtilizavel($registro)],
-            'situacao' => ['required', Rule::in(Permissionario::SITUACOES)],
+            'situacao' => ['required', Rule::in($situacoesAceitas)],
             // Foto de identificação: só imagem, e passando pela allowlist de
             // anexos (que barra o executável renomeado e o nome que o WAF
             // reprovaria na URL de download).
@@ -217,7 +235,12 @@ class CadastroPermissionarioController extends Controller
             'nome.required' => 'Informe o nome do permissionário.',
             'atividade_id.required' => 'Escolha a atividade autorizada.',
             'situacao.required' => 'Escolha a situação do cadastro.',
-            'situacao.in' => 'Situação inválida. Escolha uma das opções da lista.',
+            // A recusa diz o PORQUÊ: "situação inválida" faria a pessoa achar
+            // que digitou errado um valor que a lista realmente tem.
+            'situacao.in' => $ehInclusao
+                ? '“'.Permissionario::SITUACAO_CAMPO.'” é a situação de quem foi cadastrado em rua, '
+                    .'pelo aplicativo do fiscal. No cadastro feito aqui, escolha Regular ou Irregular.'
+                : 'Situação inválida. Escolha uma das opções da lista.',
             'validade_permissao.date' => 'A validade da permissão precisa ser uma data.',
             'foto.image' => 'A foto precisa ser uma imagem (JPG ou PNG).',
             'foto.max' => 'A foto passa de 5 MB. Envie uma imagem menor.',
@@ -295,29 +318,41 @@ class CadastroPermissionarioController extends Controller
     }
 
     /**
-     * Aplica ao registro o que o formulário decidiu sobre a foto.
+     * Aplica ao registro o que o formulário decidiu sobre a foto, e devolve o
+     * arquivo que **deixou de ser usado** — para quem chamou apagá-lo depois de
+     * gravar.
      *
      * São TRÊS casos, e confundi-los é o erro clássico: arquivo novo (troca),
      * pedido explícito de remoção, e **nada** — que é o caso normal de quem
      * entrou só para corrigir o telefone. Tratar "campo ausente" como remoção
      * apagaria a foto de quem nunca pediu isso, e a foto é a identidade de campo.
+     *
+     * Este método NÃO apaga nada de propósito. Entre os dois estragos possíveis
+     * numa falha de gravação — arquivo sobrando no disco ou cadastro apontando
+     * para arquivo inexistente —, o primeiro é lixo e o segundo é perda de dado.
+     * Por isso a exclusão fica com quem sabe se o `save()` deu certo.
+     *
+     * @return string|null Caminho a descartar após a gravação bem-sucedida
      */
-    private function aplicarFoto(Request $request, Permissionario $registro): void
+    private function aplicarFoto(Request $request, Permissionario $registro): ?string
     {
         $enviada = $request->file('foto');
 
         if ($enviada instanceof UploadedFile) {
             $anterior = $registro->foto;
             $registro->foto = $this->guardarFoto($enviada);
-            $this->apagarFoto($anterior);
 
-            return;
+            return $anterior;
         }
 
         if ($request->boolean('remover_foto')) {
-            $this->apagarFoto($registro->foto);
+            $anterior = $registro->foto;
             $registro->foto = null;
+
+            return $anterior;
         }
+
+        return null;
     }
 
     /** Guarda a imagem no disco público e devolve o caminho, ou null. */
