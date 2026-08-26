@@ -35,17 +35,25 @@ return [
     |   log   — conferem e REGISTRAM o que seriam capazes de barrar, sem barrar;
     |   block — barram de verdade, sempre dizendo o motivo a quem foi barrado.
     |
-    | O padrão é `log` de propósito. Ligar o bloqueio no mesmo passo em que o
-    | catálogo de telas nasce é como estrear a fechadura antes de saber quantas
-    | portas a casa tem: cada tela das próximas entregas entra na matriz, e um
-    | esquecimento de concessão viraria gente sem acesso ao próprio trabalho. O
-    | modo `log` deixa o rastro de tudo que SERIA barrado — dá para conferir a
-    | matriz contra a realidade antes de virar a chave (isso acontece no fim da
-    | Fase 1).
+    | O padrão é `block` desde o fim da Fase 1. Ele NASCEU `log` de propósito:
+    | ligar o bloqueio no mesmo passo em que o catálogo de telas nasce seria
+    | estrear a fechadura antes de saber quantas portas a casa tem — cada tela
+    | das entregas seguintes entra na matriz, e um esquecimento de concessão
+    | viraria gente sem acesso ao próprio trabalho. O modo `log` deixou o rastro
+    | de tudo que SERIA barrado, a matriz foi conferida contra o catálogo real e
+    | a chave virou.
+    |
+    | Consequência para quem entrega tela nova daqui em diante: a tela precisa
+    | entrar no catálogo (`CatalogoFuncionalidades`) E ganhar concessão na
+    | semente da matriz (`PermissoesSetorSeeder`, alimentada pela lista `setores`
+    | de cada item do menu). Tela controlável sem concessão é tela que ninguém
+    | abre — e agora ela barra de verdade, não só registra. `off` e `log`
+    | continuam existindo para diagnóstico pontual em ambiente controlado; não
+    | são caminho de produção.
     |
     */
 
-    'permissao_enforce' => env('PERMISSAO_ENFORCE', 'log'),
+    'permissao_enforce' => env('PERMISSAO_ENFORCE', 'block'),
 
     /*
     |--------------------------------------------------------------------------

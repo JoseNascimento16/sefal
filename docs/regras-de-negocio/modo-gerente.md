@@ -135,11 +135,23 @@ contagem honesta. A tela mostra as últimas alterações.
 - `log` — confere e **registra** quem seria barrado, sem barrar;
 - `block` — barra de verdade.
 
-O padrão hoje é **`log`**. Ligar o bloqueio junto com o nascimento do catálogo
-seria estrear a fechadura antes de saber quantas portas a casa tem: cada tela das
-próximas entregas entra na matriz, e um esquecimento de concessão viraria gente
-sem acesso ao próprio trabalho. A tela avisa, em voz alta, quando o modo não é
-`block` — senão quem configura acha que tirou um acesso e não tirou.
+O padrão é **`block`** desde o fechamento da Fase 1. Ele nasceu `log`: ligar o
+bloqueio junto com o nascimento do catálogo seria estrear a fechadura antes de
+saber quantas portas a casa tem — cada tela das entregas seguintes entra na
+matriz, e um esquecimento de concessão viraria gente sem acesso ao próprio
+trabalho. O modo de observação registrou o que seria barrado, a matriz foi
+conferida contra o catálogo real e a chave virou. A tela avisa, em voz alta,
+quando o modo não é `block` — senão quem configura acha que tirou um acesso e não
+tirou.
+
+**O que isso exige de toda tela nova daqui em diante:** ela entra no catálogo
+(declarando `slug` no menu) **e** nasce concedida a quem trabalha nela (a lista
+`setores` do item, que o seeder da matriz aplica). Tela controlável sem concessão
+não é tela "fechada por precaução": é tela que só o administrador abre — e o furo
+passa batido justamente porque em desenvolvimento se testa logado como
+administrador. `off` e `log` continuam existindo para diagnóstico pontual em
+ambiente controlado; não são caminho de produção, e o gate reprova quem devolver
+um deles ao padrão do código ou ao `.env.example`.
 
 Em `log`, cada leitura e cada mutação que **seria** barrada gera um registro no
 log da aplicação com tela, ação, rota, caminho e usuário. É esse registro que se
@@ -172,3 +184,4 @@ do bloqueio.
 | 25/08/2026 | José Nascimento | Modo Gerente | O menu passa a obedecer o modo de rollout: fora do `block`, o item continua à vista (RN-11). | Sumir do menu em modo de observação era barrada em silêncio — sem recado, sem registro, e com a URL funcionando. |
 | 25/08/2026 | José Nascimento | Modo Gerente | "Só consulta" passa a derrubar também "Opera", na gravação e na tela (RN-02). | O setor "só consulta" ainda gravava por `PUT`/`PATCH`: a coluna prometia uma coisa e o servidor fazia outra. |
 | 25/08/2026 | José Nascimento | Modo Gerente | O rastro passa a registrar o delta por setor, omitindo quem não mudou (RN-10). | "Permissões alteradas" não respondia "quem abriu qual porta, para quem?". |
+| 26/08/2026 | José Nascimento | Modo Gerente | O padrão do enforcement passa de `log` para **`block`**: as guardas barram de verdade, e o `.env.example` acompanha (RN-11). | O rollout em observação cumpriu o que existia para cumprir — o catálogo da Fase 1 fechou e a matriz foi conferida contra ele. Manter `log` deixaria o controle de acesso ligado no papel e desligado na prática, o pior modo de falhar: nada quebra, nada aparece em tela. |

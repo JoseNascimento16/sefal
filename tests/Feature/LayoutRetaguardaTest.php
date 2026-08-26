@@ -51,7 +51,20 @@ test('a senha nao viaja para a tela', function () {
 });
 
 test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () {
-    $this->actingAs(User::factory()->create())->get('/retaguarda/inicio')
+    /*
+     * O que se afirma aqui é a MONTAGEM do menu — as seções e os itens que o
+     * servidor entrega —, não o controle de acesso. Por isso o usuário é um
+     * fiscal COM a concessão semeada: com o bloqueio ligado (o padrão desde o
+     * fim da Fase 1), quem não tem linha na matriz não recebe item controlado
+     * nenhum, e a asserção falharia por falta de permissão em vez de por menu
+     * mal montado — trocando o defeito que este teste existe para pegar.
+     */
+    $this->seed(PermissoesSetorSeeder::class);
+
+    $fiscal = User::factory()->create();
+    $fiscal->setores()->attach(Setor::where('slug', 'fiscal')->firstOrFail());
+
+    $this->actingAs($fiscal)->get('/retaguarda/inicio')
         ->assertInertia(function ($p) {
             $menu = collect($p->toArray()['props']['menu']);
 

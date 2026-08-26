@@ -113,6 +113,26 @@ return [
                 .'entrega o recorte visível de uma grade.',
         ],
 
+        /*
+         * Não tem item de menu porque não é uma tela: é o botão que TODA
+         * listagem carrega. Fica no mapa mesmo assim — o acompanhamento é de
+         * funcionalidade entregue, não de linha do menu, e uma regra que vale em
+         * todas as telas é justamente a que ninguém lembra de conferir depois.
+         */
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Exportação de listagens',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.exportar-listagem',
+            'breadcrumb' => 'Presente em toda listagem da Retaguarda',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Toda listagem entrega em PDF, XLSX e DOCX exatamente o que está à '
+                .'vista — o que a busca, o filtro e a aba deixaram na tela —, nunca o universo inteiro '
+                .'nem apenas a página aberta, e sempre com o recorte declarado no documento para quem o '
+                .'receber saber do que ele fala.',
+        ],
+
         [
             'modulo' => 'Sistema',
             'tela' => 'Logs de Erros',

@@ -656,3 +656,35 @@ test('o slug declarado no menu casa com o caminho da rota', function () {
 
     expect($divergentes)->toBe([]);
 });
+
+test('o sistema entregue BARRA de verdade — o rollout em observacao nao e o padrao', function () {
+    /*
+     * Teste-LEI sobre a configuração entregue.
+     *
+     * O modo `log` existiu para o rollout: enquanto o catálogo de telas crescia,
+     * ele registrava quem SERIA barrado sem barrar ninguém. Terminada a Fase 1, a
+     * chave virou. Se o padrão voltar a `log`/`off` por descuido — um merge, um
+     * `.env.example` desatualizado copiado para produção —, o controle de acesso
+     * deixa de existir sem que nada quebre nem apareça em tela: o pior modo de
+     * falhar. Este teste é o que faz esse descuido aparecer no gate.
+     *
+     * A config é lida sem `env()` de propósito: o que se afirma é o DEFAULT do
+     * código, não o que a máquina de quem roda o teste tem no `.env`.
+     */
+    $arquivo = require config_path('retaguarda.php');
+
+    expect($arquivo['permissao_enforce'])->toBe('block');
+});
+
+test('o .env.example nao oferece um modo mais fraco do que o codigo entrega', function () {
+    /*
+     * Teste-LEI de fonte única. O modo tem dois lugares onde é escrito — o
+     * default do código e o exemplo que todo ambiente novo copia — e informação
+     * com dois donos um dia diverge. Se o exemplo ficasse em `log`, cada máquina
+     * e cada deploy montado a partir dele nasceria SEM controle de acesso, com o
+     * código jurando que o padrão é barrar.
+     */
+    $exemplo = (string) file_get_contents(base_path('.env.example'));
+
+    expect($exemplo)->toContain('PERMISSAO_ENFORCE=block');
+});
