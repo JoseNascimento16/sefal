@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\AtividadeAmbulante;
 use App\Models\PermissaoSetor;
+use App\Models\Permissionario;
 use App\Models\Setor;
 use App\Models\User;
 use App\Support\CatalogoFuncionalidades;
@@ -35,12 +37,17 @@ test('a tela lista o catalogo com filtros e modos de cada relatorio', function (
         ->assertOk()
         ->assertInertia(function (Assert $page) {
             $page->component('Retaguarda/Sistema/Relatorios')
-                ->has('relatorios', 1)
+                ->has('relatorios', 2)
                 ->where('relatorios.0.chave', 'usuarios-do-sistema')
                 ->where('relatorios.0.formatos', ['pdf', 'xlsx', 'docx'])
                 // A tela desenha o formulário a partir daqui: sem os filtros
                 // descritos, ela teria de conhecer cada relatório por dentro.
-                ->has('relatorios.0.filtros', 4);
+                ->has('relatorios.0.filtros', 4)
+                // Os dois convivem, e são coisas diferentes: um é sobre quem USA
+                // o sistema, o outro sobre quem É FISCALIZADO.
+                ->where('relatorios.1.chave', 'permissionarios')
+                ->where('relatorios.1.grupo', 'Fiscalização')
+                ->has('relatorios.1.filtros', 4);
         });
 });
 
@@ -204,4 +211,85 @@ test('a tela de relatorios entra no controle de acesso', function () {
     // E o caminho da rota tem de ser o slug — é dele que as guardas deduzem a
     // tela a que cada endereço pertence.
     expect(route('retaguarda.relatorios.index', absolute: false))->toStartWith('/retaguarda/relatorios');
+});
+
+test('o relatorio de permissionarios traz o recorte, o documento legivel e a fila de conferencia', function () {
+    /*
+     * O relatório de quem é FISCALIZADO. Duas coisas o tornam confiável e são
+     * fáceis de perder: o documento tem de sair legível (e "sem documento" é o
+     * caso normal aqui, não um defeito), e a contagem por situação tem de
+     * mostrar a QUARENTENA mesmo zerada — linha ausente vira "não sei".
+     */
+    $atividade = AtividadeAmbulante::firstOrFail();
+
+    Permissionario::factory()->comDocumento('12345678909')->create([
+        'nome' => 'Joana Vendedora',
+        'atividade_id' => $atividade->id,
+        'validade_permissao' => '2027-03-09',
+    ]);
+
+    Permissionario::factory()->emQuarentena()->create([
+        'nome' => 'Sem Documento da Silva',
+        'documento' => null,
+        'atividade_id' => $atividade->id,
+    ]);
+
+    $r = $this->actingAs(User::factory()->create(['admin' => true]))
+        ->post(route('retaguarda.relatorios.gerar'), [
+            'chave' => 'permissionarios',
+            'formato' => 'xlsx',
+            'modo' => 'analitico',
+            'filtros' => [],
+        ]);
+
+    $r->assertOk();
+
+    $texto = textoDaAba(
+        IOFactory::createReader('Xlsx')
+            ->load(arquivoTemporarioXlsx($r->streamedContent()))
+            ->getActiveSheet(),
+    );
+
+    expect($texto)
+        ->toContain('PERMISSIONÁRIOS CADASTRADOS')
+        ->toContain('2 cadastro(s)')
+        ->toContain('Joana Vendedora')
+        // Documento como uma pessoa lê, nunca a forma crua da coluna.
+        ->toContain('123.456.789-09')
+        ->not->toContain('12345678909')
+        // Data SEMPRE em BR.
+        ->toContain('09/03/2027')
+        ->not->toContain('2027-03-09')
+        // A fila que espera conferência é a informação de gestão do quadro.
+        ->toContain('Cadastrado em campo');
+});
+
+test('o filtro por situacao do relatorio de permissionarios filtra de verdade', function () {
+    $atividade = AtividadeAmbulante::firstOrFail();
+
+    Permissionario::factory()->create(['nome' => 'Regular Certinho', 'atividade_id' => $atividade->id]);
+    Permissionario::factory()->emQuarentena()->create([
+        'nome' => 'Recem Cadastrado',
+        'atividade_id' => $atividade->id,
+    ]);
+
+    $r = $this->actingAs(User::factory()->create(['admin' => true]))
+        ->post(route('retaguarda.relatorios.gerar'), [
+            'chave' => 'permissionarios',
+            'formato' => 'xlsx',
+            'modo' => 'analitico',
+            'filtros' => ['situacao' => 'Cadastrado em campo'],
+        ]);
+
+    $texto = textoDaAba(
+        IOFactory::createReader('Xlsx')
+            ->load(arquivoTemporarioXlsx($r->streamedContent()))
+            ->getActiveSheet(),
+    );
+
+    expect($texto)
+        ->toContain('Situação: Cadastrado em campo')
+        ->toContain('Recem Cadastrado')
+        ->toContain('1 cadastro(s)')
+        ->not->toContain('Regular Certinho');
 });

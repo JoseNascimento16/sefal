@@ -129,6 +129,20 @@ linhas pode, portanto, passar do total — que é o número de contas e vem da l
 setor** tem linha própria: ela não enxerga tela controlada nenhuma, e é o caso que mais importa
 nessa leitura.
 
+### RN-14 — Relatório de Permissionários: as três situações sempre aparecem, mesmo zeradas
+
+O quadro "Cadastros por situação" traz **Regular, Irregular e Cadastrado em campo** ainda que alguma
+esteja em zero: "nenhum aguardando conferência" é uma resposta de gestão, e uma linha ausente seria
+lida como "não sei". Já o quadro **por atividade** mostra só os ramos que aparecem, do maior para o
+menor — ali o zero atrapalha, porque a lista de atividades é aberta e dezenas de linhas vazias
+esconderiam as que têm gente.
+
+O documento sai **deitado** (são oito colunas), com o documento **formatado** e as datas em BR. Sem
+documento é o caso normal deste cadastro, não um defeito: sai como travessão.
+
+Ele **convive** com o de Usuários do sistema, e não substitui nenhum: um responde quem **usa** o
+sistema, o outro quem **é fiscalizado**.
+
 ---
 
 ## Changelog
@@ -136,3 +150,4 @@ nessa leitura.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 25/08/2026 | José Nascimento | Relatórios / exportação de listagens | Criação do motor de relatórios (resultado neutro + exportadores PDF/XLSX/DOCX), do endpoint único de exportação de listagem com `<BotaoExportar>`, do perfil de dados por formato e do primeiro relatório concreto (Usuários do sistema). | A Retaguarda não tinha como levar dado nenhum para fora, e cada tela que precisasse disso inventaria a sua própria geração de arquivo. |
+| 25/08/2026 | José Nascimento | Relatórios | Novo relatório "Permissionários cadastrados" (RN-14): período de cadastro, situação e atividade, com quadro por situação e por ramo. | Faltava responder "quem está na base e o que ainda espera conferência" — pergunta de gestão que o relatório de contas do sistema não responde. |
