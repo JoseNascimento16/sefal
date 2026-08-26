@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
+use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
@@ -89,6 +90,25 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::get('retaguarda/acompanhamento-de-requisitos', [AcompanhamentoRequisitosController::class, 'index'])
         ->name('retaguarda.acompanhamento-de-requisitos.index');
+
+    /*
+     * Permissionários — a identidade de quem é fiscalizado.
+     *
+     * O primeiro trecho do caminho é o slug da tela (`permissionarios`), que é de
+     * onde as guardas deduzem a permissão: as rotas nascem protegidas, e a rota
+     * que vier amanhã (prontuário, validação de quarentena) já chega junto.
+     *
+     * O identificador vai como NÚMERO, e não o código nem o nome: o WAF da
+     * Prefeitura barra assinatura de SQL na URL, e nome de gente é texto livre.
+     */
+    Route::prefix('retaguarda/permissionarios')->name('retaguarda.permissionarios.')->group(function () {
+        Route::get('/', [CadastroPermissionarioController::class, 'index'])->name('index');
+        Route::post('/', [CadastroPermissionarioController::class, 'store'])->name('store');
+        Route::put('{permissionario}', [CadastroPermissionarioController::class, 'update'])
+            ->name('update')->whereNumber('permissionario');
+        Route::delete('{permissionario}', [CadastroPermissionarioController::class, 'destroy'])
+            ->name('destroy')->whereNumber('permissionario');
+    });
 
     /*
      * Parametrização — as listas de escolha que o resto do sistema oferece.

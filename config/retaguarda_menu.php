@@ -63,10 +63,29 @@ return [
             ],
         ],
 
+        /*
+         * Fiscalização — o trabalho em si.
+         *
+         * O fiscal entra aqui, e é o único lugar do menu em que ele entra: o
+         * cadastro é a identidade de quem ele vai fiscalizar em rua, e chegar
+         * na calçada sem saber quem está cadastrado é trabalhar às cegas. A
+         * semente concede o pacote da tela (a matriz não tem granularidade na
+         * semeadura — ver `PermissoesSetorSeeder`); o refinamento para
+         * "só consulta" é ato do gestor no Modo Gerente, e está registrado no
+         * doc de regra da tela.
+         */
         [
             'rotulo' => 'Fiscalização',
-            'vazio' => 'Permissionários, fiscalizações e áreas chegam nas próximas entregas.',
-            'itens' => [],
+            'vazio' => 'Fiscalizações, operações e áreas chegam nas próximas entregas.',
+            'itens' => [
+                [
+                    'rotulo' => 'Permissionários',
+                    'rota' => 'retaguarda.permissionarios.index',
+                    'icone' => 'permissionarios',
+                    'slug' => 'permissionarios',
+                    'setores' => ['administrador', 'gestor', 'fiscal'],
+                ],
+            ],
         ],
 
         /*

@@ -3,20 +3,16 @@
 namespace App\Http\Controllers\Retaguarda\Parametrizacao;
 
 use App\Models\AtividadeAmbulante;
+use App\Models\Permissionario;
 use App\Support\Parametrizacao\DefinicaoLookup;
+use Illuminate\Http\RedirectResponse;
 
 /**
  * Atividades do Ambulante — o que o permissionário vende ou faz.
  *
- * ⚠️ Esta é a primeira lista que passará a ser APONTADA por registro de
- * operação: o cadastro de permissionário guarda a atividade autorizada. Quando
- * ele existir, excluir uma atividade em uso deixaria esses cadastros apontando
- * para o nada — e a resposta certa passa a ser inativar. O lugar de barrar isso
- * é o `destroy()` DESTA classe, recusando com o motivo em tela e delegando o
- * resto a `parent::destroy()`.
- *
- * Hoje ninguém aponta para cá, então não há o que barrar: uma checagem contra
- * uma tabela que não existe seria código morto tratando de um caso impossível.
+ * É a primeira lista APONTADA por registro de operação: o cadastro de
+ * permissionário guarda a atividade autorizada. Por isso esta é a única das seis
+ * que sobrescreve o `destroy()` — ver o método.
  */
 class AtividadesDoAmbulanteController extends ControllerDeLookup
 {
@@ -33,5 +29,35 @@ class AtividadesDoAmbulanteController extends ControllerDeLookup
                 .'É por aqui que a fiscalização confere se a atividade encontrada é a permitida.',
             exemplo: 'Ex.: Alimentos preparados',
         );
+    }
+
+    /**
+     * Recusa excluir uma atividade que algum permissionário aponta.
+     *
+     * Excluir deixaria esses cadastros apontando para o nada — e o banco, que
+     * tem a chave estrangeira, responderia com um erro cru de integridade, que
+     * para quem está na tela é o sistema quebrando sem motivo. A recusa acontece
+     * ANTES, na tela de onde a pessoa clicou, dizendo **quantos** cadastros
+     * dependem da atividade e o que fazer no lugar: **inativar**, que tira o
+     * valor das escolhas novas e mantém legível o que já foi gravado.
+     *
+     * A contagem é explícita, e não uma relação no model, de propósito: é a
+     * pergunta inteira que se faz aqui, e uma relação convidaria a carregar os
+     * registros só para contá-los.
+     */
+    public function destroy(int $item): RedirectResponse
+    {
+        $vinculados = Permissionario::query()->where('atividade_id', $item)->count();
+
+        if ($vinculados > 0) {
+            return back()->with(
+                'flash.erro',
+                "Esta atividade não pode ser excluída: {$vinculados} permissionário(s) a têm como "
+                .'atividade autorizada. Para tirá-la de circulação sem apagar o histórico, desmarque '
+                .'"Em uso".',
+            );
+        }
+
+        return parent::destroy($item);
     }
 }

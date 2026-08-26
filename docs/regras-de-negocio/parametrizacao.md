@@ -88,14 +88,25 @@ parâmetro ausente não pode derrubar um fluxo de rua.
 A tela de edição fica para quando a **cadeia de fiscalização** existir (`PEND-011`): botão que muda um
 número sem fluxo que o leia não muda nada, e ninguém saberia dizer o efeito de alterá-lo.
 
+### RN-08 — **Atividade em uso não pode ser excluída** (a primeira lista com vínculo)
+
+O cadastro de permissionário guarda a **atividade autorizada**. Excluir uma atividade apontada por
+algum cadastro deixaria esses registros apontando para o nada — e quem responderia seria a chave
+estrangeira do banco, com um erro cru de integridade que, para quem está na tela, é o sistema
+quebrando sem motivo.
+
+Então a recusa acontece **antes**, na tela de onde a pessoa clicou, dizendo **quantos** permissionários
+dependem da atividade e mandando fazer o que a RN-01 já ensina: **desmarcar "Em uso"**. Atividade que
+ninguém aponta continua excluível — a guarda não pode virar "nunca mais se exclui atividade".
+
 ---
 
 ## Fora de escopo (por ora)
 
-- **Bloqueio de exclusão por vínculo.** Nenhuma das seis listas é apontada por registro de operação
-  ainda. A primeira será **Atividades do Ambulante**, quando o cadastro de permissionário existir: aí
-  excluir uma atividade em uso deixaria os cadastros apontando para o nada, e a recusa entra no
-  `destroy()` daquela tela — dizendo o motivo em tela, como manda a lei de nunca barrar em silêncio.
+- **Bloqueio de exclusão por vínculo nas outras cinco listas.** Só **Atividades do Ambulante** é
+  apontada por registro de operação hoje (pelo cadastro de permissionário), e ela já barra — ver a
+  RN-08 acima. As outras cinco ganham a mesma recusa quando a cadeia de fiscalização existir; até lá,
+  seria código morto tratando de um caso impossível.
 - **Verificação no Monitoramento de Parametrizações.** "Lista de escolha vazia" só quebra um fluxo
   quando existe fluxo que a consome; a verificação nasce junto com ele, para poder dizer o que
   exatamente parou.
@@ -107,3 +118,4 @@ número sem fluxo que o leia não muda nada, e ninguém saberia dizer o efeito d
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 25/08/2026 | José Nascimento | Parametrização (6 telas) | Criação das seis listas de escolha com cadastro, alteração, inativação e exclusão; semeadura inicial com valores de fiscalização de ambulantes; tabela de parâmetros da fiscalização (`prazo_notificacao_dias`) lida por código, sem tela. | O vocabulário da fiscalização precisa existir antes dos fluxos que o usam — e precisa ser mantido pelo gestor, não por release. |
+| 25/08/2026 | José Nascimento | Parametrização → Atividades do Ambulante | Exclusão passa a ser recusada quando algum permissionário aponta a atividade (RN-08), dizendo quantos são e mandando inativar. | O cadastro de permissionário criou o primeiro vínculo: sem a recusa em tela, quem respondia era a chave estrangeira do banco. |

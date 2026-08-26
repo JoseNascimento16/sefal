@@ -152,6 +152,22 @@ return [
                 .'escrito.',
         ],
 
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Cadastro de Permissionário',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.permissionarios.index',
+            'breadcrumb' => 'Fiscalização › Permissionários',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Identidade de quem é fiscalizado, com documento OPCIONAL: em rua a '
+                .'pessoa é reconhecida pela foto e pelo apelido, e exigir CPF faria o cadastro de campo '
+                .'não acontecer. Quando informado, o documento é validado (CPF ou CNPJ, inclusive o '
+                .'alfanumérico) e não se repete. O cadastro nascido em campo fica marcado como '
+                .'"Cadastrado em campo" até alguém conferir — a tela de validação dessa fila é de '
+                .'entrega futura, e por ora o gestor troca a situação à mão.',
+        ],
+
         /*
          * Parametrização — as seis listas de escolha. São a MESMA tela seis
          * vezes (listar, incluir, alterar, inativar, excluir), então a nota de

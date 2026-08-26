@@ -50,17 +50,40 @@ test('a senha nao viaja para a tela', function () {
         );
 });
 
-test('o menu traz o inicio, o perfil e a secao ainda em construcao', function () {
+test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () {
     $this->actingAs(User::factory()->create())->get('/retaguarda/inicio')
         ->assertInertia(function ($p) {
             $menu = collect($p->toArray()['props']['menu']);
 
             $rotulos = $menu->pluck('itens')->flatten(1)->pluck('rotulo');
-            expect($rotulos)->toContain('Início')->toContain('Meu Perfil');
+            expect($rotulos)
+                ->toContain('Início')
+                ->toContain('Meu Perfil')
+                ->toContain('Permissionários');
 
-            // Seção sem tela pronta aparece com o recado do que vem por aí, em
-            // vez de sumir — quem usa o sistema enxerga o caminho.
             $fiscalizacao = $menu->firstWhere('rotulo', 'Fiscalização');
+            expect($fiscalizacao)->not->toBeNull();
+            expect(collect($fiscalizacao['itens'])->pluck('rotulo'))->toContain('Permissionários');
+        });
+});
+
+test('a secao que fica sem item visivel mostra o recado, em vez de sumir', function () {
+    /*
+     * O `vazio` da seção não é texto de placeholder que morre quando a primeira
+     * tela nasce: ele é o que aparece para quem NÃO tem nenhuma das telas
+     * daquela seção concedida. Some sem recado, a pessoa não sabe se a seção
+     * não existe ou se ela é que não pode — e a lei do projeto é que ninguém é
+     * barrado em silêncio.
+     */
+    config()->set('retaguarda.permissao_enforce', 'block');
+
+    $semNada = User::factory()->create();
+
+    $this->actingAs($semNada)->get('/retaguarda/inicio')
+        ->assertInertia(function ($p) {
+            $fiscalizacao = collect($p->toArray()['props']['menu'])
+                ->firstWhere('rotulo', 'Fiscalização');
+
             expect($fiscalizacao)->not->toBeNull();
             expect($fiscalizacao['itens'])->toBe([]);
             expect($fiscalizacao['vazio'])->not->toBeNull();

@@ -161,7 +161,10 @@ test('mutacao sem permissao volta para a tela anterior com o motivo, e nao grava
         ->assertRedirect('/retaguarda/inicio')
         ->assertSessionHas('flash.erro');
 
-    expect(PermissaoSetor::where('setor', 'fiscal')->exists())->toBeFalse();
+    // A conferência é sobre a linha que a mutação TENTOU gravar: o fiscal já tem
+    // outras concessões vindas da semente, e olhar o setor inteiro faria o teste
+    // passar a acusar a semeadura em vez da gravação barrada.
+    expect(PermissaoSetor::where('setor', 'fiscal')->where('slug', 'modo-gerente')->exists())->toBeFalse();
 });
 
 test('o rollout observa antes de barrar: off e log passam, block barra', function () {
