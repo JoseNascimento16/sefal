@@ -12,8 +12,10 @@ namespace App\Support;
  *     escolhe numa lista, e tratá-los como dois cria gêmeos visuais: o fiscal vê
  *     a mesma opção duas vezes em rua e o histórico se parte entre elas;
  *  2. **plural** ({@see plural} e {@see contar}). O número é conhecido na hora de
- *     escrever a frase, então "2 registro(s)" é sempre evitável — e lê como
- *     rascunho de sistema inacabado.
+ *     escrever a frase, então empurrar a concordância para o leitor entre
+ *     parênteses é sempre evitável — e lê como rascunho de sistema inacabado.
+ *     (O exemplo não vai escrito aqui de propósito: `PluralDaInterfaceTest`
+ *     varre este arquivo junto com os demais, e a forma citada seria acusada.)
  *
  * O par deste arquivo no front é `resources/js/lib/busca.ts` (`semAcento`, mesma
  * regra de dobra) e `resources/js/lib/plural.ts`.

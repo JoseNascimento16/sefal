@@ -127,6 +127,22 @@ export default function ModoGerente({
         const remover = router.on('before', (evento) => {
             const visita = evento.detail.visit;
 
+            /*
+             * Busca ANTECIPADA não é a pessoa saindo da tela: é o Inertia
+             * carregando por baixo uma página que ela talvez visite. Ela dispara
+             * este mesmo evento, então sem esta linha o simples passar do mouse
+             * sobre um item do menu abriria "sair sem salvar?" — e o pior é que
+             * cancelar a visita mataria a busca antecipada de brinde.
+             *
+             * Hoje nenhum link do projeto pede busca antecipada; a guarda está
+             * aqui porque o dia em que alguém puser um `prefetch` num link do
+             * menu, o efeito apareceria nesta tela e ninguém ligaria as duas
+             * coisas.
+             */
+            if (visita.prefetch) {
+                return;
+            }
+
             if (liberado.current || String(visita.method).toLowerCase() !== 'get') {
                 return;
             }

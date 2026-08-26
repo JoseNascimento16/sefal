@@ -2,9 +2,11 @@
  * Concordância de número nos textos de tela — o par de `App\Support\Texto` no
  * front.
  *
- * A quantidade é conhecida no momento de escrever a frase, então "2 registro(s)"
- * é sempre evitável: os parênteses são o sistema empurrando para o leitor uma
- * conta que ele mesmo já fez, e leem como rascunho.
+ * A quantidade é conhecida no momento de escrever a frase, então empurrar a
+ * concordância para o leitor entre parênteses é sempre evitável: são o sistema
+ * devolvendo uma conta que ele mesmo acabou de fazer, e leem como rascunho.
+ * (A forma errada não vai citada aqui: `PluralDaInterfaceTest` varre este
+ * arquivo, e o exemplo seria acusado — com razão.)
  *
  * @example
  *   contar(1, 'registro', 'registros')      // '1 registro'

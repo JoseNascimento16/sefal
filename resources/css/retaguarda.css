@@ -328,34 +328,43 @@ table.data-table th {
     padding: 0 14px 12px;
     border-bottom: 1px solid var(--sm-borda);
 }
+/* O espaçamento do cabeçalho ordenável passa para DENTRO do botão, e a célula
+   fica sem o dela. Com o padding no `<th>`, a faixa de 14px nas laterais e 12px
+   embaixo mostrava ponteiro de mão e reagia ao passar o mouse, e o clique ali não
+   ordenava nada — quem mirasse a borda do cabeçalho achava que a tela travou.
+   Agora a área que responde é a mesma que se vê. */
 table.data-table th.ord {
-    cursor: pointer;
+    padding: 0;
     user-select: none;
     white-space: nowrap;
-}
-table.data-table th.ord:hover {
-    color: var(--sm-texto);
 }
 /* O acionador da ordenação é um <button> (foco e Enter, não só clique de mouse);
    aqui ele deixa de PARECER um botão e volta a parecer o cabeçalho que é. */
 table.data-table th.ord .ord-wrap {
-    display: inline-flex;
+    display: flex;
+    width: 100%;
     align-items: center;
     gap: 4px;
-    padding: 0;
+    /* O mesmo espaçamento que o `<th>` comum tem, para as colunas ordenáveis e
+       as fixas ficarem alinhadas. */
+    padding: 0 14px 12px;
     border: none;
     background: none;
     font: inherit;
     color: inherit;
     letter-spacing: inherit;
     text-transform: inherit;
+    text-align: inherit;
     cursor: pointer;
+}
+table.data-table th.ord .ord-wrap:hover {
+    color: var(--sm-texto);
 }
 table.data-table th.ord .ord-ico {
     opacity: 0.4;
     transition: var(--sm-transicao);
 }
-table.data-table th.ord:hover .ord-ico {
+table.data-table th.ord .ord-wrap:hover .ord-ico {
     opacity: 0.75;
 }
 table.data-table th.ord.ord-ativa,
