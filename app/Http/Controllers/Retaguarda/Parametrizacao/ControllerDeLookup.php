@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ListaDeEscolha;
 use App\Support\Parametrizacao\CampoLookup;
 use App\Support\Parametrizacao\DefinicaoLookup;
+use App\Support\Texto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -170,15 +171,26 @@ abstract class ControllerDeLookup extends Controller
     }
 
     /**
-     * Recusa nome já usado na MESMA lista, ignorando caixa e espaços.
+     * Recusa nome já usado na MESMA lista, ignorando caixa, acento e espaços.
      *
-     * "Feira livre" e "  FEIRA LIVRE " são a mesma coisa para quem escolhe: duas
-     * linhas fariam o valor aparecer duas vezes no formulário do fiscal, e os
-     * registros históricos se dividiriam entre as duas sem ninguém perceber.
+     * "Feira livre", "  FEIRA LIVRE " e "feira lívre" são a mesma coisa para quem
+     * escolhe: duas linhas fariam o valor aparecer duas vezes no formulário do
+     * fiscal, e os registros históricos se dividiriam entre as duas sem ninguém
+     * perceber. Acento não distingue conceito nenhum aqui — a própria busca da
+     * tela já o ignora; era só a gravação que não seguia a mesma régua.
      *
-     * A comparação vai em `LOWER(TRIM(...))` porque nem o Oracle nem o SQLite
-     * comparam texto ignorando a caixa por padrão — um índice único na coluna
-     * deixaria as duas passarem.
+     * ⚠️ A comparação é feita em **PHP** ({@see Texto::chave}), e não em SQL, e
+     * isso é o coração da correção: `LOWER()` do SQLite rebaixa só ASCII e o do
+     * Oracle depende do idioma da instância, então uma comparação no banco
+     * responde coisas diferentes em dev e em produção. Era o que deixava um nome
+     * repetido COM ACENTO passar pela validação e morrer no índice único — erro
+     * 500, com a tela em silêncio para quem estava salvando.
+     *
+     * Trazer a coluna inteira para a memória é barato de propósito: lista de
+     * escolha tem dezenas de linhas (é a mesma premissa do `itens()`, que manda
+     * a lista toda para a tela). Se um dia uma delas crescer para milhares, o
+     * caminho é uma coluna canônica gravada junto, não SQL que só um dos dois
+     * bancos entende.
      */
     private function nomeInedito(DefinicaoLookup $definicao, ?int $ignorar): \Closure
     {
@@ -187,15 +199,20 @@ abstract class ControllerDeLookup extends Controller
                 return;
             }
 
-            $consulta = $definicao->modelo::query()
-                ->whereRaw('LOWER(TRIM(nome)) = ?', [mb_strtolower(trim($valor))]);
+            $procurado = Texto::chave($valor);
+
+            $consulta = $definicao->modelo::query()->select(['id', 'nome']);
 
             if ($ignorar !== null) {
                 $consulta->whereKeyNot($ignorar);
             }
 
-            if ($consulta->exists()) {
-                $falhar('Já existe um registro com esse nome nesta lista.');
+            foreach ($consulta->get() as $registro) {
+                if (Texto::chave((string) $registro->nome) === $procurado) {
+                    $falhar('Já existe um registro com esse nome nesta lista.');
+
+                    return;
+                }
             }
         };
     }

@@ -200,6 +200,43 @@ test('nome repetido e recusado mesmo trocando a caixa das letras e os espacos', 
     expect(TipoOperacao::whereRaw('LOWER(nome) = ?', ['feira livre'])->count())->toBe(1);
 });
 
+test('nome repetido com ACENTO e recusado — e nunca chega ao banco como erro cru', function () {
+    /*
+     * O caso que a caixa de letras ASCII não pega. A conferência antiga comparava
+     * em `LOWER(TRIM(nome))` DENTRO do banco, e o `LOWER` do SQLite só rebaixa
+     * ASCII: "Área não autorizada" continuava com o "Á" maiúsculo do lado do
+     * banco e minúsculo do lado do PHP, os dois nunca casavam, a validação
+     * liberava e quem recusava era o índice único — com erro 500 e a tela em
+     * silêncio, sem dizer nada a quem estava salvando.
+     *
+     * Dois cenários no mesmo teste, porque é o mesmo defeito: o nome IDÊNTICO
+     * (que o índice do banco barraria) e o nome que só difere no acento e na
+     * caixa (que o índice deixaria passar, criando gêmeos visuais na lista do
+     * fiscal).
+     */
+    // Vem da semeadura: "Área não autorizada" é um dos tipos com que a operação
+    // nasce — e é justamente um valor acentuado, o que passou batido.
+    $existente = TipoInfracao::where('nome', 'Área não autorizada')->firstOrFail();
+
+    foreach (['Área não autorizada', 'área nao autorizada', '  ÁREA NÃO AUTORIZADA '] as $repetido) {
+        $this->actingAs($this->admin)
+            ->post(caminhoDoLookup('tipos-de-infracao'), ['nome' => $repetido, 'ativo' => true])
+            ->assertSessionHasErrors('nome');
+    }
+
+    expect(TipoInfracao::where('nome', 'like', '%rea n%o autorizada')->count())->toBe(1);
+
+    // E o outro lado: alterar o próprio registro sem mexer no nome acentuado
+    // continua passando — a conferência ignora o registro que está sendo salvo.
+    $this->actingAs($this->admin)
+        ->put(caminhoDoLookup('tipos-de-infracao', $existente->id), [
+            'nome' => 'Área não autorizada',
+            'descricao' => $existente->descricao,
+            'ativo' => false,
+        ])
+        ->assertSessionHasNoErrors();
+});
+
 test('alterar um registro nao esbarra no proprio nome', function () {
     // A conferência de duplicidade tem de ignorar o próprio registro; senão
     // salvar sem mexer no nome (só para inativar) seria recusado.

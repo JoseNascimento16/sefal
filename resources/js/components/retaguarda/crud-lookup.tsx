@@ -25,6 +25,7 @@ import {
 import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta } from '@/lib/busca';
 import { VAZIO } from '@/lib/datas';
+import { linhaClicavel } from '@/lib/linha-clicavel';
 import { cn } from '@/lib/utils';
 
 /**
@@ -328,6 +329,17 @@ export default function CrudLookup({
                             />
                         </div>
 
+                        {/* A pista. A linha abre o registro, e isso não estava
+                            escrito em nenhum lugar: cursor em forma de mão é
+                            dica de mouse — não existe para quem usa teclado nem
+                            para quem lê a tela por leitor. */}
+                        {pag.visiveis.length > 0 && (
+                            <p className="form-ajuda" style={{ marginBottom: 8 }}>
+                                Clique numa linha — ou tecle Enter sobre ela —
+                                para abrir o registro.
+                            </p>
+                        )}
+
                         <div className="table-wrap">
                             <table className="data-table">
                                 <thead>
@@ -378,8 +390,10 @@ export default function CrudLookup({
                                     {pag.visiveis.map((item) => (
                                         <tr
                                             key={item.id}
-                                            className="clicavel"
-                                            onClick={() => abrir(item)}
+                                            {...linhaClicavel(
+                                                () => abrir(item),
+                                                `Abrir ${item.nome}`,
+                                            )}
                                         >
                                             <td>
                                                 <strong>{item.nome}</strong>
@@ -510,7 +524,12 @@ export default function CrudLookup({
                                     onChange={(e) => campo('ativo', e.target.checked)}
                                     style={{ width: 16, height: 16 }}
                                 />
-                                Em uso
+                                {/* "Ativo", e não "Em uso": é o MESMO atributo
+                                    que a grade mostra na coluna Situação
+                                    (Ativo/Inativo) e que a busca reconhece
+                                    ("ativos"/"inativos"). Três palavras para um
+                                    atributo faziam parecer três coisas. */}
+                                Ativo
                             </label>
                             {/* Inativar é o caminho normal de aposentar um valor:
                                 ele some do que se pode escolher hoje e continua
@@ -580,11 +599,16 @@ export default function CrudLookup({
                 <ModalConfirm
                     titulo={`Excluir "${aberto.nome}"?`}
                     mensagem={
+                        // Sem "ele/usado": o texto serve às seis listas, e três
+                        // delas têm nome feminino ("Atividade", "Unidade de
+                        // medida", "Origem de operação") — a concordância fixa no
+                        // masculino saía errada nessas.
                         <>
                             {definicao.singular} <strong>{aberto.nome}</strong> sai
-                            da lista para sempre. Se ele já foi usado em algum
-                            registro, o certo é <strong>desmarcar "Em uso"</strong>{' '}
-                            em vez de excluir — assim o histórico continua legível.
+                            da lista para sempre. Se este registro já foi usado em
+                            algum lançamento, o certo é{' '}
+                            <strong>desmarcar "Ativo"</strong> em vez de excluir —
+                            assim o histórico continua legível.
                         </>
                     }
                     rotuloConfirmar="Excluir"

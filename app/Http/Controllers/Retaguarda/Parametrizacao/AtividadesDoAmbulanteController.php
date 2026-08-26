@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Retaguarda\Parametrizacao;
 use App\Models\AtividadeAmbulante;
 use App\Models\Permissionario;
 use App\Support\Parametrizacao\DefinicaoLookup;
+use App\Support\Texto;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -52,9 +53,10 @@ class AtividadesDoAmbulanteController extends ControllerDeLookup
         if ($vinculados > 0) {
             return back()->with(
                 'flash.erro',
-                "Esta atividade não pode ser excluída: {$vinculados} permissionário(s) a têm como "
-                .'atividade autorizada. Para tirá-la de circulação sem apagar o histórico, desmarque '
-                .'"Em uso".',
+                'Esta atividade não pode ser excluída: '
+                .Texto::contar($vinculados, 'permissionário a tem', 'permissionários a têm')
+                .' como atividade autorizada. Para tirá-la de circulação sem apagar o histórico, '
+                .'desmarque "Ativo".',
             );
         }
 
