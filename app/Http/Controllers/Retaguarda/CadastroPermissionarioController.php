@@ -7,6 +7,7 @@ use App\Models\AtividadeAmbulante;
 use App\Models\Permissionario;
 use App\Rules\ArquivoSeguro;
 use App\Rules\CpfOuCnpj;
+use App\Rules\NomeDeCadastro;
 use App\Support\Protocolo;
 use Closure;
 use Illuminate\Http\RedirectResponse;
@@ -215,8 +216,10 @@ class CadastroPermissionarioController extends Controller
             : Permissionario::SITUACOES;
 
         $dados = $request->validate([
-            'nome' => ['required', 'string', 'max:150'],
-            'apelido' => ['nullable', 'string', 'max:100'],
+            // Campo cadastral aceita nome de gente, não markup: o valor sai daqui
+            // para relatório, planilha e documento — ver `NomeDeCadastro`.
+            'nome' => ['required', 'string', 'max:150', new NomeDeCadastro],
+            'apelido' => ['nullable', 'string', 'max:100', new NomeDeCadastro],
             // Opcional DE VERDADE: `nullable` primeiro, e a Rule só opina quando
             // há valor. É a identidade flexível do §4.1 da spec.
             'documento' => ['nullable', 'string', 'max:20', new CpfOuCnpj, $this->documentoInedito($registro)],

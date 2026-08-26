@@ -26,6 +26,7 @@ import {
 import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta, semAcento } from '@/lib/busca';
 import { dataBR, hojeISO, VAZIO } from '@/lib/datas';
+import { linhaClicavel } from '@/lib/linha-clicavel';
 import { maskCpfCnpj, maskTelefone } from '@/lib/masks';
 import { index, store, update, destroy } from '@/routes/retaguarda/permissionarios';
 import { cn } from '@/lib/utils';
@@ -121,14 +122,20 @@ function facetasDeAtividade(atividades: Atividade[]): { expressao: RegExp; valor
 /**
  * Um termo casa no documento da pessoa?
  *
- * Compara sem máscara dos dois lados (o digitado já vem limpo), e exige mais de
- * um caractere: um dígito só casaria com quase todo mundo.
+ * Compara sem máscara dos dois lados (o digitado já vem limpo), exige mais de um
+ * caractere (um dígito só casaria com quase todo mundo) e casa pelo **começo**,
+ * não por trecho no meio.
+ *
+ * O começo é o que a pessoa digita: ela lê o documento da esquerda para a
+ * direita e para quando já achou. Casar no meio fazia `529982` encontrar
+ * `77852998224`, e é assim que se abre o prontuário de quem não se procurava —
+ * defeito que no sistema irmão virou card de retorno da Qualidade.
  */
 function casaNoDocumento(termoSemMascara: string, documento: string | null): boolean {
     return (
         documento !== null &&
         termoSemMascara.length > 1 &&
-        semAcento(documento).includes(termoSemMascara)
+        semAcento(documento).startsWith(termoSemMascara)
     );
 }
 
@@ -146,11 +153,28 @@ function seloDaSituacao(situacao: string): { classe: string; Icone: typeof Circl
     return { classe: 'selo-aviso', Icone: CircleSlash };
 }
 
-/** As iniciais de quem não tem foto: identidade mínima, nunca um vazio. */
+/**
+ * As iniciais de quem não tem foto: identidade mínima, nunca um vazio.
+ *
+ * Só letra e número entram. Sem esse filtro, a primeira letra vinha do que
+ * estivesse na posição 0 — e um nome que começasse por pontuação rendia uma
+ * inicial como "Z<", que não identifica ninguém. A validação do nome já barra
+ * markup; isto é a segunda camada, para o que já está gravado.
+ */
 function iniciais(nome: string, apelido: string | null): string {
-    const base = (apelido ?? nome).trim().split(/\s+/);
+    const palavras = (apelido ?? nome)
+        .split(/\s+/)
+        .map((palavra) => palavra.replace(/[^\p{L}\p{N}]/gu, ''))
+        .filter((palavra) => palavra !== '');
 
-    return `${base[0]?.[0] ?? ''}${base.length > 1 ? (base[base.length - 1][0] ?? '') : ''}`.toUpperCase();
+    if (palavras.length === 0) {
+        return '';
+    }
+
+    const primeira = palavras[0][0] ?? '';
+    const ultima = palavras.length > 1 ? (palavras[palavras.length - 1][0] ?? '') : '';
+
+    return `${primeira}${ultima}`.toUpperCase();
 }
 
 /** O retrato da pessoa — foto, ou as iniciais dela. */
@@ -553,6 +577,16 @@ export default function CadastroDePermissionario({
                             />
                         </div>
 
+                        {/* A pista: a linha abre o cadastro. Cursor em forma de
+                            mão é dica de mouse — não existe para quem usa
+                            teclado nem para quem lê a tela por leitor. */}
+                        {pag.visiveis.length > 0 && (
+                            <p className="form-ajuda" style={{ marginBottom: 8 }}>
+                                Clique numa linha — ou tecle Enter sobre ela —
+                                para abrir o cadastro.
+                            </p>
+                        )}
+
                         <div className="table-wrap">
                             <table className="data-table">
                                 <thead>
@@ -614,8 +648,10 @@ export default function CadastroDePermissionario({
                                         return (
                                             <tr
                                                 key={p.id}
-                                                className="clicavel"
-                                                onClick={() => abrir(p)}
+                                                {...linhaClicavel(
+                                                    () => abrir(p),
+                                                    `Abrir o cadastro de ${p.apelido ?? p.nome}`,
+                                                )}
                                             >
                                                 <td>
                                                     <div
@@ -690,9 +726,12 @@ export default function CadastroDePermissionario({
                                 flexWrap: 'wrap',
                             }}
                         >
+                            {/* Sem nome ainda, a prévia mostra o ícone de pessoa,
+                                não um "?": ali entra a FOTO, e uma interrogação
+                                de 72px parece erro, não espaço reservado. */}
                             <Retrato
                                 p={{
-                                    nome: form.nome || '?',
+                                    nome: form.nome,
                                     apelido: form.apelido || null,
                                     foto_url: removerFoto ? null : fotoAtual,
                                 }}

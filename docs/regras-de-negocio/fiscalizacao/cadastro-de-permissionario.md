@@ -119,6 +119,10 @@ O que sobra casa contra nome, apelido, código, nº da permissão, atividade e s
 **também contra o documento sem máscara**, para quem digita `123.456.789-09` achar quem está gravado
 como `12345678909`.
 
+No documento o casamento é pelo **começo**, não por trecho no meio: é assim que a pessoa digita (lê da
+esquerda para a direita e para quando achou). Casando no meio, `529982` encontrava `77852998224` — e é
+assim que se abre o prontuário de quem não se procurava.
+
 A conferência é **termo a termo**: cada palavra digitada vale se casar no texto **ou** no documento, e
 todas precisam casar. É o que faz a consulta **mista** funcionar — `acaraje 12345678909` acha a pessoa
 cujo apelido tem "acarajé" **e** cujo documento é aquele. Exigir que todos os termos caíssem do mesmo
@@ -132,16 +136,37 @@ PDF / XLSX / DOCX pelo ponto único de exportação, com o que o filtro e a busc
 nunca o universo, nunca só a página atual. Datas saem em **dd/mm/aaaa** e o documento sai
 **formatado**; nada de id, caminho de arquivo ou forma ISO no arquivo.
 
-### RN-10 — Quem entra: o pacote da semente, e o refinamento no Modo Gerente
+### RN-10 — Quem entra: o fiscal CONSULTA; criar e apagar é da gestão
 
 A tela é controlada pela permissão **`permissionarios`** (primeiro trecho do caminho), semeada para
-**administrador, gestor e fiscal**. O fiscal está na lista porque chegar à calçada sem saber quem
-está cadastrado é trabalhar às cegas.
+**administrador, gestor e fiscal**. O fiscal está na lista porque chegar à calçada sem saber quem está
+cadastrado é trabalhar às cegas.
 
-⚠️ A semeadura da matriz **não tem granularidade**: ela concede o **pacote** da tela (vê, opera,
-inclui, exclui) a cada setor declarado. A intenção para o fiscal é **consulta** — e isso é ajustado
-no **Modo Gerente**, marcando "Só consulta" no cruzamento *Fiscal × Permissionários*, o que derruba
-operar, incluir e excluir. Não é decisão de código: quem distribui acesso é o gestor, na tela.
+Mas ele entra para **consultar**: a semente concede a ele *vê* e *opera*, e **não** *inclui* nem
+*exclui*. O motivo é o desenho do fluxo, não desconfiança — o fiscal cadastra em **rua**, pelo
+aplicativo, e o que nasce em rua entra em **quarentena** até o gestor conferir (RN-03). Cadastro
+criado de mesa por ele passaria ao largo dessa conferência, entrando direto como regular; e apagar
+cadastro é ato de gestão, porque leva embora a identidade a que uma fiscalização se liga.
+
+O gestor mantém o pacote inteiro: validar e corrigir cadastro de campo é o trabalho dele.
+
+Isto é a **concessão inicial**. Alargar ou apertar depois é ato do gestor no Modo Gerente — inclusive
+marcar "Só consulta", que derruba também o *opera*.
+
+### RN-11 — Nome e apelido são nomes de gente, não texto livre qualquer
+
+Aceitam letras (com acento), números (há apelido com número), espaço e a pontuação de nome próprio —
+ponto, apóstrofo e hífen (`Ana D'Ávila`, `Maria-José`, `J. Carlos`). Recusam markup (`<img …>`), aspas,
+barras, caractere invisível e **dois hífens seguidos**.
+
+Não é purismo: o valor GRAVADO sai por outras portas além da tela — relatório, planilha, documento,
+nome de arquivo. E `--` é a assinatura que o WAF da Prefeitura barra na URL: gravaria sem reclamar e
+depois faria a requisição que o carregasse voltar disfarçada de erro de CORS. A recusa **diz o que é
+aceito**, para quem digitou o nome da pessoa saber o que corrigir.
+
+As **iniciais** do retrato (o que aparece quando não há foto) são montadas só com letra e número, pela
+mesma razão em segunda camada: com pontuação no começo do nome, saíam iniciais como "Z<", que não
+identificam ninguém.
 
 ---
 
@@ -168,3 +193,4 @@ operar, incluir e excluir. Não é decisão de código: quem distribui acesso é
 | 25/08/2026 | José Nascimento | Cadastro de Permissionário | Criação da tela com listagem, inclusão, alteração e exclusão; documento opcional validado e normalizado quando informado; foto com allowlist de anexos e limpeza do arquivo anterior; situação com quarentena; código pelo gerador de protocolo; busca inteligente e exportação do recorte visível. | É a identidade de quem é fiscalizado: sem ela não há a quem ligar uma vistoria, e o cadastro precisa caber na realidade da rua, onde não há documento à mão. |
 | 25/08/2026 | José Nascimento | Parametrização → Atividades do Ambulante | Exclusão passa a ser recusada quando algum permissionário aponta a atividade, dizendo quantos são e mandando inativar. | Excluir deixaria os cadastros apontando para o nada, e quem responderia seria a chave estrangeira do banco — com um erro cru na cara de quem está na tela. |
 | 26/08/2026 | José Nascimento | Cadastro de Permissionário | Foto anterior passa a ser apagada só depois de a gravação dar certo (e a do excluído, depois de a linha sair); busca mista passa a casar termo a termo (texto ou documento); "Cadastrado em campo" sai das opções da inclusão pela Retaguarda, com recusa no servidor, e a inclusão propõe "Regular". | Apagar antes de gravar deixava o cadastro vivo apontando para arquivo inexistente — perda da identidade de campo. A busca não achava ninguém quando a frase misturava apelido e documento. E cadastro feito de mesa não é cadastro de rua: entrando em quarentena, sujava a fila de conferência. |
+| 26/08/2026 | José Nascimento | Cadastro de Permissionário | Nome e apelido passam a aceitar apenas nome de gente (RN-11); a busca por documento passa a casar pelo **começo**, não por trecho no meio (RN-08); a semente do fiscal passa a nascer sem *inclui* e sem *exclui* (RN-10); a linha da grade passa a abrir o cadastro também pelo **teclado**, com a pista dita em tela. | Markup gravava no cadastro e saía em relatório e planilha (a renderização escapava, o armazenamento não), e `--` no nome é a assinatura que o WAF barra na URL. Documento casando no meio abre o prontuário da pessoa errada — no sistema irmão isso virou card de retorno da Qualidade. O fiscal cadastra em rua, em quarentena: criar de mesa passaria ao largo da conferência do gestor. E a única porta para o registro era invisível e só existia para quem usa mouse. |

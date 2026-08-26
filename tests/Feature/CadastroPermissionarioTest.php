@@ -285,6 +285,48 @@ test('o nome e obrigatorio', function () {
     )->assertSessionHasErrors('nome');
 });
 
+test('nome e apelido nao aceitam markup nem a assinatura que o WAF barra', function () {
+    /*
+     * O payload abaixo GRAVAVA. Não executava — o React escapa o que renderiza —,
+     * mas ficava na base e saía por outras portas: relatório, planilha, documento.
+     * E o `--` é a assinatura que o WAF da Prefeitura barra na URL: grava sem
+     * reclamar e depois faz a requisição que carregue o valor voltar disfarçada de
+     * erro de CORS.
+     */
+    $recusados = [
+        'nome' => '<img src=x onerror=window.__xss=1>Teste',
+        'apelido' => 'Ze <b>Rico</b>',
+    ];
+
+    foreach ($recusados as $campo => $valor) {
+        $this->actingAs($this->admin)->post(
+            caminhoDoPermissionario(),
+            cadastroMinimo($this->atividade->id, [$campo => $valor]),
+        )->assertSessionHasErrors($campo);
+    }
+
+    $this->actingAs($this->admin)->post(
+        caminhoDoPermissionario(),
+        cadastroMinimo($this->atividade->id, ['nome' => 'Teste -- Rico']),
+    )->assertSessionHasErrors('nome');
+
+    expect(Permissionario::count())->toBe(0);
+});
+
+test('nome de gente de verdade continua passando — acento, apostrofo, hifen e numero', function () {
+    // A guarda não pode ser purista: apelido com número e nome com apóstrofo ou
+    // hífen são nomes reais, e recusá-los faria o cadastro não acontecer — que é
+    // o oposto do que esta tela existe para permitir.
+    foreach (['Maria das Graças de Souza', "Ana D'Ávila", 'Maria-José Ferreira', 'J. Carlos'] as $nome) {
+        $this->actingAs($this->admin)->post(
+            caminhoDoPermissionario(),
+            cadastroMinimo($this->atividade->id, ['nome' => $nome, 'apelido' => 'Zé 2']),
+        )->assertSessionHasNoErrors();
+    }
+
+    expect(Permissionario::count())->toBe(4);
+});
+
 test('a grade entrega os cadastros, as atividades e o catalogo de situacoes', function () {
     Permissionario::factory()->create([
         'apelido' => 'Zé da Água',
