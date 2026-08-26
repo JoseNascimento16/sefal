@@ -3,6 +3,7 @@
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
 use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
+use App\Http\Controllers\Retaguarda\InicioController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
 use App\Http\Controllers\Retaguarda\MonitoramentoParametrizacoesController;
@@ -29,7 +30,9 @@ Route::middleware(['auth'])->group(function () {
     // para cá que a guarda de permissão manda quem foi barrado, então ela não
     // pode ser controlada por permissão (fecharia um loop). Ver o cabeçalho de
     // `config/retaguarda_menu.php`.
-    Route::inertia('retaguarda/inicio', 'Retaguarda/Inicio')->name('retaguarda.inicio');
+    // Os atalhos vêm do SERVIDOR (ver o cabeçalho do controller): escritos na
+    // tela, o cartão de uma tela pronta continuava anunciando "Em construção".
+    Route::get('retaguarda/inicio', [InicioController::class, 'index'])->name('retaguarda.inicio');
 
     /*
      * Modo Gerente — quem entra onde.

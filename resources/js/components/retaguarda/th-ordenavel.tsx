@@ -367,7 +367,6 @@ export function ThOrdenavel<T>({
         <th
             {...resto}
             className={cn('ord', ativo && 'ord-ativa', className)}
-            onClick={() => ord.ordenarPor(campo, acessor)}
             aria-sort={
                 ativo
                     ? ord.dir === 'asc'
@@ -375,12 +374,25 @@ export function ThOrdenavel<T>({
                         : 'descending'
                     : 'none'
             }
-            title="Ordenar por esta coluna"
         >
-            <span className="ord-wrap">
+            {/*
+                O acionador é um <button>, e não o <th> com `onClick`. Com o
+                clique no cabeçalho, ordenar existia só para quem usa mouse: o
+                `<th>` não recebe foco, não responde a Enter e a árvore de
+                acessibilidade não via ali nada acionável.
+                O `<th>` continua sendo `<th>` (o `aria-sort` é dele, e é assim
+                que o leitor de tela anuncia a ordem atual); o que virou botão é
+                o conteúdo. O estilo mora em `.ord-wrap`, que já era o invólucro.
+            */}
+            <button
+                type="button"
+                className="ord-wrap"
+                onClick={() => ord.ordenarPor(campo, acessor)}
+                title="Ordenar por esta coluna"
+            >
                 {children}
                 <Seta className="ord-ico" size={14} aria-hidden />
-            </span>
+            </button>
         </th>
     );
 }

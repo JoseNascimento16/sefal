@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Bell, ChevronRight, LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { useAppearance } from '@/hooks/use-appearance';
 import { logout } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -28,6 +29,8 @@ export function Topbar({
     const { auth } = usePage().props;
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const [avisosAbertos, setAvisosAbertos] = useState(false);
+    const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+    const [saindo, setSaindo] = useState(false);
     const avisos = useRef<HTMLDivElement>(null);
 
     const escuro = resolvedAppearance === 'dark';
@@ -166,7 +169,12 @@ export function Topbar({
                         <span className="rt-avatar" aria-hidden>
                             {iniciais(auth.user.name)}
                         </span>
-                        <span>
+                        {/* No telefone só o avatar fica: nome e matrícula são
+                            conforto, e empurravam o botão de SAIR para fora da
+                            tela — numa barra que não rola, isso deixava a pessoa
+                            sem como encerrar a sessão. Ver `.rt-usuario-texto`
+                            em `retaguarda.css`. */}
+                        <span className="rt-usuario-texto">
                             <span
                                 className="rt-usuario-nome"
                                 style={{ display: 'block' }}
@@ -183,17 +191,41 @@ export function Topbar({
                     </div>
                 )}
 
-                <Link
-                    href={logout()}
-                    as="button"
+                {/* Sair PERGUNTA antes. O botão é só um ícone de 29×38 px vizinho
+                    do sino, e um toque errado no telefone encerrava a sessão na
+                    hora — levando embora o que estivesse preenchido num
+                    formulário aberto. */}
+                <button
+                    type="button"
                     className="icon-btn"
                     title="Sair do sistema"
                     aria-label="Sair do sistema"
-                    onClick={() => router.flushAll()}
+                    onClick={() => setConfirmandoSaida(true)}
                 >
                     <LogOut size={18} aria-hidden />
-                </Link>
+                </button>
             </div>
+
+            {confirmandoSaida && (
+                <ModalConfirm
+                    titulo="Sair do sistema?"
+                    mensagem="A sessão é encerrada e o que estiver preenchido em formulário aberto se perde. Para entrar de novo você precisa da matrícula e da senha."
+                    rotuloConfirmar="Sair do sistema"
+                    rotuloCancelar="Continuar no sistema"
+                    iconeConfirmar={<LogOut size={16} aria-hidden />}
+                    destrutiva
+                    processando={saindo}
+                    onCancelar={() => setConfirmandoSaida(false)}
+                    onConfirmar={() => {
+                        setSaindo(true);
+                        // A limpeza dos dados em memória vem ANTES do pedido: o
+                        // aparelho pode ser compartilhado, e o histórico de
+                        // navegação do Inertia guarda as telas já visitadas.
+                        router.flushAll();
+                        router.post(logout().url);
+                    }}
+                />
+            )}
         </header>
     );
 }
