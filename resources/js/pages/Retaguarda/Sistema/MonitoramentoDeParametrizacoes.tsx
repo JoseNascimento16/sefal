@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { BotaoAcao, Spinner } from '@/components/retaguarda/acao';
+import { contar } from '@/lib/plural';
 import { cn } from '@/lib/utils';
 import { index, profundo } from '@/routes/retaguarda/monitoramento';
 
@@ -198,15 +199,19 @@ export default function MonitoramentoDeParametrizacoes({
                 )}
 
                 <div>
+                    {/* "Sistema em operação", e não "Sistema operacional": em
+                        português essa expressão é primeiro o SO da máquina, e num
+                        painel de infraestrutura a leitura errada é provável. */}
                     <p className="card-titulo">
                         {totais.falhas > 0
-                            ? `${totais.falhas} verificação(ões) acusando problema`
+                            ? `${contar(totais.falhas, 'verificação', 'verificações')} acusando problema`
                             : totais.avisos > 0
-                              ? `Sistema operacional, com ${totais.avisos} ponto(s) de atenção`
-                              : 'Sistema operacional'}
+                              ? `Sistema em operação, com ${contar(totais.avisos, 'ponto de atenção', 'pontos de atenção')}`
+                              : 'Sistema em operação'}
                     </p>
                     <p className="card-sub">
-                        {totais.total} verificação(ões) · conferido em {carimbo}
+                        {contar(totais.total, 'verificação', 'verificações')} ·
+                        conferido em {carimbo}
                     </p>
                 </div>
             </div>
@@ -334,16 +339,25 @@ export default function MonitoramentoDeParametrizacoes({
                                                         }}
                                                     >
                                                         {check.titulo}
+                                                        {/* Um selo, não um
+                                                            parêntese grudado no
+                                                            título: "gravável(tem
+                                                            teste real)" lia como
+                                                            parte do nome da
+                                                            verificação — e "teste
+                                                            real" é vocabulário de
+                                                            dentro de casa. */}
                                                         {check.profundo && (
                                                             <span
-                                                                className="card-sub"
-                                                                title="Esta verificação tem um teste real, que roda pelo botão “Testar a fundo”."
+                                                                className="selo selo-neutro"
+                                                                title="Além da conferência rápida, esta verificação tem uma prova a fundo — que escreve em disco ou fala com um serviço externo — e roda pelo botão “Testar a fundo”."
                                                                 style={{
                                                                     marginLeft: 8,
-                                                                    fontWeight: 400,
+                                                                    fontWeight: 600,
                                                                 }}
                                                             >
-                                                                (tem teste real)
+                                                                verificação
+                                                                profunda
                                                             </span>
                                                         )}
                                                     </p>

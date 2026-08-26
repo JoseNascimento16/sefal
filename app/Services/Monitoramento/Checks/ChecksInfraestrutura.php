@@ -5,6 +5,7 @@ namespace App\Services\Monitoramento\Checks;
 use App\Models\User;
 use App\Services\Monitoramento\CheckParametrizacao;
 use App\Services\Monitoramento\ResultadoCheck;
+use App\Support\Texto;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -17,9 +18,10 @@ use Illuminate\Support\Facades\Storage;
  *    publicado (hoje o deploy ainda não foi ativado — ver `docs/deploy/okd.md`);
  *  - conexão com o Oracle e atualizações de banco pendentes: entram junto com o
  *    banco provisionado, quando houver o que conferir contra a realidade;
- *  - cadastros do domínio (áreas, tipos de documento, motivos): as telas chegam
- *    nas fases seguintes, e o check nasce COM cada uma — check de tela que não
- *    existe é ruído verde permanente;
+ *  - cadastros do domínio (áreas, tipos de documento): as telas chegam nas fases
+ *    seguintes, e o check nasce COM cada uma — check de tela que não existe é
+ *    ruído verde permanente. As listas de escolha que JÁ têm consumidor estão em
+ *    {@see ChecksParametrizacaoFiscalizacao};
  *  - batimento do agendador: não há rotina agendada ainda; entra com a primeira.
  *
  * A lista curta é deliberada. Uma tela com sessenta itens verdes não se lê — e o
@@ -45,14 +47,15 @@ class ChecksInfraestrutura
 
                         return ResultadoCheck::falha(
                             'Nenhuma conta de administrador ATIVA'
-                            .($desligados > 0 ? " (há {$desligados} desligada(s))" : '')
+                            .($desligados > 0 ? ' (há '.Texto::contar($desligados, 'desligada', 'desligadas').')' : '')
                             .' — ninguém consegue distribuir acesso às telas nem administrar o sistema, e não há como '
                             .'devolver acesso a quem perder o dele.',
                         );
                     }
 
                     return ResultadoCheck::ok(
-                        $ativos.' conta(s) de administrador ativa(s) — o sistema tem quem o administre.',
+                        Texto::contar($ativos, 'conta de administrador ativa', 'contas de administrador ativas')
+                        .' — o sistema tem quem o administre.',
                     );
                 },
                 // Ainda não há tela de usuários (ela chega nas próximas entregas);

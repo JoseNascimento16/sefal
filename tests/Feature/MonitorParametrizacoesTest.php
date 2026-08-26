@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\AtividadeAmbulante;
 use App\Models\PermissaoSetor;
 use App\Models\Setor;
+use App\Models\TipoInfracao;
 use App\Models\User;
 use App\Services\Monitoramento\CheckParametrizacao;
 use App\Services\Monitoramento\MonitorParametrizacoes;
@@ -128,15 +130,77 @@ test('o check do armazenamento nao escreve nada no load; a escrita real e a veri
         ->and($check->executarProfunda()->status)->toBe(ResultadoCheck::OK);
 });
 
+test('lei: a atividade do ambulante FLIPA — sem nenhuma em uso, o cadastro para e a tela acusa', function () {
+    /*
+     * O caso que o monitoramento existe para pegar: inativar a última atividade
+     * não avisa ninguém, e dias depois o cadastro de permissionário simplesmente
+     * não salva — com uma recusa de campo que ninguém liga a uma decisão tomada
+     * em outra tela.
+     *
+     * É FALHA, e não aviso: sem atividade em uso ninguém é cadastrado, e é do
+     * cadastro que a fiscalização parte.
+     */
+    $check = checkDoCatalogo('parametrizacao-atividade-ativa');
+
+    // Banco vazio: não há o que escolher.
+    expect($check->executar()->status)->toBe(ResultadoCheck::FALHA);
+
+    $atividade = AtividadeAmbulante::create(['nome' => 'Alimentos preparados', 'ativo' => true]);
+
+    expect($check->executar()->status)->toBe(ResultadoCheck::OK);
+
+    // Inativar a última é o caminho realista — e o check tem de acusar isso, não
+    // só a tabela vazia: "existe cadastrada" não é "pode ser escolhida".
+    $atividade->update(['ativo' => false]);
+
+    expect($check->executar()->status)->toBe(ResultadoCheck::FALHA)
+        ->and($check->executar()->detalhe)->toContain('fora de uso');
+});
+
+test('lei: o tipo de infracao FLIPA, e como AVISO — nada esta parado hoje', function () {
+    /*
+     * Severidade honesta (a regra da tela): o enquadramento em rua é de entrega
+     * futura, então lista vazia aqui não quebra fluxo nenhum HOJE. Marcar
+     * vermelho o que não parou ensina a ignorar o vermelho — e aí o dia em que um
+     * deles for de verdade, ninguém repara.
+     */
+    $check = checkDoCatalogo('parametrizacao-tipo-infracao-ativo');
+
+    expect($check->executar()->status)->toBe(ResultadoCheck::AVISO);
+
+    TipoInfracao::create(['nome' => 'Área não autorizada', 'ativo' => true]);
+
+    expect($check->executar()->status)->toBe(ResultadoCheck::OK);
+});
+
+test('as quatro listas SEM consumidor ficam fora do monitoramento', function () {
+    /*
+     * Teste-LEI do critério de admissão. Unidade de medida, tipo de operação,
+     * origem de operação e motivo de recusa não são consumidas por tela nenhuma
+     * nesta entrega: um check para cada uma seria verde permanente, e é com
+     * fileira de verdes que um vermelho passa despercebido. Cada uma entra JUNTO
+     * com a tela que a consumir.
+     */
+    $ids = collect(MonitorParametrizacoes::todosOsChecks())
+        ->map(fn (CheckParametrizacao $c): string => $c->id)
+        ->all();
+
+    foreach (['unidade', 'operacao', 'origem', 'recusa'] as $semConsumidor) {
+        expect($ids)->not->toContain("parametrizacao-{$semConsumidor}-ativo");
+    }
+});
+
 test('a tela resume o estado do sistema por modulo', function () {
     $this->actingAs(User::factory()->create(['admin' => true]))
         ->get(route('retaguarda.monitoramento.index'))
         ->assertOk()
         ->assertInertia(function (Assert $page) {
             $page->component('Retaguarda/Sistema/MonitoramentoDeParametrizacoes')
-                ->has('modulos', 1)
+                ->has('modulos', 2)
                 ->where('modulos.0.modulo', 'Infraestrutura e ambiente')
                 ->has('modulos.0.checks', 2)
+                ->where('modulos.1.modulo', 'Parametrização da fiscalização')
+                ->has('modulos.1.checks', 2)
                 // A data do carimbo é BR: nada de ISO à vista do usuário. O que
                 // se afirma é o FORMATO, e não o minuto — prender o teste ao
                 // relógio o faria falhar sozinho na virada do minuto.

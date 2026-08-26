@@ -179,6 +179,37 @@ O check conta só quem consegue entrar. Conta desligada não entra no sistema, e
 check garantir que há quem administre quando não há mais ninguém. Quando há administrador
 desligado, a mensagem diz quantos — é a pista da correção.
 
+### RN-19 — As listas de escolha OBRIGATÓRIAS são vigiadas; as demais, não
+
+Inativar o último registro de uma lista obrigatória não avisa ninguém — e é
+exatamente a alteração destrutiva silenciosa que esta tela existe para pegar.
+Duas entram, com **severidades diferentes de propósito** (RN-16):
+
+- **Atividade do ambulante** → `falha`. O cadastro de permissionário exige a
+  atividade autorizada e recusa a inativada: sem nenhuma em uso, ninguém é
+  cadastrado — e é do cadastro que a fiscalização parte.
+- **Tipo de infração** → `atenção`. Nada está parado hoje (o enquadramento em rua
+  é de entrega futura), mas lista vazia aqui é problema que se descobre na
+  calçada, longe da mesa.
+
+**Unidade de medida, tipo de operação, origem de operação e motivo de recusa ficam
+FORA por enquanto**: nenhuma tem consumidor nesta entrega, e check de fluxo que
+não existe é verde permanente (RN-12). Cada uma entra **junto com a tela que a
+consumir** — a regra do catálogo, e há teste-lei que reprova a entrada
+antecipada.
+
+### RN-20 — A tela de erro oferece a saída de QUEM está lendo
+
+A página de erro (404, 500, 503) não oferece as duas portas para todo mundo: quem
+está autenticado recebe "Ir para o início"; o visitante, "Entrar no sistema".
+Oferecer o caminho de entrada a quem já está dentro é convidá-lo a se deslogar —
+ação sem sentido para o estado dele, e no pior momento: ele errou um endereço e
+quer voltar ao trabalho.
+
+A conferência de "está autenticado?" é protegida: a sessão deste sistema mora no
+**banco**, e esta página precisa desenhar justamente quando o banco não responde.
+Na dúvida, trata como visitante.
+
 ---
 
 ## O que os testes travam
@@ -197,3 +228,6 @@ a sensação de sistema saudável justamente quando ele não está.
 | 25/08/2026 | José Nascimento | Logs | A coluna do endereço passa a se chamar **`caminho`** (banco, model e tela com o mesmo nome), a máscara do link de confirmação de e-mail passa a apontar o caminho real do Fortify (`email/verify/{id}/{hash}`), e a lista de caminhos sensíveis passa a ser conferida contra as **rotas reais** do sistema. | O nome `url` prometia o endereço inteiro numa coluna que guarda só o caminho; o padrão antigo (`verify-email/*/*`) nunca casaria com rota nenhuma; e a lista escrita à mão envelheceria calada, gravando credencial de rota nova. |
 | 25/08/2026 | José Nascimento | Logs | A ocorrência passa a guardar o **caminho** (sem a consulta, com os trechos sensíveis mascarados) em vez do endereço completo, e o **rastro é montado sem os argumentos** das chamadas. | O endereço completo levava o token de redefinição de senha e o e-mail para uma tabela que qualquer administrador lê e exporta; o rastro do PHP levava os argumentos — a senha digitada no login em texto claro. |
 | 25/08/2026 | José Nascimento | Logs / Monitoramento | Criação do registro central de exceções (com código de requisição compartilhado com a página de erro), da tela de consulta só-leitura e do motor de verificações com os dois primeiros checks (conta de administrador ativa e armazenamento gravável). | O sistema não tinha como responder "o que aconteceu com esse usuário" sem entrar no servidor, e nada avisava quando uma condição mínima de funcionamento deixava de valer. |
+| 26/08/2026 | José Nascimento | Monitoramento | Módulo novo **"Parametrização da fiscalização"** com dois checks: atividade do ambulante em uso (falha) e tipo de infração em uso (atenção) — RN-19. As outras quatro listas ficam fora, com teste-lei que reprova a entrada antecipada. | O cadastro de permissionário não salva sem atividade autorizada: inativar a última parava o fluxo em silêncio, com o painel continuando verde. É o caso que o critério de admissão descreve. |
+| 26/08/2026 | José Nascimento | Monitoramento | O selo da verificação profunda deixa de ser um parêntese grudado no título ("gravável(tem teste real)") e o resumo geral passa a dizer **"Sistema em operação"**. | Vocabulário de dentro de casa vazando para a tela, e "sistema operacional" em português é primeiro o SO da máquina — num painel de infraestrutura, a leitura errada é provável. |
+| 26/08/2026 | José Nascimento | Telas de erro | A saída oferecida passa a depender de quem está lendo (RN-20). | "Entrar no sistema" para quem já está dentro é convite a se deslogar. |

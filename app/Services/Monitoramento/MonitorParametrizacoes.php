@@ -19,9 +19,9 @@ namespace App\Services\Monitoramento;
  * com saída declarada. Ao criar uma funcionalidade que dependa de parametrização
  * obrigatória, o check nasce JUNTO com ela; depois ninguém lembra.
  *
- * A Fase 1 nasce com um módulo só (infraestrutura). Fiscalização, áreas e
- * documentos entram nas fases seguintes, cada um no seu arquivo — a estrutura já
- * está pronta e os testes-lei já valem para eles.
+ * A Fase 1 nasce com dois módulos: infraestrutura e as listas de escolha sem as
+ * quais um fluxo para. Áreas e documentos entram nas fases seguintes, cada um no
+ * seu arquivo — a estrutura já está pronta e os testes-lei já valem para eles.
  */
 class MonitorParametrizacoes
 {
@@ -36,6 +36,10 @@ class MonitorParametrizacoes
             [
                 'modulo' => 'Infraestrutura e ambiente',
                 'catalogo' => Checks\ChecksInfraestrutura::class,
+            ],
+            [
+                'modulo' => 'Parametrização da fiscalização',
+                'catalogo' => Checks\ChecksParametrizacaoFiscalizacao::class,
             ],
         ];
     }
