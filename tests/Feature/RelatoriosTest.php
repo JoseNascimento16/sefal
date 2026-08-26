@@ -89,7 +89,7 @@ test('o documento traz o recorte, a data em BR e as contas do periodo', function
     expect($texto)
         ->toContain('USUÁRIOS DO SISTEMA')
         ->toContain('Setor: Fiscal')      // o recorte por escrito
-        ->toContain('1 conta(s)')
+        ->toContain('1 conta')
         ->toContain('Fiscal')
         // Data SEMPRE em BR: forma ISO em documento gerado é inaceitável.
         ->toContain(now()->format('d/m/Y'))
@@ -252,7 +252,7 @@ test('o relatorio de permissionarios traz o recorte, o documento legivel e a fil
 
     expect($texto)
         ->toContain('PERMISSIONÁRIOS CADASTRADOS')
-        ->toContain('2 cadastro(s)')
+        ->toContain('2 cadastros')
         ->toContain('Joana Vendedora')
         // Documento como uma pessoa lê, nunca a forma crua da coluna.
         ->toContain('123.456.789-09')
@@ -290,6 +290,6 @@ test('o filtro por situacao do relatorio de permissionarios filtra de verdade', 
     expect($texto)
         ->toContain('Situação: Cadastrado em campo')
         ->toContain('Recem Cadastrado')
-        ->toContain('1 cadastro(s)')
+        ->toContain('1 cadastro')
         ->not->toContain('Regular Certinho');
 });

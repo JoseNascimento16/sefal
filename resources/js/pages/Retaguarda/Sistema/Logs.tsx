@@ -12,6 +12,7 @@ import {
 } from '@/components/retaguarda/th-ordenavel';
 import { casaTermos, parseConsulta } from '@/lib/busca';
 import { dataBR, dataHoraBR, hojeISO, VAZIO } from '@/lib/datas';
+import { contar } from '@/lib/plural';
 import { detalhe, index } from '@/routes/retaguarda/logs';
 
 /**
@@ -234,7 +235,8 @@ export default function Logs({
                     </div>
 
                     <p className="form-ajuda" style={{ margin: '0 0 10px' }}>
-                        {logs.length} ocorrência(s) no período.
+                        {contar(logs.length, 'ocorrência', 'ocorrências')} no
+                        período.
                     </p>
                 </div>
 

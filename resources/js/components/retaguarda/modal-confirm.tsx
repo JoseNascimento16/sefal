@@ -2,7 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import { Spinner } from '@/components/retaguarda/acao';
-import { useScrollLock } from '@/hooks/use-scroll-lock';
+import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import { cn } from '@/lib/utils';
 
 /**
@@ -52,8 +52,6 @@ export function ModalConfirm({
 }) {
     const voltar = useRef<HTMLButtonElement>(null);
 
-    useScrollLock(true);
-
     // O foco nasce no "Voltar", e não no botão que confirma: quem aperta Enter
     // sem ler acaba de sair, não de apagar algo.
     useEffect(() => {
@@ -75,13 +73,9 @@ export function ModalConfirm({
     }, [processando, onCancelar]);
 
     return (
-        <div
-            className="sobreposicao"
-            role="presentation"
-            // Clicar fora cancela — mas não no meio de uma ação em voo, senão a
-            // pessoa fecha a camada sem saber se aquilo foi ou não gravado.
-            onClick={processando ? undefined : onCancelar}
-        >
+        // Clicar fora cancela — mas não no meio de uma ação em voo, senão a
+        // pessoa fecha a camada sem saber se aquilo foi ou não gravado.
+        <Sobreposicao clicandoFora={processando ? undefined : onCancelar}>
             <div
                 className="card-premium"
                 style={{ width: '100%', maxWidth: 460 }}
@@ -136,6 +130,6 @@ export function ModalConfirm({
                     </button>
                 </div>
             </div>
-        </div>
+        </Sobreposicao>
     );
 }

@@ -71,7 +71,9 @@ return [
             'hus' => [],
             'nota' => $origemSpec.' Tela para onde o login leva e para onde volta, com o motivo, quem é '
                 .'barrado em outra tela. Por isso ela é a única fora do controle de acesso: barrá-la '
-                .'fecharia um laço de redirecionamento.',
+                .'fecharia um laço de redirecionamento. Os atalhos são decididos pelo servidor: levam à '
+                .'tela quando ela existe, ficam "em construção" quando ela é de entrega futura e não '
+                .'aparecem para quem não pode abri-la.',
         ],
 
         [
@@ -96,8 +98,10 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Matriz de quem entra onde: setor × tela × ação, com rastro de cada '
-                .'concessão e revogação. É a fonte única do acesso — o menu, a abertura da tela e as '
-                .'ações obedecem a ela.',
+                .'concessão e revogação — o rastro mostra em tela O QUE mudou, por setor. É a fonte '
+                .'única do acesso: o menu, a abertura da tela e as ações obedecem a ela. Cada tela é '
+                .'salva por si, e a seção com alteração pendente é sinalizada (sair sem salvar pergunta '
+                .'antes).',
         ],
 
         [
@@ -109,7 +113,7 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Emissão de documento oficial com período, totais e identificação de '
-                .'quem emitiu, em PDF, XLSX e DOCX. Não se confunde com a exportação de listagem, que '
+                .'quem emitiu, em PDF, Excel e Word. Não se confunde com a exportação de listagem, que '
                 .'entrega o recorte visível de uma grade.',
         ],
 
@@ -127,7 +131,7 @@ return [
             'breadcrumb' => 'Presente em toda listagem da Retaguarda',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemSpec.' Toda listagem entrega em PDF, XLSX e DOCX exatamente o que está à '
+            'nota' => $origemSpec.' Toda listagem entrega em PDF, Excel e Word exatamente o que está à '
                 .'vista — o que a busca, o filtro e a aba deixaram na tela —, nunca o universo inteiro '
                 .'nem apenas a página aberta, e sempre com o recorte declarado no documento para quem o '
                 .'receber saber do que ele fala.',
@@ -155,8 +159,10 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Painel das condições mínimas para o sistema funcionar: o que está '
-                .'vermelho diz o que parou e leva para onde se corrige. As verificações que escrevem em '
-                .'disco ou falam com serviço externo só rodam pelo botão.',
+                .'vermelho diz o que parou e leva para onde se corrige. Vigia o ambiente (conta de '
+                .'administrador ativa, armazenamento gravável) e as listas de escolha OBRIGATÓRIAS — '
+                .'atividade do ambulante e tipo de infração. As verificações que escrevem em disco ou '
+                .'falam com serviço externo só rodam pelo botão.',
         ],
 
         [
@@ -185,7 +191,9 @@ return [
                 .'não acontecer. Quando informado, o documento é validado (CPF ou CNPJ, inclusive o '
                 .'alfanumérico) e não se repete. O cadastro nascido em campo fica marcado como '
                 .'"Cadastrado em campo" até alguém conferir — a tela de validação dessa fila é de '
-                .'entrega futura, e por ora o gestor troca a situação à mão.',
+                .'entrega futura, e por ora o gestor troca a situação à mão. Nome e apelido aceitam nome '
+                .'de gente, não marcação nem símbolo. O fiscal CONSULTA o cadastro pela Retaguarda: '
+                .'incluir e excluir por lá são da gestão.',
         ],
 
         /*
@@ -263,7 +271,7 @@ return [
             'breadcrumb' => 'Parametrização › Motivos de Recusa',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemSpec.' O que o Gestor responde ao devolver um cadastro feito em campo. '
+            'nota' => $origemSpec.' O que o gestor responde ao devolver um cadastro feito em campo. '
                 .'O fiscal lê esse texto no aparelho, então ele precisa dizer o que corrigir.',
         ],
 

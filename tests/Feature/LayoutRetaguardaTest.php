@@ -217,12 +217,30 @@ test('as telas de erro falam portugues e nao mostram rastro de pilha', function 
     // Sem depurador: é o que roda em homologação e produção.
     config()->set('app.debug', false);
 
-    $resposta = $this->get('/rota-que-nao-existe');
+    // Autenticado, porque a saída oferecida depende de quem está lendo: para
+    // quem está dentro é "Ir para o início"; para o visitante, "Entrar no
+    // sistema" (ver `ObservabilidadeTest`).
+    $resposta = $this->actingAs(User::factory()->create())->get('/rota-que-nao-existe');
 
     $resposta->assertNotFound()
         ->assertSee('Página não encontrada')
         ->assertSee('Ir para o início')
         ->assertDontSee('Stack trace', false);
+});
+
+test('lei: a marca do sistema no exemplo de ambiente e SEFAL', function () {
+    /*
+     * Teste-LEI de fonte única. O nome do produto aparece na aba do navegador e
+     * vem de `APP_NAME`. Ele tem dois lugares onde é escrito — o default do
+     * código (`SEFAL`) e o exemplo que todo ambiente novo copia —, e informação
+     * com dois donos um dia diverge.
+     *
+     * A conferência é sobre o EXEMPLO, e não sobre o `.env` de quem roda o teste:
+     * a máquina de cada um é dela. (Foi ali que a divergência apareceu — uma
+     * máquina com `APP_NAME` antigo fazia a aba anunciar um nome de produto que
+     * nenhuma tela usa. O código e o exemplo já estavam certos.)
+     */
+    expect((string) file_get_contents(base_path('.env.example')))->toContain('APP_NAME="SEFAL"');
 });
 
 test('nenhuma classe de tela depende de espaco dentro de texto de classe', function () {

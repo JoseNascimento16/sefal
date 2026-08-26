@@ -13,9 +13,15 @@ import { edit as editarSenha } from '@/routes/security';
  * Nada de foto de perfil nesta fase, e nada de "apagar minha conta": quem abre e
  * quem encerra o acesso de um servidor é a administração.
  */
+/*
+ * O nome de cada aba é o MESMO em toda parte: na aba, no título da seção e na
+ * aba do navegador. Antes eram três vocabulários para três destinos ("Dados" /
+ * "Meus dados"; "Senha" / "Trocar a senha" / "Minha senha") — e quem procura de
+ * volta a tela onde mexeu na senha procura pelo nome que leu, não pelo sinônimo.
+ */
 const ABAS = [
-    { titulo: 'Dados', href: editarPerfil() },
-    { titulo: 'Senha', href: editarSenha() },
+    { titulo: 'Meus dados', href: editarPerfil() },
+    { titulo: 'Minha senha', href: editarSenha() },
     { titulo: 'Aparência', href: editarAparencia() },
 ];
 

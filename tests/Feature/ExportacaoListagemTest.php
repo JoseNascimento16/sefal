@@ -217,7 +217,7 @@ test('o recorte vai impresso no arquivo', function () {
     expect($texto)
         ->toContain('USUÁRIOS DO SISTEMA')          // título
         ->toContain('Somente ativos')                // filtro aplicado
-        ->toContain('2 registro(s) exportado(s)')    // volume
+        ->toContain('2 registros exportados')      // volume
         ->toContain('Ana Admin');                    // quem emitiu
 });
 

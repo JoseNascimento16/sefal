@@ -7,6 +7,7 @@ use App\Relatorios\Contracts\Relatorio;
 use App\Relatorios\Suporte\ContextoRelatorio;
 use App\Relatorios\Suporte\FiltroDef;
 use App\Relatorios\Suporte\ResultadoRelatorio;
+use App\Support\Texto;
 use Illuminate\Support\Carbon;
 
 /**
@@ -126,7 +127,7 @@ class RelatorioUsuariosDoSistema implements Relatorio
                 ]);
             }
 
-            $relacao->total('TOTAL DE CONTAS', $usuarios->count(), ['nome' => $usuarios->count().' conta(s)']);
+            $relacao->total('TOTAL DE CONTAS', $usuarios->count(), ['nome' => Texto::contar($usuarios->count(), 'conta', 'contas')]);
         }
 
         $porSetor = $this->contarPorSetor($usuarios);
@@ -227,7 +228,7 @@ class RelatorioUsuariosDoSistema implements Relatorio
             $partes[] = 'Todas as contas';
         }
 
-        $partes[] = $total.' conta(s)';
+        $partes[] = Texto::contar($total, 'conta', 'contas');
 
         return implode(' · ', $partes);
     }

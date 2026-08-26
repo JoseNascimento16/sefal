@@ -8,6 +8,7 @@ use App\Relatorios\Contracts\Relatorio;
 use App\Relatorios\Suporte\ContextoRelatorio;
 use App\Relatorios\Suporte\FiltroDef;
 use App\Relatorios\Suporte\ResultadoRelatorio;
+use App\Support\Texto;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -141,7 +142,7 @@ class RelatorioPermissionarios implements Relatorio
             }
 
             $relacao->total('TOTAL DE CADASTROS', $permissionarios->count(), [
-                'nome' => $permissionarios->count().' cadastro(s)',
+                'nome' => Texto::contar($permissionarios->count(), 'cadastro', 'cadastros'),
             ]);
         }
 
@@ -250,7 +251,7 @@ class RelatorioPermissionarios implements Relatorio
             $partes[] = 'Todos os cadastros';
         }
 
-        $partes[] = $total.' cadastro(s)';
+        $partes[] = Texto::contar($total, 'cadastro', 'cadastros');
 
         return implode(' · ', $partes);
     }

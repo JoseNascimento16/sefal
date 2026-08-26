@@ -2,7 +2,10 @@ import { Form, Head } from '@inertiajs/react';
 import { LockKeyhole } from 'lucide-react';
 import PasswordInput from '@/components/password-input';
 import { BotaoAcao } from '@/components/retaguarda/acao';
+import TextLink from '@/components/text-link';
+import { request as pedirRedefinicao } from '@/routes/password';
 import { store } from '@/routes/password/confirm';
+import { inicio } from '@/routes/retaguarda';
 
 export default function ConfirmPassword() {
     return (
@@ -16,9 +19,27 @@ export default function ConfirmPassword() {
                             className="form-group"
                             data-erro={errors.password ? '1' : undefined}
                         >
-                            <label className="form-label" htmlFor="password">
-                                Senha
-                            </label>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'baseline',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                }}
+                            >
+                                <label className="form-label" htmlFor="password">
+                                    Senha
+                                </label>
+                                {/* Quem não lembra a senha precisa poder pedir a
+                                    redefinição de DENTRO do fluxo que a exige —
+                                    como na tela de entrar. */}
+                                <TextLink
+                                    href={pedirRedefinicao()}
+                                    className="text-sm"
+                                >
+                                    Esqueci minha senha
+                                </TextLink>
+                            </div>
                             <PasswordInput
                                 id="password"
                                 name="password"
@@ -42,6 +63,19 @@ export default function ConfirmPassword() {
                         >
                             Confirmar
                         </BotaoAcao>
+
+                        {/* A saída. Esta tela não tem menu nem barra: sem um
+                            caminho de volta, quem cai aqui por engano só sai
+                            pelo botão do navegador — e a sessão segue aberta,
+                            então há para onde voltar. */}
+                        <p
+                            className="form-ajuda"
+                            style={{ marginTop: 18, textAlign: 'center' }}
+                        >
+                            <TextLink href={inicio()}>
+                                Voltar ao sistema
+                            </TextLink>
+                        </p>
                     </>
                 )}
             </Form>

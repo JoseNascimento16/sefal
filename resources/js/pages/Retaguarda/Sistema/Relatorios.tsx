@@ -5,6 +5,7 @@ import { Spinner } from '@/components/retaguarda/acao';
 import { baixarDocumento } from '@/lib/baixar-documento';
 import type { FormatoExportacao } from '@/lib/formatos-exportacao';
 import { FORMATOS_DE_DOCUMENTO } from '@/lib/formatos-exportacao';
+import { contar } from '@/lib/plural';
 import { gerar, index } from '@/routes/retaguarda/relatorios';
 
 /**
@@ -126,7 +127,12 @@ export default function Relatorios({
                             <FileBarChart size={18} aria-hidden /> Catálogo
                         </p>
                         <p className="card-sub" style={{ marginBottom: 14 }}>
-                            {relatorios.length} relatório(s) disponível(is).
+                            {contar(
+                                relatorios.length,
+                                'relatório disponível',
+                                'relatórios disponíveis',
+                            )}
+                            .
                         </p>
 
                         <ul

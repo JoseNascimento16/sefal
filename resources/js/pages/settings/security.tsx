@@ -19,7 +19,7 @@ export default function Security({ passwordRules }: Props) {
             <Head title="Minha senha" />
 
             <div style={{ marginBottom: 20 }}>
-                <h2 className="card-titulo">Trocar a senha</h2>
+                <h2 className="card-titulo">Minha senha</h2>
                 <p className="card-sub">
                     Use uma senha longa e que você não use em outro lugar.
                 </p>
