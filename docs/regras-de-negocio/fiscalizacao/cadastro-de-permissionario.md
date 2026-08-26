@@ -99,7 +99,11 @@ uma falha deixaria a foto órfã sem ninguém para reencontrá-la.
 
 O campo único interpreta a frase em facetas do domínio + termos livres, sem acento: `regular`,
 `irregular`, `cadastrado em campo` / `quarentena`, `sem documento`, `com documento`, `permissão
-vencida`. O que sobra casa contra nome, apelido, código, nº da permissão, atividade e situação — e
+vencida` — e **o nome de qualquer atividade da parametrização**, que vira faceta em tempo de
+execução (a lista é do gestor; escrita na tela, envelheceria no primeiro ramo renomeado). Como
+faceta, "bebidas" filtra pelo **ramo**, e não casa por acaso com um apelido que tenha a palavra.
+
+O que sobra casa contra nome, apelido, código, nº da permissão, atividade e situação — e
 **também contra o documento sem máscara**, para quem digita `123.456.789-09` achar quem está gravado
 como `12345678909`.
 

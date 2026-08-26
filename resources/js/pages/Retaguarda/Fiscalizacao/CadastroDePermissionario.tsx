@@ -77,6 +77,7 @@ type Modo = 'navegacao' | 'edicao';
 /** O que a busca reconhece além das palavras soltas. */
 type Faceta =
     | { tipo: 'situacao'; valor: string }
+    | { tipo: 'atividade'; valor: number }
     | { tipo: 'sem-documento' }
     | { tipo: 'com-documento' }
     | { tipo: 'permissao-vencida' };
@@ -93,6 +94,29 @@ const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
     { expressao: /\bregular(es)?\b/, valor: { tipo: 'situacao', valor: 'Regular' } },
     { expressao: /\birregular(es)?\b/, valor: { tipo: 'situacao', valor: 'Irregular' } },
 ];
+
+/** Escapa o que, num nome de atividade, o motor de expressões leria como sintaxe. */
+function escapaExpressao(valor: string): string {
+    return valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * As atividades viram facetas em tempo de execução — a lista é mantida pelo
+ * gestor, então não há como escrevê-las aqui.
+ *
+ * Da mais longa para a mais curta: declarada ao contrário, uma atividade
+ * "Bebidas" comeria a expressão de "Bebidas e água de coco". E como faceta (e
+ * não termo livre), "bebidas" filtra pelo RAMO — não casa por acaso com alguém
+ * cujo apelido tenha a palavra.
+ */
+function facetasDeAtividade(atividades: Atividade[]): { expressao: RegExp; valor: Faceta }[] {
+    return [...atividades]
+        .sort((a, b) => b.nome.length - a.nome.length)
+        .map((a) => ({
+            expressao: new RegExp(`\\b${escapaExpressao(semAcento(a.nome))}\\b`),
+            valor: { tipo: 'atividade', valor: a.id } as Faceta,
+        }));
+}
 
 /** O selo de cada situação — cor com significado, não decoração. */
 function seloDaSituacao(situacao: string): { classe: string; Icone: typeof CircleCheck } {
@@ -211,7 +235,12 @@ export default function CadastroDePermissionario({
     const { enviando, ocupado, enviar, guardar } = useEnvio();
 
     const filtrados = useMemo(() => {
-        const { facetas, termos } = parseConsulta<Faceta>(busca, FACETAS);
+        const { facetas, termos } = parseConsulta<Faceta>(busca, [
+            // O vocabulário fixo do domínio primeiro: nome de atividade é texto
+            // que o gestor digita, e não pode redefinir "regular" ou "vencida".
+            ...FACETAS,
+            ...facetasDeAtividade(atividades),
+        ]);
         const hoje = hojeISO();
 
         // O texto digitado pode SER um documento: comparar sem máscara faz
@@ -221,6 +250,10 @@ export default function CadastroDePermissionario({
         return permissionarios.filter((p) => {
             for (const faceta of facetas) {
                 if (faceta.tipo === 'situacao' && p.situacao !== faceta.valor) {
+                    return false;
+                }
+
+                if (faceta.tipo === 'atividade' && p.atividade_id !== faceta.valor) {
                     return false;
                 }
 
@@ -257,7 +290,7 @@ export default function CadastroDePermissionario({
 
             return casaTexto || casaDocumento;
         });
-    }, [permissionarios, busca]);
+    }, [permissionarios, atividades, busca]);
 
     const ord = useOrdenacao(filtrados, { campo: 'nome', acessor: 'nome' });
     const pag = usePaginacao(ord.itens);
@@ -425,6 +458,13 @@ export default function CadastroDePermissionario({
                                 'sem documento',
                                 'irregular',
                                 'permissão vencida',
+                                // Um ramo de verdade, tirado da lista que o
+                                // gestor mantém — exemplo escrito à mão aqui
+                                // envelheceria na primeira atividade renomeada.
+                                ...atividades
+                                    .filter((a) => a.ativo)
+                                    .slice(0, 1)
+                                    .map((a) => a.nome.toLowerCase()),
                             ]}
                         />
 
