@@ -1,6 +1,6 @@
-import { Head } from '@inertiajs/react';
-import { KeyRound, Save, ShieldAlert } from 'lucide-react';
-import { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { KeyRound, PencilLine, Save, ShieldAlert } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { useEnvio } from '@/hooks/use-envio';
@@ -23,6 +23,12 @@ type Acoes = Record<string, boolean>;
 
 /** As que gravam — e que "Só consulta" derruba. */
 const ACOES_DE_ESCRITA = ['habilitado', 'incluir', 'excluir'];
+
+/**
+ * Tudo que depende de "Vê". Ele é pré-requisito das demais: sem ele, o servidor
+ * zera a linha inteira ao gravar ({@see PermissaoService::normalizar}).
+ */
+const ACOES_DEPENDENTES = ['habilitado', 'apenas_leitura', 'incluir', 'excluir'];
 
 interface Setor {
     slug: string;
@@ -80,9 +86,61 @@ export default function ModoGerente({
 }) {
     const [rascunho, setRascunho] = useState<Matriz>(matriz);
     const [confirmando, setConfirmando] = useState<Funcionalidade | null>(null);
+    const [saindoPara, setSaindoPara] = useState<string | null>(null);
     const { enviando, ocupado, enviar } = useEnvio();
 
     const aviso = AVISO_ENFORCE[enforce] ?? null;
+
+    /**
+     * Quais seções têm alteração ainda não salva.
+     *
+     * A comparação é com a matriz que veio do servidor, seção por seção — é o que
+     * permite dizer ONDE está a pendência. Cada seção tem o seu botão (um ajuste
+     * num canto não regrava a casa toda), e sem este aviso quem mexesse em três
+     * seções e salvasse uma perdia as outras duas sem nunca saber.
+     */
+    const pendentes = funcionalidades
+        .filter(
+            (tela) =>
+                JSON.stringify(rascunho[tela.slug]) !==
+                JSON.stringify(matriz[tela.slug]),
+        )
+        .map((tela) => tela.slug);
+
+    // Sair com pendência: o pedido de navegação é interrompido e a decisão vai
+    // para quem está na tela. Sem isto, a alteração é descartada em silêncio.
+    const liberado = useRef(false);
+
+    useEffect(() => {
+        if (pendentes.length === 0) {
+            return;
+        }
+
+        // Recarregar, fechar a aba ou ir para fora do sistema: aqui só o próprio
+        // navegador pode perguntar.
+        const aoDescarregar = (e: BeforeUnloadEvent) => e.preventDefault();
+
+        window.addEventListener('beforeunload', aoDescarregar);
+
+        // Navegação dentro do sistema: interrompe e pergunta com o diálogo do
+        // Design System. Só GET — o POST desta tela é justamente o que salva.
+        const remover = router.on('before', (evento) => {
+            const visita = evento.detail.visit;
+
+            if (liberado.current || String(visita.method).toLowerCase() !== 'get') {
+                return;
+            }
+
+            setSaindoPara(String(visita.url));
+
+            return false;
+        });
+
+        return () => {
+            window.removeEventListener('beforeunload', aoDescarregar);
+            remover();
+        };
+    }, [pendentes.length]);
 
     function marcar(tela: string, setor: string, acao: string, valor: boolean) {
         setRascunho((atual) => {
@@ -95,6 +153,22 @@ export default function ModoGerente({
             if (acao === 'apenas_leitura' && valor) {
                 for (const escrita of ACOES_DE_ESCRITA) {
                     linha[escrita] = false;
+                }
+            }
+
+            /*
+             * Tirar o "Vê" derruba TODO o resto — é a mesma normalização que o
+             * servidor faz ao gravar, e a legenda desta tela já prometia isso em
+             * voz alta ("sem ele, nada mais vale").
+             *
+             * Faltava aqui, e o efeito era pior que uma inconsistência de
+             * desenho: quem desmarcava "Vê" via "Inclui" e "Exclui" continuarem
+             * marcados, salvava, e saía convencido de ter concedido as duas ao
+             * setor — quando o que foi gravado nega tudo.
+             */
+            if (acao === 'visivel' && !valor) {
+                for (const dependente of ACOES_DEPENDENTES) {
+                    linha[dependente] = false;
                 }
             }
 
@@ -190,6 +264,16 @@ export default function ModoGerente({
                                 <p className="card-titulo">{tela.rotulo}</p>
                                 <p className="card-sub">{tela.secao}</p>
                             </div>
+
+                            {pendentes.includes(tela.slug) && (
+                                <span
+                                    className="selo selo-aviso"
+                                    style={{ marginLeft: 'auto' }}
+                                >
+                                    <PencilLine size={13} aria-hidden />
+                                    alteração não salva
+                                </span>
+                            )}
                         </div>
 
                         <div className="table-wrap">
@@ -230,17 +314,27 @@ export default function ModoGerente({
                                                         setor.slug
                                                     ];
 
-                                                // Marca que grava fica
-                                                // indisponível enquanto "Só
-                                                // consulta" está ligada: é a
-                                                // regra do servidor visível na
-                                                // tela, em vez de uma recusa
-                                                // depois do clique.
-                                                const impedida =
+                                                /*
+                                                 * Marca indisponível é a regra
+                                                 * do servidor visível na tela,
+                                                 * em vez de uma recusa depois do
+                                                 * clique. Duas razões, e a
+                                                 * ordem importa: sem "Vê" nada
+                                                 * mais vale, e "Só consulta"
+                                                 * derruba o que grava.
+                                                 */
+                                                const semVer =
+                                                    !linha.visivel &&
+                                                    ACOES_DEPENDENTES.includes(
+                                                        acao.chave,
+                                                    );
+                                                const soConsulta =
                                                     linha.apenas_leitura &&
                                                     ACOES_DE_ESCRITA.includes(
                                                         acao.chave,
                                                     );
+                                                const impedida =
+                                                    semVer || soConsulta;
 
                                                 return (
                                                     <td key={acao.chave}>
@@ -257,9 +351,11 @@ export default function ModoGerente({
                                                                 impedida
                                                             }
                                                             title={
-                                                                impedida
-                                                                    ? 'Indisponível: o setor está marcado como "Só consulta".'
-                                                                    : undefined
+                                                                semVer
+                                                                    ? 'Indisponível: sem "Vê", nada mais vale para este setor.'
+                                                                    : soConsulta
+                                                                      ? 'Indisponível: o setor está marcado como "Só consulta".'
+                                                                      : undefined
                                                             }
                                                             onChange={(e) =>
                                                                 marcar(
@@ -293,10 +389,19 @@ export default function ModoGerente({
                                 marginTop: 14,
                             }}
                         >
+                            {/* Sem alteração, o botão não tem o que salvar — e
+                                um botão que grava o mesmo estado de novo só
+                                polui o rastro de auditoria com "nada mudou". */}
                             <BotaoAcao
                                 icone={<Save size={16} />}
                                 carregando={enviando === tela.slug}
                                 ocupado={ocupado}
+                                disabled={!pendentes.includes(tela.slug)}
+                                title={
+                                    pendentes.includes(tela.slug)
+                                        ? undefined
+                                        : 'Nada alterado nesta tela.'
+                                }
                                 rotuloCarregando="Salvando…"
                                 onClick={() => setConfirmando(tela)}
                             >
@@ -307,13 +412,23 @@ export default function ModoGerente({
                 ))
             )}
 
-            {historico.length > 0 && (
-                <section className="card-premium">
-                    <p className="card-titulo">Últimas alterações</p>
-                    <p className="card-sub" style={{ marginBottom: 14 }}>
-                        Para se poder perguntar depois quem abriu qual porta.
-                    </p>
+            {/* A seção existe SEMPRE, inclusive vazia: numa instalação nova, sem
+                ela ninguém saberia que há trilha de auditoria — e trilha que
+                ninguém sabe que existe não responde pergunta nenhuma. */}
+            <section className="card-premium">
+                <p className="card-titulo">Últimas alterações</p>
+                <p className="card-sub" style={{ marginBottom: 14 }}>
+                    Para se poder perguntar depois quem abriu qual porta, para
+                    quem.
+                </p>
 
+                {historico.length === 0 ? (
+                    <p className="form-ajuda">
+                        Nenhuma alteração de permissão registrada ainda. A
+                        primeira gravação nesta tela aparece aqui, com o que
+                        mudou em cada setor.
+                    </p>
+                ) : (
                     <div className="table-wrap">
                         <table className="data-table">
                             <thead>
@@ -321,6 +436,13 @@ export default function ModoGerente({
                                     <th scope="col">Quando</th>
                                     <th scope="col">Quem</th>
                                     <th scope="col">Tela</th>
+                                    {/* O QUE mudou é a razão de o registro
+                                        existir: "alguém mexeu nesta tela" não
+                                        responde nada depois de um incidente. O
+                                        servidor já gravava o delta por setor
+                                        (`+incluir`, `-excluir`) — a tela é que
+                                        não o mostrava. */}
+                                    <th scope="col">O que mudou</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -329,13 +451,16 @@ export default function ModoGerente({
                                         <td>{registro.quando}</td>
                                         <td>{registro.quem}</td>
                                         <td>{registro.tela}</td>
+                                        <td style={{ minWidth: 260 }}>
+                                            {registro.descricao}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                </section>
-            )}
+                )}
+            </section>
 
             {confirmando && (
                 <ModalConfirm
@@ -346,6 +471,27 @@ export default function ModoGerente({
                     processando={enviando === confirmando.slug}
                     onCancelar={() => setConfirmando(null)}
                     onConfirmar={() => gravar(confirmando)}
+                />
+            )}
+
+            {saindoPara !== null && (
+                <ModalConfirm
+                    titulo="Sair sem salvar as permissões?"
+                    mensagem={
+                        pendentes.length === 1
+                            ? 'Há alteração não salva em uma das telas. Sair agora descarta essa alteração.'
+                            : `Há alterações não salvas em ${pendentes.length} telas. Sair agora descarta todas.`
+                    }
+                    rotuloConfirmar="Sair sem salvar"
+                    rotuloCancelar="Continuar aqui"
+                    destrutiva
+                    onCancelar={() => setSaindoPara(null)}
+                    onConfirmar={() => {
+                        // A guarda se abre uma vez, para a navegação que a pessoa
+                        // acabou de confirmar — e volta a valer na próxima tela.
+                        liberado.current = true;
+                        router.visit(saindoPara);
+                    }}
                 />
             )}
         </>

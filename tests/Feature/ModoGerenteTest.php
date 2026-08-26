@@ -587,6 +587,60 @@ test('a semeadura nasce do menu — tela restrita a setor nasce concedida a ele'
         ->and($semeadas->first()->habilitado)->toBeTrue();
 });
 
+test('a semente pode AJUSTAR o pacote de um setor — e o fiscal nao inclui nem exclui na Retaguarda', function () {
+    /*
+     * O fiscal enxerga o cadastro de permissionário (chegar na calçada sem saber
+     * quem está cadastrado é trabalhar às cegas) e não cria nem apaga por lá: ele
+     * cadastra em RUA, pelo aplicativo, e o que nasce em rua entra em quarentena
+     * até o gestor conferir. Incluir de mesa passaria ao largo dessa conferência;
+     * excluir cadastro é ato de gestão.
+     *
+     * A conferência é sobre a configuração REAL do menu, e não sobre um exemplo
+     * montado no teste: é a concessão inicial entregue que se quer travar.
+     */
+    $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->firstOrFail();
+
+    expect($fiscal->visivel)->toBeTrue()
+        ->and($fiscal->habilitado)->toBeTrue()
+        ->and($fiscal->incluir)->toBeFalse()
+        ->and($fiscal->excluir)->toBeFalse();
+
+    // O gestor continua com o pacote inteiro: validar e corrigir cadastro de
+    // campo é o trabalho dele.
+    $gestor = PermissaoSetor::where('setor', 'gestor')->where('slug', 'permissionarios')->firstOrFail();
+
+    expect($gestor->incluir)->toBeTrue()
+        ->and($gestor->excluir)->toBeTrue();
+});
+
+test('a forma curta e a forma longa da semente convivem', function () {
+    // Teste-LEI do formato. A config aceita `'gestor'` (pacote inteiro) e
+    // `'fiscal' => [...]` (pacote com ajuste) na MESMA lista; se a leitura
+    // quebrasse com a mistura, a tela nasceria sem concessão nenhuma — e tela
+    // controlável sem concessão é tela que ninguém abre.
+    config()->set('retaguarda_menu.secoes', [[
+        'rotulo' => 'Fiscalização',
+        'itens' => [[
+            'rotulo' => 'Vistorias',
+            'rota' => 'retaguarda.inicio',
+            'icone' => 'fiscalizacoes',
+            'slug' => 'vistorias',
+            'setores' => ['gestor', 'fiscal' => ['excluir' => false]],
+        ]],
+    ]]);
+
+    $this->seed(PermissoesSetorSeeder::class);
+
+    $semeadas = PermissaoSetor::where('slug', 'vistorias')->get()->keyBy('setor');
+
+    expect($semeadas->keys()->sort()->values()->all())->toBe(['fiscal', 'gestor'])
+        ->and($semeadas['gestor']->excluir)->toBeTrue()
+        ->and($semeadas['fiscal']->excluir)->toBeFalse()
+        // O ajuste é PONTUAL: o que não foi declarado continua vindo do pacote.
+        ->and($semeadas['fiscal']->visivel)->toBeTrue()
+        ->and($semeadas['fiscal']->incluir)->toBeTrue();
+});
+
 test('a semeadura e idempotente e nao desfaz o que o gerente decidiu', function () {
     config()->set('retaguarda_menu.secoes', [[
         'rotulo' => 'Fiscalização',

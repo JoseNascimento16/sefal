@@ -16,6 +16,10 @@ use Illuminate\Database\Seeder;
  * acesso total dele é desvio no código, e linha de tabela alguém desmarca por
  * engano.
  *
+ * A config pode AJUSTAR esse pacote para um setor (`'fiscal' => ['excluir' =>
+ * false]`) — ver {@see CatalogoFuncionalidades::acoesSemente}. Quem decide isso é
+ * a declaração da tela no menu, não este seeder: o seeder só aplica.
+ *
  * Idempotente e NÃO destrutivo: usa `firstOrCreate`, então rodar de novo cria só
  * o que falta e nunca desfaz o que o gerente decidiu na tela. É o que permite
  * semear de novo depois de acrescentar uma tela ao menu, sem medo.
@@ -36,13 +40,7 @@ class PermissoesSetorSeeder extends Seeder
 
                 PermissaoSetor::firstOrCreate(
                     ['setor' => $setor, 'slug' => $slug],
-                    [
-                        'visivel' => true,
-                        'habilitado' => true,
-                        'apenas_leitura' => false,
-                        'incluir' => true,
-                        'excluir' => true,
-                    ],
+                    CatalogoFuncionalidades::acoesSemente($slug, $setor),
                 );
             }
         }

@@ -40,6 +40,17 @@ return [
     | nada: quem concede e quem tira é a tela do Modo Gerente. (O administrador
     | não é semeado: ele é desvio no código, não linha de matriz.)
     |
+    | Cada entrada de `setores` aceita duas formas:
+    |
+    |   'gestor'                          → o pacote da tela: vê, opera, inclui e exclui;
+    |   'fiscal' => ['excluir' => false]  → o mesmo pacote, com o ajuste declarado.
+    |
+    | A forma longa existe para o caso em que "este setor usa esta tela" NÃO quer
+    | dizer o pacote inteiro — o fiscal, que CONSULTA o cadastro de permissionário
+    | pela Retaguarda e cadastra em rua pelo aplicativo. O ajuste fica aqui, junto
+    | do resto da declaração da tela: quem lê "quem entra onde" acha tudo num só
+    | lugar (ver `CatalogoFuncionalidades::acoesSemente`).
+    |
     | Item SEM `slug` fica fora do controle de acesso, e isso é deliberado em dois
     | casos — a tela inicial (barrá-la fecharia um loop de redirecionamento, já
     | que é para lá que a própria negativa manda o usuário) e a área da própria
@@ -68,11 +79,17 @@ return [
          *
          * O fiscal entra aqui, e é o único lugar do menu em que ele entra: o
          * cadastro é a identidade de quem ele vai fiscalizar em rua, e chegar
-         * na calçada sem saber quem está cadastrado é trabalhar às cegas. A
-         * semente concede o pacote da tela (a matriz não tem granularidade na
-         * semeadura — ver `PermissoesSetorSeeder`); o refinamento para
-         * "só consulta" é ato do gestor no Modo Gerente, e está registrado no
-         * doc de regra da tela.
+         * na calçada sem saber quem está cadastrado é trabalhar às cegas.
+         *
+         * Mas ele entra para CONSULTAR. Quem cria e apaga cadastro pela
+         * Retaguarda é a gestão: o fiscal cadastra em RUA, pelo aplicativo, e o
+         * que nasce em rua entra em quarentena até o gestor conferir — criar
+         * direto de mesa passaria ao largo dessa conferência, e apagar cadastro
+         * fiscalizado deixaria o histórico sem alvo. Daí o ajuste na semente
+         * (ver `CatalogoFuncionalidades::acoesSemente`).
+         *
+         * Isto é a CONCESSÃO INICIAL. Alargar ou apertar depois é ato do gestor
+         * no Modo Gerente, e está registrado no doc de regra da tela.
          */
         [
             'rotulo' => 'Fiscalização',
@@ -83,7 +100,11 @@ return [
                     'rota' => 'retaguarda.permissionarios.index',
                     'icone' => 'permissionarios',
                     'slug' => 'permissionarios',
-                    'setores' => ['administrador', 'gestor', 'fiscal'],
+                    'setores' => [
+                        'administrador',
+                        'gestor',
+                        'fiscal' => ['incluir' => false, 'excluir' => false],
+                    ],
                 ],
             ],
         ],

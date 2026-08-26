@@ -89,11 +89,73 @@ class CatalogoFuncionalidades
      */
     public static function setoresSemente(string $slug): array
     {
+        return array_keys(self::semente($slug));
+    }
+
+    /**
+     * As ações com que um setor NASCE numa tela.
+     *
+     * O normal é o pacote inteiro — "este setor usa esta tela" quer dizer ver,
+     * operar, incluir e excluir. Mas há caso em que o pacote inteiro não é o que
+     * se quer dizer, e aí a semente precisa saber disso: o **fiscal** enxerga o
+     * cadastro de permissionário (chegar na calçada sem saber quem está
+     * cadastrado é trabalhar às cegas) e NÃO cria nem apaga por lá — ele cadastra
+     * em rua, pelo aplicativo, e o que nasce em rua entra em quarentena para o
+     * gestor conferir. Criar direto pela Retaguarda passaria ao largo dessa
+     * conferência, e apagar cadastro é ato de gestão.
+     *
+     * A exceção mora na config do menu, junto do resto da declaração da tela, e
+     * não aqui: quem lê "quem entra onde" tem de achar tudo no mesmo lugar.
+     *
+     * @return array<string, bool>
+     */
+    public static function acoesSemente(string $slug, string $setor): array
+    {
+        $pacoteCompleto = [
+            'visivel' => true,
+            'habilitado' => true,
+            'apenas_leitura' => false,
+            'incluir' => true,
+            'excluir' => true,
+        ];
+
+        return [...$pacoteCompleto, ...(self::semente($slug)[$setor] ?? [])];
+    }
+
+    /**
+     * A declaração `setores` de uma tela, normalizada em `setor => ajustes`.
+     *
+     * A config aceita as duas formas — `'fiscal'` (pacote completo) e
+     * `'fiscal' => ['excluir' => false]` (pacote com ajuste) —, e o resto do
+     * código não precisa saber qual delas foi usada.
+     *
+     * @return array<string, array<string, bool>>
+     */
+    private static function semente(string $slug): array
+    {
         foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
             foreach ((array) ($secao['itens'] ?? []) as $item) {
-                if (($item['slug'] ?? null) === $slug) {
-                    return array_values(array_map('strval', (array) ($item['setores'] ?? [])));
+                if (($item['slug'] ?? null) !== $slug) {
+                    continue;
                 }
+
+                $semente = [];
+
+                foreach ((array) ($item['setores'] ?? []) as $chave => $valor) {
+                    // Chave numérica = a forma curta, em que o VALOR é o setor.
+                    if (is_int($chave)) {
+                        $semente[(string) $valor] = [];
+
+                        continue;
+                    }
+
+                    $semente[(string) $chave] = array_map(
+                        static fn (mixed $ligada): bool => (bool) $ligada,
+                        (array) $valor,
+                    );
+                }
+
+                return $semente;
             }
         }
 
