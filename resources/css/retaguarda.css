@@ -1,10 +1,23 @@
 /* ============================================================================
    SEMOP · SEFAL — Design System da Retaguarda
    ----------------------------------------------------------------------------
-   Identidade própria: PETRÓLEO (#0d5c63) como cor institucional e ÂMBAR
-   (#f4a300) como cor de ação e de sinalização — a dupla que a fiscalização de
-   rua usa em placa, cone e faixa. A tipografia é a mesma do resto do app
+   Identidade da PREFEITURA DE SALVADOR, e uma só: AZUL. O azul oficial do
+   brasão (#0066b2) é a cor de AÇÃO — o botão que grava, o campo em foco, o
+   traço que diz "aqui se clica" — e um azul profundo da mesma família (#14477e)
+   veste a estrutura: item de menu ativo, cabeçalho, aba selecionada, brasão. O
+   sistema não tem duas cores de marca. A tipografia é a mesma do resto do app
    (nenhuma fonte nova é carregada; o `body` já aplica a família).
+
+   ⚠️ COR DE MARCA ≠ COR DE ESTADO. O verde de "deu certo", o âmbar de aviso e o
+   vermelho de perigo são SEMÂNTICA: dizem o que aconteceu com o registro, não a
+   que órgão o sistema pertence. Eles NÃO acompanharam a marca para o azul —
+   pintá-los de azul apagaria a informação que carregam. O âmbar, porém, deixou
+   de ser cor de MARCA: nenhum botão, nenhum título e nenhum realce de
+   identidade o usa mais (o que sobrou dele é aviso, e só).
+
+   Os cinzas também são AZUIS. Cinza neutro ao lado de azul profundo puxa para o
+   amarelado e faz a tela parecer suja — é a mesma escolha que o aplicativo do
+   fiscal já tinha consagrado.
 
    COMO ESTE ARQUIVO CONVIVE COM O TAILWIND
    Os tokens são prefixados `--sm-*` de propósito. O tema do Tailwind/shadcn usa
@@ -19,38 +32,50 @@
    trecho). Os dois trocam os MESMOS tokens: nenhuma cor pode ter valor único
    dentro de um só gatilho, senão o outro caminho mostra a tela pela metade.
 
+   O escuro é AZUL MARINHO — não é o claro rebaixado, é outra família: a mesma
+   noite de plantão do aplicativo do fiscal, que separa de longe o modo de
+   trabalho e não puxa para o verde.
+
    @keyframes ficam no FIM e no NÍVEL RAIZ: aninhados em @layer, o minificador
    da build de produção (lightningcss) os descarta em silêncio.
    ============================================================================ */
 
 :root {
-    /* --- Marca --- */
-    --sm-primaria: #0d5c63;
-    --sm-primaria-forte: #0a474d;
-    --sm-primaria-suave: rgba(13, 92, 99, 0.1);
-    --sm-primaria-brilho: rgba(13, 92, 99, 0.18);
-    --sm-acao: #f4a300;
-    --sm-acao-forte: #d68f00;
-    --sm-acao-suave: rgba(244, 163, 0, 0.14);
+    /* --- Marca: estrutura (azul profundo) e ação (azul do brasão) --- */
+    --sm-primaria: #14477e;
+    --sm-primaria-forte: #0e3560;
+    --sm-primaria-suave: rgba(20, 71, 126, 0.1);
+    --sm-primaria-brilho: rgba(20, 71, 126, 0.18);
+    /* #0066b2 é o azul do brasão da Prefeitura, medido no arquivo do kit. */
+    --sm-acao: #0066b2;
+    --sm-acao-forte: #00559a;
+    --sm-acao-suave: rgba(0, 102, 178, 0.12);
 
     /* --- Superfícies e texto (tema claro) --- */
-    --sm-app: #f7f8f8;
+    --sm-app: #f2f5fa;
     --sm-superficie: #ffffff;
-    --sm-superficie-2: #fbfcfc;
-    --sm-muted: #eef1f1;
-    --sm-texto: #15292b;
-    --sm-texto-corpo: #35494b;
-    --sm-texto-fraco: #6b8082;
-    --sm-borda: #dfe5e5;
-    --sm-borda-forte: #c3cfcf;
+    --sm-superficie-2: #f8fafd;
+    --sm-muted: #eef1f7;
+    --sm-texto: #0e1a2c;
+    --sm-texto-corpo: #33445e;
+    /* Um tom mais fechado do que o cinza-azul do aplicativo do fiscal (#64748f):
+       aqui este token também é usado DIRETO sobre o fundo da aplicação (subtítulo
+       de página, paginação, apoio do menu), e lá ele media 4,33:1 — abaixo dos
+       4,5:1 exigidos. Sobre este valor: 4,72:1 no fundo da aplicação e 5,16:1 no
+       cartão branco. */
+    --sm-texto-fraco: #5f6e88;
+    --sm-borda: #d9e0ee;
+    --sm-borda-forte: #b6c2d8;
 
-    /* --- Sinalização --- */
+    /* --- Sinalização (SEMÂNTICA: não acompanha a marca) --- */
     --sm-perigo: #b3261e;
     --sm-perigo-suave: rgba(179, 38, 30, 0.1);
     --sm-ok: #0f7a52;
     --sm-ok-suave: rgba(15, 122, 82, 0.12);
     --sm-aviso: #8a5300;
     --sm-aviso-suave: rgba(244, 163, 0, 0.16);
+    /* O azul de INFORMAÇÃO puxa para o ciano de propósito: ao lado do azul da
+       marca, dois azuis iguais deixariam de informar qualquer coisa. */
     --sm-info: #0b6f8c;
     --sm-info-suave: rgba(11, 111, 140, 0.12);
 
@@ -60,9 +85,9 @@
     --sm-raio-lg: 20px;
     --sm-raio-full: 9999px;
 
-    --sm-sombra-sm: 0 2px 8px rgba(15, 41, 43, 0.06);
-    --sm-sombra-md: 0 10px 24px rgba(15, 41, 43, 0.09);
-    --sm-sombra-lg: 0 24px 48px rgba(15, 41, 43, 0.16);
+    --sm-sombra-sm: 0 2px 8px rgba(13, 30, 56, 0.07);
+    --sm-sombra-md: 0 10px 24px rgba(13, 30, 56, 0.1);
+    --sm-sombra-lg: 0 24px 48px rgba(13, 30, 56, 0.18);
 
     --sm-transicao: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     --sm-menu-largura: 272px;
@@ -71,36 +96,38 @@
 
 .dark,
 [data-theme='dark'] {
-    --sm-primaria: #4cb3ba;
-    --sm-primaria-forte: #6ec7cd;
-    --sm-primaria-suave: rgba(76, 179, 186, 0.16);
-    --sm-primaria-brilho: rgba(76, 179, 186, 0.24);
-    --sm-acao: #f7b733;
-    --sm-acao-forte: #ffc857;
-    --sm-acao-suave: rgba(247, 183, 51, 0.18);
+    /* A família inteira clareia para continuar legível sobre o marinho, mas
+       continua sendo a MESMA família — nada de um segundo azul. */
+    --sm-primaria: #6aa6f0;
+    --sm-primaria-forte: #8cbdf7;
+    --sm-primaria-suave: rgba(106, 166, 240, 0.18);
+    --sm-primaria-brilho: rgba(106, 166, 240, 0.26);
+    --sm-acao: #4d9fdc;
+    --sm-acao-forte: #6fb5e8;
+    --sm-acao-suave: rgba(77, 159, 220, 0.2);
 
-    --sm-app: #0a1214;
-    --sm-superficie: #111d1f;
-    --sm-superficie-2: #16262a;
-    --sm-muted: #16262a;
-    --sm-texto: #e8f1f1;
-    --sm-texto-corpo: #c3d4d5;
-    --sm-texto-fraco: #8ba4a6;
-    --sm-borda: #23383b;
-    --sm-borda-forte: #33504f;
+    --sm-app: #0a1628;
+    --sm-superficie: #0f1d33;
+    --sm-superficie-2: #132542;
+    --sm-muted: #132542;
+    --sm-texto: #e9effb;
+    --sm-texto-corpo: #c4d2e8;
+    --sm-texto-fraco: #8d9ec0;
+    --sm-borda: #1e3252;
+    --sm-borda-forte: #2f4a76;
 
-    --sm-perigo: #f28b84;
-    --sm-perigo-suave: rgba(242, 139, 132, 0.16);
+    --sm-perigo: #ff8c84;
+    --sm-perigo-suave: rgba(255, 140, 132, 0.18);
     --sm-ok: #4ddba4;
     --sm-ok-suave: rgba(77, 219, 164, 0.16);
-    --sm-aviso: #f7b733;
-    --sm-aviso-suave: rgba(247, 183, 51, 0.18);
-    --sm-info: #57c4e3;
-    --sm-info-suave: rgba(87, 196, 227, 0.16);
+    --sm-aviso: #ff9a4d;
+    --sm-aviso-suave: rgba(255, 154, 77, 0.18);
+    --sm-info: #7cc4ff;
+    --sm-info-suave: rgba(124, 196, 255, 0.16);
 
-    --sm-sombra-sm: 0 2px 8px rgba(0, 0, 0, 0.34);
-    --sm-sombra-md: 0 12px 28px rgba(0, 0, 0, 0.42);
-    --sm-sombra-lg: 0 24px 48px rgba(0, 0, 0, 0.5);
+    --sm-sombra-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --sm-sombra-md: 0 12px 28px rgba(0, 0, 0, 0.5);
+    --sm-sombra-lg: 0 24px 48px rgba(0, 0, 0, 0.58);
 
     /* Controles nativos do navegador (lista do <select>, barra de rolagem,
        seletor de data) desenhados no escuro. Sem isto o Chromium abre a lista
@@ -132,22 +159,33 @@
     width: 100%;
 }
 
-/* Primário = petróleo com um fio de âmbar embaixo: a assinatura visual do
-   sistema aparece já no botão principal. */
+/* Primário = o AZUL DO BRASÃO com um fio do azul profundo embaixo: a assinatura
+   visual do sistema aparece já no botão principal, e é o botão que grava que
+   carrega a cor de ação — não a moldura da tela. */
 .btn-primary {
-    background: var(--sm-primaria);
+    background: var(--sm-acao);
     color: #fff;
-    box-shadow: inset 0 -2px 0 var(--sm-acao);
+    box-shadow: inset 0 -2px 0 var(--sm-primaria-forte);
 }
 .btn-primary:hover {
-    background: var(--sm-primaria-forte);
+    background: var(--sm-acao-forte);
     box-shadow:
-        inset 0 -2px 0 var(--sm-acao),
+        inset 0 -2px 0 var(--sm-primaria-forte),
         var(--sm-sombra-md);
 }
+/* No escuro o azul clareia, e branco sobre ele não chega aos 4,5:1 exigidos: o
+   texto vira tinta marinho (5,69:1 medido). O fio de baixo também inverte —
+   sobre um azul claro, o azul profundo do tema claro sumiria. */
 .dark .btn-primary,
 [data-theme='dark'] .btn-primary {
-    color: #06181a;
+    color: #04213a;
+    box-shadow: inset 0 -2px 0 rgba(4, 33, 58, 0.55);
+}
+.dark .btn-primary:hover,
+[data-theme='dark'] .btn-primary:hover {
+    box-shadow:
+        inset 0 -2px 0 rgba(4, 33, 58, 0.55),
+        var(--sm-sombra-md);
 }
 
 .btn-secondary {
@@ -523,20 +561,53 @@ table.data-table tbody tr.clicavel {
     align-items: center;
     gap: 12px;
 }
+/* ── O brasão da Prefeitura ──────────────────────────────────────────────────
+   Ele entra em DOIS registros, e a diferença é proposital: ao lado do nome do
+   produto vai só o ESCUDO, porque ali quem tem de ser lido é "SEFAL"; o lockup
+   completo — escudo, "SALVADOR PREFEITURA" e a assinatura — desce para o pé do
+   menu, que é onde a autoria do sistema é declarada sem disputar com o trabalho.
+
+   Os arquivos são servidos de `public/` como imagem, e não pelo empacotador: o
+   desenho do escudo passa de 80 KB e não tem por que atravessar o bundle.
+
+   Duas versões de cada, porque o fundo do menu muda com o tema: a colorida no
+   claro, a branca no escuro. Uma só ficaria invisível em metade dos casos. */
 .rt-marca-selo {
     display: grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
-    border-radius: var(--sm-raio-md);
-    background: linear-gradient(
-        140deg,
-        var(--sm-primaria),
-        var(--sm-primaria-forte)
-    );
-    color: #fff;
-    box-shadow: inset 0 -3px 0 var(--sm-acao);
+}
+.rt-marca-selo img {
+    width: 40px;
+    height: auto;
+}
+.rt-marca-pe {
+    width: 154px;
+    height: auto;
+    margin-bottom: 10px;
+}
+/* A troca por tema é por VISIBILIDADE, e não por `src` trocado em JavaScript: a
+   escolha do tema acontece antes da primeira pintura, e um `src` condicional
+   piscaria a versão errada.
+
+   ⚠️ Nenhuma outra regra deste arquivo declara `display` para estas imagens — se
+   declarasse com mais especificidade (`.rt-marca-selo img`, por exemplo), o
+   `display: none` daqui perderia e as DUAS versões apareceriam empilhadas. */
+.rt-marca-clara {
+    display: block;
+}
+.rt-marca-escura {
+    display: none;
+}
+.dark .rt-marca-clara,
+[data-theme='dark'] .rt-marca-clara {
+    display: none;
+}
+.dark .rt-marca-escura,
+[data-theme='dark'] .rt-marca-escura {
+    display: block;
 }
 .rt-marca-nome {
     font-size: 15px;
@@ -590,7 +661,7 @@ table.data-table tbody tr.clicavel {
 }
 .dark .rt-menu-item.ativo,
 [data-theme='dark'] .rt-menu-item.ativo {
-    color: #06181a;
+    color: #04213a;
 }
 .rt-menu-vazio {
     padding: 8px 12px 10px;
@@ -602,6 +673,8 @@ table.data-table tbody tr.clicavel {
     padding-top: 14px;
     border-top: 1px solid var(--sm-borda);
     font-size: 11.5px;
+    line-height: 1.5;
+    text-align: center;
     color: var(--sm-texto-fraco);
 }
 
@@ -913,7 +986,7 @@ table.data-table tbody tr.clicavel {
 }
 .dark .paginacao-pagina[aria-current='page'],
 [data-theme='dark'] .paginacao-pagina[aria-current='page'] {
-    color: #06181a;
+    color: #04213a;
 }
 
 /* ============================ ANIMAÇÕES ============================ */

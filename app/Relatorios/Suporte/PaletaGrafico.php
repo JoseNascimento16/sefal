@@ -11,14 +11,22 @@ namespace App\Relatorios\Suporte;
  * listas de cores dariam ao mesmo dado duas aparências, e a legenda de uma
  * contradiria a da outra.
  *
- * A base começa pelas cores da identidade do SEFAL (petróleo e âmbar).
+ * A base começa pela cor da identidade do SEFAL (o azul da Prefeitura) e segue
+ * por matizes que se distinguem dela.
  */
 class PaletaGrafico
 {
-    /** Cores base institucionais, em ordem fixa. */
+    /**
+     * Cores base institucionais, em ordem fixa.
+     *
+     * ⚠️ Aqui NÃO se põe o segundo azul da marca (#0066b2) logo depois do
+     * primeiro: em gráfico, duas cores vizinhas da mesma família deixam de dizer
+     * qual categoria é qual — e é justamente isso que a legenda promete. Cor de
+     * MARCA abre a lista; da segunda em diante o critério é ser distinguível.
+     */
     private const BASE = [
-        '#0d5c63', '#f4a300', '#0b6f8c', '#0f7a52', '#b3261e', '#6b8082',
-        '#8a5300', '#0a474d', '#7c3aed', '#0d9488', '#d946ef', '#84cc16',
+        '#14477e', '#f4a300', '#0b6f8c', '#0f7a52', '#b3261e', '#64748f',
+        '#8a5300', '#7c3aed', '#0d9488', '#d946ef', '#84cc16', '#0066b2',
     ];
 
     /**

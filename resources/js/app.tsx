@@ -32,9 +32,10 @@ createInertiaApp({
         );
     },
     progress: {
-        // Âmbar da sinalização: a barra de progresso é o único aviso de que algo
-        // está em curso quando a resposta demora.
-        color: '#f4a300',
+        // O azul do brasão (a cor de AÇÃO): a barra de progresso é o único aviso
+        // de que algo está em curso quando a resposta demora, e é a mesma cor do
+        // botão que a pessoa acabou de apertar.
+        color: '#0066b2',
     },
 });
 

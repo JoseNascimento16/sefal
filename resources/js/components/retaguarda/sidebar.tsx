@@ -1,5 +1,4 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ShieldCheck } from 'lucide-react';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { iconeDoMenu } from '@/lib/icones-menu';
 import { cn } from '@/lib/utils';
@@ -35,8 +34,26 @@ export function Sidebar({
                 onClick={onFechar}
                 aria-label="Ir para a tela inicial"
             >
+                {/* O brasão da Prefeitura, nas duas versões: a colorida vale no
+                    tema claro, a branca no escuro. Qual aparece é decidido no
+                    CSS (ver `.rt-marca-clara` / `.rt-marca-escura`), e não aqui
+                    — o tema é aplicado antes da primeira pintura, e um `src`
+                    condicional piscaria a versão errada. */}
                 <span className="rt-marca-selo">
-                    <ShieldCheck size={22} aria-hidden />
+                    {/* Decorativos de propósito: o nome acessível deste link é o
+                        `aria-label` acima, e "SEFAL" está escrito ao lado. */}
+                    <img
+                        className="rt-marca-clara"
+                        src="/images/marca/brasao-salvador-cor.svg"
+                        alt=""
+                        aria-hidden
+                    />
+                    <img
+                        className="rt-marca-escura"
+                        src="/images/marca/brasao-salvador-branco.svg"
+                        alt=""
+                        aria-hidden
+                    />
                 </span>
                 <span>
                     <span className="rt-marca-nome">SEFAL</span>
@@ -82,7 +99,24 @@ export function Sidebar({
                 ))}
             </nav>
 
-            <div className="rt-sidebar-pe">SEMOP · Prefeitura de Salvador</div>
+            {/* No pé, o lockup completo da Prefeitura — é aqui que a autoria do
+                sistema é declarada, longe do trabalho. O texto abaixo dele diz o
+                ÓRGÃO por extenso, que o lockup não diz; repetir "Prefeitura de
+                Salvador" em palavras ao lado do desenho que já a nomeia seria a
+                mesma informação duas vezes. */}
+            <div className="rt-sidebar-pe">
+                <img
+                    className="rt-marca-pe rt-marca-clara"
+                    src="/images/marca/salvador-horizontal-cor.svg"
+                    alt="Prefeitura de Salvador"
+                />
+                <img
+                    className="rt-marca-pe rt-marca-escura"
+                    src="/images/marca/salvador-horizontal-branco.svg"
+                    alt="Prefeitura de Salvador"
+                />
+                SEMOP · Secretaria de Ordem Pública
+            </div>
         </aside>
     );
 }
