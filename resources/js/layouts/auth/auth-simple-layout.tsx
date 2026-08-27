@@ -49,12 +49,11 @@ export default function AuthSimpleLayout({
                     do permissionário ao que o fiscal registra na calçada.
                 </p>
 
+                {/* Só o TEXTO institucional no pé. O lockup gráfico da Prefeitura
+                    saiu por decisão do dono: com o escudo e o nome do sistema já no
+                    topo deste mesmo painel, ele era a mesma marca duas vezes na
+                    mesma tela. */}
                 <div className="rt-entrada-pe">
-                    <img
-                        className="rt-entrada-lockup"
-                        src="/images/marca/salvador-horizontal-branco.svg"
-                        alt="Prefeitura de Salvador"
-                    />
                     SEMOP · Secretaria de Ordem Pública
                     <br />
                     Acesso restrito a servidores autorizados.
@@ -87,31 +86,10 @@ export default function AuthSimpleLayout({
                     )}
                 </button>
 
+                {/* Sem repetir a marca deste lado: o escudo, "SEFAL" e o
+                    subtítulo já estão no topo do painel da esquerda, e ali eles
+                    aparecem grandes. O cartão fica centrado sozinho no espaço. */}
                 <div className="rt-entrada-caixa">
-                    <div className="rt-entrada-cabeca">
-                        <img
-                            className="rt-marca-clara"
-                            src="/images/marca/brasao-salvador-cor.svg"
-                            alt=""
-                            aria-hidden
-                        />
-                        <img
-                            className="rt-marca-escura"
-                            src="/images/marca/brasao-salvador-branco.svg"
-                            alt=""
-                            aria-hidden
-                        />
-                        <div>
-                            <span className="rt-marca-nome">SEFAL</span>
-                            <span
-                                className="rt-marca-sub"
-                                style={{ display: 'block' }}
-                            >
-                                SEMOP · Prefeitura de Salvador
-                            </span>
-                        </div>
-                    </div>
-
                     <div className="card-premium">
                         <h1
                             style={{

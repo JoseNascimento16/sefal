@@ -973,35 +973,19 @@ button.rt-menu-item {
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.88);
 }
-.rt-entrada-lockup {
-    display: block;
-    width: 176px;
-    height: auto;
-    margin-bottom: 12px;
-}
-
 .rt-entrada-form {
     position: relative;
     display: grid;
     place-items: center;
     padding: 46px 32px;
 }
+/* Só o cartão do formulário mora aqui. A marca NÃO se repete deste lado: o
+   escudo, "SEFAL" e o subtítulo já estão no topo do painel da esquerda, e ali eles
+   aparecem grandes — repetir seria a mesma marca duas vezes na mesma tela
+   (decisão do dono). */
 .rt-entrada-caixa {
     width: 100%;
     max-width: 420px;
-}
-/* O brasão e o nome do sistema também no lado do formulário: em telas estreitas,
-   quando a arte encolhe para uma faixa, é este bloco que segura a identidade. */
-.rt-entrada-cabeca {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-.rt-entrada-cabeca img {
-    width: 38px;
-    height: auto;
-    flex: 0 0 38px;
 }
 
 /* ── Telas estreitas ─────────────────────────────────────────────────────────
