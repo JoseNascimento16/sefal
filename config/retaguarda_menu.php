@@ -27,6 +27,15 @@ return [
     |             (`resources/js/components/retaguarda/sidebar.tsx`). Mesmo assim o
     |             item declara `rota`: é dela que a permissão é deduzida, e é ela
     |             que o painel consulta para receber os dados.
+    |   curto   — opcional: o rótulo de UMA PALAVRA usado quando o menu está
+    |             retraído (a doca), onde cabem ~9 caracteres. Sem ele, a doca usa
+    |             a primeira palavra do `rotulo` — o que basta para "Relatórios" e
+    |             não basta para as seis telas que começam em "Tipos de…".
+    |   contador— opcional: o NÚMERO VIVO ao lado do item. O valor é uma chave do
+    |             catálogo em `App\Support\ContadoresDoMenu`, que decide como
+    |             apurar e com que tom (neutro = tamanho, alerta = fila). Só
+    |             declare onde o número muda a decisão de quem olha: cada contador
+    |             custa uma contagem por requisição.
     |
     | ── `slug` e `setores`: quem decide o acesso ────────────────────────────
     |
@@ -113,6 +122,11 @@ return [
                     'rota' => 'retaguarda.permissionarios.index',
                     'icone' => 'permissionarios',
                     'slug' => 'permissionarios',
+                    'curto' => 'AMBULANTES',
+                    // O tamanho do cadastro, ao lado do item. A FILA de conferência
+                    // (quem nasceu em rua e espera validação) ganha o seu contador
+                    // quando a tela de quarentena existir — o catálogo já a tem.
+                    'contador' => 'permissionarios',
                     'setores' => [
                         'administrador',
                         'gestor',
@@ -143,6 +157,7 @@ return [
                     'rotulo' => 'Tipos de Infração',
                     'rota' => 'retaguarda.parametrizacao.tipos-de-infracao.index',
                     'icone' => 'parametrizacao',
+                    'curto' => 'INFRAÇÕES',
                     'slug' => 'parametrizacao',
                     'setores' => ['administrador', 'gestor'],
                 ],
@@ -150,6 +165,7 @@ return [
                     'rotulo' => 'Atividades do Ambulante',
                     'rota' => 'retaguarda.parametrizacao.atividades-do-ambulante.index',
                     'icone' => 'parametrizacao',
+                    'curto' => 'ATIVIDADES',
                     'slug' => 'parametrizacao',
                     'setores' => ['administrador', 'gestor'],
                 ],
@@ -157,6 +173,7 @@ return [
                     'rotulo' => 'Unidades de Medida',
                     'rota' => 'retaguarda.parametrizacao.unidades-de-medida.index',
                     'icone' => 'parametrizacao',
+                    'curto' => 'UNIDADES',
                     'slug' => 'parametrizacao',
                     'setores' => ['administrador', 'gestor'],
                 ],
@@ -164,6 +181,7 @@ return [
                     'rotulo' => 'Tipos de Operação',
                     'rota' => 'retaguarda.parametrizacao.tipos-de-operacao.index',
                     'icone' => 'parametrizacao',
+                    'curto' => 'OPERAÇÕES',
                     'slug' => 'parametrizacao',
                     'setores' => ['administrador', 'gestor'],
                 ],
@@ -171,6 +189,7 @@ return [
                     'rotulo' => 'Origens de Operação',
                     'rota' => 'retaguarda.parametrizacao.origens-de-operacao.index',
                     'icone' => 'parametrizacao',
+                    'curto' => 'ORIGENS',
                     'slug' => 'parametrizacao',
                     'setores' => ['administrador', 'gestor'],
                 ],
@@ -178,6 +197,7 @@ return [
                     'rotulo' => 'Motivos de Recusa',
                     'rota' => 'retaguarda.parametrizacao.motivos-de-recusa.index',
                     'icone' => 'parametrizacao',
+                    'curto' => 'RECUSAS',
                     'slug' => 'parametrizacao',
                     'setores' => ['administrador', 'gestor'],
                 ],
@@ -191,6 +211,7 @@ return [
                     'rotulo' => 'Meu Perfil',
                     'rota' => 'profile.edit',
                     'icone' => 'perfil',
+                    'curto' => 'PERFIL',
                     'setores' => [],
                 ],
                 [
@@ -206,6 +227,7 @@ return [
                     'rotulo' => 'Monitoramento',
                     'rota' => 'retaguarda.monitoramento.index',
                     'icone' => 'monitoramento',
+                    'curto' => 'MONITOR',
                     'slug' => 'monitoramento',
                     // Diagnóstico do ambiente: quem responde por "o sistema está
                     // de pé?" é quem administra e quem gerencia a operação. O
@@ -226,6 +248,7 @@ return [
                     'rotulo' => 'Acompanhamento de Requisitos',
                     'rota' => 'retaguarda.acompanhamento-de-requisitos.index',
                     'icone' => 'requisitos',
+                    'curto' => 'REQUISITOS',
                     'slug' => 'acompanhamento-de-requisitos',
                     // Só o administrador: a tela é o retrato da CONSTRUÇÃO do
                     // sistema (o que tem requisito escrito, o que divergiu), não
@@ -237,6 +260,7 @@ return [
                     'rotulo' => 'Modo Gerente',
                     'rota' => 'retaguarda.modo-gerente.index',
                     'icone' => 'permissoes',
+                    'curto' => 'ACESSOS',
                     'slug' => 'modo-gerente',
                     // Abre SOBRE a tela atual, em vez de navegar: quem distribui
                     // acesso está no meio de uma conferência, e ir para outra

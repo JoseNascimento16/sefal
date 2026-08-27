@@ -1,8 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import {
     Check,
-    CircleCheck,
-    CircleSlash,
     Eye,
     List,
     Pencil,
@@ -141,17 +139,17 @@ function casaNoDocumento(termoSemMascara: string, documento: string | null): boo
 }
 
 /** O selo de cada situação — cor com significado, não decoração. */
-function seloDaSituacao(situacao: string): { classe: string; Icone: typeof CircleCheck } {
+function seloDaSituacao(situacao: string): string {
     if (situacao === 'Regular') {
-        return { classe: 'selo-ok', Icone: CircleCheck };
+        return 'selo-ok';
     }
 
     if (situacao === 'Irregular') {
-        return { classe: 'selo-perigo', Icone: TriangleAlert };
+        return 'selo-perigo';
     }
 
     // Cadastrado em campo: está esperando alguém decidir — nem certo, nem errado.
-    return { classe: 'selo-aviso', Icone: CircleSlash };
+    return 'selo-aviso';
 }
 
 /**
@@ -361,6 +359,36 @@ export default function CadastroDePermissionario({
     const ord = useOrdenacao(filtrados, { campo: 'nome', acessor: 'nome' });
     const pag = usePaginacao(ord.itens);
 
+    /*
+     * Os números do cabeçalho. Contados sobre a lista INTEIRA que o servidor
+     * mandou — não sobre `filtrados` —, porque eles respondem "como está o
+     * cadastro", e não "quantos casaram com a busca": mudar de resposta enquanto
+     * alguém digita faria o painel de números virar um segundo resultado de busca.
+     *
+     * As situações vêm do servidor (`situacoes`), então a conta não repete aqui os
+     * textos do catálogo — que é o que faria a soma parar de fechar no dia em que
+     * uma situação fosse renomeada.
+     */
+    /*
+     * A quarentena, pelo nome que o SERVIDOR usa: é a terceira do catálogo
+     * (`Permissionario::SITUACOES`). Escrever "Cadastrado em campo" aqui daria dois
+     * donos ao mesmo texto — e no dia em que ele mudasse, a marca de pendência
+     * sumiria da grade sem nada quebrar.
+     */
+    const situacaoDeCampo = situacoes[2] ?? '';
+
+    const numeros = useMemo(() => {
+        const [regular, irregular, campo] = situacoes;
+
+        return {
+            total: permissionarios.length,
+            regulares: permissionarios.filter((p) => p.situacao === regular).length,
+            irregulares: permissionarios.filter((p) => p.situacao === irregular)
+                .length,
+            emCampo: permissionarios.filter((p) => p.situacao === campo).length,
+        };
+    }, [permissionarios, situacoes]);
+
     function abrir(p: Permissionario) {
         setAberto(p);
         setForm(formularioDe(p, situacoes[0] ?? ''));
@@ -502,6 +530,31 @@ export default function CadastroDePermissionario({
                         campo</strong> até alguém conferir.
                     </p>
                 </div>
+
+                {/* Os números do dia. Saem da MESMA lista que a grade desenha, e
+                    não de uma consulta própria: assim eles não podem discordar do
+                    que está logo abaixo — e não custam nada ao servidor. */}
+                <div className="rt-numeros">
+                    <div className="rt-numero">
+                        <strong>{numeros.total}</strong>
+                        <span>cadastrados</span>
+                    </div>
+                    <div className="rt-numeros-separador" />
+                    <div className="rt-numero ok">
+                        <strong>{numeros.regulares}</strong>
+                        <span>regulares</span>
+                    </div>
+                    <div className="rt-numeros-separador" />
+                    <div className="rt-numero alerta">
+                        <strong>{numeros.irregulares}</strong>
+                        <span>irregulares</span>
+                    </div>
+                    <div className="rt-numeros-separador" />
+                    <div className="rt-numero info">
+                        <strong>{numeros.emCampo}</strong>
+                        <span>a conferir</span>
+                    </div>
+                </div>
             </div>
 
             <div className="card-premium">
@@ -545,7 +598,10 @@ export default function CadastroDePermissionario({
                         <BuscaInteligente
                             busca={busca}
                             setBusca={setBusca}
-                            placeholder="Procure por nome, apelido, documento ou nº da permissão"
+                            /* O exemplo entra no próprio campo: "procure por
+                               nome, apelido…" ensina o que a busca aceita, e a
+                               frase de exemplo ensina COMO se pergunta. */
+                            placeholder='Nome, apelido, documento, atividade ou situação — ex.: "irregulares sem documento"'
                             exemplos={[
                                 'cadastrado em campo',
                                 'sem documento',
@@ -684,6 +740,14 @@ export default function CadastroDePermissionario({
                                                 {...linhaClicavel(
                                                     () => abrir(p),
                                                     `Abrir o cadastro de ${p.apelido ?? p.nome}`,
+                                                    /* Cadastro nascido em rua
+                                                       espera conferência: a linha
+                                                       ganha a marca laranja na
+                                                       ponta, lida de relance sem
+                                                       chegar até a coluna de
+                                                       situação. */
+                                                    p.situacao === situacaoDeCampo &&
+                                                        'pendente',
                                                 )}
                                             >
                                                 <td>
@@ -715,13 +779,17 @@ export default function CadastroDePermissionario({
                                                 <td>{p.atividade || VAZIO}</td>
                                                 <td>{dataBR(p.validade_permissao)}</td>
                                                 <td>
+                                                    {/* Ponto de cor antes da
+                                                        palavra: o estado é lido de
+                                                        relance, e a palavra
+                                                        confirma. */}
                                                     <span
-                                                        className={cn('selo', selo.classe)}
+                                                        className={cn('selo', selo)}
                                                     >
-                                                        <selo.Icone
-                                                            size={13}
+                                                        <span
+                                                            className="selo-dot"
                                                             aria-hidden
-                                                        />{' '}
+                                                        />
                                                         {p.situacao}
                                                     </span>
                                                 </td>

@@ -4,8 +4,10 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Services\PermissaoService;
+use App\Support\ContadoresDoMenu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -224,6 +226,18 @@ class HandleInertiaRequests extends Middleware
                     // (ver o cabeçalho de `config/retaguarda_menu.php`). A `url`
                     // continua indo: é dela que o painel busca os dados.
                     'modal' => $item['modal'] ?? null,
+                    /*
+                     * O rótulo curto do menu RETRAÍDO (a doca), onde cabem umas
+                     * nove letras. Sem declaração, a primeira palavra do rótulo —
+                     * que resolve "Relatórios" e não resolve as seis telas que
+                     * começam em "Tipos de…", daí a chave `curto` na config.
+                     */
+                    'curto' => $item['curto'] ?? Str::upper(Str::before($item['rotulo'], ' ')),
+                    // O número vivo, quando o item declara um (melhor esforço:
+                    // contagem que falha vira `null` e o item aparece sem número).
+                    'contador' => isset($item['contador'])
+                        ? ContadoresDoMenu::para((string) $item['contador'])
+                        : null,
                 ];
             }
 

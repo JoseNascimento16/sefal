@@ -90,7 +90,7 @@
     --sm-sombra-lg: 0 24px 48px rgba(13, 30, 56, 0.18);
 
     --sm-transicao: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    --sm-menu-largura: 272px;
+    --sm-menu-largura: 292px;
     --sm-topbar-altura: 68px;
 }
 
@@ -347,24 +347,34 @@ select.form-control {
     color: var(--sm-texto-fraco);
 }
 
-/* ============================ TABELA ============================ */
+/* ============================ TABELA ============================
+   As linhas são CARTÕES, e não linhas de grade: cada registro é uma coisa do
+   mundo (uma pessoa que trabalha na rua), e o cartão dá a ela um corpo próprio —
+   com borda esquerda quando há pendência, que é o que faz a fila salta ao olho
+   sem ninguém ler coluna por coluna.
+
+   Tecnicamente isso é `border-spacing` no lugar de `border-collapse`: é o único
+   jeito de uma linha de tabela ter raio e sombra. Segue sendo `<table>` — a
+   semântica de tabela é o que faz leitor de tela anunciar "coluna Situação,
+   Regular" em vez de ler quatro textos soltos. */
 .table-wrap {
     overflow-x: auto;
 }
 table.data-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0 10px;
     font-size: 14px;
 }
 table.data-table th {
     text-align: left;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.09em;
     color: var(--sm-texto-fraco);
-    padding: 0 14px 12px;
-    border-bottom: 1px solid var(--sm-borda);
+    padding: 0 18px 10px;
+    border-bottom: 2px solid var(--sm-borda);
 }
 /* O espaçamento do cabeçalho ordenável passa para DENTRO do botão, e a célula
    fica sem o dela. Com o padding no `<th>`, a faixa de 14px nas laterais e 12px
@@ -411,20 +421,42 @@ table.data-table th.ord.ord-ativa .ord-ico {
     opacity: 1;
 }
 table.data-table td {
-    padding: 14px;
-    border-bottom: 1px solid var(--sm-borda);
+    padding: 15px 18px;
+    background: var(--sm-superficie);
     color: var(--sm-texto-corpo);
     vertical-align: middle;
     overflow-wrap: break-word;
+    /* A sombra do cartão é declarada NA CÉLULA porque `<tr>` não a desenha em
+       todos os navegadores; o raio é aplicado só nas pontas, abaixo. */
+    box-shadow: 0 1px 2px rgba(13, 30, 56, 0.05);
+    /* Só o que muda no `:hover`, e não `all`: numa grade de 20 linhas × 6 colunas,
+       `all` põe 120 células animando a cada troca de tema. */
+    transition:
+        background-color 0.18s ease,
+        box-shadow 0.18s ease;
 }
-table.data-table tbody tr:hover {
-    background: var(--sm-muted);
+table.data-table td:first-child {
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
 }
-table.data-table tbody tr:last-child td {
-    border-bottom: none;
+table.data-table td:last-child {
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+}
+table.data-table tbody tr:hover td {
+    background: var(--sm-superficie-2);
+    box-shadow: 0 2px 4px rgba(13, 30, 56, 0.07);
 }
 table.data-table tbody tr.clicavel {
     cursor: pointer;
+}
+/* Linha com PENDÊNCIA — o que espera alguém agir. A borda laranja na ponta
+   esquerda é lida de relance, sem precisar chegar até a coluna de situação: é a
+   mesma cor de incidência do resto do sistema. Ponha `pendente` na `<tr>`. */
+table.data-table tbody tr.pendente td:first-child {
+    box-shadow:
+        inset 3px 0 0 var(--sm-aviso),
+        0 1px 2px rgba(13, 30, 56, 0.05);
 }
 /* Protocolo, número e documento não se quebram no meio: com a quebra, o texto
    fica ilegível e impossível de copiar. A largura sobra rolando o .table-wrap. */
@@ -477,15 +509,28 @@ table.data-table tbody tr.clicavel {
     white-space: nowrap;
 }
 
-/* ============================ SELOS ============================ */
+/* ============================ SELOS ============================
+   Chip de situação. Quem quiser o PONTO na frente — o glóbulo de cor com halo,
+   que dá a leitura de "estado" antes de a palavra ser lida — põe um
+   `<span class="selo-dot" />` dentro do selo. O halo é `box-shadow`, não borda:
+   borda ocuparia espaço e desalinharia o texto do chip. */
 .selo {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 11px;
+    gap: 7px;
+    padding: 5px 12px;
     border-radius: var(--sm-raio-full);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 650;
+}
+.selo-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    /* Herda a cor do selo: um dono só para a cor do estado. */
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
 }
 .selo-neutro {
     background: var(--sm-muted);
@@ -508,187 +553,465 @@ table.data-table tbody tr.clicavel {
     color: var(--sm-info);
 }
 
-/* ============================ ESTRUTURA DA RETAGUARDA ============================ */
+/* ==================== A CASCA: EDITORIAL CURVO ====================
+   O desenho aprovado pelo dono. Duas ideias sustentam tudo o que vem abaixo:
+
+   1. **A moldura é escura, o trabalho é claro.** O painel do menu é navy nos DOIS
+      temas — a cidade de noite de um lado, a mesa iluminada do outro —, com o
+      canto direito curvado, o que faz o miolo parecer uma folha apoiada sobre ele
+      em vez de duas colunas encostadas. Por ser fixo, o painel NÃO usa os tokens
+      de superfície: no tema claro ele ficaria branco e a moldura desapareceria.
+
+   2. **O topo da tela pertence à PÁGINA, não ao sistema.** Não há barra superior.
+      A sobrancelha da seção, o título grande e o subtítulo — que cada tela já
+      escrevia no seu `.rt-page-head` — passam a ser o cabeçalho editorial. Tema e
+      avisos viram um cluster discreto no canto (`.rt-cluster`); identidade e sair
+      moram no cartão do usuário, no pé do menu. A barra antiga gastava 68px de
+      altura em toda tela para repetir, em corpo 13, o que o título já diz.
+
+   As cores fixas do painel vivem aqui, com nome: são a paleta da moldura, e a
+   troca de tema não as alcança de propósito. */
+:root {
+    --sm-menu-fundo: linear-gradient(200deg, #123054 0%, #0d1f3c 45%, #0a1628 100%);
+    --sm-menu-texto: #b9cde3;
+    --sm-menu-texto-forte: #eaf2fa;
+    --sm-menu-texto-fraco: rgba(214, 230, 245, 0.55);
+    --sm-menu-linha: rgba(122, 175, 220, 0.18);
+    --sm-menu-cartao: rgba(10, 22, 40, 0.55);
+    --sm-menu-curva: 44px;
+}
+
 .rt-shell {
     display: flex;
     min-height: 100vh;
     background: var(--sm-app);
     color: var(--sm-texto-corpo);
 }
+
+/* ── O painel estendido ──────────────────────────────────────────────────── */
 .rt-sidebar {
+    /* GRUDADO no alto e da altura da janela: o painel é moldura, não conteúdo que
+       rola. Sem isto ele crescia junto com a página, e numa tela longa o cartão do
+       usuário — que é onde mora o SAIR — ficava metros abaixo da dobra. Com a
+       altura fixa, quem rola por dentro é a lista de itens (`.rt-menu`). */
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    isolation: isolate;
+    z-index: 1;
     width: var(--sm-menu-largura);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 20px 16px;
-    background: var(--sm-superficie);
-    border-right: 1px solid var(--sm-borda);
+    gap: 14px;
+    padding: 28px 0 22px;
+    overflow: hidden;
+    background: var(--sm-menu-fundo);
+    border-radius: 0 var(--sm-menu-curva) var(--sm-menu-curva) 0;
+    box-shadow: 12px 0 44px rgba(10, 22, 40, 0.25);
+    color: var(--sm-menu-texto);
 }
-@media (max-width: 900px) {
-    .rt-sidebar {
-        position: fixed;
-        inset: 0 auto 0 0;
-        z-index: 60;
-        transform: translateX(-100%);
-        transition: transform 0.25s ease;
-        box-shadow: var(--sm-sombra-lg);
-    }
-    .rt-sidebar.aberta {
-        transform: translateX(0);
-    }
+/* No escuro o painel e o fundo da aplicação são da mesma família: sem uma linha
+   de luz na borda, a curva desaparece e as duas áreas viram uma só. */
+.dark .rt-sidebar,
+[data-theme='dark'] .rt-sidebar {
+    box-shadow:
+        12px 0 44px rgba(0, 0, 0, 0.45),
+        inset -1px 0 0 rgba(122, 175, 220, 0.14);
 }
-.rt-veu {
-    position: fixed;
-    inset: 0;
-    z-index: 55;
-    background: rgba(10, 18, 20, 0.5);
+/* A malha de ruas no pé do painel: a cidade por baixo do menu. Decoração — nenhum
+   traço ali é dado do sistema. */
+.rt-sidebar-malha {
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 220px;
+    opacity: 0.35;
+    pointer-events: none;
 }
-/* O botão que abre o menu e o ponto em que a barra passa a deslizar por cima do
-   conteúdo compartilham ESTE limite. Com dois valores diferentes (por exemplo o
-   `md` do Tailwind, 768px, e os 900px da barra), sobra uma faixa de larguras em
-   que a barra está escondida e o botão de abrir também: o menu fica inalcançável. */
-.rt-menu-botao {
-    display: none;
-}
-@media (max-width: 900px) {
-    .rt-menu-botao {
-        display: inline-flex;
-    }
+
+.rt-marca-linha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px 4px 26px;
 }
 .rt-marca {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
 }
-/* ── O brasão da Prefeitura ──────────────────────────────────────────────────
-   Ele entra em DOIS registros, e a diferença é proposital: ao lado do nome do
-   produto vai só o ESCUDO, porque ali quem tem de ser lido é "SEFAL"; o lockup
-   completo — escudo, "SALVADOR PREFEITURA" e a assinatura — desce para o pé do
-   menu, que é onde a autoria do sistema é declarada sem disputar com o trabalho.
-
-   Os arquivos são servidos de `public/` como imagem, e não pelo empacotador: o
-   desenho do escudo passa de 80 KB e não tem por que atravessar o bundle.
-
-   Duas versões de cada, porque o fundo do menu muda com o tema: a colorida no
-   claro, a branca no escuro. Uma só ficaria invisível em metade dos casos. */
-.rt-marca-selo {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-}
-.rt-marca-selo img {
-    width: 40px;
-    height: auto;
-}
-.rt-marca-pe {
-    width: 154px;
-    height: auto;
-    margin-bottom: 10px;
-}
-/* A troca por tema é por VISIBILIDADE, e não por `src` trocado em JavaScript: a
-   escolha do tema acontece antes da primeira pintura, e um `src` condicional
-   piscaria a versão errada.
-
-   ⚠️ Nenhuma outra regra deste arquivo declara `display` para estas imagens — se
-   declarasse com mais especificidade (`.rt-marca-selo img`, por exemplo), o
-   `display: none` daqui perderia e as DUAS versões apareceriam empilhadas. */
-.rt-marca-clara {
+.rt-marca img {
     display: block;
-}
-.rt-marca-escura {
-    display: none;
-}
-.dark .rt-marca-clara,
-[data-theme='dark'] .rt-marca-clara {
-    display: none;
-}
-.dark .rt-marca-escura,
-[data-theme='dark'] .rt-marca-escura {
-    display: block;
+    width: 46px;
+    height: auto;
+    flex: 0 0 46px;
 }
 .rt-marca-nome {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    color: var(--sm-texto);
-    line-height: 1.15;
+    display: block;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.1;
+    color: var(--sm-menu-texto-forte);
 }
 .rt-marca-sub {
+    display: block;
+    margin-top: 2px;
     font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.7px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--sm-texto-fraco);
+    color: var(--sm-menu-texto-fraco);
 }
+/* O botão de retrair vive na linha da marca, e não no miolo: ele é sobre o MENU,
+   e controle de uma coisa fica junto da coisa. */
+.rt-marca-recolher {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sm-menu-texto-fraco);
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-marca-recolher:hover {
+    background: rgba(122, 175, 220, 0.14);
+    color: var(--sm-menu-texto-forte);
+}
+
 .rt-menu {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 3px;
     flex: 1;
     min-height: 0;
+    padding: 0 14px;
     overflow-y: auto;
 }
-.rt-menu-secao-titulo {
-    padding: 0 10px 6px;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: 0.9px;
-    text-transform: uppercase;
-    color: var(--sm-texto-fraco);
+.rt-menu-secao {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+/* A régua substitui o título de seção. Com sete títulos em caixa alta o painel
+   virava índice; a régua separa os grupos sem gritar o nome de cada um. */
+.rt-menu-regua {
+    height: 1px;
+    margin: 12px 12px;
+    background: var(--sm-menu-linha);
 }
 .rt-menu-item {
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 10px 12px;
-    border-radius: var(--sm-raio-sm);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--sm-texto-corpo);
-    transition: var(--sm-transicao);
-}
-/* Item que abre PAINEL sobre a tela atual é um <button>, e não um link (ver o
-   menu lateral). Aqui ele deixa de parecer botão e volta a parecer o item de
-   menu que é — o `:hover` e o `.ativo` abaixo continuam ganhando desta regra por
-   especificidade, então nada de estado se perde. */
-button.rt-menu-item {
+    gap: 12px;
     width: 100%;
+    padding: 12px 14px;
     border: none;
+    border-left: 3px solid transparent;
+    border-radius: 14px;
     background: none;
     font: inherit;
-    font-weight: 600;
+    font-size: 14.5px;
+    font-weight: 500;
     text-align: left;
+    color: var(--sm-menu-texto);
     cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-menu-rotulo {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .rt-menu-item:hover {
-    background: var(--sm-muted);
-    color: var(--sm-texto);
+    background: rgba(122, 175, 220, 0.1);
+    color: var(--sm-menu-texto-forte);
 }
 .rt-menu-item.ativo {
-    background: var(--sm-primaria);
+    background: linear-gradient(
+        90deg,
+        rgba(0, 102, 178, 0.45),
+        rgba(0, 102, 178, 0.12)
+    );
+    border-left-color: #4d9fdc;
     color: #fff;
-    box-shadow: var(--sm-sombra-sm);
+    font-weight: 650;
 }
-.dark .rt-menu-item.ativo,
-[data-theme='dark'] .rt-menu-item.ativo {
-    color: #04213a;
+/* O número vivo do item. Neutro é TAMANHO: fica quieto, do lado, sem competir com
+   o nome. */
+.rt-menu-contador {
+    flex-shrink: 0;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: rgba(10, 22, 40, 0.5);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(214, 230, 245, 0.85);
+}
+/* Alerta é FILA: laranja, o mesmo da incidência no resto do sistema. Ele só
+   aparece quando há o que fazer — o servidor não manda alerta em zero. */
+.rt-menu-contador.alerta {
+    background: rgba(224, 112, 32, 0.28);
+    color: #ffb877;
+    font-weight: 700;
 }
 .rt-menu-vazio {
-    padding: 8px 12px 10px;
+    padding: 6px 14px 10px;
     font-size: 12.5px;
     line-height: 1.5;
-    color: var(--sm-texto-fraco);
+    color: var(--sm-menu-texto-fraco);
 }
-.rt-sidebar-pe {
-    padding-top: 14px;
-    border-top: 1px solid var(--sm-borda);
+
+/* O cartão de quem entrou, no pé do painel: identidade e saída no mesmo lugar,
+   longe das ações de trabalho. */
+.rt-usuario-cartao {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(122, 175, 220, 0.2);
+    border-radius: 16px;
+    background: var(--sm-menu-cartao);
+}
+.rt-avatar {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    background: linear-gradient(160deg, #17568f, #14477e);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+.rt-usuario-texto {
+    flex: 1;
+    min-width: 0;
+}
+.rt-usuario-nome {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--sm-menu-texto-forte);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rt-usuario-papel {
+    display: block;
     font-size: 11.5px;
-    line-height: 1.5;
+    text-transform: capitalize;
+    color: var(--sm-menu-texto-fraco);
+}
+.rt-usuario-sair {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #8fb4d4;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-usuario-sair:hover {
+    background: rgba(255, 140, 132, 0.16);
+    color: #ff8c84;
+}
+
+/* ── A DOCA: o menu retraído ─────────────────────────────────────────────────
+   Cartão navy flutuante, destacado das bordas — o mesmo painel reduzido ao osso:
+   ícone, rótulo de uma palavra e o número virando selo no canto. A pessoa escolhe
+   a forma e a escolha fica guardada (ver o `retaguarda-layout`). */
+.rt-doca {
+    position: fixed;
+    z-index: 60;
+    left: 18px;
+    top: 18px;
+    bottom: 18px;
+    width: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 0 14px;
+    border-radius: 24px;
+    background: linear-gradient(178deg, #0e1c34, #0a1628);
+    box-shadow:
+        0 22px 50px rgba(8, 18, 35, 0.35),
+        inset 0 1px 0 rgba(122, 175, 220, 0.18);
+    color: var(--sm-menu-texto);
+}
+/* O miolo cede a largura da doca mais as duas folgas. */
+.rt-shell-doca .rt-principal {
+    margin-left: 132px;
+}
+.rt-doca-marca {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.rt-doca-marca img {
+    display: block;
+    width: 40px;
+    height: auto;
+}
+.rt-doca-marca span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--sm-menu-texto-forte);
+}
+.rt-doca-itens {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    /* Com catorze itens a coluna passa da altura da tela em telas curtas: ela rola
+       por dentro em vez de empurrar o avatar e o botão de expandir para fora. */
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.rt-doca-itens::-webkit-scrollbar {
+    display: none;
+}
+.rt-doca-grupo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+/* Grupo seguinte separado por uma régua curta — a mesma ideia do painel
+   estendido, no espaço que a doca tem. */
+.rt-doca-grupo + .rt-doca-grupo {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--sm-menu-linha);
+    width: 52px;
+}
+.rt-doca-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 66px;
+    padding: 10px 2px 8px;
+    border: none;
+    border-radius: 16px;
+    background: none;
+    font: inherit;
+    color: #8fb4d4;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-doca-item:hover {
+    background: rgba(122, 175, 220, 0.12);
+    color: var(--sm-menu-texto-forte);
+}
+.rt-doca-item.ativo {
+    background: linear-gradient(180deg, #0d6cb5, #0066b2);
+    box-shadow: 0 8px 18px rgba(0, 102, 178, 0.45);
+    color: #fff;
+}
+.rt-doca-rotulo {
+    max-width: 100%;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
     text-align: center;
-    color: var(--sm-texto-fraco);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rt-doca-item.ativo .rt-doca-rotulo {
+    font-weight: 700;
+}
+.rt-doca-selo {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: rgba(10, 22, 40, 0.85);
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(214, 230, 245, 0.9);
+}
+.rt-doca-selo.alerta {
+    background: #e07020;
+    color: #fff;
+}
+.rt-doca-pe {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+.rt-doca-acao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: #8fb4d4;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-doca-acao:hover {
+    background: rgba(122, 175, 220, 0.14);
+    color: var(--sm-menu-texto-forte);
+}
+.rt-doca-avatar {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(122, 175, 220, 0.35);
+    border-radius: 14px;
+    background: linear-gradient(160deg, #17568f, #14477e);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-doca-avatar:hover {
+    border-color: rgba(255, 140, 132, 0.6);
 }
 
 .rt-principal {
@@ -696,109 +1019,41 @@ button.rt-menu-item {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
-.rt-topbar {
+
+/* ── O cluster de sistema: tema e avisos ─────────────────────────────────────
+   Fica no canto, acima do cabeçalho da página, e é a única coisa do SISTEMA no
+   topo do miolo. Não é barra: não tem fundo, não tem borda e não reserva altura —
+   o cabeçalho editorial da tela sobe até o topo por baixo dele. */
+.rt-cluster {
+    position: absolute;
+    z-index: 30;
+    top: 20px;
+    right: 26px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    min-height: var(--sm-topbar-altura);
-    padding: 12px 26px;
-    background: var(--sm-superficie);
-    border-bottom: 1px solid var(--sm-borda);
-    position: sticky;
-    top: 0;
-    z-index: 40;
+    gap: 8px;
 }
+/* A trilha só aparece quando tem mais de um nível — aí ela diz o caminho de
+   volta, que o título da página não diz. Ver o componente `Topbar`. */
 .rt-trilha {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    margin-right: 6px;
+    font-size: 12.5px;
     color: var(--sm-texto-fraco);
-    flex-wrap: wrap;
-    /* Sem isto a trilha não encolhe abaixo do próprio conteúdo (é o mínimo
-       automático do flex), empurra as ações para fora da barra — e a barra NÃO
-       rola na horizontal, então o que sai da tela fica inalcançável. Foi assim
-       que o botão de sair desapareceu no telefone. */
     min-width: 0;
+}
+.rt-trilha-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 .rt-trilha-atual {
     font-weight: 700;
     color: var(--sm-texto);
-}
-.rt-topbar-acoes {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto;
-    /* Tema, avisos e SAIR não cedem espaço: são as ações que acompanham o sistema
-       inteiro, e "sair" precisa estar alcançável em qualquer largura. */
-    flex-shrink: 0;
-}
-.rt-usuario {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 12px 5px 6px;
-    border-radius: var(--sm-raio-full);
-    border: 1px solid var(--sm-borda);
-    background: var(--sm-superficie);
-}
-.rt-avatar {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(
-        140deg,
-        var(--sm-primaria),
-        var(--sm-primaria-forte)
-    );
-    color: #fff;
-    font-size: 12.5px;
-    font-weight: 800;
-}
-.rt-usuario-nome {
-    font-size: 13.5px;
-    font-weight: 700;
-    color: var(--sm-texto);
-    line-height: 1.15;
-}
-.rt-usuario-matricula {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    color: var(--sm-texto-fraco);
-}
-/* ── A barra superior no telefone ────────────────────────────────────────────
-   Em 375px de largura, o nome e a matrícula do usuário ocupavam 174px e jogavam
-   o botão de SAIR 93px fora da tela. E a barra não rola na horizontal, então o
-   que saía não era só deslocado: era inalcançável — a pessoa ficava sem como
-   encerrar a sessão.
-
-   A escolha é explícita: identidade é conforto, sair é função. Abaixo de 620px o
-   avatar sozinho continua dizendo de quem é a sessão (o nome inteiro está em Meu
-   Perfil), e tema, avisos e sair permanecem os três à vista. */
-@media (max-width: 620px) {
-    .rt-usuario-texto {
-        display: none;
-    }
-    /* Sem o texto, a cápsula em volta do avatar não tem mais o que emoldurar. */
-    .rt-usuario {
-        padding: 0;
-        border-color: transparent;
-        background: none;
-    }
-}
-@media (max-width: 480px) {
-    .rt-topbar {
-        gap: 8px;
-        padding: 10px 12px;
-    }
-    .rt-trilha {
-        font-size: 12px;
-    }
 }
 .rt-pop {
     position: absolute;
@@ -813,41 +1068,103 @@ button.rt-menu-item {
     box-shadow: var(--sm-sombra-lg);
     text-align: left;
 }
+
 .rt-conteudo {
     flex: 1;
-    padding: 26px;
+    padding: 30px 38px 30px;
 }
+
+/* ── O cabeçalho editorial da página ────────────────────────────────────────
+   Sobrancelha da seção, título grande com o ponto azul, subtítulo. A direita é
+   um slot: a tela põe ali os números do dia quando tiver (ver a de
+   Permissionários) — e, quando não tem, o cabeçalho respira sozinho.
+
+   O ponto final é do CSS, e não escrito em cada tela: assim toda tela nova nasce
+   com a assinatura, e ninguém precisa lembrar de digitá-lo. */
 .rt-page-head {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 18px;
+    gap: 24px;
     flex-wrap: wrap;
-    margin-bottom: 22px;
+    /* Espaço à direita para o cluster de tema/avisos não encostar no conteúdo do
+       cabeçalho nas larguras médias. */
+    padding-right: 118px;
+    margin-bottom: 24px;
 }
 .rt-page-head .sobrancelha {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    margin-bottom: 6px;
-    font-size: 11.5px;
-    font-weight: 800;
-    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
     text-transform: uppercase;
-    color: var(--sm-acao-forte);
+    color: var(--sm-acao);
 }
 .rt-page-head h1 {
-    font-size: 26px;
-    font-weight: 800;
+    font-size: 42px;
+    font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--sm-texto);
-    line-height: 1.15;
+    line-height: 1;
+}
+.rt-page-head h1::after {
+    content: '.';
+    color: var(--sm-acao);
 }
 .rt-page-head p {
-    margin-top: 6px;
-    font-size: 14.5px;
+    margin-top: 10px;
+    max-width: 62ch;
+    font-size: 15px;
+    line-height: 1.5;
     color: var(--sm-texto-fraco);
 }
+
+/* Os números do dia, à direita do cabeçalho. Cartão claro sobre o fundo da
+   aplicação: é leitura de relance, não tabela. */
+.rt-numeros {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 16px 26px;
+    border-radius: 18px;
+    background: var(--sm-superficie);
+    box-shadow: var(--sm-sombra-sm), var(--sm-sombra-md);
+}
+.rt-numero {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.rt-numero strong {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--sm-texto);
+}
+.rt-numero span {
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--sm-texto-fraco);
+}
+.rt-numero.ok strong {
+    color: var(--sm-ok);
+}
+.rt-numero.alerta strong {
+    color: var(--sm-aviso);
+}
+.rt-numero.info strong {
+    color: var(--sm-primaria);
+}
+.rt-numeros-separador {
+    width: 1px;
+    height: 34px;
+    background: var(--sm-borda);
+}
+
 .rt-grid-atalhos {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -870,6 +1187,119 @@ button.rt-menu-item {
 }
 .rt-atalho.em-breve {
     opacity: 0.62;
+}
+
+/* ── A casca em telas estreitas ──────────────────────────────────────────────
+   Três degraus, e o critério é o mesmo em todos: o menu nunca pode ficar
+   inalcançável, e o trabalho nunca pode ceder mais largura do que tem.
+
+   · até 1100px — o painel estendido (292px) come um terço da tela: a DOCA passa a
+     valer sozinha, independente da preferência guardada. A preferência não é
+     apagada: ela volta a valer quando a janela crescer;
+   · até 620px — a doca vira BARRA INFERIOR, na faixa do polegar, com os itens
+     rolando na horizontal. É o mesmo lugar em que o aplicativo do fiscal põe a
+     navegação, então quem usa os dois não reaprende nada;
+   · o painel estendido, quando aberto pelo botão do menu, desliza por cima. */
+@media (max-width: 1100px) {
+    /* Nesta faixa quem monta o menu é a casca, sempre na forma de doca (ver
+       `LARGURA_DA_DOCA` no `retaguarda-layout`) — o painel estendido não é
+       renderizado. Então o que sobra aqui é esconder o botão de EXPANDIR: com a
+       largura mandando, ele levaria a um painel que não cabe. */
+    .rt-doca-acao {
+        display: none;
+    }
+    .rt-conteudo {
+        padding: 26px 24px;
+    }
+    .rt-page-head {
+        padding-right: 150px;
+    }
+}
+@media (max-width: 620px) {
+    .rt-doca {
+        left: 12px;
+        right: 12px;
+        top: auto;
+        bottom: 12px;
+        width: auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 20px;
+    }
+    .rt-shell-doca .rt-principal {
+        margin-left: 0;
+        /* A barra flutua sobre o conteúdo: o miolo termina acima dela. */
+        padding-bottom: 96px;
+    }
+    /* Na barra inferior a marca sairia no lugar de um item — e o brasão já está no
+       cabeçalho da tela de entrada e no painel estendido. */
+    .rt-doca-marca {
+        display: none;
+    }
+    .rt-doca-itens {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x proximity;
+    }
+    .rt-doca-grupo {
+        flex-direction: row;
+        gap: 6px;
+    }
+    /* Deitada, a régua entre grupos vira uma linha vertical. */
+    .rt-doca-grupo + .rt-doca-grupo {
+        margin: 0 0 0 6px;
+        padding: 0 0 0 10px;
+        border-top: none;
+        border-left: 1px solid var(--sm-menu-linha);
+        width: auto;
+    }
+    .rt-doca-item {
+        flex-shrink: 0;
+        width: 62px;
+        scroll-snap-align: center;
+    }
+    .rt-doca-pe {
+        flex-direction: row;
+        gap: 8px;
+        padding-left: 8px;
+        border-left: 1px solid var(--sm-menu-linha);
+    }
+    .rt-cluster {
+        top: 14px;
+        right: 14px;
+    }
+    .rt-conteudo {
+        padding: 20px 16px;
+    }
+    .rt-page-head {
+        padding-right: 0;
+        /* Sem a folga lateral, o cluster no canto cobriria a sobrancelha: o
+           cabeçalho começa abaixo dele. */
+        padding-top: 44px;
+        margin-bottom: 20px;
+    }
+    .rt-page-head h1 {
+        font-size: 30px;
+    }
+    .rt-page-head .sobrancelha {
+        letter-spacing: 0.18em;
+    }
+    .rt-page-head p {
+        font-size: 14.5px;
+    }
+    .rt-numeros {
+        width: 100%;
+        gap: 18px;
+        padding: 14px 18px;
+    }
+    .rt-numeros-separador {
+        display: none;
+    }
 }
 
 /* ============================ TELA DE ACESSO ============================

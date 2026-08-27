@@ -93,9 +93,12 @@ export default function Inicio({ atalhos }: { atalhos: Atalho[] }) {
             <div className="rt-page-head">
                 <div>
                     <p className="sobrancelha">Retaguarda · SEMOP</p>
+                    {/* Sem ponto final escrito aqui: quem o põe é o cabeçalho
+                        editorial (`.rt-page-head h1::after`), para toda tela ter
+                        a mesma assinatura sem ninguém lembrar de digitá-la. */}
                     <h1>
                         {saudacaoAgora()}
-                        {auth.user ? `, ${primeiroNome(auth.user.name)}` : ''}.
+                        {auth.user ? `, ${primeiroNome(auth.user.name)}` : ''}
                     </h1>
                     <p>
                         Fiscalização de permissionários — comerciantes
@@ -105,7 +108,7 @@ export default function Inicio({ atalhos }: { atalhos: Atalho[] }) {
 
                 {auth.user && (
                     <div style={{ textAlign: 'right' }}>
-                        <p className="rt-usuario-matricula">
+                        <p className="form-ajuda">
                             Matrícula {auth.user.login.toUpperCase()}
                         </p>
                         <p style={{ marginTop: 6 }}>

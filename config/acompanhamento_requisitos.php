@@ -123,6 +123,30 @@ return [
         ],
 
         /*
+         * A CASCA — sem item de menu, e presente em toda tela autenticada. Entra
+         * aqui pelo mesmo motivo da exportação: o mapa é de funcionalidade
+         * entregue, e o que vale em todas as telas é justamente o que ninguém
+         * lembra de conferir depois.
+         */
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Casca da Retaguarda (menu, doca e cabeçalho editorial)',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.inicio',
+            'breadcrumb' => 'Presente em toda tela da Retaguarda',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Menu lateral navy de canto curvado, com número vivo ao lado do '
+                .'item que declara um (neutro = tamanho, laranja = fila, e fila em zero não aparece) e '
+                .'o cartão de quem entrou no pé, com a saída. O menu tem duas formas — painel e doca '
+                .'flutuante —, a escolha é da pessoa e fica guardada no navegador dela; abaixo de '
+                .'1100px a doca vale sozinha e abaixo de 620px vira barra no pé da tela. Não há barra '
+                .'superior nem menu escondido atrás de botão: o topo de cada tela é o cabeçalho dela '
+                .'(seção, título, subtítulo) e o menu está sempre à vista. Desenho e decisões em '
+                .'docs/regras-de-negocio/design-retaguarda.md.',
+        ],
+
+        /*
          * Não tem item de menu porque não é uma tela: é o botão que TODA
          * listagem carrega. Fica no mapa mesmo assim — o acompanhamento é de
          * funcionalidade entregue, não de linha do menu, e uma regra que vale em

@@ -6,15 +6,31 @@ import OverlayBoasVindas from '@/components/retaguarda/overlay-boas-vindas';
 import { Sidebar } from '@/components/retaguarda/sidebar';
 import { Topbar } from '@/components/retaguarda/topbar';
 import { useFlashToast } from '@/hooks/use-flash-toast';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
 /**
- * Casca de TODA tela autenticada da Retaguarda: menu lateral + barra superior.
+ * Casca de TODA tela autenticada da Retaguarda — o desenho "editorial curvo"
+ * aprovado pelo dono: painel navy de canto curvado à esquerda, miolo claro à
+ * direita, e o topo da tela pertencendo ao CABEÇALHO DA PÁGINA em vez de a uma
+ * barra de sistema (ver `docs/regras-de-negocio/design-retaguarda.md`).
  *
- * A tela recebe a trilha de navegação por propriedade de layout:
+ * A tela recebe a trilha de navegação por propriedade de layout — desenhada só
+ * quando tem mais de um nível, porque com um nível ela repetiria o título:
  *
  *   MinhaTela.layout = { breadcrumbs: [{ title: 'Permissionários', href: url }] };
  */
+
+/** Onde a preferência de menu retraído fica guardada, por navegador. */
+const CHAVE_RETRACAO = 'sefal.menu.retraido';
+
+/**
+ * A largura abaixo da qual o painel estendido (292px) não cabe sem roubar o
+ * trabalho: a doca passa a valer sozinha. O MESMO valor está no `retaguarda.css`
+ * (o degrau de 1100px que deita a doca e aperta o miolo) — mudou aqui, mude lá.
+ */
+const LARGURA_DA_DOCA = '(max-width: 1100px)';
+
 export default function RetaguardaLayout({
     breadcrumbs = [],
     children,
@@ -22,7 +38,67 @@ export default function RetaguardaLayout({
     breadcrumbs?: BreadcrumbItem[];
     children: ReactNode;
 }) {
-    const [menuAberto, setMenuAberto] = useState(false);
+    /*
+     * Menu retraído (a doca). A preferência é da PESSOA e do navegador dela, então
+     * mora no `localStorage` — não no servidor: é conforto de quem opera, não dado
+     * do sistema, e uma coluna para isso faria a preferência viajar em toda
+     * requisição sem ninguém precisar dela.
+     *
+     * Começa estendida e é corrigida no primeiro efeito, e não lida direto no
+     * estado inicial, porque a renderização do servidor (SSR) não tem
+     * `localStorage`: ler ali faria a marcação do servidor divergir da do
+     * navegador e o React reclamaria da diferença.
+     */
+    const [retraida, setRetraida] = useState(false);
+
+    useEffect(() => {
+        try {
+            setRetraida(localStorage.getItem(CHAVE_RETRACAO) === '1');
+        } catch {
+            // Navegador com armazenamento bloqueado: fica estendida, que é o
+            // padrão. Preferência é conveniência — nunca motivo de tela quebrada.
+        }
+    }, []);
+
+    function alternarRetracao() {
+        setRetraida((atual) => {
+            const novo = !atual;
+
+            try {
+                localStorage.setItem(CHAVE_RETRACAO, novo ? '1' : '0');
+            } catch {
+                // Idem: a escolha vale para esta sessão mesmo sem poder guardá-la.
+            }
+
+            return novo;
+        });
+    }
+
+    /*
+     * Abaixo de 1100px o painel estendido não cabe: são 292px de uma tela de 900,
+     * e o que sobra para o trabalho fica estreito demais. A doca então vale
+     * SOZINHA, independente da preferência — que não é apagada e volta a valer
+     * quando a janela crescer.
+     *
+     * Uma decisão de desenho está embutida aqui: nesta faixa não existe painel
+     * escondido atrás de um botão de menu. Antes existia (a barra deslizava por
+     * cima com um véu), e isso deixava o menu a DOIS toques de distância e
+     * inalcançável para quem não notasse o hambúrguer. A doca fica sempre à vista,
+     * com ícone e rótulo — um menu, duas formas, nenhuma escondida.
+     */
+    const [estreito, setEstreito] = useState(false);
+
+    useEffect(() => {
+        const consulta = window.matchMedia(LARGURA_DA_DOCA);
+        const aplicar = () => setEstreito(consulta.matches);
+
+        aplicar();
+        consulta.addEventListener('change', aplicar);
+
+        return () => consulta.removeEventListener('change', aplicar);
+    }, []);
+
+    const emDoca = retraida || estreito;
 
     /*
      * O painel sobreposto aberto agora (hoje só o Modo Gerente), ou `null`.
@@ -70,28 +146,20 @@ export default function RetaguardaLayout({
      */
 
     return (
-        <div className="rt-shell">
+        <div className={cn('rt-shell', emDoca && 'rt-shell-doca')}>
             <Sidebar
-                aberta={menuAberto}
-                onFechar={() => setMenuAberto(false)}
+                emDoca={emDoca}
+                /* Quando a largura força a doca, alternar não tem para onde ir: o
+                   botão de expandir sai de cena (é o CSS que o esconde, no mesmo
+                   degrau de 1100px). */
+                onAlternarRetracao={alternarRetracao}
                 onAbrirPainel={setPainelAberto}
             />
 
-            {/* No celular, a barra abre por cima: o véu deixa claro que o resto
-                da tela está esperando e dá um lugar óbvio para fechar. */}
-            {menuAberto && (
-                <div
-                    className="rt-veu"
-                    role="presentation"
-                    onClick={() => setMenuAberto(false)}
-                />
-            )}
-
             <div className="rt-principal">
-                <Topbar
-                    breadcrumbs={breadcrumbs}
-                    onAbrirMenu={() => setMenuAberto(true)}
-                />
+                {/* Tema e avisos num cluster discreto no canto — o topo da tela
+                    pertence ao cabeçalho da própria página. Ver o `Topbar`. */}
+                <Topbar breadcrumbs={breadcrumbs} />
 
                 <main className="rt-conteudo">{children}</main>
             </div>
