@@ -1192,15 +1192,8 @@ textarea.pw-entrada {
 .pw-marca {
     display: flex;
     align-items: center;
-    gap: clamp(14px, 4.5vw, 20px);
-    margin-bottom: 32px;
-}
-
-/* O bloco do nome precisa poder encolher: sem isto, um filho de flex se recusa
-   a ficar menor que o próprio conteúdo e o conjunto estoura a tela estreita em
-   vez de quebrar a linha do subtítulo. */
-.pw-marca > div {
-    min-width: 0;
+    gap: 14px;
+    margin-bottom: 34px;
 }
 
 /* A marca da Prefeitura entra em DOIS registros nesta tela, e a diferença é
@@ -1216,13 +1209,9 @@ textarea.pw-entrada {
    nos dois temas. */
 .pw-marca-escudo {
     display: block;
-    /* O escudo é a assinatura da Prefeitura na primeira tela: em tamanho de
-       ícone ele vira enfeite. O piso do `clamp` é o que garante que, no aparelho
-       mais estreito, ele ceda alguns pixels em vez de empurrar o nome do produto
-       para fora da tela. */
-    width: clamp(96px, 31vw, 120px);
+    width: 58px;
     height: auto;
-    flex: 0 0 auto;
+    flex: 0 0 58px;
 }
 
 .pw-marca-oficial {
@@ -1256,18 +1245,17 @@ textarea.pw-entrada {
 
 .pw-marca h1 {
     margin: 0;
-    font-size: clamp(30px, 8.8vw, 36px);
+    font-size: 30px;
     font-weight: 900;
     letter-spacing: -0.02em;
     line-height: 1.05;
 }
 
 .pw-marca p {
-    margin: 3px 0 0;
-    font-size: 12.5px;
-    line-height: 1.35;
+    margin: 2px 0 0;
+    font-size: 13px;
     opacity: 0.78;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
