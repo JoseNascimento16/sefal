@@ -22,18 +22,16 @@ export function TelaEntrada({ aoEntrar }: { aoEntrar: () => void }) {
 
     return (
         <form className="pw-entrada-tela pw-com-faixa" onSubmit={enviar}>
-            {/* Brasão oficial da Prefeitura, do brand kit institucional. A versão
-                em branco é a correta para esta tela: o fundo é escuro nos dois
-                temas, e a versão colorida traz texto escuro que sumiria nele. */}
-            <img
-                className="pw-marca-oficial"
-                src="/images/marca/salvador-horizontal-branco.svg"
-                alt="Prefeitura Municipal do Salvador"
-                width={228}
-                height={92}
-            />
-
+            {/* Ao lado do nome do produto vai só o escudo: aqui quem precisa ser
+                lido de longe é "SEFAL". O lockup completo desce para o rodapé. */}
             <div className="pw-marca">
+                <img
+                    className="pw-marca-escudo"
+                    src="/images/marca/brasao-salvador-branco.svg"
+                    alt=""
+                    width={58}
+                    height={54}
+                />
                 <div>
                     <h1>SEFAL</h1>
                     <p>Fiscalização de ambulantes</p>
@@ -74,11 +72,18 @@ export function TelaEntrada({ aoEntrar }: { aoEntrar: () => void }) {
                 <Icone nome="seta" tamanho={20} />
             </button>
 
-            <p className="pw-rodape-entrada">
+            <footer className="pw-rodape-entrada">
+                <img
+                    className="pw-marca-oficial"
+                    src="/images/marca/salvador-horizontal-branco.svg"
+                    alt="Prefeitura Municipal do Salvador"
+                    width={186}
+                    height={75}
+                />
                 Prefeitura Municipal do Salvador · SEMOP
                 <br />
                 Aplicativo de campo — versão de demonstração
-            </p>
+            </footer>
         </form>
     );
 }

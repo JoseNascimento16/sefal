@@ -1196,15 +1196,30 @@ textarea.pw-entrada {
     margin-bottom: 34px;
 }
 
-/* O brasão oficial da Prefeitura, servido de `public/` como imagem: os arquivos
-   do brand kit passam de 100 KB por causa das máscaras, e não têm por que
-   atravessar o empacotador para aparecer numa tela só. A versão em branco é a
-   que vale aqui — o fundo desta tela é escuro nos dois temas. */
+/* A marca da Prefeitura entra em DOIS registros nesta tela, e a diferença é
+   proposital: ao lado do nome do produto vai só o ESCUDO (recortado do kit
+   institucional, arquivo `brasao-salvador-branco.svg`), porque ali quem tem de
+   ser lido é "SEFAL"; o lockup completo — escudo, "SALVADOR PREFEITURA" e a
+   assinatura — desce para o pé da tela, junto do texto institucional, que é
+   onde a autoria do sistema é declarada sem disputar com o formulário.
+
+   Os dois são servidos de `public/` como imagem: os arquivos do kit passam de
+   80 KB por causa do desenho do escudo, e não têm por que atravessar o
+   empacotador. A versão em branco é a que vale nesta tela — o fundo é escuro
+   nos dois temas. */
+.pw-marca-escudo {
+    display: block;
+    width: 58px;
+    height: auto;
+    flex: 0 0 58px;
+}
+
 .pw-marca-oficial {
     display: block;
-    width: min(228px, 62vw);
+    width: min(186px, 52vw);
     height: auto;
-    margin-bottom: 26px;
+    margin: 0 auto 10px;
+    opacity: 0.75;
 }
 
 /* No rodapé do perfil o fundo é claro ou escuro conforme o tema, então aqui as
