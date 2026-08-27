@@ -7,8 +7,8 @@
     "scope": "/app",
     "display": "standalone",
     "orientation": "portrait",
-    "background_color": "#0d5c63",
-    "theme_color": "#0d5c63",
+    "background_color": "#14477e",
+    "theme_color": "#14477e",
     "icons": [
         {
             "src": "/pwa-icone.svg",

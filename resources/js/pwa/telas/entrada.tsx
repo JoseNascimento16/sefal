@@ -22,8 +22,18 @@ export function TelaEntrada({ aoEntrar }: { aoEntrar: () => void }) {
 
     return (
         <form className="pw-entrada-tela pw-com-faixa" onSubmit={enviar}>
+            {/* Brasão oficial da Prefeitura, do brand kit institucional. A versão
+                em branco é a correta para esta tela: o fundo é escuro nos dois
+                temas, e a versão colorida traz texto escuro que sumiria nele. */}
+            <img
+                className="pw-marca-oficial"
+                src="/images/marca/salvador-horizontal-branco.svg"
+                alt="Prefeitura Municipal do Salvador"
+                width={228}
+                height={92}
+            />
+
             <div className="pw-marca">
-                <div className="pw-marca-brasao">FA</div>
                 <div>
                     <h1>SEFAL</h1>
                     <p>Fiscalização de ambulantes</p>

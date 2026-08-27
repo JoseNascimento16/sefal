@@ -7,8 +7,16 @@
    prefixo próprio (`--pw-*`), a tipografia é maior, os alvos de toque nunca
    descem de 48px e o contraste é puxado para cima.
 
-   Marca: PETRÓLEO (#0d5c63) como cor institucional e ÂMBAR (#f4a300) como cor
-   de ação — a mesma dupla da Retaguarda, em registro mais ousado.
+   Marca: AZUL, e só azul — o azul oficial do brasão da Prefeitura (#0066b2) é a
+   cor de AÇÃO, e um azul profundo da mesma família veste a barra de título. No
+   escuro, a família inteira clareia (azul-marinho de fundo, azul de céu na
+   ação) para continuar legível. O aplicativo não tem duas cores de marca.
+
+   ⚠️ COR DE MARCA ≠ COR DE ESTADO. O verde de "TUDO REGULAR", o laranja de
+   IRREGULAR e o vermelho de perigo são SEMÂNTICA: dizem o que aconteceu com o
+   ponto fiscalizado, e não a que órgão o aplicativo pertence. Por isso eles NÃO
+   acompanharam a marca para o azul — pintá-los de azul apagaria a informação
+   que carregam, e deixaria "regular" e "irregular" com a mesma cara.
 
    TEMA — o fiscal também trabalha à noite e no Carnaval. O tema escuro é real,
    não um filtro: os MESMOS tokens trocam de valor sob `[data-tema='escuro']`.
@@ -18,30 +26,41 @@
    ============================================================================ */
 
 :root {
-    --pw-primaria: #0d5c63;
-    --pw-primaria-forte: #08383d;
-    --pw-primaria-clara: #147c86;
-    --pw-primaria-suave: rgba(13, 92, 99, 0.1);
-    --pw-acao: #f4a300;
-    --pw-acao-forte: #d68f00;
-    --pw-acao-suave: rgba(244, 163, 0, 0.16);
+    --pw-primaria: #14477e;
+    --pw-primaria-forte: #0e3560;
+    --pw-primaria-clara: #1a5a9e;
+    --pw-primaria-suave: rgba(20, 71, 126, 0.1);
+    /* Ação = azul oficial do brasão. */
+    --pw-acao: #0066b2;
+    --pw-acao-forte: #00559a;
+    --pw-acao-suave: rgba(0, 102, 178, 0.12);
+    --pw-acao-texto: #ffffff;
 
-    --pw-app: #eef2f2;
+    /* Os cinzas também são azuis: cinza neutro ao lado de azul profundo puxa
+       para o amarelado e faz a tela parecer suja. */
+    --pw-app: #eef1f7;
     --pw-superficie: #ffffff;
-    --pw-superficie-2: #f6f9f9;
-    --pw-texto: #0c1c1e;
-    --pw-texto-corpo: #2f4547;
-    --pw-texto-fraco: #647c7e;
-    --pw-borda: #dae3e3;
-    --pw-borda-forte: #b9c9c9;
+    --pw-superficie-2: #f6f8fc;
+    --pw-texto: #0e1a2c;
+    --pw-texto-corpo: #33445e;
+    --pw-texto-fraco: #64748f;
+    --pw-borda: #d9e0ee;
+    --pw-borda-forte: #b6c2d8;
 
     --pw-ok: #0f7a52;
     --pw-ok-forte: #0b6242;
     --pw-ok-suave: rgba(15, 122, 82, 0.12);
-    --pw-alerta: #b06b00;
-    --pw-alerta-suave: rgba(244, 163, 0, 0.18);
+    /* Estado IRREGULAR: laranja. Fica longe do azul (que é ação) e longe do
+       verde (que é o outro desfecho possível) — a diferença tem de ser vista de
+       relance, sob sol, por quem está de pé na calçada. */
+    --pw-alerta: #a8480a;
+    --pw-alerta-suave: rgba(184, 80, 10, 0.14);
+    --pw-irregular: #b8500a;
+    --pw-irregular-texto: #ffffff;
     --pw-perigo: #b3261e;
     --pw-perigo-suave: rgba(179, 38, 30, 0.12);
+    /* O azul de INFORMAÇÃO puxa para o ciano de propósito: ao lado do azul da
+       marca, dois azuis iguais deixariam de informar qualquer coisa. */
     --pw-info: #0b6f8c;
     --pw-info-suave: rgba(11, 111, 140, 0.12);
 
@@ -49,12 +68,12 @@
     --pw-raio-lg: 22px;
     --pw-raio-full: 999px;
 
-    --pw-sombra: 0 6px 18px rgba(8, 34, 36, 0.1);
-    --pw-sombra-alta: 0 -10px 30px rgba(8, 34, 36, 0.16);
+    --pw-sombra: 0 6px 18px rgba(13, 30, 56, 0.1);
+    --pw-sombra-alta: 0 -10px 30px rgba(13, 30, 56, 0.16);
 
     --pw-topo-fundo: var(--pw-primaria);
-    --pw-entrada-brilho: rgba(20, 124, 134, 0.5);
-    --pw-entrada-fundo: linear-gradient(160deg, var(--pw-primaria-forte), #04181b 70%);
+    --pw-entrada-brilho: rgba(26, 90, 158, 0.5);
+    --pw-entrada-fundo: linear-gradient(160deg, var(--pw-primaria-forte), #061125 70%);
 
     --pw-nav-altura: 68px;
     --pw-topo-altura: 60px;
@@ -70,9 +89,10 @@
     --pw-primaria-forte: #8cbdf7;
     --pw-primaria-clara: #a8d0ff;
     --pw-primaria-suave: rgba(106, 166, 240, 0.18);
-    --pw-acao: #ffb62e;
-    --pw-acao-forte: #ffc857;
-    --pw-acao-suave: rgba(255, 182, 46, 0.18);
+    --pw-acao: #4d9fdc;
+    --pw-acao-forte: #6fb5e8;
+    --pw-acao-suave: rgba(77, 159, 220, 0.2);
+    --pw-acao-texto: #04213a;
 
     --pw-app: #0a1628;
     --pw-superficie: #0f1d33;
@@ -92,8 +112,10 @@
     --pw-ok: #4ddba4;
     --pw-ok-forte: #2fc38a;
     --pw-ok-suave: rgba(77, 219, 164, 0.16);
-    --pw-alerta: #ffc857;
-    --pw-alerta-suave: rgba(255, 200, 87, 0.18);
+    --pw-alerta: #ff9a4d;
+    --pw-alerta-suave: rgba(255, 154, 77, 0.18);
+    --pw-irregular: #ff9a4d;
+    --pw-irregular-texto: #2a1200;
     --pw-perigo: #ff8c84;
     --pw-perigo-suave: rgba(255, 140, 132, 0.18);
     --pw-info: #7cc4ff;
@@ -175,12 +197,14 @@ select {
     justify-content: center;
     gap: 8px;
     height: 22px;
+    /* A fita continua ÂMBAR de propósito: aqui o amarelo não é a marca, é fita
+       zebrada de obra — o aviso de que nada nesta tela é real. */
     background: repeating-linear-gradient(
         135deg,
-        var(--pw-acao),
-        var(--pw-acao) 12px,
-        var(--pw-acao-forte) 12px,
-        var(--pw-acao-forte) 24px
+        #f4a300,
+        #f4a300 12px,
+        #d68f00 12px,
+        #d68f00 24px
     );
     color: #2a1c00;
     font-size: 10.5px;
@@ -285,7 +309,7 @@ select {
 
 .pw-btn-acao {
     background: var(--pw-acao);
-    color: #2a1c00;
+    color: var(--pw-acao-texto);
 }
 
 .pw-btn-contorno {
@@ -348,8 +372,8 @@ select {
 }
 
 .pw-decisao .pw-irregular {
-    background: var(--pw-acao);
-    color: #2a1c00;
+    background: var(--pw-irregular);
+    color: var(--pw-irregular-texto);
 }
 
 /* No escuro o verde clareia para se ver na tela sob o poste; com ele, o texto
@@ -709,7 +733,7 @@ textarea.pw-entrada {
 }
 
 .pw-pino-irregular {
-    background: var(--pw-acao);
+    background: var(--pw-irregular);
 }
 
 .pw-pino-retorno {
@@ -783,10 +807,10 @@ textarea.pw-entrada {
     border: 0;
     border-radius: var(--pw-raio-full);
     background: var(--pw-acao);
-    color: #2a1c00;
+    color: var(--pw-acao-texto);
     font-size: 17px;
     font-weight: 800;
-    box-shadow: 0 10px 26px rgba(244, 163, 0, 0.45);
+    box-shadow: 0 10px 26px rgba(0, 102, 178, 0.4);
     cursor: pointer;
     animation: pw-surge 0.4s ease;
 }
@@ -1051,9 +1075,9 @@ textarea.pw-entrada {
 
 .pw-leitura {
     padding: 16px;
-    border-left: 5px solid var(--pw-acao);
+    border-left: 5px solid var(--pw-alerta);
     border-radius: var(--pw-raio);
-    background: var(--pw-acao-suave);
+    background: var(--pw-alerta-suave);
     color: var(--pw-texto);
     font-size: 15.5px;
     line-height: 1.5;
@@ -1070,7 +1094,7 @@ textarea.pw-entrada {
 .pw-barra-regiao > div {
     height: 100%;
     border-radius: var(--pw-raio-full);
-    background: linear-gradient(90deg, var(--pw-acao), var(--pw-perigo));
+    background: linear-gradient(90deg, var(--pw-alerta), var(--pw-perigo));
     animation: pw-cresce 0.7s ease;
 }
 
@@ -1159,7 +1183,7 @@ textarea.pw-entrada {
     justify-content: center;
     padding: 32px 24px calc(32px + var(--pw-seguro-baixo));
     background:
-        radial-gradient(circle at 15% 0%, rgba(244, 163, 0, 0.28), transparent 46%),
+        radial-gradient(circle at 15% 0%, rgba(77, 159, 220, 0.34), transparent 46%),
         radial-gradient(circle at 100% 100%, var(--pw-entrada-brilho), transparent 55%),
         var(--pw-entrada-fundo);
     color: #fff;
@@ -1172,18 +1196,15 @@ textarea.pw-entrada {
     margin-bottom: 34px;
 }
 
-.pw-marca-brasao {
-    display: grid;
-    place-items: center;
-    width: 62px;
-    height: 62px;
-    flex: 0 0 62px;
-    border-radius: 18px;
-    background: var(--pw-acao);
-    color: #2a1c00;
-    font-size: 26px;
-    font-weight: 900;
-    box-shadow: 0 8px 22px rgba(244, 163, 0, 0.35);
+/* O brasão oficial da Prefeitura, servido de `public/` como imagem: os arquivos
+   do brand kit passam de 100 KB por causa das máscaras, e não têm por que
+   atravessar o empacotador para aparecer numa tela só. A versão em branco é a
+   que vale aqui — o fundo desta tela é escuro nos dois temas. */
+.pw-marca-oficial {
+    display: block;
+    width: min(228px, 62vw);
+    height: auto;
+    margin-bottom: 26px;
 }
 
 .pw-marca h1 {
@@ -1218,7 +1239,7 @@ textarea.pw-entrada {
 
 .pw-entrada-tela .pw-entrada:focus {
     border-color: var(--pw-acao);
-    box-shadow: 0 0 0 4px rgba(244, 163, 0, 0.22);
+    box-shadow: 0 0 0 4px rgba(77, 159, 220, 0.28);
 }
 
 .pw-lembrar {
@@ -1246,13 +1267,14 @@ textarea.pw-entrada {
     flex: 0 0 26px;
     border: 2px solid rgba(255, 255, 255, 0.45);
     border-radius: 8px;
-    color: #2a1c00;
+    color: var(--pw-acao-texto);
     font-size: 15px;
 }
 
 .pw-caixa-marcada {
     border-color: var(--pw-acao);
     background: var(--pw-acao);
+    color: var(--pw-acao-texto);
 }
 
 .pw-rodape-entrada {

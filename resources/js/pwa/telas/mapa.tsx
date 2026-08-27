@@ -353,7 +353,9 @@ function Gaveta({ ambulante, aoFechar }: { ambulante: Ambulante; aoFechar: () =>
                                 flex: '0 0 8px',
                                 borderRadius: 8,
                                 background:
-                                    evento.status === 'regular' ? 'var(--pw-ok)' : 'var(--pw-acao)',
+                                    evento.status === 'regular'
+                                        ? 'var(--pw-ok)'
+                                        : 'var(--pw-irregular)',
                             }}
                         />
                         <span style={{ fontSize: 14 }}>

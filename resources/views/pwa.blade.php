@@ -5,8 +5,8 @@
         {{-- Aplicativo de rua: a tela não dá zoom por engano no meio de um toque,
              e a área segura do aparelho (entalhe, barra de gestos) é respeitada. --}}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-        <meta name="theme-color" content="#0d5c63" media="(prefers-color-scheme: light)">
-        <meta name="theme-color" content="#060f10" media="(prefers-color-scheme: dark)">
+        <meta name="theme-color" content="#14477e" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#0a1628" media="(prefers-color-scheme: dark)">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="SEFAL">
@@ -24,8 +24,8 @@
         </script>
 
         <style>
-            html { background-color: #eef2f2; }
-            html[data-tema='escuro'] { background-color: #060f10; }
+            html { background-color: #eef1f7; }
+            html[data-tema='escuro'] { background-color: #0a1628; }
         </style>
 
         <link rel="manifest" href="/manifest.json">
