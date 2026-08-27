@@ -73,7 +73,9 @@ return [
                 .'barrado em outra tela. Por isso ela é a única fora do controle de acesso: barrá-la '
                 .'fecharia um laço de redirecionamento. Os atalhos são decididos pelo servidor: levam à '
                 .'tela quando ela existe, ficam "em construção" quando ela é de entrega futura e não '
-                .'aparecem para quem não pode abri-la.',
+                .'aparecem para quem não pode abri-la. A primeira tela depois do login recebe o splash '
+                .'de boas-vindas, que aparece uma vez por entrada, não captura clique e sai sozinho; a '
+                .'saudação pelo horário tem um dono só, com a madrugada tratada como noite.',
         ],
 
         [

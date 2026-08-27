@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { ModoGerentePermissoes } from '@/components/retaguarda/modo-gerente-permissoes';
+import OverlayBoasVindas from '@/components/retaguarda/overlay-boas-vindas';
 import { Sidebar } from '@/components/retaguarda/sidebar';
 import { Topbar } from '@/components/retaguarda/topbar';
 import { useFlashToast } from '@/hooks/use-flash-toast';
@@ -42,13 +43,24 @@ export default function RetaguardaLayout({
      * digita (ou tem nos favoritos) o endereço de algo que hoje é painel, e não
      * página — ver `HandleInertiaRequests::painel`.
      */
-    const { painel } = usePage().props;
+    const { painel, auth } = usePage().props;
 
     useEffect(() => {
         if (painel !== null) {
             setPainelAberto(painel);
         }
     }, [painel]);
+
+    /*
+     * Splash de boas-vindas: só na PRIMEIRA tela depois do login (o servidor manda
+     * a marca e a consome na entrega — ver `HandleInertiaRequests::share`).
+     *
+     * A decisão é guardada no estado INICIAL, e não lida da prop a cada render: a
+     * prop vira `false` na navegação seguinte, e ler direto dela faria o splash
+     * desmontar no meio do fade se alguma requisição chegasse enquanto ele está no
+     * ar. Quem o retira do ar é ele mesmo, no fim do próprio tempo.
+     */
+    const [boasVindas] = useState(() => auth.boas_vindas === true);
 
     /*
      * O tema NÃO é escrito aqui. Quem marca o <html> (classe `.dark` e atributo
@@ -88,6 +100,11 @@ export default function RetaguardaLayout({
                 <ModoGerentePermissoes
                     onFechar={() => setPainelAberto(null)}
                 />
+            )}
+
+            {/* Boas-vindas logo depois do login — some sozinho, com fade. */}
+            {boasVindas && (
+                <OverlayBoasVindas nome={auth.user?.name ?? ''} />
             )}
         </div>
     );

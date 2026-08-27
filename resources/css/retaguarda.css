@@ -1240,11 +1240,292 @@ button.rt-menu-item {
     color: #04213a;
 }
 
+/* ==================== BOAS-VINDAS (SPLASH DE ENTRADA) ====================
+   Cobre a tela logo depois do login e some sozinho com fade suave.
+
+   O desenho é a variante aprovada pelo dono: "malha de ruas e pins" — a cidade
+   vista de cima, em azul sobre navy, com manchas de calor onde a fiscalização se
+   concentra e pins pulsando (um laranja, que é a cor de INCIDÊNCIA no sistema).
+
+   Duas leis moram aqui:
+   · `pointer-events: none` — o splash NUNCA bloqueia o clique de quem já quer
+     trabalhar, e se desmonta ao fim do fade (ver o componente);
+   · os @keyframes ficam no FIM do arquivo e no NÍVEL RAIZ. Aninhados em
+     @layer/@media, o lightningcss os descarta na build de produção, em silêncio.
+
+   ⚠️ Este bloco NÃO usa os tokens `--sm-*`: o splash é escuro nos DOIS temas (é
+   a cidade de noite), então as cores são fixas de propósito. Trocá-las por tokens
+   faria o fundo virar branco no tema claro e apagaria o texto branco por cima. */
+.bv-overlay {
+    position: fixed;
+    inset: 0;
+    /* Acima da barra lateral (60), do véu (55) e das janelas sobrepostas (80). */
+    z-index: 200;
+    overflow: hidden;
+    background: linear-gradient(125deg, #14284a 0%, #0a1628 55%, #050d1a 100%);
+    /* Nunca bloqueia o clique de quem já quer trabalhar. */
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 900ms ease;
+}
+.bv-overlay.saindo {
+    opacity: 0;
+}
+
+.bv-mapa {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    animation: bv-mapa-entra 1.6s ease both;
+}
+/* As ruas: duas espessuras de leitura — avenida e travessa. */
+.bv-rua {
+    fill: none;
+    stroke: #1b3a5e;
+    stroke-linecap: round;
+    opacity: 0.9;
+}
+.bv-rua.forte {
+    stroke: #26537e;
+}
+
+.bv-pin-nucleo {
+    fill: #4d9fdc;
+}
+.bv-pin-anel {
+    fill: none;
+    stroke: #4d9fdc;
+    stroke-width: 2;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: bv-pin-pulso 2.6s ease-out infinite;
+}
+/* O ponto irregular. É UM só: laranja é incidência, e vários fariam o splash
+   dizer que a cidade está toda irregular. */
+.bv-pin.incidencia .bv-pin-nucleo {
+    fill: #ff9a4d;
+}
+.bv-pin.incidencia .bv-pin-anel {
+    stroke: #ff9a4d;
+}
+
+/* O véu escurece a ESQUERDA, que é onde mora o texto, e deixa a malha respirar à
+   direita, onde ficam os pins. */
+.bv-veu {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(5, 13, 26, 0.94) 0%,
+        rgba(5, 13, 26, 0.78) 38%,
+        rgba(5, 13, 26, 0.35) 70%,
+        rgba(5, 13, 26, 0.15) 100%
+    );
+}
+
+.bv-marca {
+    position: absolute;
+    top: 34px;
+    right: 44px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    animation: bv-sobe 0.8s ease 0.35s both;
+}
+.bv-marca img {
+    display: block;
+    width: 46px;
+    height: auto;
+}
+.bv-marca-nome {
+    font-size: 21px;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+    color: #fff;
+}
+.bv-marca-orgao {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.bv-bloco {
+    position: absolute;
+    left: 84px;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 620px;
+}
+.bv-kicker {
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 3.4px;
+    color: #4d9fdc;
+    animation: bv-sobe 0.7s ease both;
+}
+.bv-saudacao {
+    margin-top: 14px;
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: #fff;
+    animation: bv-sobe 0.7s ease 0.25s both;
+}
+/* A régua: o traço azul que separa a saudação da frase — a mesma cor de ação do
+   sistema, para o splash não introduzir uma cor que não existe em tela nenhuma. */
+.bv-regua {
+    width: 76px;
+    height: 5px;
+    margin: 26px 0 20px;
+    border-radius: 999px;
+    background: #0066b2;
+    animation: bv-regua-cresce 0.8s ease 0.5s both;
+}
+.bv-frase {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.86);
+    animation: bv-sobe 0.7s ease 0.7s both;
+}
+
+/* ── Telas estreitas ────────────────────────────────────────────────────────
+   O bloco encosta nas margens e a tipografia desce um degrau; a marca encolhe. O
+   pin do meio (`recolhivel`) sai de cena: com a malha cortada pelo `slice`, ele
+   caía justamente sobre o texto. */
+@media (max-width: 900px) {
+    .bv-bloco {
+        left: 26px;
+        right: 26px;
+        max-width: none;
+    }
+    .bv-kicker {
+        font-size: 11px;
+        letter-spacing: 2.4px;
+    }
+    .bv-saudacao {
+        font-size: 36px;
+    }
+    .bv-regua {
+        margin: 20px 0 16px;
+    }
+    .bv-frase {
+        font-size: 15.5px;
+    }
+    .bv-marca {
+        top: 22px;
+        right: 22px;
+        gap: 10px;
+    }
+    .bv-marca img {
+        width: 34px;
+    }
+    .bv-marca-nome {
+        font-size: 17px;
+    }
+    .bv-marca-orgao {
+        font-size: 9.5px;
+        letter-spacing: 1px;
+    }
+    .bv-pin.recolhivel {
+        display: none;
+    }
+    /* Com a tela estreita a malha aparece pouco à direita: o véu abre no pé para
+       os pins que sobraram continuarem visíveis. */
+    .bv-veu {
+        background: linear-gradient(
+            180deg,
+            rgba(5, 13, 26, 0.62) 0%,
+            rgba(5, 13, 26, 0.9) 55%,
+            rgba(5, 13, 26, 0.72) 100%
+        );
+    }
+}
+@media (max-width: 420px) {
+    .bv-saudacao {
+        font-size: 30px;
+    }
+    .bv-frase {
+        font-size: 14.5px;
+    }
+}
+
+/* Quem pede menos movimento recebe o MESMO splash, parado — não um splash a
+   menos: a informação (quem entrou, que horas são) é a mesma. */
+@media (prefers-reduced-motion: reduce) {
+    .bv-mapa,
+    .bv-pin-anel,
+    .bv-marca,
+    .bv-kicker,
+    .bv-saudacao,
+    .bv-regua,
+    .bv-frase {
+        animation: none !important;
+    }
+}
+
 /* ============================ ANIMAÇÕES ============================ */
 /* Nível raiz, nunca dentro de @layer — ver o cabeçalho do arquivo. */
 @keyframes girar-acao {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes bv-sobe {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes bv-regua-cresce {
+    from {
+        width: 0;
+        opacity: 0;
+    }
+    to {
+        width: 76px;
+        opacity: 1;
+    }
+}
+
+@keyframes bv-mapa-entra {
+    from {
+        opacity: 0;
+        transform: scale(1.06);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* O anel expandindo — o "sinal saindo do ponto". Some antes de fechar o ciclo
+   para o pulso ter respiro entre uma onda e a próxima. */
+@keyframes bv-pin-pulso {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.9;
+    }
+    70% {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(2.6);
+        opacity: 0;
     }
 }
 

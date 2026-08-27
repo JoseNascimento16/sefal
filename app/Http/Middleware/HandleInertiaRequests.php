@@ -45,6 +45,23 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user ? $this->usuario($user) : null,
+                /*
+                 * A marca de "acabou de entrar", que o splash de boas-vindas lê
+                 * uma vez e nunca mais.
+                 *
+                 * ⚠️ É consumida AQUI, na ENTREGA (`pull` = lê e apaga) e dentro
+                 * de uma closure — e as duas coisas importam. A closure só roda
+                 * quando os props são de fato serializados, ou seja quando a
+                 * requisição termina numa TELA. Um redirecionamento não serializa
+                 * props, então a marca atravessa quantos saltos internos houver
+                 * entre o login e a primeira tela (a guarda de permissão pode
+                 * mandar a pessoa para outro lugar). Fosse flash de sessão comum,
+                 * ela morreria nesse salto e o splash nunca apareceria para quem
+                 * cai num redirecionamento — foi exatamente o que aconteceu em
+                 * homologação no sistema irmão.
+                 */
+                'boas_vindas' => fn (): bool => $request->hasSession()
+                    && (bool) $request->session()->pull('boas_vindas', false),
             ],
             'menu' => $user ? $this->menu($user) : [],
             'acoes' => $this->acoes($request, $user),
