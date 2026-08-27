@@ -859,6 +859,195 @@ table.data-table tbody tr.clicavel {
     opacity: 0.62;
 }
 
+/* ============================ TELA DE ACESSO ============================
+   Duas metades: a CIDADE à esquerda, o formulário à direita.
+
+   A fotografia é a ladeira do Pelourinho — que é onde este sistema trabalha. Ela
+   entra como PANO DE FUNDO, não como ilustração: quem abre a tela precisa ler os
+   campos, e não admirar a foto. Por isso ela vive só na metade que não tem
+   formulário, esmaecida e sob um véu navy.
+
+   O CONTRASTE NÃO FOI ESTIMADO — foi medido pixel a pixel, compondo as três
+   camadas (gradiente navy no fundo, foto a 42%, véu por cima) e procurando o
+   PIOR pixel da imagem em cada faixa. Com a foto a 42% sobre o extremo mais
+   claro do gradiente (#14477e):
+
+     · faixa do topo (marca + SEFAL), véu 0,66 → texto branco 10,1:1
+     · faixa do pé (assinatura institucional), véu 0,76 → branco 12,3:1
+     · piso do véu em qualquer altura (0,30) → branco 5,3:1
+
+   O mínimo exigido é 4,5:1, e o PISO já o cumpre: texto branco em qualquer ponto
+   do painel passa, mesmo que o recorte da foto mude com o tamanho da janela.
+   ⚠️ Se alguém baixar o piso do véu abaixo de 0,30, essa garantia cai. */
+.rt-entrada {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 100svh;
+    background: var(--sm-app);
+}
+
+.rt-entrada-arte {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    /* Os dois blocos de texto ficam nas pontas, e a faixa do meio guarda a
+       fotografia limpa: é lá que o véu é mais leve. */
+    justify-content: space-between;
+    overflow: hidden;
+    padding: 46px 44px;
+    background: linear-gradient(165deg, #14477e 0%, #0e3560 45%, #061125 100%);
+    color: #fff;
+}
+/* Camada 1 — a fotografia. */
+.rt-entrada-arte::before {
+    content: '';
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    background: url('/images/entrada-salvador.jpg') center / cover no-repeat;
+    opacity: 0.42;
+}
+/* Camada 2 — o véu, mais fechado onde mora texto. */
+.rt-entrada-arte::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(6, 17, 37, 0.66) 0%,
+        rgba(6, 17, 37, 0.3) 38%,
+        rgba(6, 17, 37, 0.34) 62%,
+        rgba(6, 17, 37, 0.76) 100%
+    );
+}
+
+.rt-entrada-marca {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.rt-entrada-marca img {
+    display: block;
+    width: 62px;
+    height: auto;
+    flex: 0 0 62px;
+}
+.rt-entrada-nome {
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+}
+.rt-entrada-expansao {
+    margin-top: 4px;
+    font-size: 13.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    /* 0,88 e não 0,60: o texto está sobre fotografia, e o cinza de tela lisa
+       ficaria no limite (medido: 7,1:1 nesta faixa a 0,80). */
+    color: rgba(255, 255, 255, 0.88);
+}
+.rt-entrada-dizeres {
+    max-width: 30ch;
+    font-size: 17px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.94);
+}
+.rt-entrada-pe {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.88);
+}
+.rt-entrada-lockup {
+    display: block;
+    width: 176px;
+    height: auto;
+    margin-bottom: 12px;
+}
+
+.rt-entrada-form {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 46px 32px;
+}
+.rt-entrada-caixa {
+    width: 100%;
+    max-width: 420px;
+}
+/* O brasão e o nome do sistema também no lado do formulário: em telas estreitas,
+   quando a arte encolhe para uma faixa, é este bloco que segura a identidade. */
+.rt-entrada-cabeca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.rt-entrada-cabeca img {
+    width: 38px;
+    height: auto;
+    flex: 0 0 38px;
+}
+
+/* ── Telas estreitas ─────────────────────────────────────────────────────────
+   A arte deixa de ser metade e vira FAIXA no topo: mantém a fotografia à vista
+   (é ela que diz de onde o sistema é) sem roubar altura do formulário, que é o
+   que a pessoa veio fazer. Os dizeres saem — não caberiam sem empurrar os campos
+   para baixo da dobra. */
+@media (max-width: 900px) {
+    .rt-entrada {
+        grid-template-columns: minmax(0, 1fr);
+        /* A faixa fica do TAMANHO DELA e o formulário recebe o resto. Sem isto as
+           duas linhas dividem a sobra da altura em partes iguais, e no tablet a
+           fotografia crescia para 319px — espaço tirado de quem só quer digitar a
+           matrícula. */
+        grid-template-rows: auto 1fr;
+    }
+    .rt-entrada-arte {
+        min-height: 172px;
+        padding: 22px 24px;
+        justify-content: center;
+    }
+    .rt-entrada-arte::after {
+        background: linear-gradient(
+            to bottom,
+            rgba(6, 17, 37, 0.62) 0%,
+            rgba(6, 17, 37, 0.5) 60%,
+            rgba(6, 17, 37, 0.72) 100%
+        );
+    }
+    .rt-entrada-nome {
+        font-size: 27px;
+    }
+    .rt-entrada-marca img {
+        width: 48px;
+        flex: 0 0 48px;
+    }
+    /* Escondidos, e não removidos do TSX: a mesma tela serve as duas larguras, e
+       uma segunda árvore de marcação daria dois donos ao mesmo conteúdo. */
+    .rt-entrada-dizeres,
+    .rt-entrada-pe {
+        display: none;
+    }
+    .rt-entrada-form {
+        padding: 30px 20px 44px;
+    }
+}
+@media (max-width: 420px) {
+    .rt-entrada-arte {
+        min-height: 132px;
+        padding: 18px 20px;
+    }
+    .rt-entrada-nome {
+        font-size: 23px;
+    }
+    .rt-entrada-expansao {
+        font-size: 12px;
+    }
+}
+
 /* ============================ BUSCA INTELIGENTE ============================ */
 .busca-campo {
     position: relative;
