@@ -104,8 +104,10 @@ test('todo item do menu chega com rotulo curto para a doca', function () {
     $semCurto = collect($itens)->filter(fn (array $i): bool => trim((string) $i['curto']) === '');
 
     expect($semCurto->keys()->all())->toBe([])
-        // Declarado na config quando a primeira palavra não serve…
-        ->and($itens['Tipos de Infração']['curto'])->toBe('INFRAÇÕES')
+        // Declarado na config quando a primeira palavra não serve — "Cadastro de
+        // Operação" e "Mapa de Calor" viriam ambos como uma palavra ambígua.
+        ->and($itens['Cadastro de Operação']['curto'])->toBe('OPERAÇÃO')
+        ->and($itens['Mapa de Calor']['curto'])->toBe('CALOR')
         // …e deduzido quando serve.
         ->and($itens['Relatórios']['curto'])->toBe('RELATÓRIOS');
 });

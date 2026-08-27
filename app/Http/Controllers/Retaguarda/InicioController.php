@@ -39,11 +39,12 @@ class InicioController extends Controller
     /**
      * Os atalhos da tela inicial, na ordem em que aparecem.
      *
-     * `rota` nula quer dizer "tela das próximas entregas" — o cartão nasce em
-     * construção e passa a levar a algum lugar no dia em que a rota existir, sem
-     * ninguém precisar lembrar de voltar aqui.
+     * A `rota` é declarada pelo NOME, e o nome pode ainda não estar registrado: é
+     * assim que um atalho entra no plano antes de a tela existir. Nesse caso o
+     * cartão nasce em construção (sem endereço) e passa a levar a algum lugar no dia
+     * em que a rota nascer, sem ninguém precisar voltar aqui.
      *
-     * @var list<array{chave: string, titulo: string, descricao: string, rota: string|null, slug: string|null}>
+     * @var list<array{chave: string, titulo: string, descricao: string, rota: string, slug: string|null}>
      */
     private const ATALHOS = [
         [
@@ -62,19 +63,43 @@ class InicioController extends Controller
             'rota' => 'retaguarda.permissionarios.index',
             'slug' => 'permissionarios',
         ],
+        /*
+         * As quatro do caminho da fiscalização. Elas TÊM endereço — a tela abre e
+         * diz o que vai ser (ver `TelasEmPreparacaoController`) —, então deixam de
+         * ser cartão esmaecido sem link: a espera passou a morar dentro da tela, que
+         * é onde ela pode ser explicada.
+         *
+         * O `slug` está declarado porque agora existe permissão de verdade para
+         * cada uma: quem não a tem não vê o atalho, em vez de ser convidado para
+         * uma recusa.
+         */
+        [
+            'chave' => 'operacoes',
+            'titulo' => 'Cadastro de Operação',
+            'descricao' => 'As operações de rua planejadas: onde, quando e quem vai.',
+            'rota' => 'retaguarda.operacoes.index',
+            'slug' => 'operacoes',
+        ],
         [
             'chave' => 'fiscalizacoes',
             'titulo' => 'Fiscalizações',
             'descricao' => 'O que os fiscais registraram em campo, com foto e local.',
-            'rota' => null,
-            'slug' => null,
+            'rota' => 'retaguarda.fiscalizacoes.index',
+            'slug' => 'fiscalizacoes',
         ],
         [
-            'chave' => 'areas',
-            'titulo' => 'Áreas de atuação',
-            'descricao' => 'Os polígonos que dizem quem pertence a cada área.',
-            'rota' => null,
-            'slug' => null,
+            'chave' => 'mapa',
+            'titulo' => 'Mapa ao Vivo',
+            'descricao' => 'A cidade agora: onde estão os fiscais e o que acabou de entrar.',
+            'rota' => 'retaguarda.mapa.index',
+            'slug' => 'mapa',
+        ],
+        [
+            'chave' => 'calor',
+            'titulo' => 'Mapa de Calor',
+            'descricao' => 'Onde a irregularidade se concentra, para a operação ir aonde precisa.',
+            'rota' => 'retaguarda.mapa-de-calor.index',
+            'slug' => 'mapa-de-calor',
         ],
     ];
 
@@ -96,13 +121,12 @@ class InicioController extends Controller
         $atalhos = [];
 
         foreach (self::ATALHOS as $atalho) {
-            $rota = $atalho['rota'];
-
-            // Endereço nulo = tela das próximas entregas. A rota é conferida (e
-            // não só declarada) porque o plano anda na frente das telas: um nome
-            // de rota que ainda não existe estouraria a montagem da tela inteira.
-            $endereco = $rota !== null && Route::has($rota)
-                ? route($rota, absolute: false)
+            // A rota é CONFERIDA, e não só declarada, porque o plano anda na frente
+            // das telas: um nome que ainda não existe estouraria a montagem da tela
+            // inteira. Sem registro, o endereço fica nulo e o cartão sai em
+            // construção — é a porta de entrada de um atalho planejado antes da tela.
+            $endereco = Route::has($atalho['rota'])
+                ? route($atalho['rota'], absolute: false)
                 : null;
 
             // A tela existe mas esta pessoa não entra: o atalho SOME, em vez de

@@ -214,6 +214,21 @@ class HandleInertiaRequests extends Middleware
                     continue;
                 }
 
+                /*
+                 * Item marcado como oculto sai do MENU e nada mais: a rota segue
+                 * viva, a permissão segue no Modo Gerente e a tela segue abrindo
+                 * pelo endereço. É o jeito de tirar o atalho de uma tela pronta que
+                 * ainda não vai ao ar para o usuário final — sem apagar código, que
+                 * é o que transforma "esconder" em "refazer depois".
+                 *
+                 * A conferência vem ANTES da permissão de propósito: esconder é
+                 * decisão de produto, não de acesso, e ler as duas na mesma linha
+                 * faria parecer que uma depende da outra.
+                 */
+                if (($item['oculto'] ?? false) === true) {
+                    continue;
+                }
+
                 if (! $permissoes->podeVerItemDoMenu($user, $item)) {
                     continue;
                 }

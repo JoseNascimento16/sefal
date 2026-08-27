@@ -10,7 +10,23 @@ export type UseAppearanceReturn = {
 };
 
 const listeners = new Set<() => void>();
-let currentAppearance: Appearance = 'system';
+
+/**
+ * O tema de quem NUNCA escolheu: CLARO.
+ *
+ * Já foi `system`, e o efeito era este: quem tem o sistema operacional no escuro
+ * — o padrão de fábrica em boa parte dos aparelhos — abria a Retaguarda em navy
+ * sem nunca ter pedido isso. Aqui o dia de trabalho é claro; o escuro é escolha,
+ * e quem a fizer (ou pedir `sistema`) tem a escolha respeitada.
+ *
+ * ⚠️ Este valor tem três irmãos, e os quatro precisam concordar: o `HandleAppearance`
+ * (cookie), o `$appearance ?? …` do `app.blade.php` (duas vezes: a classe do <html>
+ * e o script de pré-pintura). Se um discordar, a primeira pintura é de um tema e a
+ * segunda é de outro — o lampejo que a pré-pintura existe para evitar.
+ */
+const PADRAO: Appearance = 'light';
+
+let currentAppearance: Appearance = PADRAO;
 
 const prefersDark = (): boolean => {
     if (typeof window === 'undefined') {
@@ -31,10 +47,10 @@ const setCookie = (name: string, value: string, days = 365): void => {
 
 const getStoredAppearance = (): Appearance => {
     if (typeof window === 'undefined') {
-        return 'system';
+        return PADRAO;
     }
 
-    return (localStorage.getItem('appearance') as Appearance) || 'system';
+    return (localStorage.getItem('appearance') as Appearance) || PADRAO;
 };
 
 const isDarkMode = (appearance: Appearance): boolean => {
@@ -99,11 +115,13 @@ export function initializeTheme(): void {
         return;
     }
 
-    if (!localStorage.getItem('appearance')) {
-        localStorage.setItem('appearance', 'system');
-        setCookie('appearance', 'system');
-    }
-
+    /*
+     * Ausência de escolha NÃO é gravada como escolha. Antes se escrevia `system` no
+     * armazenamento na primeira visita, e aquilo congelava o padrão: mudá-lo depois
+     * não alcançaria mais ninguém que já tivesse aberto o sistema uma vez. Sem
+     * escrita, "não escolhi" continua sendo não escolhido, e o padrão é do código —
+     * o mesmo que o servidor usa quando não há cookie.
+     */
     currentAppearance = getStoredAppearance();
     applyTheme(currentAppearance);
 
@@ -115,7 +133,7 @@ export function useAppearance(): UseAppearanceReturn {
     const appearance: Appearance = useSyncExternalStore(
         subscribe,
         () => currentAppearance,
-        () => 'system',
+        () => PADRAO,
     );
 
     const resolvedAppearance: ResolvedAppearance = isDarkMode(appearance)

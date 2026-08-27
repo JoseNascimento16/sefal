@@ -1,5 +1,13 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ClipboardCheck, LayoutGrid, Map, Store, UserRound } from 'lucide-react';
+import {
+    ClipboardCheck,
+    Flame,
+    LayoutGrid,
+    MapPinned,
+    Siren,
+    Store,
+    UserRound,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { primeiroNome, saudacaoAgora } from '@/lib/saudacao';
 import { inicio } from '@/routes/retaguarda';
@@ -19,12 +27,17 @@ interface Atalho {
  * O ícone de cada atalho. É só isto que a tela decide sobre eles — quais existem,
  * o que dizem e para onde levam vem do servidor, que é quem sabe se a rota
  * existe e se a pessoa entra.
+ *
+ * São os MESMOS ícones do menu para as mesmas telas: o cartão da tela inicial e o
+ * item da barra têm de ser reconhecíveis como a mesma coisa.
  */
 const ICONES: Record<string, LucideIcon> = {
     perfil: UserRound,
     permissionarios: Store,
+    operacoes: Siren,
     fiscalizacoes: ClipboardCheck,
-    areas: Map,
+    mapa: MapPinned,
+    calor: Flame,
 };
 
 /*

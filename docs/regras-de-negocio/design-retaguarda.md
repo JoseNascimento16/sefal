@@ -137,10 +137,9 @@ alguém digita faria o painel de números virar um segundo resultado de busca.
 
 ### RN-07 — Telas de MAPA usarão o padrão imersivo (decidido, ainda não construído)
 
-Não há tela de mapa na Retaguarda hoje (mapa vivo e mapa de calor são de fase
-posterior — ver `docs/PENDENCIAS.md`). Quando existirem, **não** usarão a casca
-desta RN-01: usarão o padrão **imersivo** do mockup aprovado, que é outro registro
-para outro trabalho.
+As duas telas de mapa existem hoje apenas como **tela em preparação** (RN-09), na
+casca normal. Quando ganharem conteúdo, **não** usarão a casca da RN-01: usarão o
+padrão **imersivo** do mockup aprovado, que é outro registro para outro trabalho.
 
 O que está decidido:
 
@@ -160,6 +159,72 @@ O que está decidido:
 fluxo (o que o mapa mostra, quem pode ver, de onde vem o ponto) continua sendo da
 fase que a construir.
 
+### RN-08 — Esconder do menu é tirar o ATALHO, nunca desligar a tela
+
+Um item pode declarar `oculto` em `config/retaguarda_menu.php`. O efeito é um só: o
+item sai do menu. **Continuam vivas** a rota (a tela abre pelo endereço), a tela em
+si e a permissão no Modo Gerente — inclusive a concessão que o gestor já tenha
+feito. Seção que fica sem nenhum item visível desaparece da barra junto.
+
+**Por que não apagar:** esconder apagando transforma "voltar atrás" em "refazer", e
+faz a concessão de acesso já dada evaporar sem ninguém perceber. Com o flag, trazer
+de volta é remover uma linha.
+
+Em uso hoje: as **seis telas de Parametrização** (decisão do dono, 27/08/2026) —
+prontas, mas fora do menu por ora.
+
+### RN-09 — Tela que ainda não existe ABRE e diz o que vai ser
+
+O plano do sistema anda na frente das telas. Enquanto isso aparecia como item de
+menu sem destino e cartão "Em construção" sem link, quem clicava não recebia
+resposta e a espera não era explicada em lugar nenhum.
+
+Agora cada tela do caminho que ainda não chegou tem **endereço, permissão e uma
+tela de verdade**: cabeçalho editorial normal (a pessoa caiu no lugar certo) e um
+corpo que diz, em uma linha, o que a tela vai ser, **em que fase chega** e o que
+vai permitir fazer. Duas variantes, e a diferença é conteúdo, não enfeite:
+
+- **mapa** — painel navy com a malha de ruas, para as telas de mapa: elas se
+  explicam melhor mostrando o que vão mostrar;
+- **cartão** — aviso sóbrio para as telas de lista. Desenhar um mapa decorativo
+  numa tela de lista prometeria a coisa errada.
+
+Em uso hoje (`TelasEmPreparacaoController`): **Cadastro de Operação** e
+**Fiscalizações** (Fase 2), **Mapa ao Vivo** e **Mapa de Calor** (Fase 3).
+
+⚠️ Isto é **andaime**. Quando a tela real nascer, ela toma o `slug` e a rota, e a
+entrada sai do catálogo do controller — o nome de rota já segue o padrão das telas
+de verdade (`retaguarda.<slug>.index`) justamente para essa troca não tocar no menu.
+
+**A concessão inicial das quatro** segue o critério das telas prontas: o fiscal
+consulta o que é do trabalho dele — o que registrou em campo (Fiscalizações) e onde
+a cidade está agora (Mapa ao Vivo) — e não entra no que é de gestão (planejar
+operação, analisar concentração). Ele não grava nada pela Retaguarda: grava em rua,
+pelo aplicativo.
+
+### RN-10 — O tema padrão é o CLARO
+
+Quem nunca escolheu abre o sistema no **claro**. O escuro é escolha, e quem a fizer
+(ou pedir "do aparelho") tem a escolha respeitada — a opção não saiu do lugar.
+
+Era `system`, e o efeito era este: quem tem o sistema operacional no escuro — o
+padrão de fábrica em boa parte dos aparelhos — abria a Retaguarda em navy sem nunca
+ter pedido. Aqui o dia de trabalho é claro.
+
+⚠️ O padrão é decidido em **quatro** lugares, e os quatro precisam concordar: o
+`HandleAppearance` (cookie), as duas leituras do `app.blade.php` (a classe do
+`<html>` e o script de pré-pintura) e o `PADRAO` do `use-appearance.tsx`. Se um
+discordar, a página nasce de um tema e passa para o outro na hidratação — o lampejo
+que a pré-pintura existe para evitar. Há teste-lei sobre isso.
+
+A ausência de escolha **não é gravada** como escolha: antes se escrevia `system` no
+armazenamento na primeira visita, o que congelava o padrão para sempre naquele
+navegador. Sem essa escrita, mudar o padrão alcança quem nunca decidiu.
+
+**A tela de acesso e o splash de boas-vindas não seguem o tema** — são escuros por
+desenho, nos dois. O painel da fotografia e o splash são a moldura da identidade,
+como o menu (RN-01); o formulário de acesso, esse sim, acompanha o tema.
+
 ---
 
 ## Fora de escopo (por ora)
@@ -176,3 +241,4 @@ fase que a construir.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 27/08/2026 | José Nascimento | Casca da Retaguarda | Criação do doc. A casca passa a ser a "editorial curva" (RN-01), a barra superior sai e o topo da tela vira o cabeçalho da página (RN-02), o menu ganha número vivo declarado por item (RN-03) e duas formas — painel e doca, com barra inferior no telefone (RN-04); as linhas de grade viram cartões com marca de pendência e chip com ponto (RN-05); números de cabeçalho saem da própria lista da tela (RN-06). Registrada a diretriz para as telas de mapa (RN-07). | A casca anterior era genérica: barra superior repetindo o título em corpo 13, menu branco encostado em miolo branco, grade de linhas sem hierarquia e nenhum número à vista — quem abria o sistema não sabia por onde começar o dia. O menu, abaixo de 900px, ficava escondido atrás de um hambúrguer. |
+| 27/08/2026 | José Nascimento | Casca da Retaguarda | As seis telas de Parametrização saem do menu por flag, sem nada ser desligado (RN-08); as quatro telas do caminho da fiscalização entram no menu como tela que abre e explica a espera (RN-09); o tema padrão passa de "do aparelho" para CLARO (RN-10). | O menu mostrava telas de manutenção interna e não mostrava o caminho do trabalho — quem abria o sistema não via que fiscalização, operação e mapa fazem parte dele. E o padrão "do aparelho" fazia quem tem o sistema operacional no escuro abrir a Retaguarda em navy sem nunca ter pedido. |

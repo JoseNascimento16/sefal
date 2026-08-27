@@ -31,6 +31,10 @@ return [
     |             retraído (a doca), onde cabem ~9 caracteres. Sem ele, a doca usa
     |             a primeira palavra do `rotulo` — o que basta para "Relatórios" e
     |             não basta para as seis telas que começam em "Tipos de…".
+    |   oculto  — opcional: `true` esconde o item do MENU sem desligar nada. A rota
+    |             segue viva (acessível por endereço), a permissão segue no Modo
+    |             Gerente e a tela segue funcionando: o que se tira é o atalho. Serve
+    |             para tela pronta que ainda não vai ao ar para o usuário final.
     |   contador— opcional: o NÚMERO VIVO ao lado do item. O valor é uma chave do
     |             catálogo em `App\Support\ContadoresDoMenu`, que decide como
     |             apurar e com que tom (neutro = tamanho, alerta = fila). Só
@@ -115,7 +119,7 @@ return [
          */
         [
             'rotulo' => 'Fiscalização',
-            'vazio' => 'Fiscalizações, operações e áreas chegam nas próximas entregas.',
+            'vazio' => 'As telas da fiscalização aparecem aqui quando você tiver acesso a elas.',
             'itens' => [
                 [
                     'rotulo' => 'Permissionários',
@@ -133,6 +137,69 @@ return [
                         'fiscal' => ['apenas_leitura' => true],
                     ],
                 ],
+
+                /*
+                 * AS QUATRO A SEGUIR SÃO STUBS — a tela existe, responde e mostra
+                 * "em preparação"; o conteúdo chega nas Fases 2 e 3
+                 * (`TelasEmPreparacaoController`).
+                 *
+                 * Entram no menu agora porque o caminho do trabalho tem de estar
+                 * visível: quem abre o sistema precisa ver que fiscalização,
+                 * operação e mapa fazem parte dele, e em que ordem chegam. O que
+                 * NÃO se pode é prometer link e não ter endereço — daí o stub, com
+                 * a espera dita dentro da tela em vez de num item morto na barra.
+                 *
+                 * A concessão inicial segue o mesmo critério das telas prontas: o
+                 * fiscal consulta o que é do trabalho DELE (o que registrou em
+                 * campo e onde a cidade está agora) e não entra no que é de gestão
+                 * (planejar operação, analisar concentração). Ele não grava nada
+                 * pela Retaguarda — grava em rua, pelo aplicativo.
+                 */
+                [
+                    'rotulo' => 'Cadastro de Operação',
+                    'rota' => 'retaguarda.operacoes.index',
+                    'icone' => 'operacoes',
+                    'slug' => 'operacoes',
+                    'curto' => 'OPERAÇÃO',
+                    // Planejar operação é ato de gestão: o fiscal executa em rua.
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Fiscalizações',
+                    'rota' => 'retaguarda.fiscalizacoes.index',
+                    'icone' => 'fiscalizacoes',
+                    'slug' => 'fiscalizacoes',
+                    'curto' => 'REGISTROS',
+                    'setores' => [
+                        'administrador',
+                        'gestor',
+                        // O fiscal CONSULTA o que ele mesmo registrou em campo.
+                        'fiscal' => ['apenas_leitura' => true],
+                    ],
+                ],
+                [
+                    'rotulo' => 'Mapa ao Vivo',
+                    'rota' => 'retaguarda.mapa.index',
+                    'icone' => 'mapa',
+                    'slug' => 'mapa',
+                    'curto' => 'MAPA',
+                    'setores' => [
+                        'administrador',
+                        'gestor',
+                        // Saber onde a cidade está agora é do trabalho de rua.
+                        'fiscal' => ['apenas_leitura' => true],
+                    ],
+                ],
+                [
+                    'rotulo' => 'Mapa de Calor',
+                    'rota' => 'retaguarda.mapa-de-calor.index',
+                    'icone' => 'calor',
+                    'slug' => 'mapa-de-calor',
+                    'curto' => 'CALOR',
+                    // Concentração histórica serve para PLANEJAR: é leitura de
+                    // gestão, não de quem está na calçada agora.
+                    'setores' => ['administrador', 'gestor'],
+                ],
             ],
         ],
 
@@ -149,6 +216,12 @@ return [
          *
          * Gestor e administrador: manter estas listas é ato de gestão da
          * operação. O fiscal as CONSOME em rua, pelo aplicativo — não as edita.
+         *
+         * ⚠️ AS SEIS ESTÃO `oculto` (decisão do dono, 27/08/2026): saíram do MENU e
+         * nada mais. As telas funcionam, as rotas respondem pelo endereço e a
+         * permissão continua no Modo Gerente — a seção inteira desaparece da barra
+         * porque não sobra item visível nela, e é isso que se queria. Para trazê-las
+         * de volta, tire o `oculto`; nenhuma outra mudança é necessária.
          */
         [
             'rotulo' => 'Parametrização',
@@ -159,6 +232,7 @@ return [
                     'icone' => 'parametrizacao',
                     'curto' => 'INFRAÇÕES',
                     'slug' => 'parametrizacao',
+                    'oculto' => true,
                     'setores' => ['administrador', 'gestor'],
                 ],
                 [
@@ -167,6 +241,7 @@ return [
                     'icone' => 'parametrizacao',
                     'curto' => 'ATIVIDADES',
                     'slug' => 'parametrizacao',
+                    'oculto' => true,
                     'setores' => ['administrador', 'gestor'],
                 ],
                 [
@@ -175,6 +250,7 @@ return [
                     'icone' => 'parametrizacao',
                     'curto' => 'UNIDADES',
                     'slug' => 'parametrizacao',
+                    'oculto' => true,
                     'setores' => ['administrador', 'gestor'],
                 ],
                 [
@@ -183,6 +259,7 @@ return [
                     'icone' => 'parametrizacao',
                     'curto' => 'OPERAÇÕES',
                     'slug' => 'parametrizacao',
+                    'oculto' => true,
                     'setores' => ['administrador', 'gestor'],
                 ],
                 [
@@ -191,6 +268,7 @@ return [
                     'icone' => 'parametrizacao',
                     'curto' => 'ORIGENS',
                     'slug' => 'parametrizacao',
+                    'oculto' => true,
                     'setores' => ['administrador', 'gestor'],
                 ],
                 [
@@ -199,6 +277,7 @@ return [
                     'icone' => 'parametrizacao',
                     'curto' => 'RECUSAS',
                     'slug' => 'parametrizacao',
+                    'oculto' => true,
                     'setores' => ['administrador', 'gestor'],
                 ],
             ],
