@@ -108,10 +108,27 @@ export function TelaPerfil() {
                     Encerrar plantão e sair
                 </button>
 
-                <p className="pw-fraco" style={{ textAlign: 'center', marginTop: 18 }}>
+                {/* Brasão oficial no rodapé: aqui o fundo muda com o tema, então
+                    entra a versão colorida no claro e a branca no escuro. */}
+                <img
+                    className="pw-marca-rodape pw-marca-rodape-cor"
+                    src="/images/marca/salvador-horizontal-cor.svg"
+                    alt="Prefeitura Municipal do Salvador"
+                    width={168}
+                    height={68}
+                />
+                <img
+                    className="pw-marca-rodape pw-marca-rodape-branco"
+                    src="/images/marca/salvador-horizontal-branco.svg"
+                    alt="Prefeitura Municipal do Salvador"
+                    width={168}
+                    height={68}
+                />
+
+                <p className="pw-fraco" style={{ textAlign: 'center', marginTop: 4 }}>
                     SEFAL · Aplicativo de campo — protótipo de demonstração
                     <br />
-                    Prefeitura Municipal do Salvador · SEMOP
+                    SEMOP · Secretaria Municipal de Ordem Pública
                 </p>
             </div>
         </div>

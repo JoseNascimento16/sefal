@@ -1207,6 +1207,27 @@ textarea.pw-entrada {
     margin-bottom: 26px;
 }
 
+/* No rodapé do perfil o fundo é claro ou escuro conforme o tema, então aqui as
+   DUAS versões do brasão são necessárias — cada tema mostra a sua. */
+.pw-marca-rodape {
+    display: block;
+    width: 168px;
+    height: auto;
+    margin: 0 auto 12px;
+}
+
+.pw-marca-rodape-branco {
+    display: none;
+}
+
+[data-tema='escuro'] .pw-marca-rodape-branco {
+    display: block;
+}
+
+[data-tema='escuro'] .pw-marca-rodape-cor {
+    display: none;
+}
+
 .pw-marca h1 {
     margin: 0;
     font-size: 30px;
