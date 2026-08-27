@@ -1177,16 +1177,61 @@ textarea.pw-entrada {
 /* ======================= ENTRADA (LOGIN) ======================= */
 
 .pw-entrada-tela {
+    position: relative;
+    isolation: isolate;
     display: flex;
     min-height: 100dvh;
     flex-direction: column;
     justify-content: center;
+    overflow: hidden;
     padding: 32px 24px calc(32px + var(--pw-seguro-baixo));
     background:
         radial-gradient(circle at 15% 0%, rgba(77, 159, 220, 0.34), transparent 46%),
         radial-gradient(circle at 100% 100%, var(--pw-entrada-brilho), transparent 55%),
         var(--pw-entrada-fundo);
     color: #fff;
+}
+
+/* A cidade por baixo do formulário.
+   ----------------------------------------------------------------------------
+   A metade de baixo da tela de entrada recebe uma fotografia de Salvador — a
+   ladeira do Pelourinho, que é onde este aplicativo trabalha. Ela entra como
+   PANO DE FUNDO, não como ilustração: quem abre a tela tem de ler os campos, e
+   não admirar a foto.
+
+   São duas camadas, e cada uma tem uma função:
+   1. a fotografia, esmaecida e com a borda de cima dissolvida numa máscara, para
+      não haver emenda visível entre ela e o gradiente navy;
+   2. um véu navy que escurece progressivamente até o pé da tela, que é onde fica
+      o texto institucional — sem ele, a assinatura da Prefeitura cairia sobre o
+      trecho mais claro da foto.
+
+   As duas ficam ATRÁS do conteúdo (`z-index` negativo dentro do contexto de
+   empilhamento criado pelo `isolation`), então nenhum toque do fiscal esbarra
+   nelas. */
+.pw-entrada-tela::before {
+    content: '';
+    position: absolute;
+    z-index: -2;
+    inset: 46% 0 0;
+    background: url('/images/entrada-salvador.jpg') center 58% / cover no-repeat;
+    opacity: 0.42;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26%);
+    mask-image: linear-gradient(to bottom, transparent, #000 26%);
+}
+
+.pw-entrada-tela::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 40% 0 0;
+    background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(6, 17, 37, 0.34) 34%,
+        rgba(6, 17, 37, 0.6) 66%,
+        rgba(6, 17, 37, 0.8)
+    );
 }
 
 .pw-marca {
@@ -1270,7 +1315,7 @@ textarea.pw-entrada {
 }
 
 .pw-entrada-tela .pw-entrada::placeholder {
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .pw-entrada-tela .pw-entrada:focus {
@@ -1318,7 +1363,8 @@ textarea.pw-entrada {
     text-align: center;
     font-size: 12.5px;
     line-height: 1.6;
-    color: rgba(255, 255, 255, 0.6);
+    /* Sobre a fotografia, o cinza de antes (0.6) ficava no limite. */
+    color: rgba(255, 255, 255, 0.76);
 }
 
 /* ======================= VAZIO / AVISOS ======================= */
@@ -1411,9 +1457,14 @@ textarea.pw-entrada {
         justify-content: center;
     }
 
+    /* No tablet a coluna do formulário continua estreita (formulário largo é
+       formulário difícil de ler), mas quem estreita é o ESPAÇAMENTO, não a
+       tela: assim o fundo — o gradiente e a fotografia da cidade — atravessa a
+       largura inteira, em vez de virar uma tira escura no meio de uma página
+       clara. */
     .pw-entrada-tela {
-        max-width: 520px;
-        margin: 0 auto;
+        padding-left: max(24px, calc(50% - 260px));
+        padding-right: max(24px, calc(50% - 260px));
     }
 }
 
