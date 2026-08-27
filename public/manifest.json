@@ -1,0 +1,25 @@
+{
+    "name": "SEFAL · Fiscalização de Ambulantes",
+    "short_name": "SEFAL",
+    "description": "Aplicativo de campo do fiscal da SEMOP — registro de fiscalização em rua.",
+    "lang": "pt-BR",
+    "start_url": "/app",
+    "scope": "/app",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0d5c63",
+    "theme_color": "#0d5c63",
+    "icons": [
+        {
+            "src": "/pwa-icone.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ]
+}

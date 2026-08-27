@@ -1,0 +1,1427 @@
+/* ============================================================================
+   SEMOP · SEFAL — Aplicativo do Fiscal (PWA) · Identidade de CAMPO
+   ----------------------------------------------------------------------------
+   PROTÓTIPO VISUAL. Este arquivo é o vestuário do aplicativo de rua e NÃO
+   compartilha nada com o `retaguarda.css`: lá é mesa, cadeira e monitor; aqui é
+   sol a pino, luva, celular numa mão só e pressa. Por isso os tokens têm
+   prefixo próprio (`--pw-*`), a tipografia é maior, os alvos de toque nunca
+   descem de 48px e o contraste é puxado para cima.
+
+   Marca: PETRÓLEO (#0d5c63) como cor institucional e ÂMBAR (#f4a300) como cor
+   de ação — a mesma dupla da Retaguarda, em registro mais ousado.
+
+   TEMA — o fiscal também trabalha à noite e no Carnaval. O tema escuro é real,
+   não um filtro: os MESMOS tokens trocam de valor sob `[data-tema='escuro']`.
+
+   @keyframes ficam no FIM e no NÍVEL RAIZ: aninhados, o minificador da build de
+   produção (lightningcss) os descarta em silêncio.
+   ============================================================================ */
+
+:root {
+    --pw-primaria: #0d5c63;
+    --pw-primaria-forte: #08383d;
+    --pw-primaria-clara: #147c86;
+    --pw-primaria-suave: rgba(13, 92, 99, 0.1);
+    --pw-acao: #f4a300;
+    --pw-acao-forte: #d68f00;
+    --pw-acao-suave: rgba(244, 163, 0, 0.16);
+
+    --pw-app: #eef2f2;
+    --pw-superficie: #ffffff;
+    --pw-superficie-2: #f6f9f9;
+    --pw-texto: #0c1c1e;
+    --pw-texto-corpo: #2f4547;
+    --pw-texto-fraco: #647c7e;
+    --pw-borda: #dae3e3;
+    --pw-borda-forte: #b9c9c9;
+
+    --pw-ok: #0f7a52;
+    --pw-ok-forte: #0b6242;
+    --pw-ok-suave: rgba(15, 122, 82, 0.12);
+    --pw-alerta: #b06b00;
+    --pw-alerta-suave: rgba(244, 163, 0, 0.18);
+    --pw-perigo: #b3261e;
+    --pw-perigo-suave: rgba(179, 38, 30, 0.12);
+    --pw-info: #0b6f8c;
+    --pw-info-suave: rgba(11, 111, 140, 0.12);
+
+    --pw-raio: 14px;
+    --pw-raio-lg: 22px;
+    --pw-raio-full: 999px;
+
+    --pw-sombra: 0 6px 18px rgba(8, 34, 36, 0.1);
+    --pw-sombra-alta: 0 -10px 30px rgba(8, 34, 36, 0.16);
+
+    --pw-topo-fundo: var(--pw-primaria);
+    --pw-entrada-brilho: rgba(20, 124, 134, 0.5);
+    --pw-entrada-fundo: linear-gradient(160deg, var(--pw-primaria-forte), #04181b 70%);
+
+    --pw-nav-altura: 68px;
+    --pw-topo-altura: 60px;
+    --pw-seguro-baixo: env(safe-area-inset-bottom, 0px);
+}
+
+[data-tema='escuro'] {
+    /* AZUL MARINHO. O escuro do aplicativo não é o petróleo do tema claro
+       rebaixado — é outra família: azul-marinho de noite de plantão, que separa
+       de longe o modo de trabalho e não puxa para o verde. O âmbar continua
+       sendo a cor de ação e de sinalização nos dois temas. */
+    --pw-primaria: #6aa6f0;
+    --pw-primaria-forte: #8cbdf7;
+    --pw-primaria-clara: #a8d0ff;
+    --pw-primaria-suave: rgba(106, 166, 240, 0.18);
+    --pw-acao: #ffb62e;
+    --pw-acao-forte: #ffc857;
+    --pw-acao-suave: rgba(255, 182, 46, 0.18);
+
+    --pw-app: #0a1628;
+    --pw-superficie: #0f1d33;
+    --pw-superficie-2: #132542;
+    --pw-muted: #132542;
+    --pw-texto: #e9effb;
+    --pw-texto-corpo: #c4d2e8;
+    --pw-texto-fraco: #8d9ec0;
+    --pw-borda: #1e3252;
+    --pw-borda-forte: #2f4a76;
+
+    /* A barra de título não usa a cor de realce como fundo: azul claro com
+       texto branco não chega aos 4,5:1 exigidos. Ela é um azul profundo da
+       mesma família, e aí o branco tem folga. */
+    --pw-topo-fundo: #14284a;
+
+    --pw-ok: #4ddba4;
+    --pw-ok-forte: #2fc38a;
+    --pw-ok-suave: rgba(77, 219, 164, 0.16);
+    --pw-alerta: #ffc857;
+    --pw-alerta-suave: rgba(255, 200, 87, 0.18);
+    --pw-perigo: #ff8c84;
+    --pw-perigo-suave: rgba(255, 140, 132, 0.18);
+    --pw-info: #7cc4ff;
+    --pw-info-suave: rgba(124, 196, 255, 0.16);
+
+    --pw-entrada-brilho: rgba(106, 166, 240, 0.34);
+    --pw-entrada-fundo: linear-gradient(160deg, #12294c, #060e1c 72%);
+
+    --pw-sombra: 0 6px 20px rgba(0, 0, 0, 0.55);
+    --pw-sombra-alta: 0 -12px 34px rgba(0, 0, 0, 0.6);
+
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overscroll-behavior-y: none;
+}
+
+body {
+    background: var(--pw-app);
+    color: var(--pw-texto);
+    font-family:
+        'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#pwa {
+    min-height: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+    color: inherit;
+}
+
+/* ======================= ESTRUTURA DA TELA ======================= */
+
+.pw-tela {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    background: var(--pw-app);
+}
+
+.pw-corpo {
+    flex: 1;
+    padding: 16px 16px calc(var(--pw-nav-altura) + var(--pw-seguro-baixo) + 24px);
+}
+
+.pw-corpo-limpo {
+    flex: 1;
+    padding: 0;
+}
+
+/* Faixa do protótipo — discreta, mas honesta: ninguém confunde tela de ensaio
+   com sistema em produção. */
+.pw-faixa-prototipo {
+    position: fixed;
+    z-index: 1200;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 22px;
+    background: repeating-linear-gradient(
+        135deg,
+        var(--pw-acao),
+        var(--pw-acao) 12px,
+        var(--pw-acao-forte) 12px,
+        var(--pw-acao-forte) 24px
+    );
+    color: #2a1c00;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.pw-com-faixa {
+    padding-top: 22px;
+}
+
+.pw-topo {
+    position: sticky;
+    top: 22px;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: var(--pw-topo-altura);
+    padding: 10px 14px;
+    background: var(--pw-topo-fundo);
+    color: #fff;
+    box-shadow: var(--pw-sombra);
+}
+
+.pw-topo h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.pw-topo p {
+    margin: 0;
+    font-size: 12.5px;
+    opacity: 0.82;
+}
+
+.pw-topo-botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border: 0;
+    border-radius: var(--pw-raio-full);
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+.pw-topo-botao:active {
+    background: rgba(255, 255, 255, 0.32);
+}
+
+.pw-topo-avatar {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.pw-titulo-secao {
+    margin: 22px 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pw-texto-fraco);
+}
+
+/* ======================= BOTÕES ======================= */
+
+.pw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 20px;
+    border: 1px solid transparent;
+    border-radius: var(--pw-raio);
+    background: var(--pw-primaria);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.12s ease,
+        filter 0.18s ease;
+}
+
+.pw-btn:active {
+    transform: scale(0.985);
+    filter: brightness(0.94);
+}
+
+.pw-btn-acao {
+    background: var(--pw-acao);
+    color: #2a1c00;
+}
+
+.pw-btn-contorno {
+    background: transparent;
+    border-color: var(--pw-borda-forte);
+    color: var(--pw-texto);
+}
+
+.pw-btn-fantasma {
+    background: var(--pw-superficie);
+    border-color: var(--pw-borda);
+    color: var(--pw-texto-corpo);
+    font-weight: 600;
+}
+
+.pw-btn-pequeno {
+    width: auto;
+    min-height: 40px;
+    padding: 8px 14px;
+    font-size: 14px;
+    border-radius: var(--pw-raio-full);
+}
+
+/* Os dois botões de decisão do registro: propositalmente enormes. É o toque que
+   o fiscal dá em pé, com uma mão, olhando para a barraca — não para o celular. */
+.pw-decisao {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.pw-decisao button {
+    display: flex;
+    min-height: 112px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 2px solid transparent;
+    border-radius: var(--pw-raio-lg);
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition:
+        transform 0.14s ease,
+        box-shadow 0.2s ease;
+}
+
+.pw-decisao button span {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.85;
+    letter-spacing: 0;
+}
+
+.pw-decisao .pw-regular {
+    background: var(--pw-ok);
+    color: #fff;
+}
+
+.pw-decisao .pw-irregular {
+    background: var(--pw-acao);
+    color: #2a1c00;
+}
+
+/* No escuro o verde clareia para se ver na tela sob o poste; com ele, o texto
+   branco sumiria — então o texto escurece junto. */
+[data-tema='escuro'] .pw-decisao .pw-regular {
+    color: #04231a;
+}
+
+.pw-decisao button:active {
+    transform: scale(0.97);
+}
+
+.pw-decisao button.pw-escolhido {
+    box-shadow: 0 0 0 4px var(--pw-superficie), 0 0 0 7px currentColor;
+    animation: pw-pulso 0.45s ease;
+}
+
+/* ======================= CARTÕES ======================= */
+
+.pw-card {
+    padding: 14px;
+    border: 1px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    box-shadow: var(--pw-sombra);
+}
+
+.pw-card + .pw-card {
+    margin-top: 12px;
+}
+
+.pw-card-toque {
+    display: block;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pw-card-toque:active {
+    transform: scale(0.99);
+}
+
+.pw-linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.pw-linha-espalha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.pw-fraco {
+    color: var(--pw-texto-fraco);
+    font-size: 13px;
+}
+
+.pw-forte {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ======================= NÚMEROS DO DIA (INÍCIO) ======================= */
+
+.pw-numeros {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.pw-numero {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-height: 104px;
+    padding: 12px;
+    border: 1px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    box-shadow: var(--pw-sombra);
+    cursor: pointer;
+    text-align: left;
+}
+
+.pw-numero:active {
+    transform: scale(0.98);
+}
+
+.pw-numero-icone {
+    display: inline-flex;
+}
+
+.pw-numero-valor {
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+
+/* Prévia do mapa: parece um cartão, comporta-se como um botão. */
+.pw-previa {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 190px;
+    padding: 0;
+    border: 1px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie-2);
+    box-shadow: var(--pw-sombra);
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.pw-previa-mapa {
+    position: absolute;
+    inset: 0;
+    display: block;
+}
+
+.pw-previa-veu {
+    position: absolute;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 14px;
+    background: linear-gradient(to bottom, transparent 45%, rgba(0, 0, 0, 0.28));
+}
+
+/* ======================= SELOS E SITUAÇÃO ======================= */
+
+.pw-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: var(--pw-raio-full);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pw-selo-ok {
+    background: var(--pw-ok-suave);
+    color: var(--pw-ok-forte);
+}
+
+.pw-selo-alerta {
+    background: var(--pw-alerta-suave);
+    color: var(--pw-alerta);
+}
+
+.pw-selo-perigo {
+    background: var(--pw-perigo-suave);
+    color: var(--pw-perigo);
+}
+
+.pw-selo-info {
+    background: var(--pw-info-suave);
+    color: var(--pw-info);
+}
+
+.pw-selo-neutro {
+    background: var(--pw-superficie-2);
+    border: 1px solid var(--pw-borda);
+    color: var(--pw-texto-fraco);
+}
+
+[data-tema='escuro'] .pw-selo-ok {
+    color: var(--pw-ok);
+}
+
+/* ======================= CHIPS DE OCORRÊNCIA ======================= */
+
+.pw-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pw-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 10px 16px;
+    border: 1.5px solid var(--pw-borda-forte);
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-superficie);
+    color: var(--pw-texto-corpo);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.16s ease,
+        border-color 0.16s ease,
+        transform 0.12s ease;
+}
+
+.pw-chip:active {
+    transform: scale(0.96);
+}
+
+.pw-chip-ligado {
+    border-color: var(--pw-primaria);
+    background: var(--pw-primaria-suave);
+    color: var(--pw-primaria);
+    font-weight: 800;
+}
+
+/* ======================= CAMPOS ======================= */
+
+.pw-campo {
+    display: block;
+    margin-bottom: 14px;
+}
+
+.pw-campo > span {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--pw-texto-corpo);
+}
+
+.pw-entrada {
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--pw-borda-forte);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    font-size: 16.5px;
+    outline: none;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.pw-entrada:focus {
+    border-color: var(--pw-primaria);
+    box-shadow: 0 0 0 4px var(--pw-primaria-suave);
+}
+
+textarea.pw-entrada {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.pw-interruptor {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-height: 56px;
+    padding: 8px 14px;
+    border: 1px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    cursor: pointer;
+}
+
+.pw-interruptor-trilho {
+    position: relative;
+    width: 56px;
+    height: 32px;
+    flex: 0 0 56px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-borda-forte);
+    transition: background 0.2s ease;
+}
+
+.pw-interruptor-trilho::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--pw-raio-full);
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+.pw-ligado .pw-interruptor-trilho {
+    background: var(--pw-ok);
+}
+
+.pw-ligado .pw-interruptor-trilho::after {
+    transform: translateX(24px);
+}
+
+/* ======================= MAPA ======================= */
+
+.pw-mapa-area {
+    position: relative;
+    flex: 1;
+    min-height: 340px;
+}
+
+/* O mapa que ocupa a tela toda para acima da barra inferior: sem esta reserva,
+   a barra come o rodapé do mapa — e leva junto o botão de fiscalizar. */
+.pw-mapa-cheio {
+    margin-bottom: calc(var(--pw-nav-altura) + var(--pw-seguro-baixo));
+}
+
+.pw-mapa {
+    position: absolute;
+    inset: 0;
+}
+
+.leaflet-container {
+    background: var(--pw-app);
+    font-family: inherit;
+}
+
+/* O controle de aproximação encosta na barra inferior no celular; sobe um
+   dedo para continuar clicável. */
+.leaflet-bottom.leaflet-left .leaflet-control-zoom {
+    margin-bottom: 16px;
+}
+
+/* Tema escuro do mapa sem trocar de servidor de imagens: as fotos aéreas do
+   OpenStreetMap são claras por natureza; à noite elas ofuscam. */
+[data-tema='escuro'] .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(200deg) brightness(0.84) contrast(0.94) saturate(0.62);
+}
+
+.pw-pino {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 3px solid #fff;
+    border-radius: 50% 50% 50% 6px;
+    transform: rotate(45deg);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+    font-size: 15px;
+}
+
+.pw-pino > * {
+    transform: rotate(-45deg);
+}
+
+.pw-pino-regular {
+    background: var(--pw-ok);
+}
+
+.pw-pino-irregular {
+    background: var(--pw-acao);
+}
+
+.pw-pino-retorno {
+    background: var(--pw-perigo);
+    animation: pw-batida 1.6s ease-in-out infinite;
+}
+
+.pw-pino-eu {
+    width: 22px;
+    height: 22px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: var(--pw-info);
+    box-shadow: 0 0 0 8px rgba(11, 111, 140, 0.22);
+}
+
+.pw-selo-retorno {
+    position: absolute;
+    top: -14px;
+    left: 30px;
+    padding: 2px 8px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-perigo);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.pw-mapa-flutua {
+    position: absolute;
+    z-index: 600;
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    display: flex;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.pw-mapa-flutua > * {
+    pointer-events: auto;
+}
+
+.pw-pilula {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border: 1px solid var(--pw-borda);
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-superficie);
+    color: var(--pw-texto);
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: var(--pw-sombra);
+    cursor: pointer;
+}
+
+.pw-fab {
+    position: absolute;
+    z-index: 700;
+    right: 16px;
+    bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 62px;
+    padding: 0 24px 0 20px;
+    border: 0;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-acao);
+    color: #2a1c00;
+    font-size: 17px;
+    font-weight: 800;
+    box-shadow: 0 10px 26px rgba(244, 163, 0, 0.45);
+    cursor: pointer;
+    animation: pw-surge 0.4s ease;
+}
+
+.pw-fab:active {
+    transform: scale(0.96);
+}
+
+/* O painel lateral só existe onde há largura para ele (ver o bloco de tablet no
+   fim do arquivo). No retrato do celular, ele nem entra na tela. */
+.pw-painel-lateral {
+    display: none;
+}
+
+/* Gaveta de detalhe do ponto tocado no mapa. */
+.pw-gaveta {
+    position: absolute;
+    z-index: 800;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 8px 16px 20px;
+    border-radius: var(--pw-raio-lg) var(--pw-raio-lg) 0 0;
+    background: var(--pw-superficie);
+    box-shadow: var(--pw-sombra-alta);
+    animation: pw-sobe 0.24s ease;
+}
+
+.pw-gaveta-alca {
+    width: 44px;
+    height: 5px;
+    margin: 0 auto 12px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-borda-forte);
+}
+
+/* ======================= NAVEGAÇÃO INFERIOR ======================= */
+
+.pw-nav {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding-bottom: var(--pw-seguro-baixo);
+    border-top: 1px solid var(--pw-borda);
+    background: var(--pw-superficie);
+    box-shadow: var(--pw-sombra-alta);
+}
+
+.pw-nav button {
+    display: flex;
+    min-height: var(--pw-nav-altura);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 0;
+    background: transparent;
+    color: var(--pw-texto-fraco);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    position: relative;
+}
+
+.pw-nav button.pw-nav-ativo {
+    color: var(--pw-primaria);
+}
+
+.pw-nav button.pw-nav-ativo::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 34px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--pw-primaria);
+}
+
+.pw-nav-conta {
+    position: absolute;
+    top: 10px;
+    right: 22%;
+    min-width: 18px;
+    padding: 1px 5px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-perigo);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+/* ======================= GRADE DE FOTOS ======================= */
+
+.pw-fotos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+}
+
+.pw-foto {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    border-radius: var(--pw-raio);
+    background:
+        linear-gradient(135deg, var(--pw-primaria-suave), var(--pw-acao-suave)),
+        var(--pw-superficie-2);
+    color: var(--pw-texto-fraco);
+    font-size: 26px;
+    overflow: hidden;
+}
+
+.pw-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pw-foto-add {
+    border: 2px dashed var(--pw-borda-forte);
+    background: var(--pw-superficie);
+    cursor: pointer;
+}
+
+.pw-foto-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: var(--pw-raio-full);
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    cursor: pointer;
+}
+
+.pw-miniaturas {
+    display: flex;
+    gap: 6px;
+}
+
+.pw-miniatura {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background:
+        linear-gradient(135deg, var(--pw-primaria-suave), var(--pw-acao-suave)),
+        var(--pw-superficie-2);
+    font-size: 16px;
+}
+
+/* ======================= PASSOS DO REGISTRO ======================= */
+
+.pw-passo {
+    margin-bottom: 18px;
+}
+
+.pw-passo-cabeca {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.pw-passo-numero {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-primaria);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.pw-passo-titulo {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.pw-passo-opcional {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pw-texto-fraco);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ======================= RECIBO ======================= */
+
+.pw-recibo {
+    position: relative;
+    padding: 20px 18px 26px;
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    box-shadow: var(--pw-sombra);
+    animation: pw-sobe 0.3s ease;
+}
+
+.pw-recibo::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    height: 10px;
+    background:
+        radial-gradient(circle at 8px -2px, transparent 8px, var(--pw-superficie) 9px) repeat-x;
+    background-size: 16px 10px;
+}
+
+.pw-recibo-selo {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 12px;
+    border-radius: var(--pw-raio-full);
+    font-size: 34px;
+    animation: pw-pulso 0.5s ease;
+}
+
+.pw-recibo dl {
+    margin: 16px 0 0;
+    display: grid;
+    grid-template-columns: 116px 1fr;
+    gap: 9px 12px;
+    font-size: 14.5px;
+}
+
+.pw-recibo dt {
+    color: var(--pw-texto-fraco);
+    font-weight: 600;
+}
+
+.pw-recibo dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+.pw-tracejado {
+    margin: 18px 0;
+    border: 0;
+    border-top: 2px dashed var(--pw-borda);
+}
+
+/* ======================= CALOR ======================= */
+
+.pw-leitura {
+    padding: 16px;
+    border-left: 5px solid var(--pw-acao);
+    border-radius: var(--pw-raio);
+    background: var(--pw-acao-suave);
+    color: var(--pw-texto);
+    font-size: 15.5px;
+    line-height: 1.5;
+}
+
+.pw-barra-regiao {
+    height: 8px;
+    margin-top: 8px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-superficie-2);
+    overflow: hidden;
+}
+
+.pw-barra-regiao > div {
+    height: 100%;
+    border-radius: var(--pw-raio-full);
+    background: linear-gradient(90deg, var(--pw-acao), var(--pw-perigo));
+    animation: pw-cresce 0.7s ease;
+}
+
+.pw-legenda-calor {
+    height: 12px;
+    border-radius: var(--pw-raio-full);
+    background: linear-gradient(90deg, #2b83ba, #7fcdbb, #ffffbf, #fdae61, #d7191c);
+}
+
+.pw-periodo {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 5px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-superficie-2);
+    border: 1px solid var(--pw-borda);
+}
+
+.pw-periodo button {
+    min-height: 44px;
+    border: 0;
+    border-radius: var(--pw-raio-full);
+    background: transparent;
+    color: var(--pw-texto-corpo);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pw-periodo button.pw-periodo-ativo {
+    background: var(--pw-primaria);
+    color: #fff;
+}
+
+/* ======================= FILA DE ENVIO ======================= */
+
+.pw-fila-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+}
+
+.pw-fila-item + .pw-fila-item {
+    margin-top: 10px;
+}
+
+.pw-fila-marca {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: var(--pw-raio-full);
+    font-size: 18px;
+}
+
+.pw-girando {
+    animation: pw-gira 1s linear infinite;
+}
+
+.pw-progresso {
+    height: 6px;
+    margin-top: 12px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-superficie-2);
+    overflow: hidden;
+}
+
+.pw-progresso > div {
+    height: 100%;
+    background: var(--pw-primaria);
+    transition: width 0.3s ease;
+}
+
+/* ======================= ENTRADA (LOGIN) ======================= */
+
+.pw-entrada-tela {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    justify-content: center;
+    padding: 32px 24px calc(32px + var(--pw-seguro-baixo));
+    background:
+        radial-gradient(circle at 15% 0%, rgba(244, 163, 0, 0.28), transparent 46%),
+        radial-gradient(circle at 100% 100%, var(--pw-entrada-brilho), transparent 55%),
+        var(--pw-entrada-fundo);
+    color: #fff;
+}
+
+.pw-marca {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 34px;
+}
+
+.pw-marca-brasao {
+    display: grid;
+    place-items: center;
+    width: 62px;
+    height: 62px;
+    flex: 0 0 62px;
+    border-radius: 18px;
+    background: var(--pw-acao);
+    color: #2a1c00;
+    font-size: 26px;
+    font-weight: 900;
+    box-shadow: 0 8px 22px rgba(244, 163, 0, 0.35);
+}
+
+.pw-marca h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+}
+
+.pw-marca p {
+    margin: 2px 0 0;
+    font-size: 13px;
+    opacity: 0.78;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.pw-entrada-tela .pw-campo > span {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.pw-entrada-tela .pw-entrada {
+    border-color: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.pw-entrada-tela .pw-entrada::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.pw-entrada-tela .pw-entrada:focus {
+    border-color: var(--pw-acao);
+    box-shadow: 0 0 0 4px rgba(244, 163, 0, 0.22);
+}
+
+.pw-lembrar {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    min-height: 48px;
+    margin: 4px 0 20px;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pw-caixa {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-radius: 8px;
+    color: #2a1c00;
+    font-size: 15px;
+}
+
+.pw-caixa-marcada {
+    border-color: var(--pw-acao);
+    background: var(--pw-acao);
+}
+
+.pw-rodape-entrada {
+    margin-top: 26px;
+    text-align: center;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ======================= VAZIO / AVISOS ======================= */
+
+.pw-vazio {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--pw-texto-fraco);
+}
+
+.pw-vazio-icone {
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+.pw-aviso {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--pw-raio);
+    background: var(--pw-info-suave);
+    color: var(--pw-texto-corpo);
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.pw-lista-limpa {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* ======================= TABLET ======================= */
+
+/* No tablet sobra largura: o mapa ganha um painel ao lado em vez de esticar os
+   cartões até virarem faixas ilegíveis. */
+@media (min-width: 760px) {
+    .pw-corpo {
+        max-width: 720px;
+        margin: 0 auto;
+        width: 100%;
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+
+    .pw-duas-colunas {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        align-items: start;
+    }
+
+    .pw-duas-colunas .pw-card + .pw-card {
+        margin-top: 0;
+    }
+
+    .pw-mapa-com-painel {
+        display: grid;
+        grid-template-columns: 1fr 336px;
+    }
+
+    /* No retrato o mapa é a tela inteira (posicionamento absoluto); com painel
+       ao lado ele passa a ser uma CÉLULA da grade — senão cobriria o painel. */
+    .pw-mapa-com-painel .pw-mapa {
+        position: relative;
+        inset: auto;
+        height: 100%;
+    }
+
+    .pw-mapa-com-painel .pw-fab {
+        right: 360px;
+    }
+
+    .pw-mapa-com-painel .pw-gaveta {
+        right: 336px;
+    }
+
+    .pw-painel-lateral {
+        display: block;
+        position: relative;
+        z-index: 850;
+        overflow-y: auto;
+        padding: 14px;
+        border-left: 1px solid var(--pw-borda);
+        background: var(--pw-superficie-2);
+    }
+
+    .pw-nav {
+        grid-template-columns: repeat(5, minmax(0, 140px));
+        justify-content: center;
+    }
+
+    .pw-entrada-tela {
+        max-width: 520px;
+        margin: 0 auto;
+    }
+}
+
+/* ======================= MOVIMENTO ======================= */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+    }
+}
+
+@keyframes pw-sobe {
+    from {
+        transform: translateY(18px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pw-surge {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pw-pulso {
+    0% {
+        transform: scale(0.86);
+    }
+    60% {
+        transform: scale(1.06);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes pw-batida {
+    0%,
+    100% {
+        transform: rotate(45deg) scale(1);
+    }
+    50% {
+        transform: rotate(45deg) scale(1.16);
+    }
+}
+
+@keyframes pw-gira {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pw-cresce {
+    from {
+        width: 0;
+    }
+}
