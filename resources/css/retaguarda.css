@@ -650,6 +650,19 @@ table.data-table tbody tr.clicavel {
     color: var(--sm-texto-corpo);
     transition: var(--sm-transicao);
 }
+/* Item que abre PAINEL sobre a tela atual é um <button>, e não um link (ver o
+   menu lateral). Aqui ele deixa de parecer botão e volta a parecer o item de
+   menu que é — o `:hover` e o `.ativo` abaixo continuam ganhando desta regra por
+   especificidade, então nada de estado se perde. */
+button.rt-menu-item {
+    width: 100%;
+    border: none;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
 .rt-menu-item:hover {
     background: var(--sm-muted);
     color: var(--sm-texto);
@@ -1117,6 +1130,71 @@ table.data-table tbody tr.clicavel {
     padding: 20px;
     background: rgba(10, 18, 20, 0.55);
 }
+/* ── O painel do Modo Gerente ────────────────────────────────────────────────
+   Ele é a janela sobreposta MAIS LARGA do sistema, e por um motivo: a matriz é
+   setor × cinco ações por tela, e quem distribui acesso precisa ver o conjunto
+   de uma vez para notar o que ficou aberto demais. Cortada em coluna estreita,
+   ela deixaria de responder essa pergunta.
+
+   O cabeçalho fica FIXO e só o corpo rola: com o catálogo de telas crescendo, o
+   título e o botão de fechar saíam da vista, e a pessoa rolava de volta para
+   cima só para sair. */
+.mg-painel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1080px;
+    max-height: min(92vh, 100% - 8px);
+    padding: 0;
+    overflow: hidden;
+}
+.mg-cabeca {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    flex-shrink: 0;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--sm-borda);
+}
+.mg-cabeca > div:first-child {
+    min-width: 0;
+}
+.mg-cabeca .icon-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.mg-corpo {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 24px 24px;
+}
+/* Cada tela da matriz é um bloco com moldura própria dentro do painel — cartão
+   dentro de cartão ficaria com duas sombras e dois raios concorrendo. */
+.mg-tela {
+    padding: 16px 18px;
+    border: 1px solid var(--sm-borda);
+    border-radius: var(--sm-raio-md);
+    background: var(--sm-superficie-2);
+}
+.mg-tela + .mg-tela,
+.mg-corpo .mg-tela:not(:first-child) {
+    margin-top: 16px;
+}
+.mg-tela-cabeca {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+@media (max-width: 620px) {
+    .mg-cabeca,
+    .mg-corpo {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
 .sobreposicao-titulo {
     display: flex;
     align-items: center;

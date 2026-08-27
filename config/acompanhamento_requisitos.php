@@ -100,8 +100,11 @@ return [
             'nota' => $origemSpec.' Matriz de quem entra onde: setor × tela × ação, com rastro de cada '
                 .'concessão e revogação — o rastro mostra em tela O QUE mudou, por setor. É a fonte '
                 .'única do acesso: o menu, a abertura da tela e as ações obedecem a ela. Cada tela é '
-                .'salva por si, e a seção com alteração pendente é sinalizada (sair sem salvar pergunta '
-                .'antes).',
+                .'salva por si, e a seção com alteração pendente é sinalizada (fechar sem salvar '
+                .'pergunta antes). Não é uma página: abre como PAINEL sobre a tela em que a pessoa '
+                .'está, pelo item do menu Sistema — quem distribui acesso está no meio de uma '
+                .'conferência, e ir para outra página fazia perder o lugar. Quem chega pelo endereço '
+                .'antigo é levado à tela inicial com o painel abrindo lá.',
         ],
 
         [

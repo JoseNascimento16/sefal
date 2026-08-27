@@ -292,9 +292,15 @@ test('a tela que distribui acesso e barrada mesmo com o rollout em observacao', 
     expect(PermissaoSetor::where('slug', 'modo-gerente')->count())->toBe(0);
 });
 
-test('quem recebe a concessao abre a tela de verdade', function () {
-    // O outro lado da moeda: conceder na matriz TEM de abrir a porta, senão a
-    // tela do Modo Gerente seria decoração.
+test('quem recebe a concessao abre o painel de verdade', function () {
+    /*
+     * O outro lado da moeda: conceder na matriz TEM de abrir a porta, senão o
+     * Modo Gerente seria decoração.
+     *
+     * O Modo Gerente não é página: é o painel que abre sobre a tela atual, e a
+     * MESMA rota que a guarda protege é a que entrega a matriz a ele (em JSON).
+     * "Abrir" é, portanto, receber a matriz.
+     */
     config(['retaguarda.permissao_enforce' => 'block']);
 
     $gestor = usuarioDoSetor('gestor');
@@ -306,7 +312,7 @@ test('quem recebe a concessao abre a tela de verdade', function () {
         'habilitado' => true,
     ]);
 
-    $this->actingAs($gestor)->get('/retaguarda/modo-gerente')->assertOk();
+    $this->actingAs($gestor)->getJson('/retaguarda/modo-gerente')->assertOk();
 
     $this->actingAs($gestor)
         ->post(route('retaguarda.modo-gerente.salvar'), [
@@ -318,20 +324,70 @@ test('quem recebe a concessao abre a tela de verdade', function () {
     expect(PermissaoSetor::where('setor', 'fiscal')->where('slug', 'modo-gerente')->exists())->toBeTrue();
 });
 
-test('o administrador abre a tela e recebe a matriz completa', function () {
+test('o administrador recebe a matriz completa para o painel', function () {
     config(['retaguarda.permissao_enforce' => 'block']);
 
     $admin = User::factory()->create(['admin' => true]);
 
-    $this->actingAs($admin)->get('/retaguarda/modo-gerente')
+    $this->actingAs($admin)->getJson('/retaguarda/modo-gerente')
         ->assertOk()
-        ->assertInertia(fn ($p) => $p
-            ->component('Retaguarda/Sistema/ModoGerente')
-            ->has('setores', 3)
-            ->has('funcionalidades')
-            ->has('matriz')
-            ->where('enforce', 'block'),
-        );
+        ->assertJsonCount(3, 'setores')
+        ->assertJsonStructure(['setores', 'funcionalidades', 'matriz', 'acoes', 'historico'])
+        ->assertJsonPath('enforce', 'block');
+});
+
+test('o endereco do Modo Gerente leva ao inicio PEDINDO que o painel abra la', function () {
+    /*
+     * Quem tem o endereço nos favoritos (ou o digita) não pode cair num vazio: o
+     * Modo Gerente virou painel sobreposto, e a rota que era da página agora
+     * manda a pessoa para a tela inicial com o pedido de abrir o painel ali.
+     * Devolver "não encontrado" seria barrar em silêncio quem tem a permissão.
+     */
+    config(['retaguarda.permissao_enforce' => 'block']);
+
+    $this->actingAs(User::factory()->create(['admin' => true]))
+        ->get('/retaguarda/modo-gerente')
+        ->assertRedirect('/retaguarda/inicio')
+        ->assertSessionHas('abrir.painel', 'modo-gerente');
+
+    // E o pedido chega à tela como propriedade compartilhada — é ela que o painel
+    // lê para se abrir sozinho.
+    $this->followingRedirects()
+        ->actingAs(User::factory()->create(['admin' => true]))
+        ->get('/retaguarda/modo-gerente')
+        ->assertInertia(fn ($p) => $p->where('painel', 'modo-gerente'));
+});
+
+test('a leitura pedida em JSON e negada COM O MOTIVO, e nao com um redirecionamento', function () {
+    /*
+     * Quem pede a matriz é código (o painel), não navegador: um redirecionamento
+     * devolveria a tela inicial em HTML, o painel não conseguiria ler aquilo e
+     * mostraria "falha ao carregar" — que é justamente a barrada em silêncio que
+     * a lei do projeto proíbe. A negativa vem com o motivo escrito.
+     */
+    config(['retaguarda.permissao_enforce' => 'block']);
+
+    $this->actingAs(usuarioDoSetor('fiscal'))->getJson('/retaguarda/modo-gerente')
+        ->assertForbidden()
+        ->assertJsonPath('erro', 'Você não tem acesso a essa tela.');
+});
+
+test('o item do Modo Gerente no menu ABRE PAINEL — nao navega', function () {
+    /*
+     * Teste-LEI do contrato entre o servidor e a barra lateral: é o `modal` do
+     * item que faz a barra desenhar um botão em vez de um link. Sem ele, o item
+     * volta a navegar para o endereço — que hoje só redireciona —, e a pessoa dá
+     * uma volta inteira para chegar ao mesmo painel.
+     */
+    $itens = collect(
+        $this->actingAs(User::factory()->create(['admin' => true]))
+            ->get('/retaguarda/inicio')
+            ->viewData('page')['props']['menu']
+    )->pluck('itens')->flatten(1);
+
+    expect($itens->firstWhere('rotulo', 'Modo Gerente')['modal'])->toBe('modo-gerente')
+        // E o resto do menu continua navegando: `modal` é a exceção declarada.
+        ->and($itens->firstWhere('rotulo', 'Permissionários')['modal'])->toBeNull();
 });
 
 test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', function () {
@@ -339,8 +395,14 @@ test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', fu
 
     $admin = User::factory()->create(['admin' => true, 'name' => 'Ana Gestora']);
 
+    /*
+     * A gravação vem de dentro do painel, que abre SOBRE uma tela qualquer — daí
+     * o `from` ser a tela inicial. O que se afirma é que a resposta volta para
+     * onde a pessoa estava (`back()`), e não para uma página de Modo Gerente que
+     * não existe mais: o painel continua aberto por cima do que ela conferia.
+     */
     $this->actingAs($admin)
-        ->from(route('retaguarda.modo-gerente.index'))
+        ->from('/retaguarda/inicio')
         ->post(route('retaguarda.modo-gerente.salvar'), [
             'slug' => 'modo-gerente',
             'matriz' => [
@@ -350,7 +412,7 @@ test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', fu
                 ['setor' => 'fiscal', 'visivel' => false, 'habilitado' => true, 'incluir' => true],
             ],
         ])
-        ->assertRedirect(route('retaguarda.modo-gerente.index'))
+        ->assertRedirect('/retaguarda/inicio')
         ->assertSessionHas('flash.sucesso');
 
     $gestor = PermissaoSetor::where('setor', 'gestor')->where('slug', 'modo-gerente')->firstOrFail();

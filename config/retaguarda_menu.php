@@ -21,7 +21,12 @@ return [
     |   rota    — nome da rota (não a URL: o endereço muda, o nome não);
     |   icone   — chave do ícone, traduzida em `resources/js/lib/icones-menu.ts`;
     |   slug    — identidade da tela no CONTROLE DE ACESSO (ver abaixo);
-    |   setores — a SEMENTE da matriz de permissões (ver abaixo).
+    |   setores — a SEMENTE da matriz de permissões (ver abaixo);
+    |   modal   — opcional: o item ABRE UM PAINEL sobre a tela atual em vez de
+    |             navegar. O valor é a chave do painel, que o menu lateral conhece
+    |             (`resources/js/components/retaguarda/sidebar.tsx`). Mesmo assim o
+    |             item declara `rota`: é dela que a permissão é deduzida, e é ela
+    |             que o painel consulta para receber os dados.
     |
     | ── `slug` e `setores`: quem decide o acesso ────────────────────────────
     |
@@ -233,6 +238,12 @@ return [
                     'rota' => 'retaguarda.modo-gerente.index',
                     'icone' => 'permissoes',
                     'slug' => 'modo-gerente',
+                    // Abre SOBRE a tela atual, em vez de navegar: quem distribui
+                    // acesso está no meio de uma conferência, e ir para outra
+                    // página fazia perder o lugar. A `rota` continua declarada —
+                    // é dela que sai a permissão (e é ela que alimenta o painel),
+                    // então tirá-la deixaria o item fora da matriz.
+                    'modal' => 'modo-gerente',
                     // Só o administrador, e por desvio (não por linha semeada):
                     // quem distribui acesso não pode distribuir a si mesmo o
                     // poder de distribuir acesso.

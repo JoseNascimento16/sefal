@@ -18,10 +18,16 @@ import { inicio } from '@/routes/retaguarda';
 export function Sidebar({
     aberta,
     onFechar,
+    onAbrirPainel,
 }: {
     /** No celular a barra desliza por cima do conteúdo. */
     aberta: boolean;
     onFechar: () => void;
+    /**
+     * Item que abre painel sobre a tela atual em vez de navegar (o Modo Gerente).
+     * Quem monta o painel é a casca da Retaguarda, não a barra: ela só diz qual.
+     */
+    onAbrirPainel: (painel: string) => void;
 }) {
     const { menu } = usePage().props;
     const { isCurrentUrl } = useCurrentUrl();
@@ -74,6 +80,31 @@ export function Sidebar({
                         {secao.itens.map((item) => {
                             const Icone = iconeDoMenu(item.icone);
                             const ativo = isCurrentUrl(item.url);
+
+                            /*
+                             * Item de PAINEL não navega: abre sobre a tela atual.
+                             * É um <button>, e não um link com o clique
+                             * interceptado — assim o teclado, o leitor de tela e
+                             * o "abrir em nova aba" do navegador contam a mesma
+                             * história que a tela: aqui não se vai a lugar
+                             * nenhum.
+                             */
+                            if (item.modal !== null) {
+                                return (
+                                    <button
+                                        key={item.url}
+                                        type="button"
+                                        className="rt-menu-item"
+                                        onClick={() => {
+                                            onFechar();
+                                            onAbrirPainel(item.modal as string);
+                                        }}
+                                    >
+                                        <Icone size={18} aria-hidden />
+                                        {item.rotulo}
+                                    </button>
+                                );
+                            }
 
                             return (
                                 <Link

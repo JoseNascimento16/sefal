@@ -49,7 +49,32 @@ class HandleInertiaRequests extends Middleware
             'menu' => $user ? $this->menu($user) : [],
             'acoes' => $this->acoes($request, $user),
             'flash' => $this->recado($request),
+            'painel' => $this->painel($request),
         ];
+    }
+
+    /**
+     * O painel a ABRIR ao chegar nesta tela — ou `null`, que é o normal.
+     *
+     * Existe para um caso só: alguém digita (ou tem nos favoritos) o endereço de
+     * algo que hoje é painel sobreposto, e não página. O servidor manda a pessoa
+     * para a tela inicial pedindo que o painel abra lá, em vez de devolver uma
+     * página que não existe mais — ninguém fica olhando para um endereço que não
+     * leva a nada.
+     *
+     * Vai pela sessão (flash), e não na URL: assim vale uma vez, não fica no
+     * histórico do navegador e não põe nada no endereço — o WAF da Prefeitura
+     * inspeciona query string.
+     */
+    protected function painel(Request $request): ?string
+    {
+        if (! $request->hasSession()) {
+            return null;
+        }
+
+        $painel = $request->session()->get('abrir.painel');
+
+        return is_string($painel) ? $painel : null;
     }
 
     /**
@@ -178,6 +203,10 @@ class HandleInertiaRequests extends Middleware
                     'rotulo' => $item['rotulo'],
                     'url' => route($item['rota'], absolute: false),
                     'icone' => $item['icone'] ?? 'padrao',
+                    // Item que abre PAINEL sobre a tela atual em vez de navegar
+                    // (ver o cabeçalho de `config/retaguarda_menu.php`). A `url`
+                    // continua indo: é dela que o painel busca os dados.
+                    'modal' => $item['modal'] ?? null,
                 ];
             }
 

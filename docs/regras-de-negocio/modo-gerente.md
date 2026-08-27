@@ -1,6 +1,7 @@
 # Modo Gerente — controle de acesso por setor
 
-**Onde fica:** Menu → Sistema → Modo Gerente (`/retaguarda/modo-gerente`).
+**Onde fica:** Menu → Sistema → Modo Gerente — abre como **painel sobre a tela
+atual** (ver RN-13), alimentado por `/retaguarda/modo-gerente`.
 **Quem usa:** administrador.
 
 O Modo Gerente é onde se decide **quem entra em qual tela**. A unidade de decisão
@@ -154,7 +155,9 @@ Cada tela tem o seu botão (um ajuste num canto não regrava a casa toda), e por
 isso a tela precisa dizer **onde** há pendência: a seção alterada ganha o selo
 *"alteração não salva"*, o botão fica indisponível quando não há nada a gravar, e
 sair da tela com pendência **pergunta antes**. Sem isso, quem mexia em três
-seções e salvava uma perdia as outras duas sem nunca saber.
+seções e salvava uma perdia as outras duas sem nunca saber. (No painel, "sair" é
+**fechar**: a pergunta aparece igual, e também quando a pessoa navega para outra
+tela com o painel aberto.)
 
 ### RN-11 — O bloqueio tem três estágios
 
@@ -203,6 +206,30 @@ todos — qualquer pessoa autenticada poderia se conceder o resto.
 A régua continua sendo a mesma (a matriz). O que não vale para ela é o adiamento
 do bloqueio.
 
+### RN-13 — O Modo Gerente é PAINEL sobre a tela atual, não página própria
+
+O item do menu Sistema **não navega**: ele abre a matriz numa camada por cima do
+que a pessoa está vendo, e fechá-la devolve a tela exatamente como estava. Quem
+distribui acesso quase sempre está no meio de uma conferência ("por que esta
+pessoa não vê isto?"), e trocar de página fazia perder o lugar — e a resposta.
+
+Consequências, todas com a régua no mesmo servidor:
+
+- a matriz é buscada pela **mesma rota** que a guarda de leitura protege, então
+  quem não tem a permissão não recebe a matriz. Pedida em JSON, a negativa vem
+  **com o motivo escrito** — seguir um redirecionamento devolveria a tela inicial
+  em HTML, o painel não saberia ler aquilo e mostraria "falha ao carregar", que é
+  a barrada em silêncio que a RN-06 proíbe;
+- **gravar não fecha o painel** e não troca a tela de trás: a resposta volta para
+  onde a pessoa estava, e a matriz é **relida do servidor** (que normaliza a
+  linha ao gravar — mostrar o rascunho como salvo exibiria um estado que o banco
+  recusou);
+- **fechar com alteração pendente pergunta antes**, e sair do sistema com
+  pendência também (RN-10-b);
+- quem chega pelo **endereço antigo** (favorito, endereço digitado) é levado à
+  tela inicial **com o painel abrindo lá** — nunca a uma página vazia ou a um
+  "não encontrado".
+
 ---
 
 ## Changelog
@@ -216,3 +243,4 @@ do bloqueio.
 | 26/08/2026 | José Nascimento | Modo Gerente | O padrão do enforcement passa de `log` para **`block`**: as guardas barram de verdade, e o `.env.example` acompanha (RN-11). | O rollout em observação cumpriu o que existia para cumprir — o catálogo da Fase 1 fechou e a matriz foi conferida contra ele. Manter `log` deixaria o controle de acesso ligado no papel e desligado na prática, o pior modo de falhar: nada quebra, nada aparece em tela. |
 | 26/08/2026 | José Nascimento | Modo Gerente | A tela passa a derrubar Opera/Só consulta/Inclui/Exclui quando "Vê" é desmarcado (RN-02); o rastro passa a **exibir** o que mudou, em coluna própria, e a seção aparece também vazia (RN-10); seção com alteração pendente é sinalizada, o botão fica indisponível sem alteração e sair com pendência pergunta antes (RN-10-b); a semente aceita ajuste por setor, e o fiscal nasce sem Inclui/Exclui no cadastro de permissionário (RN-09). | A legenda prometia que sem "Vê" nada vale, e a tela deixava Inclui/Exclui marcados: o gestor saía convencido de ter concedido o que o servidor nega. O rastro gravava o delta desde o dia 25 e a tela não o mostrava — a auditoria respondia "alguém mexeu". E salvamento por seção sem aviso descartava, em silêncio, o que a pessoa acabou de marcar em outra. |
 | 26/08/2026 | José Nascimento | Modo Gerente | A **semente** passa pela mesma normalização que a tela aplica ao gravar (RN-02/RN-09); toda tela da Retaguarda passa a **receber as ações da pessoa** junto com a página, e a esconder o que ela não tem; telas que dividem o mesmo slug aparecem na matriz com o nome da **seção**, decidido numa passada só (RN-09). | A semente montava a linha somando ajustes sobre o pacote completo, sem normalizar: declarar "Só consulta" gravava uma linha que se contradiz — "só consulta" marcado ao lado de Opera/Inclui/Exclui ligados. Como a resolução lê as colunas cruas, ela dava poder de gravar a quem a config diz que só olha, e a config parecia certa. As telas, por sua vez, decidiam o que oferecer por conta própria: ofereciam a ação que a guarda barra, e a pessoa só descobria depois de preencher o formulário. E o rótulo do slug compartilhado emergia da ordem de iteração — com duas telas em seções diferentes, resolvia pelo nome da última. |
+| 27/08/2026 | José Nascimento | Modo Gerente | A matriz deixa de ser página e passa a abrir como **painel sobre a tela atual**, pelo item do menu Sistema (RN-13); a leitura pedida em JSON é negada com o motivo, em vez de redirecionada; gravar relê a matriz do servidor sem fechar o painel; o endereço antigo leva à tela inicial com o painel abrindo lá. | Quem distribui acesso está sempre no meio de uma conferência ("por que esta pessoa não vê isto?"), e trocar de página fazia perder o lugar — e a resposta. Manter a rota como fonte da matriz preserva a guarda de leitura no mesmo servidor: o container mudou, a régua não. |
