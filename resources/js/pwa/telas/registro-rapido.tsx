@@ -3,9 +3,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { irPara, useApp } from '../app';
 import { Interruptor, Selo, Topo, classes } from '../componentes';
 import {
-    DEMANDAS_ABERTAS,
     ORIGENS,
     acharDemanda,
+    demandasDaEquipe,
     prazoEmPalavras,
     tomDoPrazo,
     type Demanda,
@@ -55,14 +55,17 @@ const regiaoMaisProxima = (lat: number, lng: number): string =>
     ).id;
 
 const ENDERECOS_APROXIMADOS: Record<string, string> = {
-    barra: 'Av. Oceânica, altura do Farol da Barra',
-    'rio-vermelho': 'Largo da Mariquita, canteiro central',
-    pelourinho: 'Largo do Pelourinho, escadaria',
+    'costa-azul': 'Av. Otávio Mangabeira, orla do Jardim de Alah',
+    'jardim-armacao': 'Av. Otávio Mangabeira, altura do Centro de Convenções',
+    stiep: 'Rua Ewerton Visco, altura do canteiro central',
+    'boca-do-rio': 'Av. Otávio Mangabeira, acesso à Praia da Boca do Rio',
+    imbui: 'Rua Ilhéus, entorno da feira',
+    pituacu: 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu',
+    patamares: 'Alameda Praia de Patamares, acesso à areia',
+    piata: 'Av. Otávio Mangabeira, passarela de Piatã',
     itapua: 'Rua da Música, próximo ao Farol de Itapuã',
-    'campo-grande': 'Praça Dois de Julho, lado do coreto',
-    'boca-do-rio': 'Av. Otávio Mangabeira, orla',
-    comercio: 'Praça Cairu, frente ao Mercado Modelo',
-    ondina: 'Av. Adhemar de Barros, mirante de Ondina',
+    'stella-maris': 'Praia de Stella Maris, frente ao estacionamento',
+    mussurunga: 'Av. Luís Viana Filho, ponto de ônibus',
 };
 
 export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
@@ -167,7 +170,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
         () =>
             demanda?.regiao ??
             doMapa?.regiao ??
-            (posicao ? regiaoMaisProxima(posicao.lat, posicao.lng) : 'barra'),
+            (posicao ? regiaoMaisProxima(posicao.lat, posicao.lng) : 'boca-do-rio'),
         [demanda, doMapa, posicao],
     );
 
@@ -282,7 +285,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                                         Escolhendo aqui, o endereço e o número do processo vêm prontos.
                                     </p>
                                     <ul className="pw-lista-limpa">
-                                        {DEMANDAS_ABERTAS.map((d) => (
+                                        {demandasDaEquipe().map((d) => (
                                             <li key={d.id}>
                                                 <button
                                                     type="button"

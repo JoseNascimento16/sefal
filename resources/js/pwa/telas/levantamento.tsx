@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 
 import { irPara } from '../app';
 import { Selo, Topo, Vazio, classes } from '../componentes';
-import { EQUIPE, EQUIPES_SEFAL } from '../dados-demandas';
+import { AREAS_SEFAL, EQUIPE } from '../dados-demandas';
 import {
     ATIVIDADES_LEVANTAMENTO,
     EXEMPLOS_LEVANTAMENTO,
@@ -47,8 +47,8 @@ export function TelaLevantamento() {
     const [equipes, setEquipes] = useState<string[]>([EQUIPE.codigo]);
     const [linhas, setLinhas] = useState<LinhaLevantamento[]>([]);
 
-    const encarregados = EQUIPES_SEFAL.filter((e) => equipes.includes(e.codigo)).map(
-        (e) => e.encarregado,
+    const encarregados = AREAS_SEFAL.filter((a) => equipes.includes(a.equipe)).map(
+        (a) => a.encarregado,
     );
 
     const podeIrACampo = rua.trim().length > 2 && bairro.trim().length > 1 && equipes.length > 0;
@@ -171,16 +171,16 @@ function Cabecalho({
                 <p className="pw-titulo-secao">Equipes participantes</p>
 
                 <div className="pw-chips" style={{ gap: 8 }}>
-                    {EQUIPES_SEFAL.map((e) => (
+                    {AREAS_SEFAL.map((a) => (
                         <button
-                            key={e.codigo}
+                            key={a.equipe}
                             type="button"
-                            className={classes('pw-chip', equipes.includes(e.codigo) && 'pw-chip-ligado')}
-                            onClick={() => alternarEquipe(e.codigo)}
-                            aria-pressed={equipes.includes(e.codigo)}
+                            className={classes('pw-chip', equipes.includes(a.equipe) && 'pw-chip-ligado')}
+                            onClick={() => alternarEquipe(a.equipe)}
+                            aria-pressed={equipes.includes(a.equipe)}
                         >
                             <Icone nome="equipe" tamanho={15} />
-                            {e.codigo} · {e.areaNome}
+                            {a.equipe} · {a.regiao}
                         </button>
                     ))}
                 </div>

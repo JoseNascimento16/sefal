@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { BarraInferior, type Aba } from './componentes';
-import { DEMANDAS_VENCIDAS } from './dados-demandas';
+import { demandasVencidas } from './dados-demandas';
+import { entrarComMatricula } from './sessao';
 import {
     HOJE_BR,
     REGISTROS,
@@ -115,8 +116,22 @@ function useRota(): { tela: string; parametro: string | null } {
     return { tela: partes[0] || 'entrada', parametro: partes[1] ?? null };
 }
 
-const temaInicial = (): 'claro' | 'escuro' =>
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+/**
+ * O padrão do aplicativo é o tema CLARO — quem trabalha na rua está sob o sol, e o claro
+ * é o que se lê no reflexo. Antes seguíamos o tema do aparelho, e num celular configurado
+ * no escuro o aplicativo abria escuro sem ninguém ter pedido. Escolha explícita do fiscal
+ * (o botão no perfil) é lembrada; a ausência de escolha continua sendo o claro.
+ */
+const temaInicial = (): 'claro' | 'escuro' => {
+    try {
+        const salvo = window.localStorage.getItem('sefal-tema');
+        if (salvo === 'escuro' || salvo === 'claro') return salvo;
+    } catch {
+        // Armazenamento bloqueado (janela privada): segue o padrão.
+    }
+
+    return 'claro';
+};
 
 /* ---------------------------------- Tela ---------------------------------- */
 
@@ -198,7 +213,20 @@ export function App() {
             registros,
             pendentes,
             tema,
-            alternarTema: () => setTema((t) => (t === 'claro' ? 'escuro' : 'claro')),
+            alternarTema: () =>
+                setTema((t) => {
+                    const proximo = t === 'claro' ? 'escuro' : 'claro';
+                    // A escolha do fiscal é lembrada no aparelho — sem isto, o aplicativo
+                    // voltaria ao claro a cada abertura e quem trabalha à noite (a equipe
+                    // Noturna existe) teria de alternar todos os dias.
+                    try {
+                        window.localStorage.setItem('sefal-tema', proximo);
+                    } catch {
+                        // Armazenamento bloqueado: vale só nesta sessão.
+                    }
+
+                    return proximo;
+                }),
             registrar,
             anexarDocumento,
             esvaziarFila,
@@ -214,7 +242,11 @@ export function App() {
             <ContextoApp.Provider value={contexto}>
                 <FaixaPrototipo />
                 <TelaEntrada
-                    aoEntrar={() => {
+                    aoEntrar={(matricula) => {
+                        /* A identidade é trocada ANTES de a árvore autenticada
+                           montar: é ela que decide a equipe e, com a equipe, a
+                           fila e o contorno da área no mapa. */
+                        entrarComMatricula(matricula);
                         setEntrou(true);
                         irPara('inicio');
                     }}
@@ -256,7 +288,7 @@ export function App() {
                     ativa={abaAtiva}
                     aoTrocar={(aba) => irPara(aba)}
                     pendentes={pendentes}
-                    demandas={DEMANDAS_VENCIDAS.length}
+                    demandas={demandasVencidas().length}
                 />
             )}
         </ContextoApp.Provider>

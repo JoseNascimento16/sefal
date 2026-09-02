@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 
 import { irPara, useApp } from '../app';
 import { Selo, Topo, atalhoDoPerfil } from '../componentes';
-import { DEMANDAS_ABERTAS, DEMANDAS_VENCIDAS, EQUIPE } from '../dados-demandas';
+import { EQUIPE, demandasDaEquipe, demandasVencidas } from '../dados-demandas';
 import {
     AMBULANTES,
     CENTRO_SALVADOR,
@@ -47,7 +47,9 @@ export function TelaInicio() {
     /* As duas mais urgentes da fila da equipe. Aqui é CHAMADA, não fila: a fila
        inteira mora na aba Demandas, e repetir tudo aqui empurraria o mapa e as
        operações para baixo da dobra. */
-    const chamada = DEMANDAS_ABERTAS.slice(0, 2);
+    const daEquipe = demandasDaEquipe();
+    const vencidas = demandasVencidas();
+    const chamada = daEquipe.slice(0, 2);
     const atendidas = new Set(
         registros.map((r) => r.demandaId).filter((d): d is string => Boolean(d)),
     );
@@ -86,8 +88,8 @@ export function TelaInicio() {
 
                 <div className="pw-numeros" style={{ marginTop: 14 }}>
                     <Numero
-                        valor={DEMANDAS_ABERTAS.length}
-                        rotulo={DEMANDAS_ABERTAS.length === 1 ? 'demanda na fila' : 'demandas na fila'}
+                        valor={daEquipe.length}
+                        rotulo={daEquipe.length === 1 ? 'demanda na fila' : 'demandas na fila'}
                         icone="caixa-entrada"
                         tom="var(--pw-acao)"
                         aoTocar={() => irPara('demandas')}
@@ -129,24 +131,30 @@ export function TelaInicio() {
                 {/* Trabalho DIRIGIDO -------------------------------------- */}
                 <p className="pw-titulo-secao">
                     Minhas demandas
-                    {DEMANDAS_VENCIDAS.length > 0 && (
+                    {vencidas.length > 0 && (
                         <span className="pw-fraco" style={{ marginLeft: 8, fontWeight: 700, letterSpacing: 0 }}>
-                            —{' '}
-                            {DEMANDAS_VENCIDAS.length === 1
-                                ? '1 vencida'
-                                : `${DEMANDAS_VENCIDAS.length} vencidas`}
+                            — {vencidas.length === 1 ? '1 vencida' : `${vencidas.length} vencidas`}
                         </span>
                     )}
                 </p>
 
-                {chamada.map((demanda) => (
-                    <CartaoDemanda
-                        key={demanda.id}
-                        demanda={demanda}
-                        atendida={atendidas.has(demanda.id)}
-                        compacto
-                    />
-                ))}
+                {chamada.length === 0 ? (
+                    <div className="pw-card">
+                        <p className="pw-fraco" style={{ margin: 0, fontSize: 14 }}>
+                            O administrativo ainda não encaminhou nenhuma demanda à {EQUIPE.nome}. Você
+                            continua com o trabalho avulso: andar a rua, ver e registrar.
+                        </p>
+                    </div>
+                ) : (
+                    chamada.map((demanda) => (
+                        <CartaoDemanda
+                            key={demanda.id}
+                            demanda={demanda}
+                            atendida={atendidas.has(demanda.id)}
+                            compacto
+                        />
+                    ))
+                )}
 
                 <button
                     type="button"
@@ -155,7 +163,9 @@ export function TelaInicio() {
                     onClick={() => irPara('demandas')}
                 >
                     <Icone nome="caixa-entrada" tamanho={18} />
-                    Ver as {DEMANDAS_ABERTAS.length} demandas da equipe
+                    {daEquipe.length === 1
+                        ? 'Ver a demanda da equipe'
+                        : `Ver as ${daEquipe.length} demandas da equipe`}
                 </button>
 
                 <p className="pw-titulo-secao">Sua rua agora</p>

@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react';
 import { irPara, useApp } from '../app';
 import { Selo, Topo, Vazio, atalhoDoPerfil, classes } from '../componentes';
 import {
-    DEMANDAS_ABERTAS,
     EQUIPE,
     ORIGENS,
+    demandasDaEquipe,
+    demandasDeOutrasEquipes,
     prazoEmPalavras,
     tomDoPrazo,
     type Demanda,
@@ -51,9 +52,15 @@ export function TelaDemandas() {
         [registros],
     );
 
+    /* A fila da equipe é a fonte; o filtro por origem só recorta o que já
+       chegou. `daEquipe` fica à parte porque a tela precisa saber a diferença
+       entre "a equipe não tem nada" e "esta origem não tem nada". */
+    const daEquipe = useMemo(() => demandasDaEquipe(), []);
+    const deOutras = useMemo(() => demandasDeOutrasEquipes(), []);
+
     const lista = useMemo(
-        () => (filtro === 'todas' ? DEMANDAS_ABERTAS : DEMANDAS_ABERTAS.filter((d) => d.origem === filtro)),
-        [filtro],
+        () => (filtro === 'todas' ? daEquipe : daEquipe.filter((d) => d.origem === filtro)),
+        [filtro, daEquipe],
     );
 
     const vencidas = lista.filter((d) => d.prazoDias < 0).length;
@@ -83,8 +90,18 @@ export function TelaDemandas() {
                 </div>
 
                 <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13.5 }}>
-                    O administrativo encaminha cada processo para a equipe da área do endereço. Toda a
-                    equipe vê esta fila.
+                    O administrativo encaminha cada documento para a equipe da área do endereço. Toda a
+                    equipe vê esta fila — e só ela.
+                    {deOutras > 0 && (
+                        <>
+                            {' '}
+                            Outras{' '}
+                            <strong>
+                                {deOutras === 1 ? '1 demanda' : `${deOutras} demandas`}
+                            </strong>{' '}
+                            foram encaminhadas a equipes diferentes e não aparecem aqui.
+                        </>
+                    )}
                 </p>
 
                 <div className="pw-linha" style={{ gap: 8, flexWrap: 'wrap', margin: '14px 0 0' }}>
@@ -123,7 +140,17 @@ export function TelaDemandas() {
 
                 <p className="pw-titulo-secao">Encaminhadas à equipe</p>
 
-                {lista.length === 0 ? (
+                {daEquipe.length === 0 ? (
+                    /* Fila vazia da EQUIPE é diferente de fila vazia da origem, e
+                       o texto tem de dizer qual dos dois é: sem isso, o fiscal
+                       de uma equipe sem encaminhamento acha que o aplicativo
+                       quebrou. */
+                    <Vazio
+                        icone="📭"
+                        titulo="Nenhuma demanda encaminhada à sua equipe"
+                        texto={`O administrativo ainda não encaminhou nada à ${EQUIPE.nome} · ${EQUIPE.area}. As demandas de outras equipes não aparecem aqui — cada equipe vê a fila da área dela.`}
+                    />
+                ) : lista.length === 0 ? (
                     <Vazio
                         icone="📭"
                         titulo="Nada nesta origem"
@@ -172,7 +199,7 @@ export function CartaoDemanda({
                 {demanda.assunto}
             </p>
             <p className="pw-fraco" style={{ margin: '4px 0 0', fontSize: 12.5, letterSpacing: '0.02em' }}>
-                {demanda.protocolo}
+                {demanda.protocolo} · documento {demanda.documentoOrigem}
             </p>
 
             <p style={{ margin: '10px 0 0', fontSize: 14.5 }}>

@@ -6,9 +6,16 @@
    Quando o aplicativo passar a falar com o servidor, este arquivo inteiro sai —
    é a fronteira do protótipo, e por isso está sozinho num módulo só.
 
-   As COORDENADAS, essas, são reais: Barra, Rio Vermelho, Pelourinho, Itapuã,
-   Campo Grande, Boca do Rio e Comércio. Sem isso o mapa mentiria sobre a única
-   coisa que o mapa precisa acertar.
+   As COORDENADAS, essas, são reais, e todas caem na ÁREA 5 — Boca do Rio,
+   Costa Azul, Jardim Armação, Stiep, Imbuí, Pituaçu, Patamares, Piatã, Itapuã,
+   Stella Maris e Mussurunga. Sem isso o mapa mentiria sobre a única coisa que o
+   mapa precisa acertar.
+
+   ⚠️ POR QUE A ÁREA 5 E NÃO O CENTRO: o aparelho da demonstração é o do fiscal
+   da **Equipe C1 · Área 5**, que é quem recebe as demandas encaminhadas pelo
+   administrativo no roteiro combinado com o dono. Pontos conhecidos na Barra e
+   no Pelourinho, como havia antes, punham no mapa dele o serviço de outra
+   equipe — e a primeira pergunta do cliente seria justamente essa.
    ============================================================================ */
 
 export type Situacao = 'regular' | 'irregular';
@@ -100,28 +107,65 @@ export type Registro = {
     referencia: string | null;
 };
 
-export const FISCAL = {
-    nome: 'Marcos Vinícius Andrade',
-    matricula: 'F-40219',
-    setor: 'SEFAL · Fiscalização em Logradouro Público',
-    turno: 'Turno tarde',
-    iniciais: 'MA',
-    desde: '2019',
+/* Quem está com o aparelho na mão sai do módulo de sessão: é a matrícula
+   digitada na porta que decide, e um segundo lugar guardando a mesma pessoa
+   divergiria dele no primeiro ajuste. */
+export { FISCAL } from './sessao';
+
+/**
+ * Data BR de hoje somada de N dias.
+ *
+ * O "hoje" é o de verdade. Escrever as datas à mão faria o protótipo envelhecer:
+ * uma semana depois da demonstração, o turno "de hoje" apareceria vazio e a fila
+ * inteira vencida — e o dono leria isso como comportamento do sistema. É também
+ * o que a Caixa de Entrada da Retaguarda faz, e é o que mantém as duas telas
+ * mostrando a mesma data.
+ */
+export const dataBrDaqui = (dias: number): string => {
+    const d = new Date();
+    /* Meio-dia: somar dias sobre a meia-noite erra na virada do horário de
+       verão, e um dia a menos numa data de prazo é um erro que aparece. */
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + dias);
+
+    return d.toLocaleDateString('pt-BR');
 };
 
+export const HOJE_BR = dataBrDaqui(0);
+
+/**
+ * As regiões do mapa — todas dentro da Área 5, o bloco da Equipe C1.
+ *
+ * Não são bairros oficiais: são os pontos de referência sobre os quais os pinos
+ * do protótipo se distribuem. O nome de cada uma é o do bairro do bloco.
+ *
+ * ⚠️ As coordenadas da orla estão interpoladas entre Itapuã e Pituaçu (os dois
+ * pontos que já vinham conferidos no protótipo) e RECUADAS uns 200 m para
+ * dentro da terra. O recuo não é capricho: cada pino tem um desvio próprio de
+ * até 0,0026° a partir do centro da região, e com o centro sobre a linha d'água
+ * metade dos pinos aparecia no mar — foi o que o mapa mostrou na conferência.
+ */
 export const REGIOES: Regiao[] = [
-    { id: 'barra', nome: 'Barra', lat: -13.0106, lng: -38.5325 },
-    { id: 'rio-vermelho', nome: 'Rio Vermelho', lat: -13.0104, lng: -38.4906 },
-    { id: 'pelourinho', nome: 'Pelourinho', lat: -12.9718, lng: -38.5089 },
-    { id: 'itapua', nome: 'Itapuã', lat: -12.9469, lng: -38.3628 },
-    { id: 'campo-grande', nome: 'Campo Grande', lat: -12.9847, lng: -38.5152 },
-    { id: 'boca-do-rio', nome: 'Boca do Rio', lat: -12.9647, lng: -38.4067 },
-    { id: 'comercio', nome: 'Comércio', lat: -12.974, lng: -38.5137 },
-    { id: 'ondina', nome: 'Ondina', lat: -13.0086, lng: -38.5065 },
+    { id: 'costa-azul', nome: 'Costa Azul', lat: -12.9796, lng: -38.4485 },
+    { id: 'jardim-armacao', nome: 'Jardim Armação', lat: -12.9722, lng: -38.4302 },
+    { id: 'stiep', nome: 'Stiep', lat: -12.9702, lng: -38.436 },
+    { id: 'boca-do-rio', nome: 'Boca do Rio', lat: -12.9678, lng: -38.4192 },
+    { id: 'imbui', nome: 'Imbuí', lat: -12.9659, lng: -38.4305 },
+    { id: 'pituacu', nome: 'Pituaçu', lat: -12.9613, lng: -38.4032 },
+    { id: 'patamares', nome: 'Patamares', lat: -12.956, lng: -38.3902 },
+    { id: 'piata', nome: 'Piatã', lat: -12.9503, lng: -38.3762 },
+    { id: 'itapua', nome: 'Itapuã', lat: -12.9449, lng: -38.3628 },
+    { id: 'stella-maris', nome: 'Stella Maris', lat: -12.9378, lng: -38.3452 },
+    { id: 'mussurunga', nome: 'Mussurunga', lat: -12.9317, lng: -38.3722 },
 ];
 
-/** O centro do mapa quando o aparelho não entrega posição: o Farol da Barra. */
-export const CENTRO_SALVADOR = { lat: -13.0106, lng: -38.5325 };
+/**
+ * O centro do mapa quando o aparelho não entrega posição.
+ *
+ * A Boca do Rio, que dá nome à Área 5 — e não mais o Farol da Barra, que fica
+ * na área de outra equipe.
+ */
+export const CENTRO_SALVADOR = { lat: -12.9678, lng: -38.4192 };
 
 export const OCORRENCIAS = [
     { id: 'desarmou', rotulo: 'Desarmou e saiu', emoji: '✅' },
@@ -161,36 +205,40 @@ type Semente = {
     atividade: number;
     situacao: Situacao;
     permissao: string | null;
-    ultimaEm: string;
+    /** Há quantos dias o ponto foi fiscalizado — vira data na montagem. */
+    ultimaHaDias: number;
     retornoHaDias: number | null;
 };
 
+/* Os pontos conhecidos da Área 5. Nome, apelido, atividade e histórico são os
+   mesmos de antes — o que mudou foi o ENDEREÇO: todos passaram para o bloco de
+   bairros da Equipe C1, que é a equipe do aparelho. */
 const SEMENTES: Semente[] = [
-    { nome: 'Josefa Maria dos Santos', apelido: 'Dona Zefa', regiao: 'barra', endereco: 'Av. Oceânica, em frente ao Farol', dLat: 0.0004, dLng: 0.0006, atividade: 0, situacao: 'regular', permissao: 'PA-2024/0187', ultimaEm: '12/08/2026', retornoHaDias: null },
-    { nome: 'Antônio Carlos de Jesus', apelido: 'Toinho do Gelo', regiao: 'barra', endereco: 'Praia do Porto da Barra, altura da rampa', dLat: 0.0018, dLng: -0.0012, atividade: 2, situacao: 'irregular', permissao: null, ultimaEm: '21/08/2026', retornoHaDias: 5 },
-    { nome: 'Marinalva Conceição Lima', apelido: 'Nalva', regiao: 'barra', endereco: 'Largo do Farol da Barra, lado do calçadão', dLat: -0.0011, dLng: 0.0015, atividade: 1, situacao: 'regular', permissao: 'PA-2023/1142', ultimaEm: '05/08/2026', retornoHaDias: null },
-    { nome: 'Edvaldo Souza Pereira', apelido: 'Vardinho', regiao: 'barra', endereco: 'Rua Marquês de Caravelas, esquina', dLat: 0.0022, dLng: 0.0021, atividade: 4, situacao: 'irregular', permissao: null, ultimaEm: '24/08/2026', retornoHaDias: 2 },
-    { nome: 'Rosângela Batista Nunes', apelido: 'Rosa do Milho', regiao: 'barra', endereco: 'Av. Oceânica, próximo ao Morro do Cristo', dLat: -0.0026, dLng: -0.0007, atividade: 5, situacao: 'regular', permissao: 'PA-2025/0032', ultimaEm: '18/08/2026', retornoHaDias: null },
-    { nome: 'Genivaldo Ramos Filho', apelido: 'Geni', regiao: 'rio-vermelho', endereco: 'Largo da Mariquita, canteiro central', dLat: 0.0007, dLng: 0.0004, atividade: 3, situacao: 'irregular', permissao: null, ultimaEm: '23/08/2026', retornoHaDias: 3 },
-    { nome: 'Cláudia Regina Alves', apelido: 'Claudinha', regiao: 'rio-vermelho', endereco: 'Rua da Paciência, calçada par', dLat: -0.0014, dLng: 0.0019, atividade: 8, situacao: 'regular', permissao: 'PA-2024/0790', ultimaEm: '11/08/2026', retornoHaDias: null },
-    { nome: 'Ubiratan Ferreira Gomes', apelido: 'Bira', regiao: 'rio-vermelho', endereco: 'Largo de Santana, ao lado da feira', dLat: 0.0016, dLng: -0.0018, atividade: 2, situacao: 'irregular', permissao: null, ultimaEm: '25/08/2026', retornoHaDias: 1 },
-    { nome: 'Maria de Lourdes Sacramento', apelido: 'Lurdinha', regiao: 'rio-vermelho', endereco: 'Praia da Paciência, acesso à areia', dLat: -0.0021, dLng: -0.0009, atividade: 0, situacao: 'regular', permissao: 'PA-2022/2210', ultimaEm: '02/08/2026', retornoHaDias: null },
-    { nome: 'Ademilson Cruz Barbosa', apelido: 'Demí', regiao: 'pelourinho', endereco: 'Largo do Pelourinho, escadaria', dLat: 0.0009, dLng: 0.0011, atividade: 3, situacao: 'irregular', permissao: null, ultimaEm: '19/08/2026', retornoHaDias: 7 },
-    { nome: 'Vera Lúcia Nascimento', apelido: 'Vera das Fitas', regiao: 'pelourinho', endereco: 'Terreiro de Jesus, em frente à Catedral', dLat: -0.0013, dLng: 0.0006, atividade: 3, situacao: 'regular', permissao: 'PA-2023/0455', ultimaEm: '14/08/2026', retornoHaDias: null },
-    { nome: 'Reinaldo Teixeira Matos', apelido: 'Rei', regiao: 'pelourinho', endereco: 'Rua Alfredo de Brito, meio da ladeira', dLat: 0.0006, dLng: -0.0016, atividade: 6, situacao: 'irregular', permissao: null, ultimaEm: '22/08/2026', retornoHaDias: null },
-    { nome: 'Sandra Regina Oliveira', apelido: 'Sandrinha', regiao: 'pelourinho', endereco: 'Praça da Sé, próximo ao mirante', dLat: -0.0019, dLng: -0.0013, atividade: 10, situacao: 'regular', permissao: 'PA-2025/0311', ultimaEm: '09/08/2026', retornoHaDias: null },
-    { nome: 'Jailson Moreira da Silva', apelido: 'Jaja', regiao: 'itapua', endereco: 'Rua da Música, em frente ao Farol de Itapuã', dLat: 0.0012, dLng: 0.0014, atividade: 7, situacao: 'irregular', permissao: null, ultimaEm: '20/08/2026', retornoHaDias: 6 },
-    { nome: 'Terezinha Gomes Rocha', apelido: 'Tetê', regiao: 'itapua', endereco: 'Praia de Itapuã, quiosque 4', dLat: -0.0017, dLng: 0.0008, atividade: 11, situacao: 'regular', permissao: 'PA-2024/1503', ultimaEm: '17/08/2026', retornoHaDias: null },
-    { nome: 'Wellington Prado Cardoso', apelido: 'Well', regiao: 'itapua', endereco: 'Alameda da Praia, altura do posto', dLat: 0.0024, dLng: -0.0011, atividade: 2, situacao: 'irregular', permissao: null, ultimaEm: '25/08/2026', retornoHaDias: null },
-    { nome: 'Ivonete Cerqueira Dias', apelido: 'Neta', regiao: 'campo-grande', endereco: 'Praça Dois de Julho, lado do coreto', dLat: 0.0008, dLng: 0.0009, atividade: 8, situacao: 'regular', permissao: 'PA-2023/0918', ultimaEm: '13/08/2026', retornoHaDias: null },
-    { nome: 'Robson Almeida Vieira', apelido: 'Robinho', regiao: 'campo-grande', endereco: 'Av. Sete de Setembro, ponto de ônibus', dLat: -0.0015, dLng: 0.0017, atividade: 1, situacao: 'irregular', permissao: null, ultimaEm: '24/08/2026', retornoHaDias: 4 },
-    { nome: 'Dilma Santana Freitas', apelido: 'Dida', regiao: 'campo-grande', endereco: 'Rua Carlos Gomes, calçada ímpar', dLat: 0.0019, dLng: -0.0006, atividade: 6, situacao: 'regular', permissao: 'PA-2022/0674', ultimaEm: '06/08/2026', retornoHaDias: null },
-    { nome: 'Sérgio Luiz Damasceno', apelido: 'Serginho', regiao: 'boca-do-rio', endereco: 'Av. Otávio Mangabeira, orla do Jardim de Alah', dLat: 0.0011, dLng: 0.0013, atividade: 2, situacao: 'irregular', permissao: null, ultimaEm: '23/08/2026', retornoHaDias: 9 },
-    { nome: 'Patrícia Mendes Argolo', apelido: 'Paty', regiao: 'boca-do-rio', endereco: 'Praia da Boca do Rio, quiosque 12', dLat: -0.0016, dLng: 0.0007, atividade: 9, situacao: 'regular', permissao: 'PA-2025/0128', ultimaEm: '16/08/2026', retornoHaDias: null },
-    { nome: 'Anderson Rocha Sampaio', apelido: 'Deko', regiao: 'boca-do-rio', endereco: 'Rua Pernambués, acesso à areia', dLat: 0.0021, dLng: -0.0015, atividade: 7, situacao: 'irregular', permissao: null, ultimaEm: '25/08/2026', retornoHaDias: null },
-    { nome: 'Célia Maria Bonfim', apelido: 'Ciça', regiao: 'comercio', endereco: 'Praça Cairu, frente ao Mercado Modelo', dLat: 0.0006, dLng: 0.0008, atividade: 3, situacao: 'regular', permissao: 'PA-2024/0602', ultimaEm: '10/08/2026', retornoHaDias: null },
-    { nome: 'Nilton César Passos', apelido: 'Nilton', regiao: 'comercio', endereco: 'Av. da França, saída do Elevador Lacerda', dLat: -0.0012, dLng: -0.0009, atividade: 4, situacao: 'irregular', permissao: null, ultimaEm: '21/08/2026', retornoHaDias: 12 },
-    { nome: 'Adriana Lopes Figueiredo', apelido: 'Dri', regiao: 'ondina', endereco: 'Av. Adhemar de Barros, mirante de Ondina', dLat: 0.0014, dLng: 0.0005, atividade: 5, situacao: 'regular', permissao: 'PA-2023/1780', ultimaEm: '15/08/2026', retornoHaDias: null },
+    { nome: 'Josefa Maria dos Santos', apelido: 'Dona Zefa', regiao: 'jardim-armacao', endereco: 'Av. Otávio Mangabeira, em frente ao Centro de Convenções', dLat: 0.0004, dLng: 0.0006, atividade: 0, situacao: 'regular', permissao: 'PA-2024/0187', ultimaHaDias: 14, retornoHaDias: null },
+    { nome: 'Antônio Carlos de Jesus', apelido: 'Toinho do Gelo', regiao: 'boca-do-rio', endereco: 'Praia da Boca do Rio, altura da rampa', dLat: 0.0018, dLng: -0.0012, atividade: 2, situacao: 'irregular', permissao: null, ultimaHaDias: 5, retornoHaDias: 5 },
+    { nome: 'Marinalva Conceição Lima', apelido: 'Nalva', regiao: 'costa-azul', endereco: 'Orla do Jardim de Alah, lado do calçadão', dLat: -0.0011, dLng: 0.0015, atividade: 1, situacao: 'regular', permissao: 'PA-2023/1142', ultimaHaDias: 21, retornoHaDias: null },
+    { nome: 'Edvaldo Souza Pereira', apelido: 'Vardinho', regiao: 'stiep', endereco: 'Rua Ewerton Visco, esquina com o canteiro', dLat: 0.0022, dLng: 0.0021, atividade: 4, situacao: 'irregular', permissao: null, ultimaHaDias: 2, retornoHaDias: 2 },
+    { nome: 'Rosângela Batista Nunes', apelido: 'Rosa do Milho', regiao: 'jardim-armacao', endereco: 'Av. Otávio Mangabeira, próximo ao Parque dos Ventos', dLat: -0.0026, dLng: -0.0007, atividade: 5, situacao: 'regular', permissao: 'PA-2025/0032', ultimaHaDias: 8, retornoHaDias: null },
+    { nome: 'Genivaldo Ramos Filho', apelido: 'Geni', regiao: 'costa-azul', endereco: 'Av. Otávio Mangabeira, orla do Jardim de Alah', dLat: 0.0007, dLng: 0.0004, atividade: 3, situacao: 'irregular', permissao: null, ultimaHaDias: 3, retornoHaDias: 3 },
+    { nome: 'Cláudia Regina Alves', apelido: 'Claudinha', regiao: 'imbui', endereco: 'Rua Ilhéus, calçada par', dLat: -0.0014, dLng: 0.0019, atividade: 8, situacao: 'regular', permissao: 'PA-2024/0790', ultimaHaDias: 15, retornoHaDias: null },
+    { nome: 'Ubiratan Ferreira Gomes', apelido: 'Bira', regiao: 'stiep', endereco: 'Rua Doutor Augusto Lopes Pontes, ao lado da feira', dLat: 0.0016, dLng: -0.0018, atividade: 2, situacao: 'irregular', permissao: null, ultimaHaDias: 1, retornoHaDias: 1 },
+    { nome: 'Maria de Lourdes Sacramento', apelido: 'Lurdinha', regiao: 'costa-azul', endereco: 'Praia de Costa Azul, acesso à areia', dLat: -0.0021, dLng: -0.0009, atividade: 0, situacao: 'regular', permissao: 'PA-2022/2210', ultimaHaDias: 24, retornoHaDias: null },
+    { nome: 'Ademilson Cruz Barbosa', apelido: 'Demí', regiao: 'pituacu', endereco: 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu', dLat: 0.0009, dLng: 0.0011, atividade: 3, situacao: 'irregular', permissao: null, ultimaHaDias: 7, retornoHaDias: 7 },
+    { nome: 'Vera Lúcia Nascimento', apelido: 'Vera das Fitas', regiao: 'pituacu', endereco: 'Praia de Pituaçu, em frente ao quiosque 3', dLat: -0.0013, dLng: 0.0006, atividade: 3, situacao: 'regular', permissao: 'PA-2023/0455', ultimaHaDias: 12, retornoHaDias: null },
+    { nome: 'Reinaldo Teixeira Matos', apelido: 'Rei', regiao: 'imbui', endereco: 'Rua Mário Leal, meio da ladeira', dLat: 0.0006, dLng: -0.0016, atividade: 6, situacao: 'irregular', permissao: null, ultimaHaDias: 4, retornoHaDias: null },
+    { nome: 'Sandra Regina Oliveira', apelido: 'Sandrinha', regiao: 'patamares', endereco: 'Praia de Patamares, próximo ao mirante', dLat: -0.0019, dLng: -0.0013, atividade: 10, situacao: 'regular', permissao: 'PA-2025/0311', ultimaHaDias: 17, retornoHaDias: null },
+    { nome: 'Jailson Moreira da Silva', apelido: 'Jaja', regiao: 'itapua', endereco: 'Rua da Música, em frente ao Farol de Itapuã', dLat: 0.0012, dLng: 0.0014, atividade: 7, situacao: 'irregular', permissao: null, ultimaHaDias: 6, retornoHaDias: 6 },
+    { nome: 'Terezinha Gomes Rocha', apelido: 'Tetê', regiao: 'itapua', endereco: 'Praia de Itapuã, quiosque 4', dLat: -0.0017, dLng: 0.0008, atividade: 11, situacao: 'regular', permissao: 'PA-2024/1503', ultimaHaDias: 9, retornoHaDias: null },
+    { nome: 'Wellington Prado Cardoso', apelido: 'Well', regiao: 'itapua', endereco: 'Alameda da Praia, altura do posto', dLat: 0.0024, dLng: -0.0011, atividade: 2, situacao: 'irregular', permissao: null, ultimaHaDias: 1, retornoHaDias: null },
+    { nome: 'Ivonete Cerqueira Dias', apelido: 'Neta', regiao: 'piata', endereco: 'Praia de Piatã, lado do coreto', dLat: 0.0008, dLng: 0.0009, atividade: 8, situacao: 'regular', permissao: 'PA-2023/0918', ultimaHaDias: 13, retornoHaDias: null },
+    { nome: 'Robson Almeida Vieira', apelido: 'Robinho', regiao: 'mussurunga', endereco: 'Av. Luís Viana Filho, ponto de ônibus', dLat: -0.0015, dLng: 0.0017, atividade: 1, situacao: 'irregular', permissao: null, ultimaHaDias: 2, retornoHaDias: 4 },
+    { nome: 'Dilma Santana Freitas', apelido: 'Dida', regiao: 'mussurunga', endereco: 'Rua Direta de Mussurunga, calçada ímpar', dLat: 0.0019, dLng: -0.0006, atividade: 6, situacao: 'regular', permissao: 'PA-2022/0674', ultimaHaDias: 20, retornoHaDias: null },
+    { nome: 'Sérgio Luiz Damasceno', apelido: 'Serginho', regiao: 'boca-do-rio', endereco: 'Rua Doutor Walter Ribeiro, esquina com a orla', dLat: 0.0011, dLng: 0.0013, atividade: 2, situacao: 'irregular', permissao: null, ultimaHaDias: 3, retornoHaDias: 9 },
+    { nome: 'Patrícia Mendes Argolo', apelido: 'Paty', regiao: 'boca-do-rio', endereco: 'Praia da Boca do Rio, quiosque 12', dLat: -0.0016, dLng: 0.0007, atividade: 9, situacao: 'regular', permissao: 'PA-2025/0128', ultimaHaDias: 10, retornoHaDias: null },
+    { nome: 'Anderson Rocha Sampaio', apelido: 'Deko', regiao: 'patamares', endereco: 'Alameda Praia de Patamares, acesso à areia', dLat: 0.0021, dLng: -0.0015, atividade: 7, situacao: 'irregular', permissao: null, ultimaHaDias: 1, retornoHaDias: null },
+    { nome: 'Célia Maria Bonfim', apelido: 'Ciça', regiao: 'stella-maris', endereco: 'Praia de Stella Maris, frente ao estacionamento', dLat: 0.0006, dLng: 0.0008, atividade: 3, situacao: 'regular', permissao: 'PA-2024/0602', ultimaHaDias: 16, retornoHaDias: null },
+    { nome: 'Nilton César Passos', apelido: 'Nilton', regiao: 'piata', endereco: 'Av. Otávio Mangabeira, saída da passarela de Piatã', dLat: -0.0012, dLng: -0.0009, atividade: 4, situacao: 'irregular', permissao: null, ultimaHaDias: 5, retornoHaDias: 12 },
+    { nome: 'Adriana Lopes Figueiredo', apelido: 'Dri', regiao: 'jardim-armacao', endereco: 'Av. Otávio Mangabeira, mirante da Armação', dLat: 0.0014, dLng: 0.0005, atividade: 5, situacao: 'regular', permissao: 'PA-2023/1780', ultimaHaDias: 11, retornoHaDias: null },
 ];
 
 const centroDe = (id: string): Regiao => REGIOES.find((r) => r.id === id) ?? REGIOES[0];
@@ -200,7 +248,7 @@ export const nomeRegiao = (id: string): string => centroDe(id).nome;
 const historicoDe = (s: Semente, indice: number): EventoHistorico[] => {
     const base: EventoHistorico[] = [
         {
-            data: s.ultimaEm,
+            data: dataBrDaqui(-s.ultimaHaDias),
             resumo:
                 s.situacao === 'regular'
                     ? 'Ponto conferido — permissão em dia e passagem livre.'
@@ -211,7 +259,7 @@ const historicoDe = (s: Semente, indice: number): EventoHistorico[] => {
 
     if (indice % 3 === 0) {
         base.push({
-            data: '29/07/2026',
+            data: dataBrDaqui(-34),
             resumo: 'Abordagem educativa: orientação sobre o horário permitido.',
             status: 'irregular',
         });
@@ -219,7 +267,7 @@ const historicoDe = (s: Semente, indice: number): EventoHistorico[] => {
 
     if (indice % 2 === 0) {
         base.push({
-            data: '11/07/2026',
+            data: dataBrDaqui(-46),
             resumo: 'Local vazio na chegada da equipe.',
             status: 'regular',
         });
@@ -244,7 +292,7 @@ export const AMBULANTES: Ambulante[] = SEMENTES.map((s, i) => {
         endereco: s.endereco,
         lat: centro.lat + s.dLat,
         lng: centro.lng + s.dLng,
-        ultimaEm: s.ultimaEm,
+        ultimaEm: dataBrDaqui(-s.ultimaHaDias),
         retornoHaDias: s.retornoHaDias,
         historico: historicoDe(s, i),
     };
@@ -258,7 +306,8 @@ export const RETORNOS_PENDENTES = AMBULANTES.filter((a) => a.retornoHaDias !== n
 
 type SementeRegistro = [
     hora: string,
-    dataBr: string,
+    /** Há quantos dias a fiscalização aconteceu (0 = hoje) — vira data BR. */
+    diasAtras: number,
     regiao: string,
     endereco: string,
     status: Situacao,
@@ -266,7 +315,8 @@ type SementeRegistro = [
     relato: string,
     fotos: number,
     ambulante: string | null,
-    retornoBr: string | null,
+    /** Em quantos dias o retorno foi marcado — `null` quando não houve. */
+    retornoEmDias: number | null,
     envio: 'enviado' | 'pendente' | 'erro',
     documento: string | null,
     /** Demanda que originou a fiscalização; `null` = o fiscal achou andando. */
@@ -275,19 +325,22 @@ type SementeRegistro = [
     referencia: string | null,
 ];
 
+/* O turno do fiscal da Equipe C1 — os endereços são os mesmos pontos da Área 5,
+   e as três fiscalizações DIRIGIDAS apontam para as demandas que o
+   administrativo encaminhou à equipe (CXE-0011, CXE-0012 e CXE-0016). */
 const SEMENTES_REGISTRO: SementeRegistro[] = [
-    ['14:38', '26/08/2026', 'barra', 'Av. Oceânica, em frente ao Farol', 'irregular', ['desarmou', 'reincidente'], 'Barraca montada sobre a faixa de pedestres. Orientado, desarmou na hora e deixou o ponto sem resistência.', 3, 'Toinho do Gelo', '29/08/2026', 'pendente', null, 'dem-01', '156-2026/0093437'],
-    ['13:52', '26/08/2026', 'barra', 'Rua Marquês de Caravelas, esquina', 'irregular', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', '27/08/2026', 'erro', 'AA 160049', null, null],
-    ['12:07', '26/08/2026', 'barra', 'Praia do Porto da Barra, altura da rampa', 'regular', ['orientado'], 'Permissão apresentada e conferida. Passagem livre, sem obstrução.', 1, 'Dona Zefa', null, 'enviado', null, 'dem-02', 'ESAL-2026/002038'],
-    ['11:20', '26/08/2026', 'ondina', 'Av. Adhemar de Barros, mirante de Ondina', 'regular', ['vazio'], 'Local vazio na chegada da equipe.', 1, null, null, 'enviado', null, null, null],
-    ['10:44', '26/08/2026', 'rio-vermelho', 'Largo da Mariquita, canteiro central', 'irregular', ['desarmou', 'calcada'], 'Ponto ocupando o canteiro. Desarmou e saiu após a orientação.', 2, 'Geni', '02/09/2026', 'pendente', null, null, null],
-    ['09:58', '26/08/2026', 'rio-vermelho', 'Largo de Santana, ao lado da feira', 'irregular', ['bebida', 'sem-permissao'], 'Venda de bebida gelada sem permissão. Ambulante não identificado — saiu antes da conferência.', 4, null, '28/08/2026', 'enviado', null, null, null],
-    ['16:35', '25/08/2026', 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'irregular', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', '01/09/2026', 'enviado', 'NP 194894', null, null],
-    ['15:12', '25/08/2026', 'boca-do-rio', 'Praia da Boca do Rio, quiosque 12', 'regular', ['orientado'], 'Ponto dentro dos limites autorizados.', 2, 'Paty', null, 'enviado', null, null, null],
-    ['11:03', '25/08/2026', 'comercio', 'Praça Cairu, frente ao Mercado Modelo', 'regular', ['orientado'], 'Conferido no roteiro da manhã. Sem ocorrência.', 1, 'Ciça', null, 'enviado', null, null, null],
-    ['09:41', '24/08/2026', 'campo-grande', 'Av. Sete de Setembro, ponto de ônibus', 'irregular', ['desarmou', 'calcada', 'reincidente'], 'Terceira ocorrência no mesmo ponto neste mês. Desarmou e saiu.', 6, 'Robinho', '31/08/2026', 'enviado', 'NP 194892', null, null],
-    ['08:26', '24/08/2026', 'pelourinho', 'Largo do Pelourinho, escadaria', 'irregular', ['recusou'], 'Insistiu em permanecer alegando autorização verbal. Documento emitido no local.', 4, 'Demí', '26/08/2026', 'enviado', 'AA 160047', null, null],
-    ['17:14', '22/08/2026', 'comercio', 'Av. da França, saída do Elevador Lacerda', 'irregular', ['desarmou', 'sem-permissao'], 'Ponto sem permissão, obstruindo a saída do elevador.', 2, 'Nilton', '25/08/2026', 'enviado', null, null, null],
+    ['14:38', 0, 'jardim-armacao', 'Av. Otávio Mangabeira, acesso à Praia da Boca do Rio', 'irregular', ['desarmou', 'reincidente'], 'Barraca montada sobre a faixa de pedestres. Orientado, desarmou na hora e deixou o ponto sem resistência.', 3, 'Toinho do Gelo', 3, 'pendente', null, 'dem-0011', 'CXE-0011'],
+    ['13:52', 0, 'stiep', 'Rua Ewerton Visco, esquina com o canteiro', 'irregular', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', 1, 'erro', 'AA 160049', null, null],
+    ['12:07', 0, 'itapua', 'Praia de Itapuã, altura do Farol', 'regular', ['orientado'], 'Permissão apresentada e conferida. Passagem livre, sem obstrução.', 1, 'Tetê', null, 'enviado', null, 'dem-0012', 'CXE-0012'],
+    ['11:20', 0, 'patamares', 'Alameda Praia de Patamares, acesso à areia', 'regular', ['vazio'], 'Local vazio na chegada da equipe.', 1, null, null, 'enviado', null, null, null],
+    ['10:44', 0, 'costa-azul', 'Orla do Jardim de Alah, canteiro central', 'irregular', ['desarmou', 'calcada'], 'Ponto ocupando o canteiro. Desarmou e saiu após a orientação.', 2, 'Geni', 7, 'pendente', null, null, null],
+    ['09:58', 0, 'imbui', 'Rua Ilhéus, entorno da feira', 'irregular', ['bebida', 'sem-permissao'], 'Venda de bebida gelada sem permissão. Ambulante não identificado — saiu antes da conferência.', 4, null, 2, 'enviado', null, 'dem-0016', 'CXE-0016'],
+    ['16:35', -1, 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'irregular', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', 6, 'enviado', 'NP 194894', null, null],
+    ['15:12', -1, 'boca-do-rio', 'Praia da Boca do Rio, quiosque 12', 'regular', ['orientado'], 'Ponto dentro dos limites autorizados.', 2, 'Paty', null, 'enviado', null, null, null],
+    ['11:03', -1, 'stella-maris', 'Praia de Stella Maris, frente ao estacionamento', 'regular', ['orientado'], 'Conferido no roteiro da manhã. Sem ocorrência.', 1, 'Ciça', null, 'enviado', null, null, null],
+    ['09:41', -2, 'mussurunga', 'Av. Luís Viana Filho, ponto de ônibus', 'irregular', ['desarmou', 'calcada', 'reincidente'], 'Terceira ocorrência no mesmo ponto neste mês. Desarmou e saiu.', 6, 'Robinho', 5, 'enviado', 'NP 194892', null, null],
+    ['08:26', -2, 'pituacu', 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu', 'irregular', ['recusou'], 'Insistiu em permanecer alegando autorização verbal. Documento emitido no local.', 4, 'Demí', 0, 'enviado', 'AA 160047', null, null],
+    ['17:14', -4, 'piata', 'Av. Otávio Mangabeira, saída da passarela de Piatã', 'irregular', ['desarmou', 'sem-permissao'], 'Ponto sem permissão, obstruindo a saída da passarela.', 2, 'Nilton', -1, 'enviado', null, null, null],
 ];
 
 /** "NP 194894" → 'np'. O número guarda a sigla, então o tipo se deduz dele. */
@@ -308,12 +361,13 @@ const protocoloDe = (dataBr: string, ordem: number): string => {
 export const REGISTROS: Registro[] = SEMENTES_REGISTRO.map((s, i) => {
     const centro = centroDe(s[2]);
     const desvio = ((i % 5) - 2) * 0.0009;
+    const dataBr = dataBrDaqui(s[1]);
 
     return {
         id: `reg-${String(i + 1).padStart(3, '0')}`,
-        protocolo: protocoloDe(s[1], i + 1),
+        protocolo: protocoloDe(dataBr, i + 1),
         hora: s[0],
-        dataBr: s[1],
+        dataBr,
         regiao: s[2],
         endereco: s[3],
         lat: centro.lat + desvio,
@@ -323,7 +377,7 @@ export const REGISTROS: Registro[] = SEMENTES_REGISTRO.map((s, i) => {
         relato: s[6],
         fotos: s[7],
         ambulante: s[8],
-        retornoBr: s[9],
+        retornoBr: s[9] === null ? null : dataBrDaqui(s[9]),
         envio: s[10],
         documento: s[11],
         documentoTipo: tipoDoDocumento(s[11]),
@@ -356,13 +410,13 @@ type Foco = { regiao: string; registros: number; raio: number; dias: number };
 
 /** Os focos de incidência que a fiscalização vem acumulando. */
 const FOCOS: Foco[] = [
-    { regiao: 'barra', registros: 74, raio: 0.006, dias: 90 },
-    { regiao: 'rio-vermelho', registros: 52, raio: 0.005, dias: 90 },
-    { regiao: 'pelourinho', registros: 41, raio: 0.0035, dias: 90 },
-    { regiao: 'itapua', registros: 23, raio: 0.007, dias: 90 },
-    { regiao: 'boca-do-rio', registros: 16, raio: 0.006, dias: 60 },
-    { regiao: 'comercio', registros: 12, raio: 0.003, dias: 45 },
-    { regiao: 'campo-grande', registros: 9, raio: 0.004, dias: 30 },
+    { regiao: 'boca-do-rio', registros: 74, raio: 0.006, dias: 90 },
+    { regiao: 'itapua', registros: 52, raio: 0.007, dias: 90 },
+    { regiao: 'costa-azul', registros: 41, raio: 0.0035, dias: 90 },
+    { regiao: 'jardim-armacao', registros: 23, raio: 0.004, dias: 90 },
+    { regiao: 'pituacu', registros: 16, raio: 0.006, dias: 60 },
+    { regiao: 'stiep', registros: 12, raio: 0.003, dias: 45 },
+    { regiao: 'patamares', registros: 9, raio: 0.004, dias: 30 },
 ];
 
 export type IncidenciaCalor = {
@@ -476,18 +530,9 @@ export const DOCUMENTOS_DE_CAMPO = [
     },
 ];
 
-/** Data BR de hoje somada de N dias — o protótipo não guarda nada, só mostra. */
-export const dataBrDaqui = (dias: number): string => {
-    const d = new Date(2026, 7, 26);
-    d.setDate(d.getDate() + dias);
-
-    return d.toLocaleDateString('pt-BR');
-};
-
 export const horaAgora = (): string =>
     new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-export const HOJE_BR = '26/08/2026';
 
 export type Operacao = {
     id: string;
@@ -505,49 +550,50 @@ export type Operacao = {
 export const OPERACOES: Operacao[] = [
     {
         id: 'op-1',
-        nome: 'Rotina Centro',
-        local: 'Pelourinho e Terreiro de Jesus',
-        regiao: 'pelourinho',
-        quando: 'Amanhã, 27/08/2026',
-        horario: '08h às 12h',
-        fiscais: 4,
-        tom: 'proxima',
-        observacao: 'Foco em passagem livre nas escadarias.',
-    },
-    {
-        id: 'op-2',
-        nome: 'Operação Verão',
-        local: 'Orla de Itapuã',
-        regiao: 'itapua',
-        quando: '28/08/2026',
-        horario: '14h às 19h',
-        fiscais: 8,
-        tom: 'planejada',
-        observacao: 'Apoio da guarda municipal confirmado.',
-    },
-    {
-        id: 'op-3',
-        nome: 'Varredura da Barra',
-        local: 'Av. Oceânica, do Farol ao Morro do Cristo',
-        regiao: 'barra',
-        quando: 'Hoje, 26/08/2026',
+        nome: 'Rotina Orla',
+        local: 'Boca do Rio e Jardim Armação',
+        regiao: 'boca-do-rio',
+        quando: `Hoje, ${dataBrDaqui(0)}`,
         horario: '16h às 20h',
         fiscais: 6,
         tom: 'agora',
         observacao: 'Você está escalado nesta operação.',
     },
     {
+        id: 'op-2',
+        nome: 'Rotina Costa Azul',
+        local: 'Orla do Jardim de Alah',
+        regiao: 'costa-azul',
+        quando: `Amanhã, ${dataBrDaqui(1)}`,
+        horario: '08h às 12h',
+        fiscais: 4,
+        tom: 'proxima',
+        observacao: 'Foco em passagem livre no calçadão.',
+    },
+    {
+        id: 'op-3',
+        nome: 'Operação Verão',
+        local: 'Orla de Itapuã e Stella Maris',
+        regiao: 'itapua',
+        quando: dataBrDaqui(2),
+        horario: '14h às 19h',
+        fiscais: 8,
+        tom: 'planejada',
+        observacao: 'Apoio da guarda municipal confirmado.',
+    },
+    {
         id: 'op-4',
-        nome: 'Feira de Santana do Rio Vermelho',
-        local: 'Largo de Santana',
-        regiao: 'rio-vermelho',
-        quando: '31/08/2026',
+        nome: 'Feira do Imbuí',
+        local: 'Rua Ilhéus, entorno da feira',
+        regiao: 'imbui',
+        quando: dataBrDaqui(5),
         horario: '06h às 11h',
         fiscais: 5,
         tom: 'planejada',
         observacao: 'Montagem da feira acompanhada desde a madrugada.',
     },
 ];
+
 
 /** Saudação pela hora do aparelho — o aplicativo abre falando com gente. */
 export const saudacao = (): string => {
@@ -560,7 +606,23 @@ export const saudacao = (): string => {
     return hora < 18 ? 'Boa tarde' : 'Boa noite';
 };
 
-export const DATA_POR_EXTENSO = 'Quarta-feira, 26 de agosto de 2026';
+/**
+ * A data de hoje por extenso, com a primeira letra maiúscula.
+ *
+ * Calculada, não escrita: era uma data fixa, e o aplicativo abria dizendo "26 de
+ * agosto" em qualquer dia que a demonstração acontecesse — ao lado de uma fila
+ * com prazos de hoje.
+ */
+export const DATA_POR_EXTENSO = (() => {
+    const texto = new Date().toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    });
+
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+})();
 
 /** "há 1 dia" / "há 4 dias" — a quantidade é sempre conhecida, então a frase sai pronta. */
 export const emDias = (dias: number): string => (dias === 1 ? 'há 1 dia' : `há ${dias} dias`);

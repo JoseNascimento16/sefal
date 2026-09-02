@@ -43,7 +43,7 @@ export function TelaPerfil() {
                                 {FISCAL.nome}
                             </p>
                             <p className="pw-fraco" style={{ margin: 0 }}>
-                                Matrícula {FISCAL.matricula} · desde {FISCAL.desde}
+                                {FISCAL.papel} · matrícula {FISCAL.matricula} · desde {FISCAL.desde}
                             </p>
                             <p className="pw-fraco" style={{ margin: 0 }}>
                                 {EQUIPE.nome} · {EQUIPE.area} — {EQUIPE.areaNome} · {FISCAL.turno}
@@ -74,20 +74,30 @@ export function TelaPerfil() {
                                 </span>
                             </span>
                         </span>
-                        <Selo tom="info">{EQUIPE.bairros.length} bairros</Selo>
+                        <Selo tom="info">{EQUIPE.recorteRotulo}</Selo>
                     </div>
 
-                    <div className="pw-linha" style={{ gap: 6, flexWrap: 'wrap' }}>
-                        {EQUIPE.bairros.map((bairro) => (
-                            <Selo key={bairro} tom="neutro">
-                                {bairro}
-                            </Selo>
-                        ))}
-                    </div>
+                    {/* Nem toda equipe se descreve por bloco de bairros: a
+                        Itinerante percorre corredores e a Noturna cobre a cidade
+                        inteira. Listar "0 bairros" nelas seria a leitura
+                        invertida — por isso o recorte manda no que aparece. */}
+                    {EQUIPE.bairros.length > 0 ? (
+                        <div className="pw-linha" style={{ gap: 6, flexWrap: 'wrap' }}>
+                            {EQUIPE.bairros.map((bairro) => (
+                                <Selo key={bairro} tom="neutro">
+                                    {bairro}
+                                </Selo>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="pw-fraco" style={{ margin: 0, fontSize: 13.5 }}>
+                            Cobertura: toda a cidade. O recorte desta equipe é o turno.
+                        </p>
+                    )}
 
                     <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 12.5 }}>
-                        As demandas do e-Salvador, do Fala Salvador 156 e de licença nova caem na equipe da
-                        área onde fica o endereço. É esta lista que decide.
+                        {EQUIPE.recorteExplicacao} As demandas do e-Salvador, do Fala Salvador 156, de
+                        licença nova e de ofício caem na equipe da área onde fica o endereço.
                     </p>
                 </div>
 

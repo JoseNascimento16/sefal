@@ -794,6 +794,63 @@ textarea.pw-entrada {
     cursor: pointer;
 }
 
+/* A pílula LIGADA (o interruptor da delimitação da área) veste a cor de ação:
+   ela não é um estado do ponto fiscalizado, é uma escolha do fiscal. */
+.pw-pilula-ligada {
+    border-color: var(--pw-acao);
+    background: var(--pw-acao);
+    color: var(--pw-acao-texto);
+}
+
+/* ======================= ÁREA DA EQUIPE NO MAPA ======================= */
+
+/* O rótulo pousa sobre o contorno, sem caixa pesada: ele nomeia a área, não
+   compete com os pinos. `pointer-events: none` porque tocar nele não faz nada e
+   um alvo de toque morto em cima do mapa atrapalha quem quer arrastar. */
+.pw-rotulo-area {
+    display: inline-block;
+    transform: translate(-50%, -50%);
+    padding: 5px 11px;
+    border: 1px solid color-mix(in srgb, var(--pw-acao) 45%, transparent);
+    border-radius: var(--pw-raio-full);
+    background: color-mix(in srgb, var(--pw-superficie) 88%, transparent);
+    color: var(--pw-acao);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.pw-legenda-area {
+    position: absolute;
+    z-index: 600;
+    left: 12px;
+    right: 12px;
+    /* Acima do botão de Fiscalizar (62px de altura + folga): no rodapé, o texto
+       passaria por baixo dele em qualquer tamanho de tela. */
+    bottom: 94px;
+    margin: 0;
+    padding: 9px 13px;
+    border: 1px solid var(--pw-borda);
+    border-left: 4px solid var(--pw-acao);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    color: var(--pw-texto-corpo);
+    font-size: 12.5px;
+    line-height: 1.45;
+    box-shadow: var(--pw-sombra);
+    pointer-events: none;
+}
+
+/* Ponto FORA da área da equipe: continua no mapa, mas apagado. Esconder seria
+   pior — o ponto existe, e o contorno é aproximado; o que se quer dizer é "isto
+   não é seu serviço", não "isto não existe". */
+.pw-pino-fora {
+    opacity: 0.34;
+    filter: grayscale(1);
+}
+
 .pw-fab {
     position: absolute;
     z-index: 700;
@@ -1334,6 +1391,20 @@ textarea.pw-entrada {
 .pw-entrada-tela .pw-entrada:focus {
     border-color: var(--pw-acao);
     box-shadow: 0 0 0 4px rgba(77, 159, 220, 0.28);
+}
+
+/* A dica da porta: diz que a matrícula escolhe a equipe. Fica discreta porque é
+   apoio à demonstração, não instrução de uso. */
+.pw-dica-entrada {
+    margin: -6px 0 16px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.pw-dica-entrada strong {
+    color: #fff;
+    font-weight: 800;
 }
 
 .pw-lembrar {

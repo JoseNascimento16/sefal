@@ -6,18 +6,23 @@ import { Icone } from '../icones';
 /**
  * A porta do aplicativo de campo.
  *
- * No protótipo qualquer matrícula entra — não há servidor do outro lado. O que
- * esta tela está decidindo é outra coisa: o tamanho do alvo de toque de quem
+ * No protótipo qualquer matrícula entra — não há servidor do outro lado para
+ * conferir senha. Mas a matrícula NÃO é decorativa: é ela que decide quem
+ * entrou e, com isso, a EQUIPE de quem entrou — e a equipe é o que define a
+ * fila de demandas e o contorno da área no mapa. `fiscal`, o login da
+ * demonstração, entra como César Amaral, encarregado da Equipe C1 · Área 5.
+ *
+ * A outra coisa que esta tela decide é o tamanho do alvo de toque de quem
  * digita em pé, no sol, segurando o celular com uma mão só.
  */
-export function TelaEntrada({ aoEntrar }: { aoEntrar: () => void }) {
-    const [matricula, setMatricula] = useState('F-40219');
+export function TelaEntrada({ aoEntrar }: { aoEntrar: (matricula: string) => void }) {
+    const [matricula, setMatricula] = useState('fiscal');
     const [senha, setSenha] = useState('••••••••');
     const [lembrar, setLembrar] = useState(true);
 
     const enviar = (evento: FormEvent) => {
         evento.preventDefault();
-        aoEntrar();
+        aoEntrar(matricula);
     };
 
     return (
@@ -48,6 +53,15 @@ export function TelaEntrada({ aoEntrar }: { aoEntrar: () => void }) {
                     autoComplete="username"
                 />
             </label>
+
+            {/* A dica existe porque a matrícula muda o que o aplicativo mostra:
+                sem ela, quem abre a demonstração não descobriria que trocar de
+                matrícula troca a equipe — e a fila com ela. */}
+            <p className="pw-dica-entrada">
+                A matrícula decide a equipe: <strong>fiscal</strong> entra na Equipe C1 · Área 5 (Boca
+                do Rio). <strong>F-2801</strong> entra na Itinerante, <strong>F-2461</strong> na
+                Equipe B2.
+            </p>
 
             <label className="pw-campo">
                 <span>Senha</span>
