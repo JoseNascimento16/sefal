@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 
 import { irPara, useApp } from '../app';
 import { Selo, Topo, atalhoDoPerfil } from '../componentes';
+import { DEMANDAS_ABERTAS, DEMANDAS_VENCIDAS, EQUIPE } from '../dados-demandas';
 import {
     AMBULANTES,
     CENTRO_SALVADOR,
@@ -16,16 +17,22 @@ import {
     saudacao,
     type Operacao,
 } from '../dados-prototipo';
-import { Icone } from '../icones';
+import { Icone, type Nome as NomeDeIcone } from '../icones';
 import { criarMapa, pinoAmbulante } from '../mapa';
+import { CartaoDemanda } from './demandas';
 
 /* ============================================================================
    INÍCIO — a primeira tela do plantão.
    ----------------------------------------------------------------------------
    O fiscal abre o aplicativo antes de sair da base: ele quer saber o que tem
    pela frente, não operar nada ainda. Então esta tela RESPONDE, não pergunta —
+   de que equipe e área ele é, quantas demandas o administrativo encaminhou,
    quantos registros ele já fez hoje, quantos retornos venceram, o que está na
    fila para subir e quais operações a chefia marcou.
+
+   A ordem mudou com o cenário novo: a faixa de EQUIPE abre a tela e as
+   demandas vêm antes do mapa. O trabalho dirigido tem PRAZO e número de
+   processo; o avulso não — quem tem prazo vem primeiro.
 
    O mapa aparece aqui como PRÉVIA: mostra a região com os pontos, não aceita
    arrasto nem zoom, e o toque leva à aba do mapa. É um convite, não uma
@@ -37,6 +44,14 @@ export function TelaInicio() {
     const doDia = registros.filter((r) => r.dataBr === HOJE_BR);
     const irregulares = doDia.filter((r) => r.status === 'irregular').length;
 
+    /* As duas mais urgentes da fila da equipe. Aqui é CHAMADA, não fila: a fila
+       inteira mora na aba Demandas, e repetir tudo aqui empurraria o mapa e as
+       operações para baixo da dobra. */
+    const chamada = DEMANDAS_ABERTAS.slice(0, 2);
+    const atendidas = new Set(
+        registros.map((r) => r.demandaId).filter((d): d is string => Boolean(d)),
+    );
+
     return (
         <div className="pw-tela">
             <Topo
@@ -46,7 +61,37 @@ export function TelaInicio() {
             />
 
             <div className="pw-corpo">
-                <div className="pw-numeros">
+                {/* A identidade de EQUIPE abre a tela porque é ela que define o que
+                    chega para este fiscal — a demanda cai na equipe da área, não na
+                    pessoa. Sem isto, a fila parece arbitrária. */}
+                <button
+                    type="button"
+                    className="pw-faixa-equipe"
+                    onClick={() => irPara('perfil')}
+                    aria-label="Ver o perfil e a área da equipe"
+                >
+                    <span className="pw-equipe-selo">
+                        <Icone nome="equipe" tamanho={19} />
+                    </span>
+                    <span style={{ minWidth: 0, textAlign: 'left' }}>
+                        <span className="pw-forte" style={{ display: 'block', fontSize: 14.5 }}>
+                            {EQUIPE.nome} · {EQUIPE.area} — {EQUIPE.areaNome}
+                        </span>
+                        <span className="pw-fraco" style={{ fontSize: 12.5 }}>
+                            Encarregado {EQUIPE.encarregado} · {FISCAL.turno}
+                        </span>
+                    </span>
+                    <Icone nome="seta" tamanho={18} />
+                </button>
+
+                <div className="pw-numeros" style={{ marginTop: 14 }}>
+                    <Numero
+                        valor={DEMANDAS_ABERTAS.length}
+                        rotulo={DEMANDAS_ABERTAS.length === 1 ? 'demanda na fila' : 'demandas na fila'}
+                        icone="caixa-entrada"
+                        tom="var(--pw-acao)"
+                        aoTocar={() => irPara('demandas')}
+                    />
                     <Numero
                         valor={doDia.length}
                         rotulo={doDia.length === 1 ? 'registro hoje' : 'registros hoje'}
@@ -63,14 +108,55 @@ export function TelaInicio() {
                         tom="var(--pw-perigo)"
                         aoTocar={() => irPara('mapa')}
                     />
-                    <Numero
-                        valor={pendentes}
-                        rotulo={pendentes === 1 ? 'aguarda envio' : 'aguardam envio'}
-                        icone="nuvem"
-                        tom="var(--pw-alerta)"
-                        aoTocar={() => irPara('sincronizacao')}
-                    />
                 </div>
+
+                <button
+                    type="button"
+                    className="pw-tira-envio"
+                    onClick={() => irPara('sincronizacao')}
+                >
+                    <Icone nome="nuvem" tamanho={18} />
+                    <span className="pw-forte">
+                        {pendentes === 0
+                            ? 'Nada aguardando envio'
+                            : pendentes === 1
+                              ? '1 registro aguardando envio'
+                              : `${pendentes} registros aguardando envio`}
+                    </span>
+                    <Icone nome="seta" tamanho={16} />
+                </button>
+
+                {/* Trabalho DIRIGIDO -------------------------------------- */}
+                <p className="pw-titulo-secao">
+                    Minhas demandas
+                    {DEMANDAS_VENCIDAS.length > 0 && (
+                        <span className="pw-fraco" style={{ marginLeft: 8, fontWeight: 700, letterSpacing: 0 }}>
+                            —{' '}
+                            {DEMANDAS_VENCIDAS.length === 1
+                                ? '1 vencida'
+                                : `${DEMANDAS_VENCIDAS.length} vencidas`}
+                        </span>
+                    )}
+                </p>
+
+                {chamada.map((demanda) => (
+                    <CartaoDemanda
+                        key={demanda.id}
+                        demanda={demanda}
+                        atendida={atendidas.has(demanda.id)}
+                        compacto
+                    />
+                ))}
+
+                <button
+                    type="button"
+                    className="pw-btn pw-btn-contorno"
+                    style={{ marginTop: 12 }}
+                    onClick={() => irPara('demandas')}
+                >
+                    <Icone nome="caixa-entrada" tamanho={18} />
+                    Ver as {DEMANDAS_ABERTAS.length} demandas da equipe
+                </button>
 
                 <p className="pw-titulo-secao">Sua rua agora</p>
 
@@ -101,7 +187,17 @@ export function TelaInicio() {
                     onClick={() => irPara('registrar')}
                 >
                     <Icone nome="mais" tamanho={20} />
-                    Registrar fiscalização
+                    Registrar fiscalização avulsa
+                </button>
+
+                <button
+                    type="button"
+                    className="pw-btn pw-btn-contorno"
+                    style={{ marginTop: 10 }}
+                    onClick={() => irPara('levantamento')}
+                >
+                    <Icone nome="prancheta" tamanho={19} />
+                    Levantamento de ambulantes
                 </button>
             </div>
         </div>
@@ -117,7 +213,7 @@ function Numero({
 }: {
     valor: number;
     rotulo: string;
-    icone: 'lista' | 'relogio' | 'nuvem';
+    icone: NomeDeIcone;
     tom: string;
     aoTocar: () => void;
 }) {

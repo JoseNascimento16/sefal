@@ -44,6 +44,34 @@ export type Ambulante = {
     historico: EventoHistorico[];
 };
 
+/**
+ * De onde a fiscalização nasceu.
+ *
+ * `avulsa` é o fiscal andando a rua e vendo — o caminho que o protótipo já
+ * encenava. `dirigida` é o trabalho que o administrativo encaminhou à equipe
+ * com número de processo e prazo: aí a fiscalização nasce AMARRADA à demanda, e
+ * o vínculo tem de ficar visível no registro, no recibo e no documento.
+ */
+export type OrigemRegistro = 'avulsa' | 'dirigida';
+
+/**
+ * A via do documento, CONGELADA no instante em que foi lavrada.
+ *
+ * O documento não se remonta a partir da tela na hora de imprimir: o que vale é
+ * o que o notificado assinou. Por isso o texto inteiro fica guardado no
+ * registro e a impressão apenas o repete — dá para tirar a segunda via dias
+ * depois e sair igual à primeira.
+ */
+export type ViaImpressa = {
+    tipo: 'np' | 'aa';
+    numero: string;
+    titulo: string;
+    campos: { rotulo: string; valor: string }[];
+    listas: { titulo: string; itens: string[] }[];
+    assinaturas: { rotulo: string; estado: 'assinada' | 'recusada' | 'pendente'; nome?: string }[];
+    rodape: string;
+};
+
 export type Registro = {
     id: string;
     protocolo: string;
@@ -61,13 +89,22 @@ export type Registro = {
     retornoBr: string | null;
     envio: 'enviado' | 'pendente' | 'erro';
     documento: string | null;
+    /** 'np' = Notificação Preliminar; 'aa' = Auto de Apreensão. */
+    documentoTipo: 'np' | 'aa' | null;
+    /** Preenchida quando o documento foi lavrado NESTA sessão do protótipo. */
+    via: ViaImpressa | null;
+    origem: OrigemRegistro;
+    /** Preenchido só quando a origem é dirigida. */
+    demandaId: string | null;
+    /** O número do processo da demanda — vai para o campo REFERÊNCIA do papel. */
+    referencia: string | null;
 };
 
 export const FISCAL = {
     nome: 'Marcos Vinícius Andrade',
     matricula: 'F-40219',
-    setor: 'SEFAL · Fiscalização de Ambulantes',
-    equipe: 'Equipe Litoral · Turno tarde',
+    setor: 'SEFAL · Fiscalização em Logradouro Público',
+    turno: 'Turno tarde',
     iniciais: 'MA',
     desde: '2019',
 };
@@ -232,22 +269,35 @@ type SementeRegistro = [
     retornoBr: string | null,
     envio: 'enviado' | 'pendente' | 'erro',
     documento: string | null,
+    /** Demanda que originou a fiscalização; `null` = o fiscal achou andando. */
+    demandaId: string | null,
+    /** Nº do processo da demanda, que o papel chama de REFERÊNCIA. */
+    referencia: string | null,
 ];
 
 const SEMENTES_REGISTRO: SementeRegistro[] = [
-    ['14:38', '26/08/2026', 'barra', 'Av. Oceânica, em frente ao Farol', 'irregular', ['desarmou', 'reincidente'], 'Barraca montada sobre a faixa de pedestres. Orientado, desarmou na hora e deixou o ponto sem resistência.', 3, 'Toinho do Gelo', '29/08/2026', 'pendente', null],
-    ['13:52', '26/08/2026', 'barra', 'Rua Marquês de Caravelas, esquina', 'irregular', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', '27/08/2026', 'erro', 'NT 2026/0418'],
-    ['12:07', '26/08/2026', 'barra', 'Praia do Porto da Barra, altura da rampa', 'regular', ['orientado'], 'Permissão apresentada e conferida. Passagem livre, sem obstrução.', 1, 'Dona Zefa', null, 'enviado', null],
-    ['11:20', '26/08/2026', 'ondina', 'Av. Adhemar de Barros, mirante de Ondina', 'regular', ['vazio'], 'Local vazio na chegada da equipe.', 1, null, null, 'enviado', null],
-    ['10:44', '26/08/2026', 'rio-vermelho', 'Largo da Mariquita, canteiro central', 'irregular', ['desarmou', 'calcada'], 'Ponto ocupando o canteiro. Desarmou e saiu após a orientação.', 2, 'Geni', '02/09/2026', 'pendente', null],
-    ['09:58', '26/08/2026', 'rio-vermelho', 'Largo de Santana, ao lado da feira', 'irregular', ['bebida', 'sem-permissao'], 'Venda de bebida gelada sem permissão. Ambulante não identificado — saiu antes da conferência.', 4, null, '28/08/2026', 'enviado', null],
-    ['16:35', '25/08/2026', 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'irregular', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', '01/09/2026', 'enviado', 'NT 2026/0411'],
-    ['15:12', '25/08/2026', 'boca-do-rio', 'Praia da Boca do Rio, quiosque 12', 'regular', ['orientado'], 'Ponto dentro dos limites autorizados.', 2, 'Paty', null, 'enviado', null],
-    ['11:03', '25/08/2026', 'comercio', 'Praça Cairu, frente ao Mercado Modelo', 'regular', ['orientado'], 'Conferido no roteiro da manhã. Sem ocorrência.', 1, 'Ciça', null, 'enviado', null],
-    ['09:41', '24/08/2026', 'campo-grande', 'Av. Sete de Setembro, ponto de ônibus', 'irregular', ['desarmou', 'calcada', 'reincidente'], 'Terceira ocorrência no mesmo ponto neste mês. Desarmou e saiu.', 6, 'Robinho', '31/08/2026', 'enviado', 'AI 2026/0093'],
-    ['08:26', '24/08/2026', 'pelourinho', 'Largo do Pelourinho, escadaria', 'irregular', ['recusou'], 'Insistiu em permanecer alegando autorização verbal. Documento emitido no local.', 4, 'Demí', '26/08/2026', 'enviado', 'AI 2026/0091'],
-    ['17:14', '22/08/2026', 'comercio', 'Av. da França, saída do Elevador Lacerda', 'irregular', ['desarmou', 'sem-permissao'], 'Ponto sem permissão, obstruindo a saída do elevador.', 2, 'Nilton', '25/08/2026', 'enviado', null],
+    ['14:38', '26/08/2026', 'barra', 'Av. Oceânica, em frente ao Farol', 'irregular', ['desarmou', 'reincidente'], 'Barraca montada sobre a faixa de pedestres. Orientado, desarmou na hora e deixou o ponto sem resistência.', 3, 'Toinho do Gelo', '29/08/2026', 'pendente', null, 'dem-01', '156-2026/0093437'],
+    ['13:52', '26/08/2026', 'barra', 'Rua Marquês de Caravelas, esquina', 'irregular', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', '27/08/2026', 'erro', 'AA 160049', null, null],
+    ['12:07', '26/08/2026', 'barra', 'Praia do Porto da Barra, altura da rampa', 'regular', ['orientado'], 'Permissão apresentada e conferida. Passagem livre, sem obstrução.', 1, 'Dona Zefa', null, 'enviado', null, 'dem-02', 'ESAL-2026/002038'],
+    ['11:20', '26/08/2026', 'ondina', 'Av. Adhemar de Barros, mirante de Ondina', 'regular', ['vazio'], 'Local vazio na chegada da equipe.', 1, null, null, 'enviado', null, null, null],
+    ['10:44', '26/08/2026', 'rio-vermelho', 'Largo da Mariquita, canteiro central', 'irregular', ['desarmou', 'calcada'], 'Ponto ocupando o canteiro. Desarmou e saiu após a orientação.', 2, 'Geni', '02/09/2026', 'pendente', null, null, null],
+    ['09:58', '26/08/2026', 'rio-vermelho', 'Largo de Santana, ao lado da feira', 'irregular', ['bebida', 'sem-permissao'], 'Venda de bebida gelada sem permissão. Ambulante não identificado — saiu antes da conferência.', 4, null, '28/08/2026', 'enviado', null, null, null],
+    ['16:35', '25/08/2026', 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'irregular', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', '01/09/2026', 'enviado', 'NP 194894', null, null],
+    ['15:12', '25/08/2026', 'boca-do-rio', 'Praia da Boca do Rio, quiosque 12', 'regular', ['orientado'], 'Ponto dentro dos limites autorizados.', 2, 'Paty', null, 'enviado', null, null, null],
+    ['11:03', '25/08/2026', 'comercio', 'Praça Cairu, frente ao Mercado Modelo', 'regular', ['orientado'], 'Conferido no roteiro da manhã. Sem ocorrência.', 1, 'Ciça', null, 'enviado', null, null, null],
+    ['09:41', '24/08/2026', 'campo-grande', 'Av. Sete de Setembro, ponto de ônibus', 'irregular', ['desarmou', 'calcada', 'reincidente'], 'Terceira ocorrência no mesmo ponto neste mês. Desarmou e saiu.', 6, 'Robinho', '31/08/2026', 'enviado', 'NP 194892', null, null],
+    ['08:26', '24/08/2026', 'pelourinho', 'Largo do Pelourinho, escadaria', 'irregular', ['recusou'], 'Insistiu em permanecer alegando autorização verbal. Documento emitido no local.', 4, 'Demí', '26/08/2026', 'enviado', 'AA 160047', null, null],
+    ['17:14', '22/08/2026', 'comercio', 'Av. da França, saída do Elevador Lacerda', 'irregular', ['desarmou', 'sem-permissao'], 'Ponto sem permissão, obstruindo a saída do elevador.', 2, 'Nilton', '25/08/2026', 'enviado', null, null, null],
 ];
+
+/** "NP 194894" → 'np'. O número guarda a sigla, então o tipo se deduz dele. */
+const tipoDoDocumento = (documento: string | null): 'np' | 'aa' | null => {
+    if (!documento) {
+        return null;
+    }
+
+    return documento.startsWith('AA') ? 'aa' : 'np';
+};
 
 const protocoloDe = (dataBr: string, ordem: number): string => {
     const [dia, mes, ano] = dataBr.split('/');
@@ -276,6 +326,11 @@ export const REGISTROS: Registro[] = SEMENTES_REGISTRO.map((s, i) => {
         retornoBr: s[9],
         envio: s[10],
         documento: s[11],
+        documentoTipo: tipoDoDocumento(s[11]),
+        via: null,
+        origem: s[12] ? 'dirigida' : 'avulsa',
+        demandaId: s[12],
+        referencia: s[13],
     };
 });
 
@@ -394,9 +449,31 @@ export const PRAZOS_RETORNO = [
     { id: 'semana', rotulo: 'Em 1 semana', dias: 7 },
 ];
 
-export const MOTIVOS_DOCUMENTO = [
-    { id: 'nt', titulo: 'Notificação de Termo', sigla: 'NT', descricao: 'Registro formal da orientação, sem multa.' },
-    { id: 'ai', titulo: 'Auto de Infração', sigla: 'AI', descricao: 'Escalada com penalidade — reincidência ou recusa.' },
+/**
+ * Os DOIS documentos que o SEFAL lavra em campo — e são exatamente estes.
+ *
+ * O protótipo anterior chutava um par genérico ("Notificação de Termo" e "Auto
+ * de Infração"). Os blocos de papel que o cliente entregou dizem outra coisa: o
+ * que o agente preenche na calçada é a **Notificação Preliminar** (dá prazo
+ * para sanar) e, quando recolhe material, o **Auto de Apreensão** (que manda os
+ * bens para o SEGUB). Auto de Infração existe no fluxo da SEMOP, mas não é
+ * documento de campo deste setor — não entra aqui.
+ */
+export const DOCUMENTOS_DE_CAMPO = [
+    {
+        id: 'np' as const,
+        titulo: 'Notificação Preliminar',
+        sigla: 'NP',
+        descricao: 'Aponta as irregularidades e dá prazo para sanar, sob as penalidades previstas.',
+        emoji: '📋',
+    },
+    {
+        id: 'aa' as const,
+        titulo: 'Auto de Apreensão',
+        sigla: 'AA',
+        descricao: 'Recolhe material e mercadoria, com guarda no SEGUB e prazo de permanência.',
+        emoji: '📦',
+    },
 ];
 
 /** Data BR de hoje somada de N dias — o protótipo não guarda nada, só mostra. */

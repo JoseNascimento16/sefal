@@ -3,7 +3,8 @@
  *
  * São SVG escritos aqui, e não uma biblioteca: o aplicativo do fiscal roda em
  * rede de celular no meio da rua, e cada quilobyte que não viaja é meio segundo
- * a menos entre abrir e registrar. São doze desenhos; não vale uma dependência.
+ * a menos entre abrir e registrar. São trinta desenhos curtos; não vale uma
+ * dependência.
  */
 
 type Props = {
@@ -35,6 +36,12 @@ export type Nome =
     | 'sol'
     | 'seta'
     | 'atualizar'
+    | 'caixa-entrada'
+    | 'assinar'
+    | 'imprimir'
+    | 'pacote'
+    | 'equipe'
+    | 'prancheta'
     | 'erro';
 
 const TRACOS: Record<Nome, string> = {
@@ -60,6 +67,15 @@ const TRACOS: Record<Nome, string> = {
     sol: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-14v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4',
     seta: 'm9 5 7 7-7 7',
     atualizar: 'M20 11A8 8 0 0 0 6.3 6.3L4 8.5m0 0V4m0 4.5h4.5M4 13a8 8 0 0 0 13.7 4.7L20 15.5m0 0V20m0-4.5h-4.5',
+    'caixa-entrada':
+        'M3 13h4l1.5 3h7L17 13h4M3 13l2.6-7.3A2 2 0 0 1 7.5 4.4h9a2 2 0 0 1 1.9 1.3L21 13v4.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V13Z',
+    assinar: 'M3 20.5c3.5.6 5.3-.7 5.3-2.4 0-1.4-1-2-1.9-1.4-1.2.8-.7 3 1.6 3 2.6 0 4.2-2.4 5.6-6.1M12.5 12.6 20 5a2 2 0 0 0-2.8-2.8l-7.6 7.6-1 3.7 3.9-.9Z',
+    imprimir:
+        'M7 8V4h10v4M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v6H7v-6Z',
+    pacote: 'M21 8.5 12 4 3 8.5m18 0v7L12 20l-9-4.5v-7m18 0L12 13 3 8.5M12 13v7M7.5 6.2 16.5 11',
+    equipe: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-7 9a7 7 0 0 1 14 0m1.5-15.6a3.5 3.5 0 0 1 0 6.7M19 20a6.6 6.6 0 0 0-2.2-4.8',
+    prancheta:
+        'M9 4.5H7a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2h-2M9 4.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 4.5v1H9v-1ZM9 12h6m-6 4h4',
     erro: 'M12 8v5m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
 };
 

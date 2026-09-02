@@ -1,24 +1,45 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { BarraInferior, type Aba } from './componentes';
-import { HOJE_BR, REGISTROS, horaAgora, type Registro, type Situacao } from './dados-prototipo';
+import { DEMANDAS_VENCIDAS } from './dados-demandas';
+import {
+    HOJE_BR,
+    REGISTROS,
+    horaAgora,
+    type OrigemRegistro,
+    type Registro,
+    type Situacao,
+    type ViaImpressa,
+} from './dados-prototipo';
+import { TelaApreensao } from './telas/apreensao';
 import { TelaCalor } from './telas/calor';
+import { TelaDemanda } from './telas/demanda';
+import { TelaDemandas } from './telas/demandas';
+import { TelaDocumentos } from './telas/documentos';
 import { TelaEntrada } from './telas/entrada';
-import { TelaEscalada } from './telas/escalada';
 import { TelaInicio } from './telas/inicio';
+import { TelaLevantamento } from './telas/levantamento';
 import { TelaMapa } from './telas/mapa';
+import { TelaNotificacao } from './telas/notificacao';
 import { TelaPerfil } from './telas/perfil';
 import { TelaRecibo } from './telas/recibo';
 import { TelaRegistroRapido } from './telas/registro-rapido';
 import { TelaRegistros } from './telas/registros';
 import { TelaSincronizacao } from './telas/sincronizacao';
+import { TelaVia } from './telas/via';
 
 /* ============================================================================
    PROTÓTIPO — aplicativo do fiscal (SEFAL)
    ----------------------------------------------------------------------------
    Uma página só, sem Inertia e sem biblioteca de rotas: o endereço vive no
-   fragmento (`#/mapa`, `#/recibo/reg-013`) e um `switch` decide a tela. São nove
-   telas; uma biblioteca de roteamento aqui pesaria mais que o aplicativo.
+   fragmento (`#/mapa`, `#/recibo/reg-013`) e um `switch` decide a tela. São
+   quinze telas; uma biblioteca de roteamento aqui pesaria mais que o
+   aplicativo.
+
+   A barra de baixo tem SEIS destinos porque o trabalho do fiscal passou a ter
+   duas entradas, não uma: além do que ele acha andando a rua (o mapa), há a
+   fila do que o administrativo encaminhou à equipe (as demandas). Esconder a
+   fila atrás de outra tela seria esconder metade do serviço.
 
    O estado também é deliberadamente simples — o que o fiscal registra fica na
    memória da aba. É protótipo: não há servidor do outro lado, e fingir que há
@@ -36,6 +57,9 @@ export type NovoRegistro = {
     lng: number;
     endereco: string;
     regiao: string;
+    origem: OrigemRegistro;
+    demandaId: string | null;
+    referencia: string | null;
 };
 
 type Contexto = {
@@ -44,7 +68,7 @@ type Contexto = {
     tema: 'claro' | 'escuro';
     alternarTema: () => void;
     registrar: (novo: NovoRegistro) => string;
-    anexarDocumento: (id: string, documento: string, nome: string | null) => void;
+    anexarDocumento: (id: string, via: ViaImpressa, nome: string | null) => void;
     esvaziarFila: () => void;
     sair: () => void;
 };
@@ -127,6 +151,11 @@ export function App() {
                 retornoBr: novo.retornoBr,
                 envio: 'pendente',
                 documento: null,
+                documentoTipo: null,
+                via: null,
+                origem: novo.origem,
+                demandaId: novo.demandaId,
+                referencia: novo.referencia,
             },
             ...atuais,
         ]);
@@ -134,9 +163,19 @@ export function App() {
         return id;
     }, []);
 
-    const anexarDocumento = useCallback((id: string, documento: string, nome: string | null) => {
+    const anexarDocumento = useCallback((id: string, via: ViaImpressa, nome: string | null) => {
         setRegistros((atuais) =>
-            atuais.map((r) => (r.id === id ? { ...r, documento, ambulante: nome ?? r.ambulante } : r)),
+            atuais.map((r) =>
+                r.id === id
+                    ? {
+                          ...r,
+                          documento: `${via.tipo === 'np' ? 'NP' : 'AA'} ${via.numero}`,
+                          documentoTipo: via.tipo,
+                          via,
+                          ambulante: nome ?? r.ambulante,
+                      }
+                    : r,
+            ),
         );
     }, []);
 
@@ -185,7 +224,9 @@ export function App() {
     }
 
     const abaAtiva: Aba = (
-        ['inicio', 'mapa', 'registros', 'calor', 'sincronizacao'].includes(tela) ? tela : 'inicio'
+        ['inicio', 'demandas', 'mapa', 'registros', 'calor', 'sincronizacao'].includes(tela)
+            ? tela
+            : 'inicio'
     ) as Aba;
 
     const comBarra = abaAtiva === tela;
@@ -195,17 +236,28 @@ export function App() {
             <FaixaPrototipo />
             <div className="pw-com-faixa">
                 {tela === 'inicio' && <TelaInicio />}
+                {tela === 'demandas' && <TelaDemandas />}
+                {tela === 'demanda' && <TelaDemanda id={parametro} />}
                 {tela === 'mapa' && <TelaMapa regiaoFoco={parametro} />}
-                {tela === 'registrar' && <TelaRegistroRapido ambulanteId={parametro} />}
+                {tela === 'registrar' && <TelaRegistroRapido alvo={parametro} />}
                 {tela === 'recibo' && <TelaRecibo id={parametro} />}
-                {tela === 'escalada' && <TelaEscalada id={parametro} />}
+                {tela === 'documentos' && <TelaDocumentos id={parametro} />}
+                {tela === 'notificacao' && <TelaNotificacao id={parametro} />}
+                {tela === 'apreensao' && <TelaApreensao id={parametro} />}
+                {tela === 'via' && <TelaVia id={parametro} />}
+                {tela === 'levantamento' && <TelaLevantamento />}
                 {tela === 'registros' && <TelaRegistros />}
                 {tela === 'calor' && <TelaCalor />}
                 {tela === 'sincronizacao' && <TelaSincronizacao />}
                 {tela === 'perfil' && <TelaPerfil />}
             </div>
             {comBarra && (
-                <BarraInferior ativa={abaAtiva} aoTrocar={(aba) => irPara(aba)} pendentes={pendentes} />
+                <BarraInferior
+                    ativa={abaAtiva}
+                    aoTrocar={(aba) => irPara(aba)}
+                    pendentes={pendentes}
+                    demandas={DEMANDAS_VENCIDAS.length}
+                />
             )}
         </ContextoApp.Provider>
     );
