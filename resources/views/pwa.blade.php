@@ -18,8 +18,12 @@
              à noite leva um clarão branco a cada abertura. --}}
         <script>
             (function () {
-                const escuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                document.documentElement.dataset.tema = escuro ? 'escuro' : 'claro';
+                // Padrão CLARO (quem usa está na rua, sob o sol); só a escolha explícita
+                // do fiscal, guardada no aparelho, pinta escuro já na primeira tela — sem
+                // isto haveria um lampejo branco a cada abertura para quem escolheu escuro.
+                let salvo = null;
+                try { salvo = window.localStorage.getItem('sefal-tema'); } catch (e) {}
+                document.documentElement.dataset.tema = salvo === 'escuro' ? 'escuro' : 'claro';
             })();
         </script>
 

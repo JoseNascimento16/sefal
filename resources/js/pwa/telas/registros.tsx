@@ -109,6 +109,15 @@ function Cartao({ registro }: { registro: Registro }) {
                 {nomeRegiao(registro.regiao)} · {registro.ambulante ?? 'Não identificado'}
             </p>
 
+            {registro.origem === 'dirigida' && registro.referencia && (
+                <p style={{ margin: '0 0 10px' }}>
+                    <span className="pw-selo pw-selo-origem">
+                        <Icone nome="caixa-entrada" tamanho={13} />
+                        {registro.referencia}
+                    </span>
+                </p>
+            )}
+
             {rotulos.length > 0 && (
                 <div className="pw-linha" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
                     {rotulos.map((o) => (

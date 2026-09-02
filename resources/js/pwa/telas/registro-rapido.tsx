@@ -3,6 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { irPara, useApp } from '../app';
 import { Interruptor, Selo, Topo, classes } from '../componentes';
 import {
+    ORIGENS,
+    acharDemanda,
+    demandasDaEquipe,
+    prazoEmPalavras,
+    tomDoPrazo,
+    type Demanda,
+} from '../dados-demandas';
+import {
     AMBULANTES,
     CENTRO_SALVADOR,
     OCORRENCIAS,
@@ -23,8 +31,16 @@ import { Icone } from '../icones';
 
    Por isso esta tela não pede nada obrigatório além da DECISÃO. Coordenada,
    hora e região já vêm capturadas; foto, relato, ocorrência e vínculo com um
-   ambulante conhecido são todos opcionais. Identificar a pessoa e emitir
-   documento é a ESCALADA — mora noutra tela, e só quem precisa chega lá.
+   ambulante conhecido são todos opcionais. Emitir o documento oficial —
+   Notificação Preliminar ou Auto de Apreensão — mora noutras telas, e só quem
+   precisa chega lá.
+
+   O QUE MUDOU COM O CENÁRIO NOVO: o registro passou a ter ORIGEM. Ele pode
+   nascer AVULSO (o fiscal viu andando, como sempre) ou DIRIGIDO — encaminhado à
+   equipe pelo administrativo, com número de processo e prazo. No dirigido, o
+   passo 1 deixa de ser "onde você está" e passa a ser "o que foi encaminhado":
+   o endereço vem do processo, e o vínculo fica à vista da abertura até o
+   documento, porque é ele que vai para o campo REFERÊNCIA do papel.
    ============================================================================ */
 
 type Foto = { id: string; url: string | null };
@@ -39,32 +55,43 @@ const regiaoMaisProxima = (lat: number, lng: number): string =>
     ).id;
 
 const ENDERECOS_APROXIMADOS: Record<string, string> = {
-    barra: 'Av. Oceânica, altura do Farol da Barra',
-    'rio-vermelho': 'Largo da Mariquita, canteiro central',
-    pelourinho: 'Largo do Pelourinho, escadaria',
+    'costa-azul': 'Av. Otávio Mangabeira, orla do Jardim de Alah',
+    'jardim-armacao': 'Av. Otávio Mangabeira, altura do Centro de Convenções',
+    stiep: 'Rua Ewerton Visco, altura do canteiro central',
+    'boca-do-rio': 'Av. Otávio Mangabeira, acesso à Praia da Boca do Rio',
+    imbui: 'Rua Ilhéus, entorno da feira',
+    pituacu: 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu',
+    patamares: 'Alameda Praia de Patamares, acesso à areia',
+    piata: 'Av. Otávio Mangabeira, passarela de Piatã',
     itapua: 'Rua da Música, próximo ao Farol de Itapuã',
-    'campo-grande': 'Praça Dois de Julho, lado do coreto',
-    'boca-do-rio': 'Av. Otávio Mangabeira, orla',
-    comercio: 'Praça Cairu, frente ao Mercado Modelo',
-    ondina: 'Av. Adhemar de Barros, mirante de Ondina',
+    'stella-maris': 'Praia de Stella Maris, frente ao estacionamento',
+    mussurunga: 'Av. Luís Viana Filho, ponto de ônibus',
 };
 
-export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null }) {
+export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const { registrar } = useApp();
-    const escolhido = ambulanteId ? (AMBULANTES.find((a) => a.id === ambulanteId) ?? null) : null;
 
-    /* Vindo de um ponto conhecido (o pino do mapa), o registro já nasce COM o
-       lugar: coordenada, endereço e ambulante do ponto. É o caso do retorno
-       vencido — o fiscal tocou no pino justamente porque vai lá. */
+    /* O mesmo endereço serve os dois caminhos, e o prefixo diz qual é: `amb-07`
+       vem de um pino do mapa, `dem-03` vem da fila da equipe. */
+    const doMapa = alvo?.startsWith('amb-') ? (AMBULANTES.find((a) => a.id === alvo) ?? null) : null;
+    const daFila = alvo?.startsWith('dem-') ? acharDemanda(alvo) : null;
+
+    const [demanda, setDemanda] = useState<Demanda | null>(daFila);
+    const [escolhendoDemanda, setEscolhendoDemanda] = useState(false);
+
+    const centroDaDemanda = demanda ? (REGIOES.find((r) => r.id === demanda.regiao) ?? null) : null;
+
     const [posicao, setPosicao] = useState<{ lat: number; lng: number; precisao: number } | null>(
-        escolhido ? { lat: escolhido.lat, lng: escolhido.lng, precisao: 12 } : null,
+        doMapa ? { lat: doMapa.lat, lng: doMapa.lng, precisao: 12 } : null,
     );
     const [posicaoReal, setPosicaoReal] = useState(false);
     const [fotos, setFotos] = useState<Foto[]>([]);
     const [marcadas, setMarcadas] = useState<string[]>([]);
     const [relato, setRelato] = useState('');
     const [ditando, setDitando] = useState(false);
-    const [vinculo, setVinculo] = useState<string | null>(escolhido ? escolhido.apelido : null);
+    const [vinculo, setVinculo] = useState<string | null>(
+        doMapa ? doMapa.apelido : (daFila?.sgci?.nome ?? null),
+    );
     const [buscando, setBuscando] = useState(false);
     const [busca, setBusca] = useState('');
     const [decisao, setDecisao] = useState<'regular' | 'irregular' | null>(null);
@@ -72,13 +99,28 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
     const [prazo, setPrazo] = useState(PRAZOS_RETORNO[1]);
     const seletor = useRef<HTMLInputElement>(null);
 
+    const dirigida = demanda !== null;
+
+    /**
+     * A coordenada é do APARELHO, mesmo na dirigida.
+     *
+     * O processo diz o endereço; quem diz onde o fiscal estava é o GPS — o
+     * próprio manual do cliente pede isso ("seria ideal que pegasse pelo GPS")
+     * justamente porque endereço de processo erra e coordenada não. Só quem
+     * chegou por um pino do mapa dispensa a captura: ali a coordenada já é a do
+     * ponto que o fiscal tocou.
+     */
     useEffect(() => {
-        if (escolhido) {
+        if (doMapa) {
             return;
         }
 
+        /* Sem GPS liberado, o palpite é o centro da região da demanda — e não o
+           Farol da Barra, que jogaria o registro num bairro alheio. */
+        const reserva = { ...(centroDaDemanda ?? CENTRO_SALVADOR), precisao: 45 };
+
         if (!navigator.geolocation) {
-            setPosicao({ ...CENTRO_SALVADOR, precisao: 45 });
+            setPosicao(reserva);
 
             return;
         }
@@ -92,10 +134,11 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                 });
                 setPosicaoReal(true);
             },
-            () => setPosicao({ ...CENTRO_SALVADOR, precisao: 45 }),
+            () => setPosicao(reserva),
             { enableHighAccuracy: true, timeout: 6000 },
         );
-    }, [escolhido]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [doMapa, demanda?.id]);
 
     /* O ditado é encenação: mostra ao dono ONDE o botão fica e como ele se
        comporta. A transcrição de verdade entra quando o aplicativo sair do
@@ -124,11 +167,15 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
     }, [ditando]);
 
     const regiao = useMemo(
-        () => escolhido?.regiao ?? (posicao ? regiaoMaisProxima(posicao.lat, posicao.lng) : 'barra'),
-        [escolhido, posicao],
+        () =>
+            demanda?.regiao ??
+            doMapa?.regiao ??
+            (posicao ? regiaoMaisProxima(posicao.lat, posicao.lng) : 'boca-do-rio'),
+        [demanda, doMapa, posicao],
     );
 
-    const endereco = escolhido?.endereco ?? ENDERECOS_APROXIMADOS[regiao] ?? 'Endereço aproximado';
+    const endereco =
+        demanda?.endereco ?? doMapa?.endereco ?? ENDERECOS_APROXIMADOS[regiao] ?? 'Endereço aproximado';
 
     const sugestoes = useMemo(() => {
         const termo = busca.trim().toLowerCase();
@@ -174,6 +221,9 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
             lng: posicao?.lng ?? CENTRO_SALVADOR.lng,
             endereco,
             regiao,
+            origem: dirigida ? 'dirigida' : 'avulsa',
+            demandaId: demanda?.id ?? null,
+            referencia: demanda?.protocolo ?? null,
         });
 
         irPara(`recibo/${id}`);
@@ -183,17 +233,109 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
         <div className="pw-tela">
             <Topo
                 titulo="Registrar fiscalização"
-                subtitulo="Só a decisão é obrigatória"
-                aoVoltar={() => irPara('mapa')}
+                subtitulo={dirigida ? `Dirigida · ${demanda.protocolo}` : 'Só a decisão é obrigatória'}
+                aoVoltar={() => irPara(dirigida ? 'demandas' : 'mapa')}
             />
 
             <div className="pw-corpo">
-                {/* 1 · Onde ------------------------------------------------ */}
+                {/* 1 · Origem ---------------------------------------------- */}
                 <section className="pw-passo">
                     <div className="pw-passo-cabeca">
                         <span className="pw-passo-numero">1</span>
-                        <span className="pw-passo-titulo">Onde você está</span>
-                        <span className="pw-passo-opcional">Automático</span>
+                        <span className="pw-passo-titulo">Origem da fiscalização</span>
+                        {dirigida && <span className="pw-passo-opcional">Do processo</span>}
+                    </div>
+
+                    {dirigida ? (
+                        <VinculoDaDemanda
+                            demanda={demanda}
+                            aoSoltar={daFila ? null : () => setDemanda(null)}
+                        />
+                    ) : (
+                        <>
+                            <div className="pw-duas-colunas">
+                                <div className="pw-card pw-card-escolhido">
+                                    <p className="pw-forte" style={{ margin: 0, fontSize: 15.5 }}>
+                                        <Icone nome="mapa" tamanho={16} /> Avulsa
+                                    </p>
+                                    <p className="pw-fraco" style={{ margin: '4px 0 0' }}>
+                                        O fiscal encontrou andando a rua.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="pw-card pw-card-toque"
+                                    onClick={() => setEscolhendoDemanda((e) => !e)}
+                                >
+                                    <p className="pw-forte" style={{ margin: 0, fontSize: 15.5 }}>
+                                        <Icone nome="caixa-entrada" tamanho={16} /> Dirigida
+                                    </p>
+                                    <p className="pw-fraco" style={{ margin: '4px 0 0' }}>
+                                        Vem de um processo encaminhado à equipe.
+                                    </p>
+                                </button>
+                            </div>
+
+                            {escolhendoDemanda && (
+                                <div className="pw-card" style={{ marginTop: 12 }}>
+                                    <p className="pw-forte" style={{ margin: '0 0 4px', fontSize: 14.5 }}>
+                                        Vincular a uma demanda da fila
+                                    </p>
+                                    <p className="pw-fraco" style={{ margin: '0 0 10px', fontSize: 13 }}>
+                                        Escolhendo aqui, o endereço e o número do processo vêm prontos.
+                                    </p>
+                                    <ul className="pw-lista-limpa">
+                                        {demandasDaEquipe().map((d) => (
+                                            <li key={d.id}>
+                                                <button
+                                                    type="button"
+                                                    className="pw-btn pw-btn-fantasma"
+                                                    style={{
+                                                        justifyContent: 'flex-start',
+                                                        marginTop: 6,
+                                                        textAlign: 'left',
+                                                        minHeight: 58,
+                                                    }}
+                                                    onClick={() => {
+                                                        setDemanda(d);
+                                                        setEscolhendoDemanda(false);
+                                                        setVinculo(d.sgci?.nome ?? null);
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: 19 }}>
+                                                        {ORIGENS[d.origem].emoji}
+                                                    </span>
+                                                    <span style={{ minWidth: 0 }}>
+                                                        <span
+                                                            className="pw-forte"
+                                                            style={{ display: 'block', fontSize: 14.5 }}
+                                                        >
+                                                            {d.assunto}
+                                                        </span>
+                                                        <span className="pw-fraco" style={{ fontSize: 12.5 }}>
+                                                            {d.bairro} · {prazoEmPalavras(d.prazoDias)}
+                                                        </span>
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </section>
+
+                {/* 2 · Onde ------------------------------------------------ */}
+                <section className="pw-passo">
+                    <div className="pw-passo-cabeca">
+                        <span className="pw-passo-numero">2</span>
+                        <span className="pw-passo-titulo">
+                            {dirigida ? 'Endereço da demanda' : 'Onde você está'}
+                        </span>
+                        <span className="pw-passo-opcional">
+                            {dirigida ? 'Do processo' : 'Automático'}
+                        </span>
                     </div>
 
                     <div className="pw-card">
@@ -203,7 +345,7 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                                     {endereco}
                                 </p>
                                 <p className="pw-fraco" style={{ margin: '2px 0 0' }}>
-                                    {nomeRegiao(regiao)} ·{' '}
+                                    {demanda?.bairro ?? nomeRegiao(regiao)} ·{' '}
                                     {posicao
                                         ? `${posicao.lat.toFixed(5)}, ${posicao.lng.toFixed(5)}`
                                         : 'capturando coordenada…'}
@@ -214,12 +356,18 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                                 {posicao ? `±${posicao.precisao} m` : '…'}
                             </Selo>
                         </div>
-                        {escolhido && (
+                        {doMapa && (
                             <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
-                                Local do ponto de {escolhido.apelido}, aberto pelo mapa.
+                                Local do ponto de {doMapa.apelido}, aberto pelo mapa.
                             </p>
                         )}
-                        {!escolhido && !posicaoReal && posicao && (
+                        {dirigida && (
+                            <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
+                                Endereço informado no processo — confirme no local antes de lavrar
+                                documento.
+                            </p>
+                        )}
+                        {!doMapa && !dirigida && !posicaoReal && posicao && (
                             <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
                                 Coordenada simulada — o aparelho não liberou a localização.
                             </p>
@@ -227,10 +375,10 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                     </div>
                 </section>
 
-                {/* 2 · Fotos ---------------------------------------------- */}
+                {/* 3 · Fotos ---------------------------------------------- */}
                 <section className="pw-passo">
                     <div className="pw-passo-cabeca">
-                        <span className="pw-passo-numero">2</span>
+                        <span className="pw-passo-numero">3</span>
                         <span className="pw-passo-titulo">Fotos do local</span>
                         <span className="pw-passo-opcional">Opcional</span>
                     </div>
@@ -281,10 +429,10 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                     />
                 </section>
 
-                {/* 3 · O que aconteceu ------------------------------------ */}
+                {/* 4 · O que aconteceu ------------------------------------ */}
                 <section className="pw-passo">
                     <div className="pw-passo-cabeca">
-                        <span className="pw-passo-numero">3</span>
+                        <span className="pw-passo-numero">4</span>
                         <span className="pw-passo-titulo">O que aconteceu</span>
                         <span className="pw-passo-opcional">Um toque</span>
                     </div>
@@ -323,12 +471,14 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                     </div>
                 </section>
 
-                {/* 4 · Quem ----------------------------------------------- */}
+                {/* 5 · Quem ---------------------------------------------- */}
                 <section className="pw-passo">
                     <div className="pw-passo-cabeca">
-                        <span className="pw-passo-numero">4</span>
+                        <span className="pw-passo-numero">5</span>
                         <span className="pw-passo-titulo">Ambulante</span>
-                        <span className="pw-passo-opcional">Opcional</span>
+                        <span className="pw-passo-opcional">
+                            {demanda?.sgci ? 'Do cadastro SGCI' : 'Opcional'}
+                        </span>
                     </div>
 
                     <div className="pw-card">
@@ -338,9 +488,11 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                                     {vinculo ?? 'Não identificado'}
                                 </p>
                                 <p className="pw-fraco" style={{ margin: 0 }}>
-                                    {vinculo
-                                        ? 'Vinculado a um ponto conhecido'
-                                        : 'A maioria das abordagens fica assim mesmo'}
+                                    {demanda?.sgci
+                                        ? `Ambulante · permissionário SEMOP · ${demanda.sgci.equipamento}`
+                                        : vinculo
+                                          ? 'Ambulante sem permissão registrada · ponto conhecido'
+                                          : 'A maioria das abordagens fica assim mesmo'}
                                 </p>
                             </div>
                             {vinculo ? (
@@ -362,6 +514,14 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                                 </button>
                             )}
                         </div>
+
+                        {demanda?.sgci && vinculo === demanda.sgci.nome && (
+                            <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13 }}>
+                                <Icone nome="prancheta" tamanho={13} /> Inscrição{' '}
+                                {demanda.sgci.inscricao} · {demanda.sgci.atividade} ·{' '}
+                                {demanda.sgci.damEmDia ? 'DAM quitado' : 'DAM em aberto'}
+                            </p>
+                        )}
 
                         {buscando && !vinculo && (
                             <div style={{ marginTop: 12 }}>
@@ -395,10 +555,10 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                     </div>
                 </section>
 
-                {/* 5 · Decisão -------------------------------------------- */}
+                {/* 6 · Decisão ------------------------------------------- */}
                 <section className="pw-passo">
                     <div className="pw-passo-cabeca">
-                        <span className="pw-passo-numero">5</span>
+                        <span className="pw-passo-numero">6</span>
                         <span className="pw-passo-titulo">Como ficou o local</span>
                     </div>
 
@@ -424,7 +584,7 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                     </div>
                 </section>
 
-                {/* 6 · Retorno -------------------------------------------- */}
+                {/* 7 · Retorno ------------------------------------------- */}
                 <section className="pw-passo">
                     <Interruptor
                         ligado={retorno}
@@ -459,6 +619,62 @@ export function TelaRegistroRapido({ ambulanteId }: { ambulanteId: string | null
                     {decisao ? 'Concluir registro' : 'Escolha regular ou irregular'}
                     <Icone nome="seta" tamanho={20} />
                 </button>
+            </div>
+        </div>
+    );
+}
+
+/** O crachá da demanda: fica no alto do registro e vai até o documento. */
+function VinculoDaDemanda({
+    demanda,
+    aoSoltar,
+}: {
+    demanda: Demanda;
+    /** `null` quando o fiscal chegou pela própria demanda — aí não há o que soltar. */
+    aoSoltar: (() => void) | null;
+}) {
+    const origem = ORIGENS[demanda.origem];
+
+    return (
+        <div className="pw-card pw-card-vinculo">
+            <div className="pw-linha-espalha" style={{ gap: 10, marginBottom: 8 }}>
+                <span className="pw-selo pw-selo-origem">
+                    <span>{origem.emoji}</span>
+                    {origem.curto}
+                </span>
+                <Selo tom={tomDoPrazo(demanda.prazoDias)}>
+                    <Icone nome="relogio" tamanho={13} />
+                    {prazoEmPalavras(demanda.prazoDias)}
+                </Selo>
+            </div>
+
+            <p className="pw-forte" style={{ margin: 0, fontSize: 15.5, lineHeight: 1.3 }}>
+                {demanda.assunto}
+            </p>
+            <p className="pw-fraco" style={{ margin: '4px 0 0', fontSize: 12.5 }}>
+                Referência {demanda.protocolo} · prazo {demanda.prazoBr}
+            </p>
+            <p style={{ margin: '10px 0 0', fontSize: 14, color: 'var(--pw-texto-corpo)' }}>
+                {demanda.detalhe}
+            </p>
+
+            <div className="pw-linha" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <button
+                    type="button"
+                    className="pw-btn pw-btn-fantasma pw-btn-pequeno"
+                    onClick={() => irPara(`demanda/${demanda.id}`)}
+                >
+                    Abrir a demanda
+                </button>
+                {aoSoltar && (
+                    <button
+                        type="button"
+                        className="pw-btn pw-btn-fantasma pw-btn-pequeno"
+                        onClick={aoSoltar}
+                    >
+                        Voltar a avulsa
+                    </button>
+                )}
             </div>
         </div>
     );

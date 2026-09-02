@@ -1,5 +1,6 @@
 import { irPara, useApp } from '../app';
 import { Interruptor, Selo, Topo } from '../componentes';
+import { EQUIPE } from '../dados-demandas';
 import { FISCAL, HOJE_BR } from '../dados-prototipo';
 import { Icone } from '../icones';
 
@@ -42,14 +43,73 @@ export function TelaPerfil() {
                                 {FISCAL.nome}
                             </p>
                             <p className="pw-fraco" style={{ margin: 0 }}>
-                                Matrícula {FISCAL.matricula} · desde {FISCAL.desde}
+                                {FISCAL.papel} · matrícula {FISCAL.matricula} · desde {FISCAL.desde}
                             </p>
                             <p className="pw-fraco" style={{ margin: 0 }}>
-                                {FISCAL.equipe}
+                                {EQUIPE.nome} · {EQUIPE.area} — {EQUIPE.areaNome} · {FISCAL.turno}
                             </p>
                         </div>
                     </div>
                 </div>
+
+                {/* A ÁREA da equipe, por extenso.
+                    Não é enfeite de perfil: é a régua do que chega para este
+                    fiscal. A demanda cai na equipe da área onde fica o endereço,
+                    então quem duvida de uma demanda na fila confere aqui se o
+                    bairro é dele. */}
+                <p className="pw-titulo-secao">Minha equipe e minha área</p>
+
+                <div className="pw-card">
+                    <div className="pw-linha-espalha" style={{ marginBottom: 10 }}>
+                        <span className="pw-linha" style={{ gap: 10 }}>
+                            <span className="pw-equipe-selo">
+                                <Icone nome="equipe" tamanho={18} />
+                            </span>
+                            <span style={{ minWidth: 0 }}>
+                                <span className="pw-forte" style={{ display: 'block', fontSize: 15.5 }}>
+                                    {EQUIPE.nome} · {EQUIPE.area} — {EQUIPE.areaNome}
+                                </span>
+                                <span className="pw-fraco" style={{ fontSize: 13 }}>
+                                    Encarregado {EQUIPE.encarregado}
+                                </span>
+                            </span>
+                        </span>
+                        <Selo tom="info">{EQUIPE.recorteRotulo}</Selo>
+                    </div>
+
+                    {/* Nem toda equipe se descreve por bloco de bairros: a
+                        Itinerante percorre corredores e a Noturna cobre a cidade
+                        inteira. Listar "0 bairros" nelas seria a leitura
+                        invertida — por isso o recorte manda no que aparece. */}
+                    {EQUIPE.bairros.length > 0 ? (
+                        <div className="pw-linha" style={{ gap: 6, flexWrap: 'wrap' }}>
+                            {EQUIPE.bairros.map((bairro) => (
+                                <Selo key={bairro} tom="neutro">
+                                    {bairro}
+                                </Selo>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="pw-fraco" style={{ margin: 0, fontSize: 13.5 }}>
+                            Cobertura: toda a cidade. O recorte desta equipe é o turno.
+                        </p>
+                    )}
+
+                    <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 12.5 }}>
+                        {EQUIPE.recorteExplicacao} As demandas do e-Salvador, do Fala Salvador 156, de
+                        licença nova e de ofício caem na equipe da área onde fica o endereço.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    className="pw-btn pw-btn-contorno"
+                    style={{ marginTop: 12 }}
+                    onClick={() => irPara('demandas')}
+                >
+                    <Icone nome="caixa-entrada" tamanho={18} />
+                    Abrir a fila da equipe
+                </button>
 
                 <p className="pw-titulo-secao">Meu turno de hoje</p>
 

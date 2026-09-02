@@ -794,6 +794,63 @@ textarea.pw-entrada {
     cursor: pointer;
 }
 
+/* A pílula LIGADA (o interruptor da delimitação da área) veste a cor de ação:
+   ela não é um estado do ponto fiscalizado, é uma escolha do fiscal. */
+.pw-pilula-ligada {
+    border-color: var(--pw-acao);
+    background: var(--pw-acao);
+    color: var(--pw-acao-texto);
+}
+
+/* ======================= ÁREA DA EQUIPE NO MAPA ======================= */
+
+/* O rótulo pousa sobre o contorno, sem caixa pesada: ele nomeia a área, não
+   compete com os pinos. `pointer-events: none` porque tocar nele não faz nada e
+   um alvo de toque morto em cima do mapa atrapalha quem quer arrastar. */
+.pw-rotulo-area {
+    display: inline-block;
+    transform: translate(-50%, -50%);
+    padding: 5px 11px;
+    border: 1px solid color-mix(in srgb, var(--pw-acao) 45%, transparent);
+    border-radius: var(--pw-raio-full);
+    background: color-mix(in srgb, var(--pw-superficie) 88%, transparent);
+    color: var(--pw-acao);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.pw-legenda-area {
+    position: absolute;
+    z-index: 600;
+    left: 12px;
+    right: 12px;
+    /* Acima do botão de Fiscalizar (62px de altura + folga): no rodapé, o texto
+       passaria por baixo dele em qualquer tamanho de tela. */
+    bottom: 94px;
+    margin: 0;
+    padding: 9px 13px;
+    border: 1px solid var(--pw-borda);
+    border-left: 4px solid var(--pw-acao);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    color: var(--pw-texto-corpo);
+    font-size: 12.5px;
+    line-height: 1.45;
+    box-shadow: var(--pw-sombra);
+    pointer-events: none;
+}
+
+/* Ponto FORA da área da equipe: continua no mapa, mas apagado. Esconder seria
+   pior — o ponto existe, e o contorno é aproximado; o que se quer dizer é "isto
+   não é seu serviço", não "isto não existe". */
+.pw-pino-fora {
+    opacity: 0.34;
+    filter: grayscale(1);
+}
+
 .pw-fab {
     position: absolute;
     z-index: 700;
@@ -849,6 +906,12 @@ textarea.pw-entrada {
 
 /* ======================= NAVEGAÇÃO INFERIOR ======================= */
 
+/* SEIS destinos, e não cinco: o trabalho do fiscal passou a ter duas entradas
+   — o que ele acha andando (mapa) e o que o administrativo encaminhou à equipe
+   (demandas). Com seis colunas num aparelho de 360px cada alvo fica com 60px,
+   então o rótulo encolhe um ponto e perde o espaçamento entre letras; abaixo de
+   340px ele encolhe mais. O ALVO DE TOQUE não muda — continua a coluna inteira
+   por 68px de altura, muito acima dos 48px mínimos. */
 .pw-nav {
     position: fixed;
     z-index: 1000;
@@ -856,7 +919,7 @@ textarea.pw-entrada {
     right: 0;
     bottom: 0;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     padding-bottom: var(--pw-seguro-baixo);
     border-top: 1px solid var(--pw-borda);
     background: var(--pw-superficie);
@@ -893,10 +956,17 @@ textarea.pw-entrada {
     background: var(--pw-primaria);
 }
 
+@media (max-width: 400px) {
+    .pw-nav button {
+        font-size: 10px;
+        letter-spacing: -0.01em;
+    }
+}
+
 .pw-nav-conta {
     position: absolute;
     top: 10px;
-    right: 22%;
+    right: 16%;
     min-width: 18px;
     padding: 1px 5px;
     border-radius: var(--pw-raio-full);
@@ -1323,6 +1393,20 @@ textarea.pw-entrada {
     box-shadow: 0 0 0 4px rgba(77, 159, 220, 0.28);
 }
 
+/* A dica da porta: diz que a matrícula escolhe a equipe. Fica discreta porque é
+   apoio à demonstração, não instrução de uso. */
+.pw-dica-entrada {
+    margin: -6px 0 16px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.pw-dica-entrada strong {
+    color: #fff;
+    font-weight: 800;
+}
+
 .pw-lembrar {
     display: flex;
     width: 100%;
@@ -1397,6 +1481,516 @@ textarea.pw-entrada {
     list-style: none;
 }
 
+/* ======================= EQUIPE E ÁREA ======================= */
+
+/* A identidade de equipe abre a tela de Início. É um botão porque leva ao
+   perfil, onde a lista de bairros da área está por extenso — mas é discreto,
+   porque informa antes de convidar. */
+.pw-faixa-equipe {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: linear-gradient(120deg, var(--pw-primaria-suave), transparent 70%),
+        var(--pw-superficie);
+    color: var(--pw-texto);
+    cursor: pointer;
+    text-align: left;
+}
+.pw-faixa-equipe:active {
+    transform: scale(0.995);
+}
+
+.pw-equipe-selo {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-primaria);
+    color: #fff;
+}
+
+.pw-cartao-equipe {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* A fila de envio saiu do trio de contadores para abrir vaga às demandas — mas
+   não podia sumir, então virou esta tira de uma linha. */
+.pw-tira-envio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 10px;
+    padding: 10px 14px;
+    border: 1px dashed var(--pw-borda-forte);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie-2);
+    color: var(--pw-texto-corpo);
+    font-size: 14px;
+    cursor: pointer;
+}
+.pw-tira-envio > span {
+    flex: 1;
+    text-align: left;
+}
+
+/* ======================= DEMANDAS ======================= */
+
+.pw-card-demanda + .pw-card-demanda,
+.pw-card-demanda + .pw-card {
+    margin-top: 12px;
+}
+
+/* Vencida ganha a barra vermelha na lateral. O prazo é a única informação da
+   fila que não perdoa, então ela precisa ser vista antes de ler o texto. */
+.pw-card-vencido {
+    border-left: 5px solid var(--pw-perigo);
+}
+
+.pw-card-vinculo {
+    border-left: 5px solid var(--pw-acao);
+    background: linear-gradient(120deg, var(--pw-acao-suave), transparent 60%), var(--pw-superficie);
+}
+
+.pw-selo-origem {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: var(--pw-raio-full);
+    border: 1px solid var(--pw-borda-forte);
+    background: var(--pw-superficie-2);
+    color: var(--pw-texto-corpo);
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+/* ======================= CADASTRO SGCI ======================= */
+
+/* O que vem de fora se veste de fora. A ficha do SGCI é emoldurada e sombreada
+   para o fiscal não confundir cadastro com o que ele mesmo digitou — e para não
+   tentar corrigir ali o que só se corrige no cadastro. */
+.pw-card-sgci {
+    border-style: dashed;
+    border-color: var(--pw-info);
+    background: linear-gradient(120deg, var(--pw-info-suave), transparent 70%), var(--pw-superficie);
+}
+
+.pw-selo-sgci {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-info);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.pw-ficha {
+    display: grid;
+    grid-template-columns: 116px 1fr;
+    gap: 8px 12px;
+    margin: 0;
+    font-size: 14px;
+}
+.pw-ficha dt {
+    color: var(--pw-texto-fraco);
+    font-weight: 600;
+}
+.pw-ficha dd {
+    margin: 0;
+    font-weight: 700;
+}
+
+/* ======================= MÚLTIPLA ESCOLHA ======================= */
+
+/* Os documentos oficiais são blocos de caixinhas para marcar com "X" — a
+   Notificação Preliminar tem vinte. Na tela, a LINHA INTEIRA é o alvo: mirar um
+   quadradinho de 26px com luva, de pé, é o que faz o fiscal marcar o motivo
+   errado. */
+.pw-marcaveis {
+    display: grid;
+    gap: 8px;
+}
+
+.pw-marcavel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 52px;
+    padding: 11px 14px;
+    border: 1.5px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    color: var(--pw-texto-corpo);
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        background 0.16s ease,
+        border-color 0.16s ease;
+}
+.pw-marcavel-ligado {
+    border-color: var(--pw-acao);
+    background: var(--pw-acao-suave);
+    color: var(--pw-texto);
+    font-weight: 700;
+}
+.pw-marcavel-texto {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.pw-quadro {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border: 2px solid var(--pw-borda-forte);
+    border-radius: 7px;
+    background: var(--pw-superficie);
+    color: #fff;
+}
+.pw-quadro-marcado {
+    border-color: var(--pw-acao);
+    background: var(--pw-acao);
+    color: var(--pw-acao-texto);
+}
+
+/* O chip miniatura serve as listas de sugestão (atividade, equipamento, rua):
+   são atalhos, não decisões — e por isso não têm o peso do chip de ocorrência. */
+.pw-chip-mini {
+    min-height: 40px;
+    padding: 7px 12px;
+    border-width: 1px;
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.pw-grade-prazos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.pw-grade-prazos .pw-chip {
+    justify-content: center;
+    min-height: 46px;
+    padding: 8px 6px;
+    font-size: 14px;
+}
+
+/* ======================= ASSINATURAS ======================= */
+
+.pw-assinatura {
+    padding: 12px 14px;
+    border: 1.5px dashed var(--pw-borda-forte);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+}
+.pw-assinatura-feita {
+    border-style: solid;
+    border-color: var(--pw-borda);
+    background: var(--pw-superficie-2);
+}
+
+/* O rabisco encenado. Não é assinatura de verdade — é o SINAL de que a
+   assinatura foi colhida, e é assim que se lê de relance na revisão. */
+.pw-rabisco {
+    height: 46px;
+    border-bottom: 2px solid var(--pw-texto-fraco);
+    background-image:
+        radial-gradient(ellipse 34px 12px at 22% 62%, transparent 10px, var(--pw-texto) 11px, transparent 12px),
+        radial-gradient(ellipse 26px 16px at 44% 46%, transparent 8px, var(--pw-texto) 9px, transparent 10px),
+        radial-gradient(ellipse 30px 10px at 68% 66%, transparent 9px, var(--pw-texto) 10px, transparent 11px);
+    background-repeat: no-repeat;
+    opacity: 0.62;
+}
+
+/* ======================= DOCUMENTOS ======================= */
+
+.pw-cabeca-documento {
+    border-top: 4px solid var(--pw-primaria);
+}
+
+.pw-numero-documento {
+    flex: 0 0 auto;
+    padding: 3px 10px;
+    border: 1.5px solid var(--pw-perigo);
+    border-radius: 6px;
+    color: var(--pw-perigo);
+    font-size: 17px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+}
+
+.pw-card-documento {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.pw-card-documento + .pw-card-documento {
+    margin-top: 12px;
+}
+
+.pw-doc-icone {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie-2);
+    border: 1px solid var(--pw-borda);
+    font-size: 24px;
+}
+
+.pw-card-escolhido {
+    border-color: var(--pw-acao);
+    border-width: 2px;
+    background: var(--pw-acao-suave);
+}
+
+/* ======================= BENS APREENDIDOS ======================= */
+
+.pw-item-bem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    font-size: 14.5px;
+    font-weight: 600;
+}
+.pw-item-bem + .pw-item-bem {
+    border-top: 1px solid var(--pw-borda);
+}
+
+.pw-item-qtd {
+    flex: 0 0 auto;
+    min-width: 52px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--pw-primaria-suave);
+    color: var(--pw-primaria);
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+/* O botão de remover, quando está numa LINHA de lista, não flutua sobre uma
+   foto — então perde o posicionamento absoluto que ele tem sobre a miniatura. */
+.pw-remove-linha {
+    position: static;
+    flex: 0 0 32px;
+}
+
+/* ======================= LEVANTAMENTO ======================= */
+
+.pw-linha-levantada {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pw-item-numero {
+    flex: 0 0 auto;
+    min-width: 42px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: var(--pw-primaria);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.pw-miniatura-vazia {
+    background: var(--pw-superficie-2);
+    border: 1px dashed var(--pw-borda-forte);
+    color: var(--pw-texto-fraco);
+}
+
+.pw-total-levantamento {
+    margin-top: 14px;
+    border-color: var(--pw-primaria);
+    border-width: 2px;
+}
+
+/* ======================= BOBINA 80 mm ======================= */
+
+/* A via do notificado sai numa impressora de bolso de 80mm — e a prévia
+   respeita essa largura em vez de acompanhar a tela. É o único jeito de o
+   fiscal ver, ANTES de imprimir, o que vai quebrar de linha no papel. */
+.pw-bobina-palco {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+    padding: 18px 10px;
+    border-radius: var(--pw-raio-lg);
+    background:
+        repeating-linear-gradient(
+            135deg,
+            var(--pw-superficie-2),
+            var(--pw-superficie-2) 10px,
+            transparent 10px,
+            transparent 20px
+        ),
+        var(--pw-app);
+    border: 1px solid var(--pw-borda);
+}
+
+.pw-bobina {
+    width: 302px;
+    max-width: 100%;
+    padding: 18px 16px 22px;
+    background: #fffdf7;
+    color: #14181f;
+    box-shadow: 0 8px 26px rgba(13, 30, 56, 0.24);
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    /* A serrilha de quem arrancou o papel do rolo. */
+    clip-path: polygon(
+        0 0,
+        100% 0,
+        100% calc(100% - 6px),
+        95% 100%,
+        90% calc(100% - 6px),
+        85% 100%,
+        80% calc(100% - 6px),
+        75% 100%,
+        70% calc(100% - 6px),
+        65% 100%,
+        60% calc(100% - 6px),
+        55% 100%,
+        50% calc(100% - 6px),
+        45% 100%,
+        40% calc(100% - 6px),
+        35% 100%,
+        30% calc(100% - 6px),
+        25% 100%,
+        20% calc(100% - 6px),
+        15% 100%,
+        10% calc(100% - 6px),
+        5% 100%,
+        0 calc(100% - 6px)
+    );
+}
+
+.pw-bobina-orgao {
+    margin: 0;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.pw-bobina-titulo {
+    margin: 12px 0 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.pw-bobina-numero {
+    margin: 2px 0 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.pw-bobina-corte {
+    margin: 12px 0;
+    border: 0;
+    border-top: 1px dashed #14181f;
+}
+
+.pw-bobina-campo {
+    margin-bottom: 8px;
+}
+.pw-bobina-campo > span {
+    display: block;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.72;
+}
+.pw-bobina-campo > strong {
+    display: block;
+    font-size: 12.5px;
+    word-break: break-word;
+}
+
+.pw-bobina-secao {
+    margin: 0 0 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.pw-bobina-lista {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 12px;
+}
+.pw-bobina-lista li {
+    margin-bottom: 4px;
+}
+
+.pw-bobina-assinatura {
+    margin-top: 22px;
+}
+.pw-bobina-linha-assinatura {
+    display: block;
+    height: 1px;
+    margin-bottom: 4px;
+    background: #14181f;
+}
+.pw-bobina-assinatura > span:not(.pw-bobina-linha-assinatura) {
+    display: block;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.72;
+}
+.pw-bobina-assinatura > strong {
+    display: block;
+    font-size: 11.5px;
+}
+
+.pw-bobina-rodape {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: 9.5px;
+    line-height: 1.4;
+}
+.pw-bobina-aviso {
+    margin-top: 8px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 /* ======================= TABLET ======================= */
 
 /* No tablet sobra largura: o mapa ganha um painel ao lado em vez de esticar os
@@ -1453,8 +2047,29 @@ textarea.pw-entrada {
     }
 
     .pw-nav {
-        grid-template-columns: repeat(5, minmax(0, 140px));
+        grid-template-columns: repeat(6, minmax(0, 132px));
         justify-content: center;
+    }
+
+    .pw-nav button {
+        font-size: 11.5px;
+    }
+
+    /* No tablet a lista de motivos volta a ser DUAS COLUNAS, como no impresso.
+       O agente que já preenche o bloco de papel reconhece o desenho, e as vinte
+       caixas passam a caber quase sem rolagem. */
+    .pw-marcaveis {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .pw-grade-prazos {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    /* A bobina fica ao natural — 80mm são 80mm, no tablet como no celular. */
+    .pw-bobina-palco {
+        padding: 26px 10px;
     }
 
     /* No tablet a coluna do formulário continua estreita (formulário largo é

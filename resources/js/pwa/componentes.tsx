@@ -137,10 +137,118 @@ export function Aviso({ children }: { children: ReactNode }) {
     );
 }
 
-export type Aba = 'inicio' | 'mapa' | 'registros' | 'calor' | 'sincronizacao';
+/**
+ * Caixa de múltipla escolha ao tamanho da rua.
+ *
+ * Os documentos oficiais são blocos de caixinhas para assinalar com "X" — a
+ * Notificação Preliminar tem vinte delas. Numa tela de celular, isso só
+ * funciona se a linha INTEIRA for o alvo do toque (não só o quadradinho) e se
+ * o marcado se distinguir de longe: fundo, borda e peso do texto mudam juntos.
+ */
+export function Marcavel({
+    marcado,
+    aoAlternar,
+    children,
+    fim,
+}: {
+    marcado: boolean;
+    aoAlternar: () => void;
+    children: ReactNode;
+    /** Canto direito — contagem, valor, o que a linha precisar mostrar. */
+    fim?: ReactNode;
+}) {
+    return (
+        <button
+            type="button"
+            className={classes('pw-marcavel', marcado && 'pw-marcavel-ligado')}
+            onClick={aoAlternar}
+            aria-pressed={marcado}
+        >
+            <span className={classes('pw-quadro', marcado && 'pw-quadro-marcado')} aria-hidden="true">
+                {marcado && <Icone nome="certo" tamanho={15} />}
+            </span>
+            <span className="pw-marcavel-texto">{children}</span>
+            {fim}
+        </button>
+    );
+}
+
+/** Assinatura recolhida em campo — ou a recusa, que também é informação. */
+export function Assinatura({
+    rotulo,
+    estado,
+    aoAssinar,
+    aoRecusar,
+    nome,
+    aoNome,
+    lugarNome,
+}: {
+    rotulo: string;
+    estado: 'pendente' | 'assinada' | 'recusada';
+    aoAssinar: () => void;
+    aoRecusar: () => void;
+    nome?: string;
+    aoNome?: (valor: string) => void;
+    lugarNome?: string;
+}) {
+    return (
+        <div className={classes('pw-assinatura', estado !== 'pendente' && 'pw-assinatura-feita')}>
+            <div className="pw-linha-espalha" style={{ marginBottom: 8 }}>
+                <span className="pw-forte" style={{ fontSize: 14.5 }}>
+                    {rotulo}
+                </span>
+                {estado === 'assinada' && (
+                    <Selo tom="ok">
+                        <Icone nome="certo" tamanho={13} /> Assinou
+                    </Selo>
+                )}
+                {estado === 'recusada' && (
+                    <Selo tom="perigo">
+                        <Icone nome="alerta" tamanho={13} /> Recusou assinar
+                    </Selo>
+                )}
+            </div>
+
+            {aoNome && (
+                <input
+                    className="pw-entrada"
+                    style={{ marginBottom: 8 }}
+                    value={nome ?? ''}
+                    onChange={(e) => aoNome(e.target.value)}
+                    placeholder={lugarNome}
+                />
+            )}
+
+            {estado === 'assinada' ? (
+                <div className="pw-rabisco" aria-hidden="true" />
+            ) : (
+                <div className="pw-linha" style={{ gap: 8 }}>
+                    <button
+                        type="button"
+                        className="pw-btn pw-btn-contorno pw-btn-pequeno"
+                        onClick={aoAssinar}
+                    >
+                        <Icone nome="assinar" tamanho={16} />
+                        Colher assinatura
+                    </button>
+                    <button
+                        type="button"
+                        className="pw-btn pw-btn-fantasma pw-btn-pequeno"
+                        onClick={aoRecusar}
+                    >
+                        Recusou
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export type Aba = 'inicio' | 'demandas' | 'mapa' | 'registros' | 'calor' | 'sincronizacao';
 
 const ABAS: { id: Aba; rotulo: string; icone: Nome }[] = [
     { id: 'inicio', rotulo: 'Início', icone: 'casa' },
+    { id: 'demandas', rotulo: 'Demandas', icone: 'caixa-entrada' },
     { id: 'mapa', rotulo: 'Mapa', icone: 'mapa' },
     { id: 'registros', rotulo: 'Registros', icone: 'lista' },
     { id: 'calor', rotulo: 'Calor', icone: 'calor' },
@@ -151,11 +259,17 @@ export function BarraInferior({
     ativa,
     aoTrocar,
     pendentes,
+    demandas,
 }: {
     ativa: Aba;
     aoTrocar: (aba: Aba) => void;
     pendentes: number;
+    /** Demandas vencidas — o número que faz o fiscal olhar a fila. */
+    demandas?: number;
 }) {
+    const conta = (aba: Aba): number =>
+        aba === 'sincronizacao' ? pendentes : aba === 'demandas' ? (demandas ?? 0) : 0;
+
     return (
         <nav className="pw-nav" aria-label="Navegação principal">
             {ABAS.map((aba) => (
@@ -168,9 +282,7 @@ export function BarraInferior({
                 >
                     <Icone nome={aba.icone} tamanho={23} />
                     {aba.rotulo}
-                    {aba.id === 'sincronizacao' && pendentes > 0 && (
-                        <span className="pw-nav-conta">{pendentes}</span>
-                    )}
+                    {conta(aba.id) > 0 && <span className="pw-nav-conta">{conta(aba.id)}</span>}
                 </button>
             ))}
         </nav>

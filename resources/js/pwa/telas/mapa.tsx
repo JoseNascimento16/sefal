@@ -2,7 +2,9 @@ import * as L from 'leaflet';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { irPara } from '../app';
-import { Selo, SeloSituacao, Topo, atalhoDoPerfil } from '../componentes';
+import { Selo, SeloSituacao, Topo, atalhoDoPerfil, classes } from '../componentes';
+import { EQUIPE } from '../dados-demandas';
+import { centroDaArea } from '../sessao';
 import {
     AMBULANTES,
     CENTRO_SALVADOR,
@@ -13,7 +15,19 @@ import {
     type Ambulante,
 } from '../dados-prototipo';
 import { Icone } from '../icones';
-import { criarMapa, pinoAmbulante, pinoDoFiscal } from '../mapa';
+import { camadaDaArea, criarMapa, dentroDoAnel, pinoAmbulante, pinoDoFiscal } from '../mapa';
+
+/**
+ * O ponto cai fora da área da equipe?
+ *
+ * Só faz sentido perguntar quando a equipe se descreve por bloco de bairros: a
+ * Itinerante percorre corredores e a Noturna cobre a cidade inteira, e nessas
+ * duas NADA está fora — apagar pinos ali seria mentira.
+ */
+const foraDaArea = (lat: number, lng: number): boolean =>
+    EQUIPE.recorte === 'bairros' && EQUIPE.contorno !== null
+        ? !dentroDoAnel(lat, lng, EQUIPE.contorno)
+        : false;
 
 /* ============================================================================
    Tela principal — o MAPA.
@@ -31,19 +45,29 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
     const [modo, setModo] = useState<'mapa' | 'lista'>('mapa');
     const [posicao, setPosicao] = useState<{ lat: number; lng: number; precisao: number } | null>(null);
     const [posicaoReal, setPosicaoReal] = useState(false);
+    /* A delimitação nasce ACESA: a primeira pergunta de quem abre o mapa da
+       equipe é "até onde é meu", e responder isso só depois de um toque
+       esconderia a resposta. O interruptor existe para quem quer ver a rua
+       limpa por baixo do contorno. */
+    const [mostrarArea, setMostrarArea] = useState(true);
+
+    /* O mapa abre na ÁREA DA EQUIPE, e não num ponto fixo da cidade: para o
+       fiscal da Itinerante, um centro fixo na Boca do Rio deixaria os corredores
+       dele fora do quadro. A região focada, quando existe, manda em tudo. */
+    const centroPadrao = centroDaArea() ?? CENTRO_SALVADOR;
 
     const centro = useMemo<[number, number]>(() => {
         const foco = regiaoFoco ? AMBULANTES.find((a) => a.regiao === regiaoFoco) : null;
 
-        return foco ? [foco.lat, foco.lng] : [CENTRO_SALVADOR.lat, CENTRO_SALVADOR.lng];
-    }, [regiaoFoco]);
+        return foco ? [foco.lat, foco.lng] : [centroPadrao.lat, centroPadrao.lng];
+    }, [regiaoFoco, centroPadrao.lat, centroPadrao.lng]);
 
     /* Posição do aparelho — de verdade quando o navegador deixa, e a coordenada
-       do Farol da Barra quando não deixa. O protótipo precisa desenhar o "eu
-       estou aqui" mesmo num computador de mesa sem GPS. */
+       do meio da área da equipe quando não deixa. O protótipo precisa desenhar o
+       "eu estou aqui" mesmo num computador de mesa sem GPS. */
     useEffect(() => {
         if (!navigator.geolocation) {
-            setPosicao({ ...CENTRO_SALVADOR, precisao: 45 });
+            setPosicao({ ...centroPadrao, precisao: 45 });
 
             return;
         }
@@ -57,7 +81,7 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
                 });
                 setPosicaoReal(true);
             },
-            () => setPosicao({ ...CENTRO_SALVADOR, precisao: 45 }),
+            () => setPosicao({ ...centroPadrao, precisao: 45 }),
             { enableHighAccuracy: true, timeout: 6000 },
         );
     }, []);
@@ -79,9 +103,10 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
             const vencido = ambulante.retornoHaDias !== null;
             const tipo = vencido ? 'retorno' : ambulante.situacao;
             const selo = vencido ? emDias(ambulante.retornoHaDias ?? 0) : undefined;
+            const fora = foraDaArea(ambulante.lat, ambulante.lng);
 
             L.marker([ambulante.lat, ambulante.lng], {
-                icon: pinoAmbulante(ambulante.emoji, tipo, selo),
+                icon: pinoAmbulante(ambulante.emoji, tipo, selo, fora),
                 zIndexOffset: vencido ? 500 : 0,
             })
                 .addTo(mapa)
@@ -100,6 +125,26 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
             mapaRef.current = null;
         };
     }, [modo, centro, regiaoFoco]);
+
+    /* A delimitação em efeito PRÓPRIO, e não junto com os pinos: assim acender e
+       apagar o contorno não remonta os 25 marcadores do mapa. */
+    useEffect(() => {
+        const mapa = mapaRef.current;
+
+        if (!mapa || !mostrarArea) {
+            return;
+        }
+
+        const camada = camadaDaArea({
+            contorno: EQUIPE.contorno,
+            corredores: EQUIPE.corredores,
+            rotulo: `${EQUIPE.area} · ${EQUIPE.areaNome} — ${EQUIPE.nome}`,
+        }).addTo(mapa);
+
+        return () => {
+            camada.remove();
+        };
+    }, [modo, centro, regiaoFoco, mostrarArea]);
 
     /* O pino do fiscal entra quando a posição chega — que costuma ser depois de
        o mapa já estar desenhado. */
@@ -131,7 +176,7 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
         <div className="pw-tela">
             <Topo
                 titulo={regiaoFoco ? `Roteiro · ${nomeRegiao(regiaoFoco)}` : 'Fiscalização em rua'}
-                subtitulo={`${AMBULANTES.length} pontos conhecidos · ${RETORNOS_PENDENTES.length} retornos vencidos`}
+                subtitulo={`${EQUIPE.nome} · ${EQUIPE.area} — ${AMBULANTES.length} pontos conhecidos · ${RETORNOS_PENDENTES.length} retornos vencidos`}
                 acao={
                     <button
                         type="button"
@@ -154,12 +199,35 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
                             <Icone nome="alvo" tamanho={16} />
                             {posicao ? `±${posicao.precisao} m` : 'Localizando…'}
                         </button>
+                        <button
+                            type="button"
+                            className={classes('pw-pilula', mostrarArea && 'pw-pilula-ligada')}
+                            onClick={() => setMostrarArea((v) => !v)}
+                            aria-pressed={mostrarArea}
+                        >
+                            <Icone nome="equipe" tamanho={16} />
+                            {EQUIPE.area}
+                        </button>
                         {!posicaoReal && (
                             <span className="pw-pilula" style={{ cursor: 'default' }}>
                                 Posição simulada
                             </span>
                         )}
                     </div>
+
+                    {/* A legenda diz o que o contorno É — e, principalmente, o que
+                        ele NÃO é. Contorno em mapa parece exato; este é
+                        aproximado, e o fiscal precisa saber disso antes de
+                        decidir se um ponto de fronteira é dele. */}
+                    {mostrarArea && (
+                        <p className="pw-legenda-area">
+                            {EQUIPE.recorte === 'cidade'
+                                ? `Cobertura da ${EQUIPE.nome}: toda a cidade — o recorte é o turno (${EQUIPE.turno.toLowerCase()}).`
+                                : EQUIPE.recorte === 'corredores'
+                                  ? `Em azul, os corredores da ${EQUIPE.nome}. Traçado aproximado dos eixos que a equipe percorre.`
+                                  : `Em azul, a área da ${EQUIPE.nome} (${EQUIPE.bairros.length} bairros). Contorno aproximado; pontos fora dele são de outra equipe.`}
+                        </p>
+                    )}
 
                     <PainelLateral aoSelecionar={setSelecionado} />
 
