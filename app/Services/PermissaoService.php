@@ -134,8 +134,8 @@ class PermissaoService
     /**
      * A tela CONTROLÁVEL a que um caminho de requisição pertence, ou null.
      *
-     * A tela sai do PRIMEIRO trecho depois de `retaguarda` — `retaguarda/permissionarios/7/foto`
-     * é a tela `permissionarios` dois segmentos adiante. Mora aqui porque dois lugares fazem a
+     * A tela sai do PRIMEIRO trecho depois de `retaguarda` — `retaguarda/ambulantes/7/foto`
+     * é a tela `ambulantes` dois segmentos adiante. Mora aqui porque dois lugares fazem a
      * mesma pergunta (a guarda de leitura e a montagem dos props da tela): com uma cópia em cada
      * um, bastaria um deles mudar de ideia sobre o que é "a tela do caminho" para a tela oferecer
      * o que a guarda barra.

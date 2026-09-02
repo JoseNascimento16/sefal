@@ -20,8 +20,8 @@ import { contar } from '@/lib/plural';
  *
  * @example
  *   <BotaoExportar
- *       titulo="Permissionários"
- *       subtitulo="Fiscalização › Permissionários"
+ *       titulo="Ambulantes"
+ *       subtitulo="Fiscalização › Ambulantes"
  *       contexto={`Aba: ${aba} · busca: "${busca}"`}
  *       colunas={[{ chave: 'nome', titulo: 'Nome' }]}
  *       linhas={ord.itens}

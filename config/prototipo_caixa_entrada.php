@@ -315,7 +315,7 @@ return [
             'assunto' => 'Equipamento cedido a terceiro',
             'endereco' => 'Avenida Cardeal da Silva, 622',
             'bairro' => 'Federação',
-            'descricao' => 'Requerente informa que o permissionário do ponto não trabalha mais no local e '
+            'descricao' => 'Requerente informa que o ambulante do ponto não trabalha mais no local e '
                 .'cedeu o equipamento a outra pessoa.',
             'anexo' => 'esalvador-31990.pdf',
             'situacao' => 'Aguardando triagem',

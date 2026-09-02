@@ -77,7 +77,7 @@ class TelasEmPreparacaoController extends Controller
             'variante' => 'cartao',
             'fase' => 'Fase 2',
             'itens' => [
-                'Consultar a fiscalização pelo permissionário, pela área ou pelo período.',
+                'Consultar a fiscalização pelo ambulante, pela área ou pelo período.',
                 'Ver foto, ponto de GPS e o documento que saiu na hora.',
                 'Acompanhar o prazo de retorno de quem foi notificado.',
             ],

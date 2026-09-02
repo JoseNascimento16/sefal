@@ -129,7 +129,7 @@ linhas pode, portanto, passar do total — que é o número de contas e vem da l
 setor** tem linha própria: ela não enxerga tela controlada nenhuma, e é o caso que mais importa
 nessa leitura.
 
-### RN-14 — Relatório de Permissionários: as três situações sempre aparecem, mesmo zeradas
+### RN-14 — Relatório de Ambulantes: as três situações sempre aparecem, e a permissão é quadro próprio
 
 O quadro "Cadastros por situação" traz **Regular, Irregular e Cadastrado em campo** ainda que alguma
 esteja em zero: "nenhum aguardando conferência" é uma resposta de gestão, e uma linha ausente seria
@@ -137,7 +137,16 @@ lida como "não sei". Já o quadro **por atividade** mostra só os ramos que apa
 menor — ali o zero atrapalha, porque a lista de atividades é aberta e dezenas de linhas vazias
 esconderiam as que têm gente.
 
-O documento sai **deitado** (são oito colunas), com o documento **formatado** e as datas em BR. Sem
+Há um terceiro quadro, **"Cadastros por permissão da SEMOP"**, com duas linhas — permissionários e
+sem permissão. Ele existe porque ser permissionário passou a ser um **atributo** do ambulante, e não a
+categoria de todos: é esse quadro que dimensiona o trabalho educativo, que é justamente com quem não
+tem permissão. Pela mesma razão a relação nominal ganhou a coluna **Permissionário** (Sim/Não, nunca
+travessão — "não" é resposta, não ausência de resposta) e os filtros ganharam **Permissão da SEMOP**.
+
+Permissão e **situação** são filtros separados de propósito: são perguntas diferentes, e um ambulante
+sem permissão pode estar `Regular` num ponto autorizado por outra via.
+
+O documento sai **deitado** (são nove colunas), com o documento **formatado** e as datas em BR. Sem
 documento é o caso normal deste cadastro, não um defeito: sai como travessão.
 
 Ele **convive** com o de Usuários do sistema, e não substitui nenhum: um responde quem **usa** o
@@ -151,4 +160,5 @@ sistema, o outro quem **é fiscalizado**.
 |---|---|---|---|---|
 | 25/08/2026 | José Nascimento | Relatórios / exportação de listagens | Criação do motor de relatórios (resultado neutro + exportadores PDF/XLSX/DOCX), do endpoint único de exportação de listagem com `<BotaoExportar>`, do perfil de dados por formato e do primeiro relatório concreto (Usuários do sistema). | A Retaguarda não tinha como levar dado nenhum para fora, e cada tela que precisasse disso inventaria a sua própria geração de arquivo. |
 | 25/08/2026 | José Nascimento | Relatórios | Novo relatório "Permissionários cadastrados" (RN-14): período de cadastro, situação e atividade, com quadro por situação e por ramo. | Faltava responder "quem está na base e o que ainda espera conferência" — pergunta de gestão que o relatório de contas do sistema não responde. |
+| 02/09/2026 | José Nascimento | Relatórios | O relatório passa a se chamar **"Ambulantes cadastrados"** (chave `ambulantes`), ganha a coluna **Permissionário** na relação nominal, o filtro **Permissão da SEMOP** e o quadro **"Cadastros por permissão da SEMOP"** — RN-14. | A área de negócio decidiu que a entidade é o **ambulante**, e ter permissão passou a ser atributo dele. O relatório dizia "Permissionários cadastrados" sobre uma base em que a maioria não tem permissão, e não havia como responder quantos têm — que é o número que dimensiona o trabalho educativo. |
 | 26/08/2026 | José Nascimento | Relatórios / exportação de listagens | Os formatos passam a se chamar **PDF · Excel · Word** na interface (capitalização normal, sem caixa alta), e o mesmo par aparece no texto do requisito; a camada sobreposta da escolha de formato passa a neutralizar o fundo. | "XLSX"/"DOCX" são códigos técnicos e "EXCEL"/"WORD" em caixa alta soam a grito — dois vocabulários para o mesmo artefato, e nenhum deles o nome que a pessoa reconhece. E a janela era modal só para quem olha: `Tab` e leitor de tela alcançavam os botões da tela de trás. |

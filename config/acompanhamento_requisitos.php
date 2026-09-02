@@ -179,7 +179,7 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemStub.' Stub aguardando a Fase 2. Vai receber o que o aplicativo do fiscal registra '
-                .'na rua: consulta por permissionário, área e período, com foto, ponto de GPS, o '
+                .'na rua: consulta por ambulante, área e período, com foto, ponto de GPS, o '
                 .'documento emitido na hora e o prazo de retorno de quem foi notificado. Nada se '
                 .'perde à espera dela — o aplicativo guarda o registro.',
         ],
@@ -271,10 +271,10 @@ return [
 
         [
             'modulo' => 'Fiscalização',
-            'tela' => 'Cadastro de Permissionário',
+            'tela' => 'Cadastro de Ambulante',
             'origem' => 'Retaguarda',
-            'rota' => 'retaguarda.permissionarios.index',
-            'breadcrumb' => 'Fiscalização › Permissionários',
+            'rota' => 'retaguarda.ambulantes.index',
+            'breadcrumb' => 'Fiscalização › Ambulantes',
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Identidade de quem é fiscalizado, com documento OPCIONAL: em rua a '
@@ -284,7 +284,12 @@ return [
                 .'"Cadastrado em campo" até alguém conferir — a tela de validação dessa fila é de '
                 .'entrega futura, e por ora o gestor troca a situação à mão. Nome e apelido aceitam nome '
                 .'de gente, não marcação nem símbolo. O fiscal CONSULTA o cadastro pela Retaguarda: '
-                .'incluir e excluir por lá são da gestão.',
+                .'incluir e excluir por lá são da gestão. A entidade é o AMBULANTE, e ser '
+                .'PERMISSIONÁRIO é atributo dela (tem permissão da SEMOP, sim ou não): quem é marcado '
+                .'precisa informar o nº da permissão, a validade segue opcional (em rua o papel '
+                .'costuma não estar legível), desmarcar limpa os dois, e a situação continua sendo '
+                .'outra pergunta — sem permissão pode estar regular, e permissionário pode estar '
+                .'irregular.',
         ],
 
         [
@@ -402,7 +407,7 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemSpec.' Ramo autorizado na permissão — o que a pessoa vende ou faz no '
-                .'ponto. Será a primeira lista apontada por cadastro de permissionário, e a exclusão '
+                .'ponto. Será a primeira lista apontada por cadastro de ambulante, e a exclusão '
                 .'passa a ser barrada quando esse vínculo existir.',
         ],
 

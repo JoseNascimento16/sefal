@@ -95,7 +95,7 @@ Word) sai pelo ponto único do projeto e entrega o **recorte visível**, com a s
 
 ### RN-07 — Os parâmetros da fiscalização são lidos por código, e não têm tela **nesta entrega**
 
-`prazo_notificacao_dias = 10` (dias corridos para o permissionário atender a uma notificação) já
+`prazo_notificacao_dias = 10` (dias corridos para o ambulante atender a uma notificação) já
 existe e é lido por `ParametroFiscalizacao::inteiro()`, sempre com um valor de referência em mão —
 parâmetro ausente não pode derrubar um fluxo de rua.
 
@@ -104,12 +104,12 @@ número sem fluxo que o leia não muda nada, e ninguém saberia dizer o efeito d
 
 ### RN-08 — **Atividade em uso não pode ser excluída** (a primeira lista com vínculo)
 
-O cadastro de permissionário guarda a **atividade autorizada**. Excluir uma atividade apontada por
+O cadastro de ambulante guarda a **atividade autorizada**. Excluir uma atividade apontada por
 algum cadastro deixaria esses registros apontando para o nada — e quem responderia seria a chave
 estrangeira do banco, com um erro cru de integridade que, para quem está na tela, é o sistema
 quebrando sem motivo.
 
-Então a recusa acontece **antes**, na tela de onde a pessoa clicou, dizendo **quantos** permissionários
+Então a recusa acontece **antes**, na tela de onde a pessoa clicou, dizendo **quantos** ambulantes
 dependem da atividade e mandando fazer o que a RN-01 já ensina: **desmarcar "Em uso"**. Atividade que
 ninguém aponta continua excluível — a guarda não pode virar "nunca mais se exclui atividade".
 
@@ -118,7 +118,7 @@ ninguém aponta continua excluível — a guarda não pode virar "nunca mais se 
 ## Fora de escopo (por ora)
 
 - **Bloqueio de exclusão por vínculo nas outras cinco listas.** Só **Atividades do Ambulante** é
-  apontada por registro de operação hoje (pelo cadastro de permissionário), e ela já barra — ver a
+  apontada por registro de operação hoje (pelo cadastro de ambulante), e ela já barra — ver a
   RN-08 acima. As outras cinco ganham a mesma recusa quando a cadeia de fiscalização existir; até lá,
   seria código morto tratando de um caso impossível.
 - **Verificação no Monitoramento de Parametrizações.** "Lista de escolha vazia" só quebra um fluxo

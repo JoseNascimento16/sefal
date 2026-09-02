@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\DB;
 /**
  * Gerador PADRÃO de número de protocolo do sistema.
  *
- * Formato: `<PREFIXO><YYYYMMDD><NNN>` — ex.: `PER20260825001`.
- * - PREFIXO: sigla do domínio (PER = Permissionário, FI = Fiscalização, …).
+ * Formato: `<PREFIXO><YYYYMMDD><NNN>` — ex.: `AMB20260902001`.
+ * - PREFIXO: sigla do domínio (AMB = Ambulante, FI = Fiscalização, …). O prefixo `PER` continua
+ *   nos cadastros que nasceram antes de a entidade se chamar Ambulante: código gravado é
+ *   identidade, e identidade não se reescreve por estética.
  * - YYYYMMDD: data de referência do registro.
  * - NNN: sequencial de 3 dígitos que **reinicia todo dia** (por prefixo + data). Passando de 999 o
  *   número simplesmente cresce (4 dígitos) — o `str_pad` é piso, não teto.

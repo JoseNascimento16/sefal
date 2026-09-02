@@ -2,8 +2,8 @@
 
 namespace App\Relatorios;
 
+use App\Models\Ambulante;
 use App\Models\AtividadeAmbulante;
-use App\Models\Permissionario;
 use App\Relatorios\Contracts\Relatorio;
 use App\Relatorios\Suporte\ContextoRelatorio;
 use App\Relatorios\Suporte\FiltroDef;
@@ -13,26 +13,34 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Permissionários cadastrados — quem está na base, em que ramo e em que situação.
+ * Ambulantes cadastrados — quem está na base, em que ramo e em que situação.
  *
- * Responde a duas perguntas de gestão que ninguém consegue responder de cabeça:
- * "quantos cadastros temos, e quantos ainda esperam conferência?" e "quem foi
- * cadastrado neste período, por ramo?". A segunda é a que justifica o período: o
- * cadastro em campo cresce por mutirão, e o número por si só não conta a história.
+ * Responde a três perguntas de gestão que ninguém consegue responder de cabeça:
+ * "quantos cadastros temos, e quantos ainda esperam conferência?", "quem foi
+ * cadastrado neste período, por ramo?" e — desde que ser permissionário virou
+ * atributo — "**quantos têm permissão da SEMOP, e quantos não têm?**". A segunda
+ * é a que justifica o período: o cadastro em campo cresce por mutirão, e o número
+ * por si só não conta a história. A terceira é a que dimensiona o trabalho
+ * educativo, que é justamente com quem não tem permissão.
  *
  * Convive com o relatório de contas do sistema — são coisas diferentes: aquele é
  * sobre QUEM USA o sistema, este é sobre QUEM É FISCALIZADO.
  */
-class RelatorioPermissionarios implements Relatorio
+class RelatorioAmbulantes implements Relatorio
 {
+    /** Os dois recortes do filtro de permissão — texto, porque filtro viaja como texto. */
+    private const COM_PERMISSAO = 'sim';
+
+    private const SEM_PERMISSAO = 'nao';
+
     public function chave(): string
     {
-        return 'permissionarios';
+        return 'ambulantes';
     }
 
     public function titulo(): string
     {
-        return 'Permissionários cadastrados';
+        return 'Ambulantes cadastrados';
     }
 
     public function grupo(): string
@@ -42,14 +50,14 @@ class RelatorioPermissionarios implements Relatorio
 
     public function descricao(): string
     {
-        return 'Cadastros por período, atividade e situação, com o quanto ainda espera a validação do gestor. Responde "quem está na base, e o que falta conferir".';
+        return 'Cadastros por período, atividade, situação e permissão da SEMOP, com o quanto ainda espera a validação do gestor. Responde "quem está na base, quem tem permissão e o que falta conferir".';
     }
 
     public function filtros(): array
     {
         $situacoes = [['valor' => '', 'rotulo' => 'Todas']];
 
-        foreach (Permissionario::SITUACOES as $situacao) {
+        foreach (Ambulante::SITUACOES as $situacao) {
             $situacoes[] = ['valor' => $situacao, 'rotulo' => $situacao];
         }
 
@@ -67,6 +75,14 @@ class RelatorioPermissionarios implements Relatorio
             FiltroDef::data('data_final', 'Cadastrado até'),
             FiltroDef::select('situacao', 'Situação', $situacoes),
             FiltroDef::select('atividade_id', 'Atividade', $atividades),
+            // Permissão e situação são perguntas DIFERENTES (um ambulante sem
+            // permissão pode estar regular), então são dois filtros — juntá-los
+            // num só obrigaria a inventar combinações que não existem.
+            FiltroDef::select('permissionario', 'Permissão da SEMOP', [
+                ['valor' => '', 'rotulo' => 'Todos'],
+                ['valor' => self::COM_PERMISSAO, 'rotulo' => 'Permissionários'],
+                ['valor' => self::SEM_PERMISSAO, 'rotulo' => 'Sem permissão'],
+            ]),
         ];
     }
 
@@ -77,12 +93,13 @@ class RelatorioPermissionarios implements Relatorio
 
     public function gerar(ContextoRelatorio $contexto): ResultadoRelatorio
     {
-        $consulta = Permissionario::query()->with('atividade')->orderBy('nome');
+        $consulta = Ambulante::query()->with('atividade')->orderBy('nome');
 
         $inicio = self::dataFiltro($contexto->filtro('data_inicial'));
         $fim = self::dataFiltro($contexto->filtro('data_final'));
         $situacao = $contexto->filtro('situacao');
         $atividadeId = $contexto->filtro('atividade_id');
+        $permissao = $contexto->filtro('permissionario');
 
         if ($inicio !== null) {
             $consulta->where('created_at', '>=', $inicio->startOfDay());
@@ -94,7 +111,7 @@ class RelatorioPermissionarios implements Relatorio
             $consulta->where('created_at', '<=', $fim->endOfDay());
         }
 
-        if (is_string($situacao) && in_array($situacao, Permissionario::SITUACOES, true)) {
+        if (is_string($situacao) && in_array($situacao, Ambulante::SITUACOES, true)) {
             $consulta->where('situacao', $situacao);
         }
 
@@ -102,30 +119,37 @@ class RelatorioPermissionarios implements Relatorio
             $consulta->where('atividade_id', (int) $atividadeId);
         }
 
-        $permissionarios = $consulta->get();
+        if ($permissao === self::COM_PERMISSAO || $permissao === self::SEM_PERMISSAO) {
+            $consulta->where('permissionario', $permissao === self::COM_PERMISSAO);
+        }
+
+        $ambulantes = $consulta->get();
 
         $resultado = new ResultadoRelatorio;
         $resultado->metadados = [
             'titulo' => mb_strtoupper($this->titulo()),
-            'filtros_resumo' => $this->resumo($inicio, $fim, $situacao, $atividadeId, $permissionarios->count()),
-            // Oito colunas não cabem em pé.
+            'filtros_resumo' => $this->resumo($inicio, $fim, $situacao, $atividadeId, $permissao, $ambulantes->count()),
+            // Nove colunas não cabem em pé.
             'orientacao' => 'landscape',
         ];
 
         // O gerencial responde "quanto"; o analítico, "quem". A relação nominal
         // inteira afogaria o número num documento de gestão.
         if (! $contexto->ehGerencial()) {
-            $relacao = $resultado->secao('Relação de permissionários');
+            $relacao = $resultado->secao('Relação de ambulantes');
             $relacao->coluna('codigo', 'Código');
             $relacao->coluna('nome', 'Nome');
             $relacao->coluna('apelido', 'Apelido');
             $relacao->coluna('documento', 'Documento');
             $relacao->coluna('atividade', 'Atividade');
+            // A coluna que o rename tornou indispensável: sem ela o documento
+            // não diz quem tem permissão, e é essa a diferença que a gestão pede.
+            $relacao->coluna('permissionario', 'Permissionário', 'texto', 'center');
             $relacao->coluna('permissao', 'Nº permissão');
             $relacao->coluna('validade', 'Validade', 'texto', 'center');
             $relacao->coluna('situacao', 'Situação', 'texto', 'center');
 
-            foreach ($permissionarios as $p) {
+            foreach ($ambulantes as $p) {
                 $relacao->linha([
                     'codigo' => $p->codigo,
                     'nome' => $p->nome,
@@ -134,6 +158,9 @@ class RelatorioPermissionarios implements Relatorio
                     // sair legível — não na forma crua da coluna.
                     'documento' => $p->documentoFormatado() ?: '—',
                     'atividade' => $p->atividade->nome,
+                    // "Sim"/"Não", e não um traço: aqui a resposta negativa é
+                    // informação, não ausência de informação.
+                    'permissionario' => $p->permissionario ? 'Sim' : 'Não',
                     'permissao' => $p->numero_permissao ?? '—',
                     // Data SEMPRE em BR, como em todo o sistema.
                     'validade' => $p->validade_permissao?->format('d/m/Y') ?? '—',
@@ -141,12 +168,12 @@ class RelatorioPermissionarios implements Relatorio
                 ]);
             }
 
-            $relacao->total('TOTAL DE CADASTROS', $permissionarios->count(), [
-                'nome' => Texto::contar($permissionarios->count(), 'cadastro', 'cadastros'),
+            $relacao->total('TOTAL DE CADASTROS', $ambulantes->count(), [
+                'nome' => Texto::contar($ambulantes->count(), 'cadastro', 'cadastros'),
             ]);
         }
 
-        $porSituacao = $this->contarPorSituacao($permissionarios);
+        $porSituacao = $this->contarPorSituacao($ambulantes);
 
         $quadro = $resultado->secao('Cadastros por situação');
         $quadro->coluna('situacao', 'Situação');
@@ -156,9 +183,24 @@ class RelatorioPermissionarios implements Relatorio
             $quadro->linha(['situacao' => $nome, 'cadastros' => (string) $quantidade]);
         }
 
-        $quadro->total('TOTAL', $permissionarios->count(), ['cadastros' => $permissionarios->count()]);
+        $quadro->total('TOTAL', $ambulantes->count(), ['cadastros' => $ambulantes->count()]);
 
-        $porAtividade = $this->contarPorAtividade($permissionarios);
+        /*
+         * Com permissão × sem permissão. É o quadro que responde a pergunta nova
+         * do cenário: quem não tem permissão é a maior parte do trabalho de
+         * campo, e antes do rename esse número simplesmente não existia — a base
+         * inteira se chamava "permissionários".
+         */
+        $comPermissao = $ambulantes->filter(fn (Ambulante $a): bool => (bool) $a->permissionario)->count();
+
+        $quadroPermissao = $resultado->secao('Cadastros por permissão da SEMOP');
+        $quadroPermissao->coluna('permissao', 'Permissão');
+        $quadroPermissao->coluna('cadastros', 'Cadastros', 'numero', 'right');
+        $quadroPermissao->linha(['permissao' => 'Permissionários', 'cadastros' => (string) $comPermissao]);
+        $quadroPermissao->linha(['permissao' => 'Sem permissão', 'cadastros' => (string) ($ambulantes->count() - $comPermissao)]);
+        $quadroPermissao->total('TOTAL', $ambulantes->count(), ['cadastros' => $ambulantes->count()]);
+
+        $porAtividade = $this->contarPorAtividade($ambulantes);
 
         $ramos = $resultado->secao('Cadastros por atividade');
         $ramos->coluna('atividade', 'Atividade');
@@ -168,7 +210,7 @@ class RelatorioPermissionarios implements Relatorio
             $ramos->linha(['atividade' => $nome, 'cadastros' => (string) $quantidade]);
         }
 
-        $ramos->total('TOTAL', $permissionarios->count(), ['cadastros' => $permissionarios->count()]);
+        $ramos->total('TOTAL', $ambulantes->count(), ['cadastros' => $ambulantes->count()]);
 
         if ($contexto->querGraficos() && $porSituacao !== []) {
             $resultado->grafico(
@@ -188,14 +230,14 @@ class RelatorioPermissionarios implements Relatorio
      * O zero é o dado mais útil deste quadro: "nenhum aguardando validação" é
      * uma resposta, e uma linha ausente seria lida como "não sei".
      *
-     * @param  Collection<int, Permissionario>  $permissionarios
+     * @param  Collection<int, Ambulante>  $ambulantes
      * @return array<string, int>
      */
-    private function contarPorSituacao(Collection $permissionarios): array
+    private function contarPorSituacao(Collection $ambulantes): array
     {
-        $contagem = array_fill_keys(Permissionario::SITUACOES, 0);
+        $contagem = array_fill_keys(Ambulante::SITUACOES, 0);
 
-        foreach ($permissionarios as $p) {
+        foreach ($ambulantes as $p) {
             $contagem[$p->situacao] = ($contagem[$p->situacao] ?? 0) + 1;
         }
 
@@ -208,14 +250,14 @@ class RelatorioPermissionarios implements Relatorio
      * Aqui o zero não ajuda: a lista de atividades é aberta e cresce, e dezenas
      * de linhas zeradas esconderiam as que têm gente.
      *
-     * @param  Collection<int, Permissionario>  $permissionarios
+     * @param  Collection<int, Ambulante>  $ambulantes
      * @return array<string, int>
      */
-    private function contarPorAtividade(Collection $permissionarios): array
+    private function contarPorAtividade(Collection $ambulantes): array
     {
         $contagem = [];
 
-        foreach ($permissionarios as $p) {
+        foreach ($ambulantes as $p) {
             $rotulo = $p->atividade->nome;
             $contagem[$rotulo] = ($contagem[$rotulo] ?? 0) + 1;
         }
@@ -226,7 +268,7 @@ class RelatorioPermissionarios implements Relatorio
     }
 
     /** O recorte por escrito — é o que o documento imprime para se explicar depois. */
-    private function resumo(?Carbon $inicio, ?Carbon $fim, mixed $situacao, mixed $atividadeId, int $total): string
+    private function resumo(?Carbon $inicio, ?Carbon $fim, mixed $situacao, mixed $atividadeId, mixed $permissao, int $total): string
     {
         $partes = [];
 
@@ -236,8 +278,12 @@ class RelatorioPermissionarios implements Relatorio
                 .' a '.($fim?->format('d/m/Y') ?? 'hoje');
         }
 
-        if (is_string($situacao) && in_array($situacao, Permissionario::SITUACOES, true)) {
+        if (is_string($situacao) && in_array($situacao, Ambulante::SITUACOES, true)) {
             $partes[] = 'Situação: '.$situacao;
+        }
+
+        if ($permissao === self::COM_PERMISSAO || $permissao === self::SEM_PERMISSAO) {
+            $partes[] = 'Permissão: '.($permissao === self::COM_PERMISSAO ? 'permissionários' : 'sem permissão');
         }
 
         if (is_string($atividadeId) && $atividadeId !== '') {

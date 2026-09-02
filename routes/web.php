@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
-use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
+use App\Http\Controllers\Retaguarda\CadastroAmbulanteController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\InicioController;
@@ -136,29 +136,29 @@ Route::middleware(['auth'])->group(function () {
         ->name('retaguarda.acompanhamento-de-requisitos.index');
 
     /*
-     * Permissionários — a identidade de quem é fiscalizado.
+     * Ambulantes — a identidade de quem é fiscalizado.
      *
-     * O primeiro trecho do caminho é o slug da tela (`permissionarios`), que é de
+     * O primeiro trecho do caminho é o slug da tela (`ambulantes`), que é de
      * onde as guardas deduzem a permissão: as rotas nascem protegidas, e a rota
      * que vier amanhã (prontuário, validação de quarentena) já chega junto.
      *
      * O identificador vai como NÚMERO, e não o código nem o nome: o WAF da
      * Prefeitura barra assinatura de SQL na URL, e nome de gente é texto livre.
      */
-    Route::prefix('retaguarda/permissionarios')->name('retaguarda.permissionarios.')->group(function () {
-        Route::get('/', [CadastroPermissionarioController::class, 'index'])->name('index');
+    Route::prefix('retaguarda/ambulantes')->name('retaguarda.ambulantes.')->group(function () {
+        Route::get('/', [CadastroAmbulanteController::class, 'index'])->name('index');
 
         // A foto sai por aqui, e não por URL de disco público: é retrato de
         // cidadão fiscalizado, e mora sob o caminho da tela justamente para a
         // guarda de leitura conferir a permissão antes de entregar a imagem.
-        Route::get('{permissionario}/foto', [CadastroPermissionarioController::class, 'foto'])
-            ->name('foto')->whereNumber('permissionario');
+        Route::get('{ambulante}/foto', [CadastroAmbulanteController::class, 'foto'])
+            ->name('foto')->whereNumber('ambulante');
 
-        Route::post('/', [CadastroPermissionarioController::class, 'store'])->name('store');
-        Route::put('{permissionario}', [CadastroPermissionarioController::class, 'update'])
-            ->name('update')->whereNumber('permissionario');
-        Route::delete('{permissionario}', [CadastroPermissionarioController::class, 'destroy'])
-            ->name('destroy')->whereNumber('permissionario');
+        Route::post('/', [CadastroAmbulanteController::class, 'store'])->name('store');
+        Route::put('{ambulante}', [CadastroAmbulanteController::class, 'update'])
+            ->name('update')->whereNumber('ambulante');
+        Route::delete('{ambulante}', [CadastroAmbulanteController::class, 'destroy'])
+            ->name('destroy')->whereNumber('ambulante');
     });
 
     /*

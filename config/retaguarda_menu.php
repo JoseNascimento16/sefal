@@ -64,7 +64,7 @@ return [
     |   'fiscal' => ['excluir' => false]  → o mesmo pacote, com o ajuste declarado.
     |
     | A forma longa existe para o caso em que "este setor usa esta tela" NÃO quer
-    | dizer o pacote inteiro — o fiscal, que CONSULTA o cadastro de permissionário
+    | dizer o pacote inteiro — o fiscal, que CONSULTA o cadastro de ambulante
     | pela Retaguarda e cadastra em rua pelo aplicativo. O ajuste fica aqui, junto
     | do resto da declaração da tela: quem lê "quem entra onde" acha tudo num só
     | lugar (ver `CatalogoFuncionalidades::acoesSemente`).
@@ -122,15 +122,15 @@ return [
             'vazio' => 'As telas da fiscalização aparecem aqui quando você tiver acesso a elas.',
             'itens' => [
                 [
-                    'rotulo' => 'Permissionários',
-                    'rota' => 'retaguarda.permissionarios.index',
-                    'icone' => 'permissionarios',
-                    'slug' => 'permissionarios',
+                    'rotulo' => 'Ambulantes',
+                    'rota' => 'retaguarda.ambulantes.index',
+                    'icone' => 'ambulantes',
+                    'slug' => 'ambulantes',
                     'curto' => 'AMBULANTES',
                     // O tamanho do cadastro, ao lado do item. A FILA de conferência
                     // (quem nasceu em rua e espera validação) ganha o seu contador
                     // quando a tela de quarentena existir — o catálogo já a tem.
-                    'contador' => 'permissionarios',
+                    'contador' => 'ambulantes',
                     'setores' => [
                         'administrador',
                         'gestor',

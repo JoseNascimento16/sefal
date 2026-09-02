@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Models\Permissionario;
+use App\Models\Ambulante;
 use Throwable;
 
 /**
@@ -49,17 +49,17 @@ class ContadoresDoMenu
     {
         return [
             // O tamanho do cadastro. Neutro: é a dimensão do trabalho, não uma fila.
-            'permissionarios' => [
+            'ambulantes' => [
                 'tom' => self::TOM_NEUTRO,
-                'valor' => fn (): int => Permissionario::query()->count(),
+                'valor' => fn (): int => Ambulante::query()->count(),
             ],
 
             // A FILA de conferência: cadastro que nasceu em rua e espera o gestor
             // validar. É alerta porque cobra ação — e é a razão de a quarentena
             // existir. Zero não vira selo.
-            'permissionarios-em-quarentena' => [
+            'ambulantes-em-quarentena' => [
                 'tom' => self::TOM_ALERTA,
-                'valor' => fn (): int => Permissionario::query()->emQuarentena()->count(),
+                'valor' => fn (): int => Ambulante::query()->emQuarentena()->count(),
             ],
         ];
     }

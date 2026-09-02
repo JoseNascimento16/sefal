@@ -19,7 +19,7 @@ class RegistroRelatorios
      */
     private const RELATORIOS = [
         RelatorioUsuariosDoSistema::class,
-        RelatorioPermissionarios::class,
+        RelatorioAmbulantes::class,
     ];
 
     /**

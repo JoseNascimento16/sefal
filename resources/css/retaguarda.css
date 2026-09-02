@@ -1077,7 +1077,7 @@ table.data-table tbody tr.pendente td:first-child {
 /* ── O cabeçalho editorial da página ────────────────────────────────────────
    Sobrancelha da seção, título grande com o ponto azul, subtítulo. A direita é
    um slot: a tela põe ali os números do dia quando tiver (ver a de
-   Permissionários) — e, quando não tem, o cabeçalho respira sozinho.
+   Ambulantes) — e, quando não tem, o cabeçalho respira sozinho.
 
    O ponto final é do CSS, e não escrito em cada tela: assim toda tela nova nasce
    com a assinatura, e ninguém precisa lembrar de digitá-lo. */

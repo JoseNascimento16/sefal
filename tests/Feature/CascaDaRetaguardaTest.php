@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Permissionario;
+use App\Models\Ambulante;
 use App\Models\Setor;
 use App\Models\User;
 use App\Support\ContadoresDoMenu;
@@ -32,7 +32,7 @@ function itensDoMenu(User $u): array
     return collect($menu)->pluck('itens')->flatten(1)->keyBy('rotulo')->all();
 }
 
-/** Um gestor, que enxerga o cadastro de permissionário. */
+/** Um gestor, que enxerga o cadastro de ambulante. */
 function gestorDaCasca(): User
 {
     $u = User::factory()->create(['admin' => false]);
@@ -44,11 +44,11 @@ function gestorDaCasca(): User
 test('o item que declara contador chega com o numero e o tom', function () {
     $this->seed(PermissoesSetorSeeder::class);
 
-    Permissionario::factory()->count(3)->create();
+    Ambulante::factory()->count(3)->create();
 
     $itens = itensDoMenu(gestorDaCasca());
 
-    expect($itens['Permissionários']['contador'])->toBe(['valor' => 3, 'tom' => 'neutro']);
+    expect($itens['Ambulantes']['contador'])->toBe(['valor' => 3, 'tom' => 'neutro']);
 });
 
 test('item sem contador declarado nao inventa numero', function () {
@@ -66,12 +66,12 @@ test('o contador de FILA nao aparece em zero, e aparece quando ha o que fazer', 
      * fazer — o pior uso possível de uma cor de alerta. Neutro é diferente: zero
      * cadastrados é um tamanho honesto, e aparece.
      */
-    expect(ContadoresDoMenu::para('permissionarios-em-quarentena'))->toBeNull()
-        ->and(ContadoresDoMenu::para('permissionarios'))->toBe(['valor' => 0, 'tom' => 'neutro']);
+    expect(ContadoresDoMenu::para('ambulantes-em-quarentena'))->toBeNull()
+        ->and(ContadoresDoMenu::para('ambulantes'))->toBe(['valor' => 0, 'tom' => 'neutro']);
 
-    Permissionario::factory()->create(['situacao' => Permissionario::SITUACAO_CAMPO]);
+    Ambulante::factory()->create(['situacao' => Ambulante::SITUACAO_CAMPO]);
 
-    expect(ContadoresDoMenu::para('permissionarios-em-quarentena'))
+    expect(ContadoresDoMenu::para('ambulantes-em-quarentena'))
         ->toBe(['valor' => 1, 'tom' => 'alerta']);
 });
 
@@ -82,15 +82,15 @@ test('contador desconhecido ou que falha nao derruba o menu — vem sem numero',
     expect(ContadoresDoMenu::para('nao-existe-esse-contador'))->toBeNull();
 
     // A contagem estoura de verdade: a tabela é derrubada debaixo dela.
-    Schema::drop('permissionarios');
+    Schema::drop('ambulantes');
 
-    expect(ContadoresDoMenu::para('permissionarios'))->toBeNull();
+    expect(ContadoresDoMenu::para('ambulantes'))->toBeNull();
 
     // E o menu continua de pé, com o item lá — só sem o número.
     $itens = itensDoMenu(User::factory()->create(['admin' => true]));
 
-    expect($itens)->toHaveKey('Permissionários')
-        ->and($itens['Permissionários']['contador'])->toBeNull();
+    expect($itens)->toHaveKey('Ambulantes')
+        ->and($itens['Ambulantes']['contador'])->toBeNull();
 });
 
 test('todo item do menu chega com rotulo curto para a doca', function () {

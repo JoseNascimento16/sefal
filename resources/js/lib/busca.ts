@@ -121,7 +121,7 @@ export function parseConsulta<T>(
 
 /**
  * Todo termo tem de aparecer em ALGUM dos campos (E entre termos, OU entre
- * campos) — é o que faz "acai barra" achar o permissionário "Açaí do Barra".
+ * campos) — é o que faz "acai barra" achar o ambulante "Açaí do Barra".
  * Consulta vazia não filtra nada.
  */
 export function casaTermos(

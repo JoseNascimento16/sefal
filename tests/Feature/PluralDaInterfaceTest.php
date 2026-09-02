@@ -110,7 +110,7 @@ test('o padrao reconhece a forma preguicosa e nao confunde codigo com texto', fu
     ['1 conta(s) de administrador ativa(s)', true],
     ['{totais.total} verificação(ões)', true],
     ['2 relatório(s) disponível(is)', true],
-    ['{vinculados} permissionário(s) a têm', true],
+    ['{vinculados} ambulante(s) a têm', true],
     ['há 3 desligada(s)', true],
     ['amplitude de 12 dia(s)', true],
     ['8 funcionalidade(s) · 0 alinhada(s)', true],

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ambulante;
 use App\Models\AtividadeAmbulante;
-use App\Models\Permissionario;
 use App\Rules\ArquivoSeguro;
 use App\Rules\CpfOuCnpj;
 use App\Rules\NomeDeCadastro;
@@ -20,11 +20,11 @@ use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
- * Cadastro de Permissionário — a identidade de quem é fiscalizado.
+ * Cadastro de Ambulante — a identidade de quem é fiscalizado.
  *
- * É a tela-núcleo da fiscalização: sem um permissionário, não há a quem ligar
- * uma vistoria. Três decisões governam este controller, e todas as três vêm da
- * realidade da rua (spec §4.1):
+ * É a tela-núcleo da fiscalização: sem um ambulante, não há a quem ligar
+ * uma vistoria. Quatro decisões governam este controller, e todas vêm da
+ * realidade da rua (spec §4.1 e a decisão de 02/09/2026):
  *
  *  1. **Documento é opcional em TODO caminho.** O alvo muitas vezes não tem CPF
  *     à mão, e exigi-lo faria o cadastro não acontecer. Quando existe, é
@@ -38,6 +38,13 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
  *     antigo, não: inativar tira o valor das escolhas novas, não invalida o
  *     passado (senão quem entra para corrigir um telefone seria obrigado a
  *     trocar o ramo).
+ *  4. **Ser permissionário é ATRIBUTO, não categoria.** O ambulante pode ter
+ *     permissão da SEMOP ou não, e é essa marca que dá sentido ao número e à
+ *     validade da permissão. Marcado, o número passa a ser exigido — é ele que
+ *     sustenta a afirmação. Desmarcado, número e validade são LIMPOS: guardar
+ *     permissão de quem o cadastro diz não ter deixaria a base afirmando duas
+ *     coisas contrárias, e a busca por "permissão vencida" acusaria quem nunca
+ *     teve permissão.
  *
  * ⚠️ A **validação do cadastro em quarentena** (aprovar / mesclar duplicado /
  * recusar com motivo) é da Fase 5 e NÃO mora aqui: hoje a situação
@@ -45,13 +52,13 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
  * trocar à mão.
  *
  * A guarda de acesso deduz a tela do primeiro trecho do caminho
- * (`/retaguarda/permissionarios/…`), então a permissão se chama `permissionarios`
+ * (`/retaguarda/ambulantes/…`), então a permissão se chama `ambulantes`
  * e as rotas nascem protegidas sem ninguém declarar nada.
  */
-class CadastroPermissionarioController extends Controller
+class CadastroAmbulanteController extends Controller
 {
     /** Onde as fotos moram. */
-    private const PASTA_DAS_FOTOS = 'permissionarios';
+    private const PASTA_DAS_FOTOS = 'ambulantes';
 
     /**
      * Disco PRIVADO, e não o público.
@@ -72,14 +79,14 @@ class CadastroPermissionarioController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('Retaguarda/Fiscalizacao/CadastroDePermissionario', [
-            'permissionarios' => $this->listagem(),
+        return Inertia::render('Retaguarda/Fiscalizacao/CadastroDeAmbulante', [
+            'ambulantes' => $this->listagem(),
             'atividades' => $this->atividades(),
             // Os dois catálogos de situação vêm do SERVIDOR: são os mesmos que a
             // validação exige. Escritos também na tela, um dia discordariam — e a
             // tela ofereceria uma opção que o servidor recusa.
-            'situacoes' => Permissionario::SITUACOES,
-            'situacoesDeInclusao' => Permissionario::SITUACOES_DE_MESA,
+            'situacoes' => Ambulante::SITUACOES,
+            'situacoesDeInclusao' => Ambulante::SITUACOES_DE_MESA,
         ]);
     }
 
@@ -87,13 +94,13 @@ class CadastroPermissionarioController extends Controller
     {
         $dados = $this->validados($request, null);
 
-        $permissionario = new Permissionario;
-        $permissionario->fill($dados);
+        $ambulante = new Ambulante;
+        $ambulante->fill($dados);
 
         // A rede do `$modelClass` importa: sem a linha do contador do dia (banco
         // restaurado, carga anterior), o número recomeçaria em 001 e colidiria
         // com o que já está gravado.
-        $permissionario->codigo = Protocolo::proximo('PER', null, Permissionario::class, 'codigo');
+        $ambulante->codigo = Protocolo::proximo('AMB', null, Ambulante::class, 'codigo');
 
         $guardada = $this->guardarFoto($request->file('foto'));
 
@@ -106,8 +113,8 @@ class CadastroPermissionarioController extends Controller
          * o arquivo ANTIGO; faltava o do arquivo novo.
          */
         try {
-            $permissionario->foto = $guardada;
-            $permissionario->save();
+            $ambulante->foto = $guardada;
+            $ambulante->save();
         } catch (\Throwable $erro) {
             $this->apagarFoto($guardada);
 
@@ -115,13 +122,13 @@ class CadastroPermissionarioController extends Controller
         }
 
         return redirect()
-            ->route('retaguarda.permissionarios.index')
-            ->with('flash.sucesso', "Permissionário cadastrado sob o código {$permissionario->codigo}.");
+            ->route('retaguarda.ambulantes.index')
+            ->with('flash.sucesso', "Ambulante cadastrado sob o código {$ambulante->codigo}.");
     }
 
-    public function update(Request $request, int $permissionario): RedirectResponse
+    public function update(Request $request, int $ambulante): RedirectResponse
     {
-        $registro = Permissionario::query()->findOrFail($permissionario);
+        $registro = Ambulante::query()->findOrFail($ambulante);
 
         $registro->fill($this->validados($request, $registro));
 
@@ -135,22 +142,22 @@ class CadastroPermissionarioController extends Controller
         $this->apagarFoto($descartar);
 
         return redirect()
-            ->route('retaguarda.permissionarios.index')
+            ->route('retaguarda.ambulantes.index')
             ->with('flash.sucesso', 'Alterações salvas.');
     }
 
     /**
      * Exclui o cadastro.
      *
-     * Hoje nada aponta para o permissionário, então a exclusão é livre (com a
+     * Hoje nada aponta para o ambulante, então a exclusão é livre (com a
      * confirmação que a tela pede). Quando a cadeia de fiscalização existir, o
      * lugar de barrar é aqui — recusando com o motivo em tela, como a
      * parametrização faz com a atividade em uso. Apagar um cadastro fiscalizado
      * deixaria o histórico sem alvo.
      */
-    public function destroy(int $permissionario): RedirectResponse
+    public function destroy(int $ambulante): RedirectResponse
     {
-        $registro = Permissionario::query()->findOrFail($permissionario);
+        $registro = Ambulante::query()->findOrFail($ambulante);
 
         $foto = $registro->foto;
 
@@ -162,14 +169,14 @@ class CadastroPermissionarioController extends Controller
         $this->apagarFoto($foto);
 
         return redirect()
-            ->route('retaguarda.permissionarios.index')
-            ->with('flash.sucesso', 'Permissionário excluído.');
+            ->route('retaguarda.ambulantes.index')
+            ->with('flash.sucesso', 'Ambulante excluído.');
     }
 
     /**
      * A foto de um cadastro — a única porta por onde a imagem sai.
      *
-     * Mora sob `/retaguarda/permissionarios/…`, então a guarda de leitura confere a permissão da
+     * Mora sob `/retaguarda/ambulantes/…`, então a guarda de leitura confere a permissão da
      * tela antes de qualquer coisa: quem não abre o cadastro também não vê o retrato de quem está
      * nele. É por isso que o arquivo pode ficar no disco privado.
      *
@@ -177,9 +184,9 @@ class CadastroPermissionarioController extends Controller
      * mostrando as iniciais da pessoa, e uma resposta vazia com código 200 faria o navegador
      * desenhar uma imagem quebrada.
      */
-    public function foto(int $permissionario): HttpResponse
+    public function foto(int $ambulante): HttpResponse
     {
-        $registro = Permissionario::query()->findOrFail($permissionario);
+        $registro = Ambulante::query()->findOrFail($ambulante);
 
         $disco = Storage::disk(self::DISCO_DAS_FOTOS);
 
@@ -205,11 +212,11 @@ class CadastroPermissionarioController extends Controller
      */
     private function listagem(): array
     {
-        $itens = Permissionario::query()
+        $itens = Ambulante::query()
             ->with('atividade')
             ->orderBy('nome')
             ->get()
-            ->map(fn (Permissionario $p): array => [
+            ->map(fn (Ambulante $p): array => [
                 'id' => (int) $p->getKey(),
                 'codigo' => $p->codigo,
                 'nome' => $p->nome,
@@ -221,6 +228,10 @@ class CadastroPermissionarioController extends Controller
                 'documento_formatado' => $p->documentoFormatado(),
                 'rg' => $p->rg,
                 'telefone' => $p->telefone,
+                // Tem permissão da SEMOP? É o que separa o permissionário do
+                // ambulante que a fiscalização encontra sem nada — e é por isso
+                // que o número e a validade abaixo às vezes estão vazios.
+                'permissionario' => (bool) $p->permissionario,
                 'numero_permissao' => $p->numero_permissao,
                 // ISO só por dentro (é o valor de `<input type="date">`); quem
                 // escreve dd/mm/aaaa é a tela.
@@ -233,7 +244,7 @@ class CadastroPermissionarioController extends Controller
                 // nada de texto livre no caminho, que o WAF barraria.
                 'foto_url' => $p->foto === null
                     ? null
-                    : route('retaguarda.permissionarios.foto', $p->getKey(), absolute: false),
+                    : route('retaguarda.ambulantes.foto', $p->getKey(), absolute: false),
                 'cadastrado_em' => $p->created_at?->format('Y-m-d'),
             ])
             ->all();
@@ -271,15 +282,15 @@ class CadastroPermissionarioController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function validados(Request $request, ?Permissionario $registro): array
+    private function validados(Request $request, ?Ambulante $registro): array
     {
         // Na INCLUSÃO a quarentena não é oferecida (ver `SITUACOES_DE_MESA`); na
         // alteração, sim. A conferência é do servidor, e não só do `<select>`:
         // esconder a opção na tela não impede ninguém de mandar o valor.
         $ehInclusao = $registro === null;
         $situacoesAceitas = $ehInclusao
-            ? Permissionario::SITUACOES_DE_MESA
-            : Permissionario::SITUACOES;
+            ? Ambulante::SITUACOES_DE_MESA
+            : Ambulante::SITUACOES;
 
         $dados = $request->validate([
             // Campo cadastral aceita nome de gente, não markup: o valor sai daqui
@@ -291,7 +302,26 @@ class CadastroPermissionarioController extends Controller
             'documento' => ['nullable', 'string', 'max:20', new CpfOuCnpj, $this->documentoInedito($registro)],
             'rg' => ['nullable', 'string', 'max:20'],
             'telefone' => ['nullable', 'string', 'max:20'],
-            'numero_permissao' => ['nullable', 'string', 'max:30'],
+            // Tem permissão da SEMOP? Obrigatório responder: em branco seria
+            // gravado como "não tem", e "ninguém marcou" não é a mesma coisa que
+            // "não tem" quando a resposta decide o resto do bloco.
+            'permissionario' => ['required', 'boolean'],
+            /*
+             * O NÚMERO é exigido de quem é permissionário: é ele que sustenta a
+             * afirmação. Sem essa amarra, marcar a caixa era só um clique — e o
+             * cadastro passava a dizer "tem permissão" sem nada que se pudesse
+             * conferir depois.
+             *
+             * A VALIDADE segue opcional, e é decisão consciente (ver o doc de
+             * regra): em rua o papel está desbotado, rasgado ou não está com a
+             * pessoa, e exigir a data faria alguém inventar uma — data inventada
+             * é pior que data ausente, porque a busca por "permissão vencida"
+             * passaria a acusar com base nela. Ausente, ela não acusa ninguém.
+             */
+            'numero_permissao' => [
+                Rule::requiredIf(fn (): bool => $request->boolean('permissionario')),
+                'nullable', 'string', 'max:30',
+            ],
             'validade_permissao' => ['nullable', 'date'],
             'atividade_id' => ['required', 'integer', $this->atividadeUtilizavel($registro)],
             'situacao' => ['required', Rule::in($situacoesAceitas)],
@@ -301,13 +331,15 @@ class CadastroPermissionarioController extends Controller
             'foto' => ['nullable', 'image', 'max:5120', new ArquivoSeguro(['jpg', 'jpeg', 'png'])],
             'remover_foto' => ['nullable', 'boolean'],
         ], [
-            'nome.required' => 'Informe o nome do permissionário.',
+            'nome.required' => 'Informe o nome do ambulante.',
             'atividade_id.required' => 'Escolha a atividade autorizada.',
             'situacao.required' => 'Escolha a situação do cadastro.',
+            'permissionario.required' => 'Diga se o ambulante tem permissão da SEMOP.',
+            'numero_permissao.required' => 'Informe o nº da permissão da SEMOP — é ele que sustenta a marcação de permissionário. Se a pessoa não tem permissão, desmarque a opção.',
             // A recusa diz o PORQUÊ: "situação inválida" faria a pessoa achar
             // que digitou errado um valor que a lista realmente tem.
             'situacao.in' => $ehInclusao
-                ? '“'.Permissionario::SITUACAO_CAMPO.'” é a situação de quem foi cadastrado em rua, '
+                ? '“'.Ambulante::SITUACAO_CAMPO.'” é a situação de quem foi cadastrado em rua, '
                     .'pelo aplicativo do fiscal. No cadastro feito aqui, escolha Regular ou Irregular.'
                 : 'Situação inválida. Escolha uma das opções da lista.',
             'validade_permissao.date' => 'A validade da permissão precisa ser uma data.',
@@ -326,6 +358,26 @@ class CadastroPermissionarioController extends Controller
          */
         unset($dados['foto'], $dados['remover_foto']);
 
+        /*
+         * A marca vira booleano de verdade aqui, e não no model: o formulário
+         * manda arquivo, então o corpo é multipart e o valor chega como texto
+         * ("1"/"0"). Gravado cru, um `"0"` seria lido como preenchido por
+         * qualquer código que só perguntasse "tem valor?".
+         */
+        $dados['permissionario'] = $request->boolean('permissionario');
+
+        /*
+         * Não é permissionário ⇒ número e validade da permissão SAEM. É o caso do
+         * gestor que desmarca a opção num cadastro que já a tinha: guardar a
+         * permissão de quem o cadastro diz não ter deixaria a base afirmando duas
+         * coisas contrárias — e a busca por "permissão vencida" acusaria alguém
+         * por um papel que o próprio sistema diz que não existe.
+         */
+        if (! $dados['permissionario']) {
+            $dados['numero_permissao'] = null;
+            $dados['validade_permissao'] = null;
+        }
+
         return $dados;
     }
 
@@ -338,23 +390,23 @@ class CadastroPermissionarioController extends Controller
      * pessoas diferentes e o índice único do banco estouraria depois, com uma
      * tela de erro no lugar de uma recusa explicada.
      */
-    private function documentoInedito(?Permissionario $registro): Closure
+    private function documentoInedito(?Ambulante $registro): Closure
     {
         return function (string $atributo, mixed $valor, Closure $falhar) use ($registro): void {
-            $canonico = Permissionario::documentoCanonico(is_string($valor) ? $valor : null);
+            $canonico = Ambulante::documentoCanonico(is_string($valor) ? $valor : null);
 
             if ($canonico === null) {
                 return;
             }
 
-            $consulta = Permissionario::query()->where('documento', $canonico);
+            $consulta = Ambulante::query()->where('documento', $canonico);
 
             if ($registro !== null) {
                 $consulta->whereKeyNot($registro->getKey());
             }
 
             if ($consulta->exists()) {
-                $falhar('Já existe um permissionário com esse documento.');
+                $falhar('Já existe um ambulante com esse documento.');
             }
         };
     }
@@ -365,7 +417,7 @@ class CadastroPermissionarioController extends Controller
      * Inativa é recusada no cadastro NOVO e aceita no cadastro que já a apontava
      * — inativar tira o valor de circulação, não reescreve o passado.
      */
-    private function atividadeUtilizavel(?Permissionario $registro): Closure
+    private function atividadeUtilizavel(?Ambulante $registro): Closure
     {
         return function (string $atributo, mixed $valor, Closure $falhar) use ($registro): void {
             // O valor chega cru (a regra `integer` roda em paralelo, não antes):
@@ -403,7 +455,7 @@ class CadastroPermissionarioController extends Controller
      *
      * @return string|null Caminho a descartar após a gravação bem-sucedida
      */
-    private function aplicarFoto(Request $request, Permissionario $registro): ?string
+    private function aplicarFoto(Request $request, Ambulante $registro): ?string
     {
         $enviada = $request->file('foto');
 

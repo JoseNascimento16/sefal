@@ -141,7 +141,7 @@ class ParametrizacaoFiscalizacaoSeeder extends Seeder
         $parametros = [
             'prazo_notificacao_dias' => [
                 'valor' => '10',
-                'descricao' => 'Prazo, em dias corridos, para o permissionário atender a uma notificação.',
+                'descricao' => 'Prazo, em dias corridos, para o ambulante atender a uma notificação.',
             ],
         ];
 

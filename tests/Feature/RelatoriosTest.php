@@ -1,8 +1,8 @@
 <?php
 
+use App\Models\Ambulante;
 use App\Models\AtividadeAmbulante;
 use App\Models\PermissaoSetor;
-use App\Models\Permissionario;
 use App\Models\Setor;
 use App\Models\User;
 use App\Support\CatalogoFuncionalidades;
@@ -45,9 +45,10 @@ test('a tela lista o catalogo com filtros e modos de cada relatorio', function (
                 ->has('relatorios.0.filtros', 4)
                 // Os dois convivem, e são coisas diferentes: um é sobre quem USA
                 // o sistema, o outro sobre quem É FISCALIZADO.
-                ->where('relatorios.1.chave', 'permissionarios')
+                ->where('relatorios.1.chave', 'ambulantes')
                 ->where('relatorios.1.grupo', 'Fiscalização')
-                ->has('relatorios.1.filtros', 4);
+                // Cinco: período (dois), situação, atividade e permissão da SEMOP.
+                ->has('relatorios.1.filtros', 5);
         });
 });
 
@@ -217,7 +218,7 @@ test('a tela de relatorios entra no controle de acesso', function () {
     expect(route('retaguarda.relatorios.index', absolute: false))->toStartWith('/retaguarda/relatorios');
 });
 
-test('o relatorio de permissionarios traz o recorte, o documento legivel e a fila de conferencia', function () {
+test('o relatorio de ambulantes traz o recorte, o documento legivel e a fila de conferencia', function () {
     /*
      * O relatório de quem é FISCALIZADO. Duas coisas o tornam confiável e são
      * fáceis de perder: o documento tem de sair legível (e "sem documento" é o
@@ -226,13 +227,13 @@ test('o relatorio de permissionarios traz o recorte, o documento legivel e a fil
      */
     $atividade = AtividadeAmbulante::firstOrFail();
 
-    Permissionario::factory()->comDocumento('12345678909')->create([
+    Ambulante::factory()->comDocumento('12345678909')->create([
         'nome' => 'Joana Vendedora',
         'atividade_id' => $atividade->id,
         'validade_permissao' => '2027-03-09',
     ]);
 
-    Permissionario::factory()->emQuarentena()->create([
+    Ambulante::factory()->emQuarentena()->create([
         'nome' => 'Sem Documento da Silva',
         'documento' => null,
         'atividade_id' => $atividade->id,
@@ -240,7 +241,7 @@ test('o relatorio de permissionarios traz o recorte, o documento legivel e a fil
 
     $r = $this->actingAs(User::factory()->create(['admin' => true]))
         ->post(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'permissionarios',
+            'chave' => 'ambulantes',
             'formato' => 'xlsx',
             'modo' => 'analitico',
             'filtros' => [],
@@ -255,7 +256,7 @@ test('o relatorio de permissionarios traz o recorte, o documento legivel e a fil
     );
 
     expect($texto)
-        ->toContain('PERMISSIONÁRIOS CADASTRADOS')
+        ->toContain('AMBULANTES CADASTRADOS')
         ->toContain('2 cadastros ')
         ->not->toContain('cadastro(s)')
         ->toContain('Joana Vendedora')
@@ -269,18 +270,18 @@ test('o relatorio de permissionarios traz o recorte, o documento legivel e a fil
         ->toContain('Cadastrado em campo');
 });
 
-test('o filtro por situacao do relatorio de permissionarios filtra de verdade', function () {
+test('o filtro por situacao do relatorio de ambulantes filtra de verdade', function () {
     $atividade = AtividadeAmbulante::firstOrFail();
 
-    Permissionario::factory()->create(['nome' => 'Regular Certinho', 'atividade_id' => $atividade->id]);
-    Permissionario::factory()->emQuarentena()->create([
+    Ambulante::factory()->create(['nome' => 'Regular Certinho', 'atividade_id' => $atividade->id]);
+    Ambulante::factory()->emQuarentena()->create([
         'nome' => 'Recem Cadastrado',
         'atividade_id' => $atividade->id,
     ]);
 
     $r = $this->actingAs(User::factory()->create(['admin' => true]))
         ->post(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'permissionarios',
+            'chave' => 'ambulantes',
             'formato' => 'xlsx',
             'modo' => 'analitico',
             'filtros' => ['situacao' => 'Cadastrado em campo'],

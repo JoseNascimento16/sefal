@@ -35,7 +35,7 @@ sistema — é a cidade por baixo do menu, e nada mais.
 ### RN-02 — Não há barra superior: o topo da tela é o cabeçalho da PÁGINA
 
 A tela abre com **sobrancelha da seção** (azul, espaçada), **título grande com
-ponto azul final** ("Permissionários.") e **subtítulo**. É o `.rt-page-head`, que
+ponto azul final** ("Ambulantes.") e **subtítulo**. É o `.rt-page-head`, que
 cada tela já escrevia — o que mudou foi o peso: ele passou a ser o topo da tela.
 
 O ponto final é do CSS (`.rt-page-head h1::after`), e não digitado em cada tela:

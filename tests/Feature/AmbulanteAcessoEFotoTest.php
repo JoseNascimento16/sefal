@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
+use App\Http\Controllers\Retaguarda\CadastroAmbulanteController;
+use App\Models\Ambulante;
 use App\Models\AtividadeAmbulante;
-use App\Models\Permissionario;
 use App\Models\Setor;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -13,7 +13,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 /*
 |--------------------------------------------------------------------------
-| Permissionários — quem grava o quê, e por onde a foto sai
+| Ambulantes — quem grava o quê, e por onde a foto sai
 |--------------------------------------------------------------------------
 |
 | Duas coisas que o cadastro em si não responde, e que decidem se a quarentena
@@ -46,9 +46,9 @@ beforeEach(function () {
 });
 
 /** O endereço da tela (a lista, ou um registro). */
-function enderecoDoPermissionario(?int $id = null): string
+function enderecoDoAmbulante(?int $id = null): string
 {
-    return '/retaguarda/permissionarios'.($id === null ? '' : "/{$id}");
+    return '/retaguarda/ambulantes'.($id === null ? '' : "/{$id}");
 }
 
 /** Uma conta do setor informado, sem marca de administrador. */
@@ -71,17 +71,19 @@ function camposDoCadastro(int $atividadeId, array $extras = []): array
     return [
         'nome' => 'João da Silva',
         'atividade_id' => $atividadeId,
-        'situacao' => Permissionario::SITUACAO_REGULAR,
+        'situacao' => Ambulante::SITUACAO_REGULAR,
+        // Sem permissão da SEMOP: o caso comum, e a resposta é obrigatória.
+        'permissionario' => false,
         ...$extras,
     ];
 }
 
 /** Um cadastro esperando a conferência do gestor. */
-function cadastroEmQuarentena(int $atividadeId): Permissionario
+function cadastroEmQuarentena(int $atividadeId): Ambulante
 {
-    return Permissionario::factory()->create([
+    return Ambulante::factory()->create([
         'atividade_id' => $atividadeId,
-        'situacao' => Permissionario::SITUACAO_CAMPO,
+        'situacao' => Ambulante::SITUACAO_CAMPO,
     ]);
 }
 
@@ -99,14 +101,14 @@ test('o fiscal NAO tira da quarentena o cadastro que ele mesmo fez em rua', func
     $p = cadastroEmQuarentena($this->atividade->id);
 
     $this->actingAs($fiscal)->put(
-        enderecoDoPermissionario($p->id),
+        enderecoDoAmbulante($p->id),
         camposDoCadastro($this->atividade->id, [
             'nome' => $p->nome,
-            'situacao' => Permissionario::SITUACAO_REGULAR,
+            'situacao' => Ambulante::SITUACAO_REGULAR,
         ]),
     )->assertSessionHas('flash.erro');
 
-    expect($p->fresh()->situacao)->toBe(Permissionario::SITUACAO_CAMPO);
+    expect($p->fresh()->situacao)->toBe(Ambulante::SITUACAO_CAMPO);
 });
 
 test('o fiscal nao inclui nem exclui cadastro pela Retaguarda', function () {
@@ -114,20 +116,20 @@ test('o fiscal nao inclui nem exclui cadastro pela Retaguarda', function () {
     $p = cadastroEmQuarentena($this->atividade->id);
 
     $this->actingAs($fiscal)
-        ->post(enderecoDoPermissionario(), camposDoCadastro($this->atividade->id))
+        ->post(enderecoDoAmbulante(), camposDoCadastro($this->atividade->id))
         ->assertSessionHas('flash.erro');
 
     $this->actingAs($fiscal)
-        ->delete(enderecoDoPermissionario($p->id))
+        ->delete(enderecoDoAmbulante($p->id))
         ->assertSessionHas('flash.erro');
 
     // Um só: o que já existia. Nada foi criado nem apagado.
-    expect(Permissionario::count())->toBe(1);
+    expect(Ambulante::count())->toBe(1);
 });
 
 test('o fiscal ABRE a tela — barrar a consulta seria mandá-lo para a rua às cegas', function () {
     $this->actingAs(contaDoSetor('fiscal'))
-        ->get(enderecoDoPermissionario())
+        ->get(enderecoDoAmbulante())
         ->assertOk();
 });
 
@@ -136,20 +138,20 @@ test('o gestor continua fazendo tudo — a restricao e do fiscal, nao da tela', 
     $p = cadastroEmQuarentena($this->atividade->id);
 
     $this->actingAs($gestor)->put(
-        enderecoDoPermissionario($p->id),
+        enderecoDoAmbulante($p->id),
         camposDoCadastro($this->atividade->id, [
             'nome' => $p->nome,
-            'situacao' => Permissionario::SITUACAO_REGULAR,
+            'situacao' => Ambulante::SITUACAO_REGULAR,
         ]),
     )->assertSessionHasNoErrors();
 
-    expect($p->fresh()->situacao)->toBe(Permissionario::SITUACAO_REGULAR);
+    expect($p->fresh()->situacao)->toBe(Ambulante::SITUACAO_REGULAR);
 
     $this->actingAs($gestor)
-        ->post(enderecoDoPermissionario(), camposDoCadastro($this->atividade->id))
+        ->post(enderecoDoAmbulante(), camposDoCadastro($this->atividade->id))
         ->assertSessionHasNoErrors();
 
-    expect(Permissionario::count())->toBe(2);
+    expect(Ambulante::count())->toBe(2);
 });
 
 test('a tela recebe do servidor o que a pessoa pode fazer nela', function () {
@@ -161,7 +163,7 @@ test('a tela recebe do servidor o que a pessoa pode fazer nela', function () {
      * A resposta vem do MESMO serviço que as guardas consultam: uma segunda conta
      * feita no navegador acabaria discordando da que barra.
      */
-    $this->actingAs(contaDoSetor('fiscal'))->get(enderecoDoPermissionario())
+    $this->actingAs(contaDoSetor('fiscal'))->get(enderecoDoAmbulante())
         ->assertInertia(fn (Assert $page) => $page
             ->where('acoes.visivel', true)
             ->where('acoes.apenas_leitura', true)
@@ -169,7 +171,7 @@ test('a tela recebe do servidor o que a pessoa pode fazer nela', function () {
             ->where('acoes.incluir', false)
             ->where('acoes.excluir', false));
 
-    $this->actingAs(contaDoSetor('gestor'))->get(enderecoDoPermissionario())
+    $this->actingAs(contaDoSetor('gestor'))->get(enderecoDoAmbulante())
         ->assertInertia(fn (Assert $page) => $page
             ->where('acoes.habilitado', true)
             ->where('acoes.incluir', true)
@@ -185,7 +187,7 @@ test('fora do modo que barra, a tela oferece tudo — senao esconderia o que o s
      */
     config(['retaguarda.permissao_enforce' => 'log']);
 
-    $this->actingAs(contaDoSetor('fiscal'))->get(enderecoDoPermissionario())
+    $this->actingAs(contaDoSetor('fiscal'))->get(enderecoDoAmbulante())
         ->assertInertia(fn (Assert $page) => $page->where('acoes.incluir', true));
 });
 
@@ -200,13 +202,13 @@ test('tela fora do Modo Gerente nao declara restricao nenhuma', function () {
 test('a foto exige autenticacao e permissao da tela', function () {
     Storage::fake('local');
 
-    $p = Permissionario::factory()->create([
+    $p = Ambulante::factory()->create([
         'atividade_id' => $this->atividade->id,
-        'foto' => 'permissionarios/retrato.jpg',
+        'foto' => 'ambulantes/retrato.jpg',
     ]);
-    Storage::disk('local')->put('permissionarios/retrato.jpg', 'conteudo');
+    Storage::disk('local')->put('ambulantes/retrato.jpg', 'conteudo');
 
-    $endereco = enderecoDoPermissionario($p->id).'/foto';
+    $endereco = enderecoDoAmbulante($p->id).'/foto';
 
     // Visitante: quem responde é a guarda de autenticação.
     $this->get($endereco)->assertRedirect(route('login'));
@@ -225,35 +227,35 @@ test('a foto exige autenticacao e permissao da tela', function () {
 test('cadastro sem foto e arquivo sumido respondem 404, nao imagem quebrada', function () {
     Storage::fake('local');
 
-    $semFoto = Permissionario::factory()->create([
+    $semFoto = Ambulante::factory()->create([
         'atividade_id' => $this->atividade->id,
         'foto' => null,
     ]);
 
     // A coluna aponta para um arquivo que não está mais no disco.
-    $sumida = Permissionario::factory()->create([
+    $sumida = Ambulante::factory()->create([
         'atividade_id' => $this->atividade->id,
-        'foto' => 'permissionarios/nao-esta-la.jpg',
+        'foto' => 'ambulantes/nao-esta-la.jpg',
     ]);
 
     $this->actingAs($this->admin)
-        ->get(enderecoDoPermissionario($semFoto->id).'/foto')->assertNotFound();
+        ->get(enderecoDoAmbulante($semFoto->id).'/foto')->assertNotFound();
 
     $this->actingAs($this->admin)
-        ->get(enderecoDoPermissionario($sumida->id).'/foto')->assertNotFound();
+        ->get(enderecoDoAmbulante($sumida->id).'/foto')->assertNotFound();
 });
 
 test('a grade aponta a foto para a rota, e nunca para o disco publico', function () {
     Storage::fake('local');
 
-    $p = Permissionario::factory()->create([
+    $p = Ambulante::factory()->create([
         'atividade_id' => $this->atividade->id,
-        'foto' => 'permissionarios/retrato.jpg',
+        'foto' => 'ambulantes/retrato.jpg',
     ]);
 
-    $this->actingAs($this->admin)->get(enderecoDoPermissionario())
+    $this->actingAs($this->admin)->get(enderecoDoAmbulante())
         ->assertInertia(fn (Assert $page) => $page
-            ->where('permissionarios.0.foto_url', "/retaguarda/permissionarios/{$p->id}/foto"));
+            ->where('ambulantes.0.foto_url', "/retaguarda/ambulantes/{$p->id}/foto"));
 });
 
 test('gravacao que falha na INCLUSAO nao deixa a foto orfa no disco', function () {
@@ -268,7 +270,7 @@ test('gravacao que falha na INCLUSAO nao deixa a foto orfa no disco', function (
      */
     Storage::fake('local');
 
-    $ocupado = Permissionario::factory()->create(['atividade_id' => $this->atividade->id]);
+    $ocupado = Ambulante::factory()->create(['atividade_id' => $this->atividade->id]);
 
     /*
      * O contador volta a apontar para o código que este cadastro JÁ tem, então a
@@ -280,18 +282,18 @@ test('gravacao que falha na INCLUSAO nao deixa a foto orfa no disco', function (
      * queria reservar para a colisão.
      */
     DB::table('protocolo_contadores')
-        ->where('prefixo', 'PER')
+        ->where('prefixo', 'AMB')
         ->update(['proximo' => (int) substr($ocupado->codigo, -3)]);
 
     expect(fn () => $this->withoutExceptionHandling()->actingAs($this->admin)->post(
-        enderecoDoPermissionario(),
+        enderecoDoAmbulante(),
         camposDoCadastro($this->atividade->id, [
             'foto' => UploadedFile::fake()->image('retrato.jpg'),
         ]),
     ))->toThrow(QueryException::class);
 
     // Nenhum arquivo sobrou: a pasta está como estava antes da tentativa.
-    expect(Storage::disk('local')->allFiles('permissionarios'))->toBe([]);
+    expect(Storage::disk('local')->allFiles('ambulantes'))->toBe([]);
 });
 
 test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mora', function () {
@@ -311,7 +313,7 @@ test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mor
     $absoluto = rtrim(str_replace(
         '\\',
         '/',
-        Storage::disk(CadastroPermissionarioController::DISCO_DAS_FOTOS)->path(''),
+        Storage::disk(CadastroAmbulanteController::DISCO_DAS_FOTOS)->path(''),
     ), '/');
 
     expect($absoluto)->toStartWith($raiz.'/');
@@ -362,19 +364,19 @@ test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mor
 
 test('razao social com virgula e E comercial e aceita — o campo aceita CNPJ', function () {
     /*
-     * O documento aceita CPF **ou CNPJ**, então existe permissionário pessoa
+     * O documento aceita CPF **ou CNPJ**, então existe ambulante pessoa
      * jurídica. Recusar a pontuação de razão social obrigava quem cadastrava a
      * alterá-la para o cadastro passar — e aí o nome deixava de bater com o
      * documento que ele representa.
      */
     $this->actingAs($this->admin)->post(
-        enderecoDoPermissionario(),
+        enderecoDoAmbulante(),
         camposDoCadastro($this->atividade->id, [
             'nome' => 'Silva & Filhos Comercio de Alimentos, ME',
             'documento' => '11.222.333/0001-81',
         ]),
     )->assertSessionHasNoErrors();
 
-    expect(Permissionario::firstOrFail()->nome)
+    expect(Ambulante::firstOrFail()->nome)
         ->toBe('Silva & Filhos Comercio de Alimentos, ME');
 });

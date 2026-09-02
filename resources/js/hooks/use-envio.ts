@@ -20,7 +20,7 @@ type Opts = PostArgs[2];
  *
  * @example
  *   const { enviando, ocupado, enviar } = useEnvio();
- *   enviar('validar', url, { permissionario_id }, { onSuccess: fechar });
+ *   enviar('validar', url, { ambulante_id }, { onSuccess: fechar });
  *   <BotaoAcao carregando={enviando === 'validar'} ocupado={ocupado} onClick={validar}>Validar</BotaoAcao>
  */
 export function useEnvio() {

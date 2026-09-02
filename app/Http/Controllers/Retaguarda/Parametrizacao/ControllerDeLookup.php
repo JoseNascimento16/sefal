@@ -83,7 +83,7 @@ abstract class ControllerDeLookup extends Controller
      *
      * Hoje nada aponta para estas listas, então não há vínculo a conferir. Quando
      * houver — a primeira será a atividade do ambulante, apontada pelo cadastro
-     * de permissionário —, a tela dona sobrescreve este método, recusa com
+     * de ambulante —, a tela dona sobrescreve este método, recusa com
      * `back()->with('flash.erro', …)` (a recusa tem de DIZER o motivo, na tela de
      * onde a pessoa clicou) e delega o resto com `parent::destroy()`. Excluir um
      * valor em uso deixaria o histórico apontando para o nada; o certo, aí, é

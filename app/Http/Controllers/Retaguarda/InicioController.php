@@ -16,7 +16,7 @@ use Inertia\Response;
  *
  * Ela existia como `Route::inertia`, sem servidor nenhum por trás, e os atalhos
  * eram quatro cartões escritos na própria tela. O resultado foi o defeito que
- * essa forma sempre produz: o cartão de Permissionários continuou dizendo "Em
+ * essa forma sempre produz: o cartão de Ambulantes continuou dizendo "Em
  * construção" depois de a tela ficar pronta, e a primeira coisa que o usuário
  * enxergava desmentia a entrega principal — enquanto o menu, ao lado, abria a
  * tela normalmente.
@@ -57,11 +57,11 @@ class InicioController extends Controller
             'slug' => null,
         ],
         [
-            'chave' => 'permissionarios',
-            'titulo' => 'Permissionários',
+            'chave' => 'ambulantes',
+            'titulo' => 'Ambulantes',
             'descricao' => 'Cadastro, validação do que veio da rua e prontuário.',
-            'rota' => 'retaguarda.permissionarios.index',
-            'slug' => 'permissionarios',
+            'rota' => 'retaguarda.ambulantes.index',
+            'slug' => 'ambulantes',
         ],
         /*
          * As quatro do caminho da fiscalização. As duas de MAPA já existem

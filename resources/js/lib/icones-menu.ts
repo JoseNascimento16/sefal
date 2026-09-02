@@ -31,7 +31,7 @@ import {
 const ICONES: Record<string, LucideIcon> = {
     inicio: LayoutGrid,
     perfil: UserRound,
-    permissionarios: Store,
+    ambulantes: Store,
     fiscalizacoes: ClipboardCheck,
     // A caixa de entrada é a bandeja onde o papel de fora cai: e-Salvador, 156,
     // pedido de licença e ofício chegam ali antes de virar trabalho de rua.

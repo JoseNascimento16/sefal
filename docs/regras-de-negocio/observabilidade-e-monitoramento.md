@@ -185,7 +185,7 @@ Inativar o último registro de uma lista obrigatória não avisa ninguém — e 
 exatamente a alteração destrutiva silenciosa que esta tela existe para pegar.
 Duas entram, com **severidades diferentes de propósito** (RN-16):
 
-- **Atividade do ambulante** → `falha`. O cadastro de permissionário exige a
+- **Atividade do ambulante** → `falha`. O cadastro de ambulante exige a
   atividade autorizada e recusa a inativada: sem nenhuma em uso, ninguém é
   cadastrado — e é do cadastro que a fiscalização parte.
 - **Tipo de infração** → `atenção`. Nada está parado hoje (o enquadramento em rua

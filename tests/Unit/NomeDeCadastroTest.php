@@ -41,7 +41,7 @@ test('nome de gente passa — acento, apostrofo, hifen, ponto e numero', functio
 
 test('razao social passa — o campo que usa esta regra aceita CNPJ', function () {
     /*
-     * Pessoa jurídica também é permissionário, e razão social usa vírgula e E
+     * Pessoa jurídica também é ambulante, e razão social usa vírgula e E
      * comercial o tempo todo. Recusá-las obrigava a alterar a razão social para
      * o cadastro passar — o nome deixava de bater com o documento.
      *

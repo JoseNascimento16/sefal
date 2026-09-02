@@ -18,7 +18,7 @@ import type { BreadcrumbItem } from '@/types';
  * A tela recebe a trilha de navegação por propriedade de layout — desenhada só
  * quando tem mais de um nível, porque com um nível ela repetiria o título:
  *
- *   MinhaTela.layout = { breadcrumbs: [{ title: 'Permissionários', href: url }] };
+ *   MinhaTela.layout = { breadcrumbs: [{ title: 'Ambulantes', href: url }] };
  */
 
 /** Onde a preferência de menu retraído fica guardada, por navegador. */

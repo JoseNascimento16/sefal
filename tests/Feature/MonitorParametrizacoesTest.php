@@ -133,7 +133,7 @@ test('o check do armazenamento nao escreve nada no load; a escrita real e a veri
 test('lei: a atividade do ambulante FLIPA — sem nenhuma em uso, o cadastro para e a tela acusa', function () {
     /*
      * O caso que o monitoramento existe para pegar: inativar a última atividade
-     * não avisa ninguém, e dias depois o cadastro de permissionário simplesmente
+     * não avisa ninguém, e dias depois o cadastro de ambulante simplesmente
      * não salva — com uma recusa de campo que ninguém liga a uma decisão tomada
      * em outra tela.
      *

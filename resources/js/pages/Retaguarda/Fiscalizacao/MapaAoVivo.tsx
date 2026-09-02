@@ -23,7 +23,7 @@ import { contar } from '@/lib/plural';
 import { cn } from '@/lib/utils';
 import { index as rotaMapa } from '@/routes/retaguarda/mapa';
 import { index as rotaOperacoes } from '@/routes/retaguarda/operacoes';
-import { index as rotaPermissionarios } from '@/routes/retaguarda/permissionarios';
+import { index as rotaAmbulantes } from '@/routes/retaguarda/ambulantes';
 
 /**
  * Mapa ao Vivo — a cidade agora, para o GESTOR.
@@ -570,7 +570,7 @@ export default function MapaAoVivo({
 /**
  * O cartão de vidro do ponto escolhido — resumo e as ações que dali saem.
  *
- * As ações LEVAM a outras telas (o prontuário do permissionário, o encaminhamento
+ * As ações LEVAM a outras telas (o prontuário do ambulante, o encaminhamento
  * de fiscalização); nenhuma delas grava aqui. Mapa é leitura: quem grava
  * fiscalização é o aplicativo, em rua.
  */
@@ -736,7 +736,7 @@ function CartaoDeDetalhe({
             <button
                 type="button"
                 className="rt-vidro-acao"
-                onClick={() => router.visit(rotaPermissionarios())}
+                onClick={() => router.visit(rotaAmbulantes())}
             >
                 Ver prontuário
                 <ArrowRight size={15} aria-hidden />
