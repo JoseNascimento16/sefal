@@ -62,7 +62,7 @@ import {
  *     quem, quando e por quê.
  *
  * Três vistas, em abas: a **caixa** (a grade, com busca e exportação), o
- * **registro** do papel recebido, e o **detalhe** de uma demanda com o trâmite
+ * **cadastro** da demanda, e o **detalhe** de uma demanda com o trâmite
  * inteiro.
  *
  * ⚠️ A busca é o filtro ÚNICO — não há chip de filtro paralelo. Os números do
@@ -455,7 +455,7 @@ export default function CaixaDeEntrada({
                             onClick={abrirRegistro}
                         >
                             <Plus size={16} aria-hidden />
-                            <span className="aba-rotulo">Registrar papel recebido</span>
+                            <span className="aba-rotulo">Cadastrar Demanda</span>
                         </button>
                     )}
 
@@ -511,7 +511,7 @@ export default function CaixaDeEntrada({
                                     ocupado={ocupado}
                                     onClick={abrirRegistro}
                                 >
-                                    Registrar papel recebido
+                                    Cadastrar Demanda
                                 </BotaoAcao>
                             )}
 
@@ -610,7 +610,7 @@ export default function CaixaDeEntrada({
                                         <tr>
                                             <td colSpan={9} className="tabela-vazia">
                                                 {demandas.length === 0
-                                                    ? 'Nenhuma demanda na caixa. Use "Registrar papel recebido" para lançar o que chegou.'
+                                                    ? 'Nenhuma demanda na caixa. Use "Cadastrar Demanda" para lançar o que chegou.'
                                                     : 'Nenhuma demanda casa com a busca. Limpe o campo para ver a caixa inteira.'}
                                             </td>
                                         </tr>
