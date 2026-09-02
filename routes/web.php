@@ -7,6 +7,8 @@ use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\InicioController;
 use App\Http\Controllers\Retaguarda\LogsController;
+use App\Http\Controllers\Retaguarda\MapaAoVivoController;
+use App\Http\Controllers\Retaguarda\MapaDeCalorController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
 use App\Http\Controllers\Retaguarda\MonitoramentoParametrizacoesController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\AtividadesDoAmbulanteController;
@@ -50,8 +52,25 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /*
+     * As duas telas de MAPA — PROTÓTIPO, no padrão imersivo (RN-07).
+     *
+     * Só GET: mapa é leitura. Quem grava fiscalização é o aplicativo do fiscal,
+     * em rua; quem cria operação é o Cadastro de Operação, para onde a
+     * recomendação do mapa de calor leva.
+     *
+     * Elas TOMARAM o slug e o nome de rota que o catálogo de telas em preparação
+     * lhes emprestava (`retaguarda.mapa.index`, `retaguarda.mapa-de-calor.index`)
+     * — é a troca prevista pela RN-09, e por isso o menu não foi tocado.
+     */
+    Route::get('retaguarda/mapa', [MapaAoVivoController::class, 'index'])
+        ->name('retaguarda.mapa.index');
+
+    Route::get('retaguarda/mapa-de-calor', [MapaDeCalorController::class, 'index'])
+        ->name('retaguarda.mapa-de-calor.index');
+
+    /*
      * As telas do caminho da fiscalização que ainda não existem — Cadastro de
-     * Operação, Fiscalizações, Mapa ao Vivo e Mapa de Calor.
+     * Operação e Fiscalizações.
      *
      * Elas abrem e dizem, em uma linha, o que vão ser e em que fase chegam (ver o
      * cabeçalho do controller). O laço nasce do catálogo do próprio controller, e

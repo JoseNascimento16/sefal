@@ -64,14 +64,15 @@ class InicioController extends Controller
             'slug' => 'permissionarios',
         ],
         /*
-         * As quatro do caminho da fiscalização. Elas TÊM endereço — a tela abre e
-         * diz o que vai ser (ver `TelasEmPreparacaoController`) —, então deixam de
-         * ser cartão esmaecido sem link: a espera passou a morar dentro da tela, que
-         * é onde ela pode ser explicada.
+         * As quatro do caminho da fiscalização. As duas de MAPA já existem
+         * (protótipo, 02/09/2026); Cadastro de Operação e Fiscalizações têm
+         * endereço e uma tela que abre dizendo o que vão ser (ver
+         * `TelasEmPreparacaoController`) — então nenhuma das quatro é cartão
+         * esmaecido sem link: a espera, onde ainda há, mora dentro da tela, que é
+         * onde ela pode ser explicada.
          *
-         * O `slug` está declarado porque agora existe permissão de verdade para
-         * cada uma: quem não a tem não vê o atalho, em vez de ser convidado para
-         * uma recusa.
+         * O `slug` está declarado porque existe permissão de verdade para cada uma:
+         * quem não a tem não vê o atalho, em vez de ser convidado para uma recusa.
          */
         [
             'chave' => 'operacoes',

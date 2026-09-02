@@ -145,12 +145,16 @@ return [
         ],
 
         /*
-         * AS QUATRO TELAS EM PREPARAÇÃO — Fases 2 e 3.
+         * AS DUAS TELAS EM PREPARAÇÃO — Fase 2.
          *
          * Entram no mapa porque estão ENTREGUES como stub: têm endereço, permissão
          * e uma tela que abre dizendo o que vai ser. O mapa é de funcionalidade
          * entregue, e o que existe pela metade é justamente o que precisa aparecer
          * com o estado escrito — senão passa por pronto na leitura de cima.
+         *
+         * Eram QUATRO: o Mapa ao Vivo e o Mapa de Calor saíram desta vizinhança em
+         * 02/09/2026, quando passaram a existir como protótipo — as linhas deles
+         * estão junto das outras telas de protótipo, mais abaixo.
          */
         [
             'modulo' => 'Fiscalização',
@@ -178,33 +182,6 @@ return [
                 .'na rua: consulta por permissionário, área e período, com foto, ponto de GPS, o '
                 .'documento emitido na hora e o prazo de retorno de quem foi notificado. Nada se '
                 .'perde à espera dela — o aplicativo guarda o registro.',
-        ],
-
-        [
-            'modulo' => 'Fiscalização',
-            'tela' => 'Mapa ao Vivo',
-            'origem' => 'Retaguarda',
-            'rota' => 'retaguarda.mapa.index',
-            'breadcrumb' => 'Fiscalização › Mapa ao Vivo',
-            'hu_status' => 'nao',
-            'hus' => [],
-            'nota' => $origemStub.' Stub aguardando a Fase 3. Vai mostrar a cidade agora: fiscais em campo com o '
-                .'último ponto conhecido, o que foi registrado nas últimas horas e as áreas de '
-                .'atuação desenhadas sobre o mapa. O desenho da tela de mapa já está decidido '
-                .'(padrão imersivo, em docs/regras-de-negocio/design-retaguarda.md).',
-        ],
-
-        [
-            'modulo' => 'Fiscalização',
-            'tela' => 'Mapa de Calor',
-            'origem' => 'Retaguarda',
-            'rota' => 'retaguarda.mapa-de-calor.index',
-            'breadcrumb' => 'Fiscalização › Mapa de Calor',
-            'hu_status' => 'nao',
-            'hus' => [],
-            'nota' => $origemStub.' Stub aguardando a Fase 3. Vai mostrar onde a ocorrência se concentra, por '
-                .'região e por período, para a operação ir aonde precisa — inclusive o foco do dia '
-                .'sugerido a partir dos últimos trinta dias.',
         ],
 
         /*
@@ -350,6 +327,52 @@ return [
                 .'1:1, a Caixa de Entrada sugere e o administrativo confirma. ⚠️ É PROTÓTIPO: a lista de '
                 .'fiscais de cada equipe é fictícia (o documento nomeia só o encarregado), não há tabela '
                 .'nem gravação, e o que a pessoa mexe vive na sessão dela.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Mapa ao Vivo',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.mapa.index',
+            'breadcrumb' => 'Fiscalização › Mapa ao Vivo',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemPrototipo.' Deixou de ser stub em 02/09/2026. A cidade agora, para o GESTOR — '
+                .'não é a tela do fiscal: a pergunta que ela responde é "para onde eu mando gente hoje?". '
+                .'Primeira tela no padrão IMERSIVO (RN-07 do desenho da Retaguarda): o mapa é o fundo, '
+                .'sangrando de borda a borda, e a leitura flutua sobre a cidade em painéis de vidro; o menu '
+                .'permanece. Mostra os pontos conhecidos por situação, o que entrou no período, quem está na '
+                .'rua e os RETORNOS VENCIDOS, que pulsam com o "há N dias" colado no pino. Filtros do gestor '
+                .'por equipe, situação e período — e filtrar pela equipe Noturna seleciona por TURNO, não por '
+                .'bairro, porque é esse o recorte dela. Os painéis são agregações da mesma lista que o mapa '
+                .'desenha (RN-06) e o recorte vai dito em palavras, para ninguém ler o número da equipe como '
+                .'se fosse o da cidade. ⚠️ É PROTÓTIPO: pessoas, horários e situações são inventados; as '
+                .'coordenadas de Salvador e a área/equipe de cada bairro, não (a derivação sai do mesmo '
+                .'cadastro de Áreas e Equipes). Não há tempo real nem tabela: a tela declara o instante que '
+                .'mostra. Pendências que isto abre: de onde virá a posição do fiscal em campo e com que '
+                .'frequência, e qual é o prazo oficial de retorno de uma notificação.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Mapa de Calor',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.mapa-de-calor.index',
+            'breadcrumb' => 'Fiscalização › Mapa de Calor',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemPrototipo.' Deixou de ser stub em 02/09/2026. O registro de campo virando decisão '
+                .'de operação, no mesmo padrão IMERSIVO (RN-07). A tela abre com a LEITURA EM UMA FRASE '
+                .'("o Centro Histórico concentra 42% das ocorrências dos últimos 30 dias — 3,1× a média da '
+                .'cidade"), porque quem tem trinta segundos não interpreta gradiente; a mancha serve para '
+                .'conferir e achar o recorte. Janela de 7, 30 ou 90 dias e recorte por equipe, com ranking '
+                .'das regiões trazendo ocorrências, fatia do período, a VARIAÇÃO contra o período anterior de '
+                .'igual tamanho e a equipe responsável. A recomendação de operação diz o MOTIVO e não aponta '
+                .'sempre o primeiro do ranking: bairro em subida forte na segunda posição costuma ser a '
+                .'melhor aposta, porque o líder já tem rotina. O ranking exporta em PDF/XLSX/DOCX pelo ponto '
+                .'único, com o recorte impresso. ⚠️ É PROTÓTIPO: a incidência é inventada (coordenadas e '
+                .'estrutura de equipes, não), não há tabela, e criar operação é da tela de Cadastro de '
+                .'Operação — esta apenas leva até lá.',
         ],
 
         /*

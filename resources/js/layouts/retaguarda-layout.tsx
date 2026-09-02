@@ -33,9 +33,21 @@ const LARGURA_DA_DOCA = '(max-width: 1100px)';
 
 export default function RetaguardaLayout({
     breadcrumbs = [],
+    imersivo = false,
     children,
 }: {
     breadcrumbs?: BreadcrumbItem[];
+    /**
+     * A tela usa o corpo INTEIRO, sem o respiro do miolo — é o padrão imersivo
+     * das telas de mapa (RN-07): o mapa é o fundo, sangrando de borda a borda, e
+     * a leitura flutua sobre ele em painéis de vidro.
+     *
+     * O menu PERMANECE: o imersivo é sobre o conteúdo, não sobre a casca. O que
+     * a marca faz é tirar o preenchimento do miolo, travar a rolagem da página
+     * (quem rola é o mapa) e clarear o cluster de tema/avisos, que ficaria
+     * invisível em texto escuro sobre a cidade à noite.
+     */
+    imersivo?: boolean;
     children: ReactNode;
 }) {
     /*
@@ -146,7 +158,13 @@ export default function RetaguardaLayout({
      */
 
     return (
-        <div className={cn('rt-shell', emDoca && 'rt-shell-doca')}>
+        <div
+            className={cn(
+                'rt-shell',
+                emDoca && 'rt-shell-doca',
+                imersivo && 'rt-shell-imersivo',
+            )}
+        >
             <Sidebar
                 emDoca={emDoca}
                 /* Quando a largura força a doca, alternar não tem para onde ir: o
