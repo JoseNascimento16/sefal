@@ -4,6 +4,7 @@ use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
 use App\Http\Controllers\Retaguarda\CadastroAmbulanteController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
+use App\Http\Controllers\Retaguarda\DenunciasController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\InicioController;
 use App\Http\Controllers\Retaguarda\LogsController;
@@ -164,7 +165,7 @@ Route::middleware(['auth'])->group(function () {
     /*
      * Caixa de Entrada do Administrativo — PROTÓTIPO.
      *
-     * A porta por onde a demanda de fora entra: e-Salvador, Fala Salvador 156,
+     * A porta por onde a demanda de fora entra: e-Salvador, Fala Salvador,
      * pedido de nova licença e ofício chegam em PAPEL, e é aqui que o
      * administrativo digita, decide e encaminha à equipe da área do bairro.
      *
@@ -185,6 +186,38 @@ Route::middleware(['auth'])->group(function () {
             ->name('devolver')->whereNumber('demanda');
         // Só existe porque é protótipo: devolve a caixa ao estado de demonstração.
         Route::post('reiniciar', [CaixaDeEntradaController::class, 'reiniciar'])->name('reiniciar');
+    });
+
+    /*
+     * Denúncias das ouvidorias — PROTÓTIPO.
+     *
+     * Duas telas, uma por canal (e-Salvador e Fala Salvador), e as mutações do
+     * fluxo de duas etapas: a triagem encaminha à ÁREA ou devolve/arquiva; o
+     * gestor da área direciona à EQUIPE ou anexa a uma OPERAÇÃO.
+     *
+     * As duas telas dividem o primeiro trecho do caminho (`denuncias`), e é
+     * dele que as guardas deduzem a permissão: a concessão é UMA, para o
+     * módulo, que é o que "quem cuida de denúncia" quer dizer. Separar a
+     * permissão do e-Salvador da do Fala Salvador seria uma decisão que ninguém
+     * precisa tomar e uma linha a mais na matriz.
+     *
+     * Não há rota de INCLUSÃO, e isso é deliberado: a denúncia entra por
+     * integração, ninguém a digita aqui. Ver o cabeçalho do controller.
+     *
+     * As mutações vão no corpo do POST porque carregam lista de identificadores
+     * e texto livre de justificativa — em query string o WAF da Prefeitura
+     * barraria, e a falha voltaria disfarçada de erro de CORS.
+     */
+    Route::prefix('retaguarda/denuncias')->name('retaguarda.denuncias.')->group(function () {
+        Route::get('e-salvador', [DenunciasController::class, 'eSalvador'])->name('e-salvador.index');
+        Route::get('fala-salvador', [DenunciasController::class, 'falaSalvador'])->name('fala-salvador.index');
+
+        Route::post('encaminhar', [DenunciasController::class, 'encaminhar'])->name('encaminhar');
+        Route::post('devolver', [DenunciasController::class, 'devolver'])->name('devolver');
+        Route::post('direcionar', [DenunciasController::class, 'direcionar'])->name('direcionar');
+        Route::post('operacao', [DenunciasController::class, 'operacao'])->name('operacao');
+        // Só existe porque é protótipo: devolve o módulo ao estado da demonstração.
+        Route::post('reiniciar', [DenunciasController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*

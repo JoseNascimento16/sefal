@@ -42,7 +42,7 @@ return [
      */
     'origens' => [
         'e-Salvador',
-        'Fala Salvador 156',
+        'Fala Salvador',
         'Nova licença',
         'Ofício',
     ],
@@ -96,7 +96,7 @@ return [
         [
             'id' => 1,
             'protocolo' => 'CXE-0001',
-            'origem' => 'Fala Salvador 156',
+            'origem' => 'Fala Salvador',
             'documento_origem' => '156-2026-884120',
             'dias_atras' => 1,
             'prazo_em_dias' => 9,
@@ -188,7 +188,7 @@ return [
         [
             'id' => 5,
             'protocolo' => 'CXE-0005',
-            'origem' => 'Fala Salvador 156',
+            'origem' => 'Fala Salvador',
             'documento_origem' => '156-2026-880913',
             'dias_atras' => 9,
             'prazo_em_dias' => 1,
@@ -282,7 +282,7 @@ return [
         [
             'id' => 9,
             'protocolo' => 'CXE-0009',
-            'origem' => 'Fala Salvador 156',
+            'origem' => 'Fala Salvador',
             'documento_origem' => '156-2026-885201',
             'dias_atras' => 0,
             'prazo_em_dias' => 10,

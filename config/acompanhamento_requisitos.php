@@ -65,6 +65,40 @@ $origemStub = 'Sem requisito escrito — origem: decisão do dono 2026-08-27 (o 
 $origemPrototipo = 'Sem requisito escrito — origem: reunião com o cliente 2026-09-02 '
     .'(docs/cenario-2026-09-02-reuniao-cliente.md) + documentos do cliente. Entregue como PROTÓTIPO.';
 
+/*
+ * A origem do módulo de Denúncias, e o fluxo que as DUAS telas dele compartilham.
+ *
+ * O fluxo fica numa variável separada porque é literalmente o mesmo nas duas
+ * linhas: repetido à mão, um dia só uma delas ganharia a regra nova, e o
+ * acompanhamento passaria a descrever dois módulos onde existe um.
+ */
+$origemDenuncias = 'Sem requisito escrito — origem: pedido do dono 2026-09-02, a partir do cenário '
+    .'da reunião com o cliente (docs/cenario-2026-09-02-reuniao-cliente.md). Entregue como PROTÓTIPO.';
+
+$fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o setor ADMINISTRATIVO '
+    .'analisa a denúncia recebida e a encaminha à ÁREA do bairro, com a área sugerida pela estrutura '
+    .'Área › Equipe e editável na própria linha (bairro pertencente a duas áreas tem duas respostas '
+    .'certas), vendo o NOME DO GESTOR que vai receber, ou a retira do fluxo devolvendo ao canal / '
+    .'arquivando, com motivo de lista MAIS justificativa por escrito — denúncia improcedente ou '
+    .'duplicada não deve chegar ao gestor; (2) DIRECIONAMENTO — o gestor DA ÁREA escolhe entre mandar à '
+    .'EQUIPE (a da área, ou outra, e aí a justificativa passa a ser obrigatória) ou incluir numa '
+    .'OPERAÇÃO já planejada, podendo abrir uma nova dali. As duas etapas operam em LOTE e uma a uma, e '
+    .'a etapa de quem entrou vem do SETOR (administrativo tria, gestor direciona, quem administra o '
+    .'sistema exerce as duas), com selo visível na tela dizendo a etapa E a área. O GESTOR É DE UMA '
+    .'ÁREA: a listagem dele traz só o que foi encaminhado à área que ele responde, e a ação sobre '
+    .'denúncia de outra área é recusada no servidor com o motivo escrito — esconder sem barrar deixaria '
+    .'a fronteira valendo só para quem não sabe montar a requisição. Estados: Recebida › Encaminhada à '
+    .'área › Direcionada à equipe | Em operação › Em campo › Concluída, com Devolvida e Arquivada como '
+    .'saídas da triagem; cada mudança acrescenta linha ao trâmite (quem, quando, por quê). A permissão '
+    .'é UMA para o módulo (as duas telas dividem o caminho /retaguarda/denuncias e aparecem no menu '
+    .'como uma PASTA que expande), concedida a administrativo, administrador e gestor — o fiscal não '
+    .'entra, senão escolheria o próprio trabalho. ⚠️ É PROTÓTIPO: a integração NÃO existe, não há tabela '
+    .'nem gravação — as denúncias de partida vêm de config/prototipo_denuncias.php, o vínculo gestor↔área '
+    .'vem de config/prototipo_estrutura.php e as decisões vivem na sessão de quem navega. Pendências que '
+    .'isto abre: contrato das APIs do e-Salvador e do 156, prazo real de cada canal, canal de devolução, '
+    .'a MODELAGEM DEFINITIVA do vínculo gestor↔área (em produção é tabela usuário↔área, não arquivo de '
+    .'configuração) e a numeração definitiva do protocolo.';
+
 return [
 
     'telas' => [
@@ -307,10 +341,46 @@ return [
                 .'respostas certas. Duas saídas: registrar e encaminhar (vira trabalho dirigido da '
                 .'equipe) ou registrar e devolver/arquivar, com motivo de lista MAIS justificativa por '
                 .'escrito, porque é ato administrativo. Cada decisão acrescenta uma linha ao trâmite da '
-                .'demanda (quem, quando, o quê). ⚠️ É PROTÓTIPO: não há tabela nem gravação — as '
+                .'demanda (quem, quando, o quê). A tela é do setor ADMINISTRATIVO (concessão '
+                .'acrescentada em 02/09/2026, quando o setor nasceu): registrar o que chega em papel é '
+                .'função dele; o gestor acompanha e o administrador cobre. ⚠️ É PROTÓTIPO: não há '
+                .'tabela nem gravação — as '
                 .'demandas de partida vêm de config/prototipo_caixa_entrada.php e as decisões vivem na '
                 .'sessão de quem navega. Pendências que isto abre: prazo de cada canal, canal de retorno '
                 .'ao e-Salvador/156 e a numeração definitiva do protocolo.',
+        ],
+
+        [
+            'modulo' => 'Denúncias',
+            'tela' => 'Denúncias do e-Salvador',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.denuncias.e-salvador.index',
+            'breadcrumb' => 'Denúncias › e-Salvador',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemDenuncias.' As denúncias que o portal e-Salvador (Ouvidoria Geral do '
+                .'Município) entrega ao SEFAL por INTEGRAÇÃO — ninguém as digita: a tela não tem botão de '
+                .'cadastrar, e cada denúncia carrega o número que o canal lhe deu e a hora em que a '
+                .'integração a entregou. O que chega em papel ao balcão continua sendo assunto da Caixa '
+                .'de Entrada. Como o cidadão abre a denúncia autenticado, o requerente vem SEMPRE '
+                .'identificado (nome, CPF, e-mail, telefone), o endereço vem estruturado e ele pode '
+                .'anexar foto e documento. '.$fluxoDenuncias,
+        ],
+
+        [
+            'modulo' => 'Denúncias',
+            'tela' => 'Denúncias do Fala Salvador',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+            'breadcrumb' => 'Denúncias › Fala Salvador',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemDenuncias.' As denúncias que a central telefônica Fala Salvador (Disque '
+                .'156) entrega ao SEFAL por INTEGRAÇÃO — mesma mecânica da tela do e-Salvador, com o que '
+                .'o telefone muda no dado: a denúncia pode ser ANÔNIMA, o relato é a transcrição do que '
+                .'o atendente ouviu (às vezes sem número nem ponto de referência, e a tela marca isso '
+                .'porque é o que decide se dá para mandar equipe), a categoria é a que o atendente '
+                .'escolheu, e não há anexo. '.$fluxoDenuncias,
         ],
 
         [

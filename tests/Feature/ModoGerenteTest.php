@@ -329,9 +329,12 @@ test('o administrador recebe a matriz completa para o painel', function () {
 
     $admin = User::factory()->create(['admin' => true]);
 
+    // A matriz oferece TODO setor do catálogo: se um deles não chegasse ao painel,
+    // ninguém conseguiria conceder nada a quem o exerce — e a conta sai da config,
+    // que é a fonte única, para o catálogo crescer sem quebrar um teste correto.
     $this->actingAs($admin)->getJson('/retaguarda/modo-gerente')
         ->assertOk()
-        ->assertJsonCount(3, 'setores')
+        ->assertJsonCount(count((array) config('retaguarda.setores')), 'setores')
         ->assertJsonStructure(['setores', 'funcionalidades', 'matriz', 'acoes', 'historico'])
         ->assertJsonPath('enforce', 'block');
 });
@@ -927,15 +930,53 @@ test('todo item de menu restrito a setor declara slug — senao escapa da matriz
      */
     $escapando = [];
 
-    foreach (config('retaguarda_menu.secoes', []) as $secao) {
-        foreach ($secao['itens'] ?? [] as $item) {
-            if (($item['setores'] ?? []) !== [] && ($item['slug'] ?? null) === null) {
-                $escapando[] = $item['rotulo'];
-            }
+    // Percorre pelo caminhador do MENU, que desce nas pastas (`filhos`): o item de
+    // dentro de uma pasta é tela como qualquer outra, e varrer só o primeiro nível
+    // deixaria justamente as telas agrupadas fora da lei, sem nada acusar.
+    foreach (CatalogoFuncionalidades::folhasDoMenu() as $folha) {
+        $item = $folha['item'];
+
+        if (($item['setores'] ?? []) !== [] && ($item['slug'] ?? null) === null) {
+            $escapando[] = $item['rotulo'];
         }
     }
 
     expect($escapando)->toBe([]);
+});
+
+test('pasta de menu nao decide acesso — quem decide sao os filhos', function () {
+    /*
+     * Teste-LEI sobre a configuração real.
+     *
+     * Uma pasta agrupa; ela não tem tela. Se ela declarasse `slug` ou `setores`, a
+     * MESMA decisão de acesso passaria a ter dois donos — a pasta diria uma coisa
+     * e o filho outra —, e o caminhador do menu ainda atribuiria a permissão ao
+     * filho. Quem lesse a config acreditaria na pasta.
+     */
+    $confusas = [];
+
+    foreach (config('retaguarda_menu.secoes', []) as $secao) {
+        foreach ($secao['itens'] ?? [] as $item) {
+            if (($item['filhos'] ?? []) === []) {
+                continue;
+            }
+
+            foreach (['rota', 'slug', 'setores'] as $chave) {
+                if (array_key_exists($chave, $item)) {
+                    $confusas[] = "{$item['rotulo']}: pasta declarando {$chave}";
+                }
+            }
+
+            // Pasta vazia é item que abre para não mostrar nada.
+            foreach ($item['filhos'] as $filho) {
+                if (! is_string($filho['rota'] ?? null)) {
+                    $confusas[] = "{$item['rotulo']}: filho sem rota";
+                }
+            }
+        }
+    }
+
+    expect($confusas)->toBe([]);
 });
 
 test('o slug declarado no menu casa com o caminho da rota', function () {
@@ -947,18 +988,20 @@ test('o slug declarado no menu casa com o caminho da rota', function () {
      */
     $divergentes = [];
 
-    foreach (config('retaguarda_menu.secoes', []) as $secao) {
-        foreach ($secao['itens'] ?? [] as $item) {
-            $slug = $item['slug'] ?? null;
-            if ($slug === null || ! Route::has($item['rota'])) {
-                continue;
-            }
+    // Desce nas pastas: a tela agrupada tem caminho e slug como qualquer outra, e
+    // é nela que a divergência passaria despercebida por mais tempo.
+    foreach (CatalogoFuncionalidades::folhasDoMenu() as $folha) {
+        $item = $folha['item'];
+        $slug = $item['slug'] ?? null;
 
-            $segmentos = explode('/', trim(Route::getRoutes()->getByName($item['rota'])->uri(), '/'));
+        if ($slug === null || ! is_string($item['rota'] ?? null) || ! Route::has($item['rota'])) {
+            continue;
+        }
 
-            if (($segmentos[0] ?? null) !== 'retaguarda' || ($segmentos[1] ?? null) !== $slug) {
-                $divergentes[] = "{$item['rotulo']}: slug={$slug}, caminho=".implode('/', $segmentos);
-            }
+        $segmentos = explode('/', trim(Route::getRoutes()->getByName($item['rota'])->uri(), '/'));
+
+        if (($segmentos[0] ?? null) !== 'retaguarda' || ($segmentos[1] ?? null) !== $slug) {
+            $divergentes[] = "{$item['rotulo']}: slug={$slug}, caminho=".implode('/', $segmentos);
         }
     }
 

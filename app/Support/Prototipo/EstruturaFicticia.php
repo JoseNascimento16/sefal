@@ -49,6 +49,11 @@ class EstruturaFicticia
                 );
 
                 return [
+                    // `gestor` declarado ANTES do espalhamento: área criada pela
+                    // tela (na sessão) não tem a chave, e a tela lê
+                    // `area.gestor.nome` de qualquer cartão. Chave ausente em
+                    // metade dos registros vira leitura defensiva espalhada.
+                    'gestor' => null,
                     ...$area,
                     'bairros' => $bairros,
                     'total_bairros' => count($bairros),
@@ -88,6 +93,78 @@ class EstruturaFicticia
     public static function codigosDeEquipe(): array
     {
         return array_column(self::cruas(), 'equipe');
+    }
+
+    /**
+     * Os nomes das áreas, sem repetição e na ordem da estrutura — a lista que a
+     * validação aceita e que as telas oferecem.
+     *
+     * @return list<string>
+     */
+    public static function nomesDeArea(): array
+    {
+        return array_values(array_unique(array_map(
+            static fn (array $a): string => (string) $a['nome'],
+            self::cruas(),
+        )));
+    }
+
+    /**
+     * `área => gestor` — quem responde por cada área DENTRO do sistema.
+     *
+     * Não confundir com o `encarregado`, que chefia a equipe em campo. O gestor é
+     * quem recebe a denúncia encaminhada e decide equipe ou operação, e é o nome
+     * que o triador precisa ver antes de encaminhar: "encaminhei para a Área 5" só
+     * diz metade — a outra metade é para QUEM.
+     *
+     * @return array<string, array{nome: string, matricula: string|null}>
+     */
+    public static function gestoresPorArea(): array
+    {
+        $mapa = [];
+
+        foreach (self::cruas() as $area) {
+            $gestor = (array) ($area['gestor'] ?? []);
+
+            $mapa[(string) $area['nome']] = [
+                'nome' => (string) ($gestor['nome'] ?? ''),
+                // Área sem conta de demonstração tem nome de gestor e não tem
+                // matrícula: é o caso normal aqui, não dado faltando.
+                'matricula' => isset($gestor['matricula']) && $gestor['matricula'] !== null
+                    ? (string) $gestor['matricula']
+                    : null,
+            ];
+        }
+
+        return $mapa;
+    }
+
+    /**
+     * As áreas de que esta matrícula é gestora — vazio quando ela não é gestora de
+     * nenhuma.
+     *
+     * Devolve LISTA, e não uma área só, porque na vida real uma pessoa responde por
+     * mais de uma área (férias, acumulação, área recém-criada). Quem consome já
+     * trata o plural, então a modelagem definitiva não obriga a mexer em quem lê.
+     *
+     * @return list<string>
+     */
+    public static function areasDoGestor(?string $matricula): array
+    {
+        if ($matricula === null || trim($matricula) === '') {
+            return [];
+        }
+
+        $procurada = mb_strtolower(trim($matricula));
+        $areas = [];
+
+        foreach (self::gestoresPorArea() as $area => $gestor) {
+            if ($gestor['matricula'] !== null && mb_strtolower($gestor['matricula']) === $procurada) {
+                $areas[] = $area;
+            }
+        }
+
+        return $areas;
     }
 
     /**

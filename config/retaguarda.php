@@ -12,13 +12,21 @@ return [
     | validam contra esta lista. Um usuário pertence a N setores (`user_setores`).
     |
     | administrador — enxerga e administra tudo;
+    | administrativo— o setor de retaguarda que RECEBE o que chega de fora: tria a
+    |                 denúncia das ouvidorias e registra o que vem em papel. NÃO é
+    |                 o administrador do sistema (decisão do dono, 02/09/2026) — é
+    |                 quem faz o trabalho administrativo. O administrador também
+    |                 pode fazer esse trabalho, por ser administrador;
     | fiscal        — usa o PWA em rua e registra fiscalizações;
-    | gestor        — valida cadastros de campo e acompanha a operação.
+    | gestor        — gestor de uma ÁREA de fiscalização: direciona o que foi
+    |                 encaminhado à área dele, valida cadastros de campo e
+    |                 acompanha a operação.
     |
     */
 
     'setores' => [
         'administrador' => 'Administrador',
+        'administrativo' => 'Administrativo',
         'fiscal' => 'Fiscal',
         'gestor' => 'Gestor',
     ],

@@ -82,10 +82,29 @@ class InicioController extends Controller
             'slug' => 'operacoes',
         ],
         /*
-         * A Caixa de Entrada vem ANTES de Fiscalizações, como no menu: é o começo
-         * da cadeia — a demanda de fora entra, é triada, e só então vira trabalho
-         * de campo. A ordem dos atalhos conta essa sequência.
+         * As Denúncias e a Caixa de Entrada vêm ANTES de Fiscalizações, como no
+         * menu: é o começo da cadeia — a demanda de fora entra, é triada, e só
+         * então vira trabalho de campo. A ordem dos atalhos conta essa sequência.
+         *
+         * Os dois canais de denúncia entram como DOIS atalhos, e não um, porque
+         * são duas telas: um cartão só levaria a uma delas e deixaria a outra sem
+         * caminho a partir daqui — atalho que esconde metade do módulo é pior que
+         * atalho nenhum.
          */
+        [
+            'chave' => 'denuncias-e-salvador',
+            'titulo' => 'Denúncias do e-Salvador',
+            'descricao' => 'O que o portal da ouvidoria entrega: triar, encaminhar à área ou devolver.',
+            'rota' => 'retaguarda.denuncias.e-salvador.index',
+            'slug' => 'denuncias',
+        ],
+        [
+            'chave' => 'denuncias-fala-salvador',
+            'titulo' => 'Denúncias do Fala Salvador',
+            'descricao' => 'O que chega do Disque 156, inclusive anônimo: triar e dirigir o trabalho.',
+            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+            'slug' => 'denuncias',
+        ],
         [
             'chave' => 'caixa',
             'titulo' => 'Caixa de Entrada',

@@ -45,6 +45,36 @@ bloco de bairros.
 | Itinerante | Avenida Sete | I1 | Roberto Moraes |
 | Noturna | Toda Salvador | N1 | Alcione Brandão |
 
+### RN-01b — Encarregado e GESTOR são duas pessoas diferentes
+
+O **encarregado** chefia a equipe **em rua** (vem do documento do cliente). O **gestor da área**
+responde por ela **dentro do sistema**: é ele que recebe a denúncia encaminhada à área e decide se
+ela vai a uma equipe ou entra numa operação (ver [Denúncias](../fiscalizacao/denuncias.md), RN-06).
+
+A tela mostra os dois com o papel escrito no rótulo — "Encarregado (campo)" e "Gestor da área
+(sistema)" —, porque é fácil confundi-los, e confundi-los faz mandar denúncia para quem está na
+calçada em vez de para quem decide.
+
+| Área | Gestor da área | Conta de demonstração |
+|---|---|---|
+| Área 1 · Centro | Marta Nogueira Prado | `gestor2` |
+| Área 2 · Itapagipe | Djalma Sousa Vieira | — |
+| Área 3 · Brotas | Verônica Lins Barreto | `gestor3` |
+| Área 4 · Liberdade | Ivanildo Costa Pinheiro | — |
+| Área 5 · Boca do Rio | Lourdes Figueiredo Sales | `gestor1` |
+| Área 6 · Pau da Lima | Otacílio Ramos Cunha | — |
+| Itinerante · Avenida Sete | Bruna Cavalcanti Reis | — |
+| Noturna · Toda Salvador | Aristides Moreno Fagundes | — |
+
+Área **sem** gestor registrado aparece com o aviso de que a denúncia encaminhada a ela fica sem quem
+a receba — é aviso, não bloqueio: o cadastro do gestor é de fora desta tela.
+
+⚠️ **PROTÓTIPO — a modelagem definitiva deste vínculo é da fase de produção.** Hoje ele mora em
+`config/prototipo_estrutura.php`, junto da área, e liga pela **matrícula**. Em produção o vínculo é
+entre **usuário e área**, em tabela: uma pessoa pode responder por mais de uma área, gestor entra e
+sai, e isso é fato datado — não linha de arquivo de configuração. O código já trata **lista** de
+áreas por gestor, justamente para a modelagem real não obrigar a reescrever quem lê.
+
 ### RN-02 — São TRÊS recortes, não um
 
 | Recorte | Quem é | O que a tela mostra |
@@ -98,11 +128,13 @@ Desenhar a divisão da cidade e nomear encarregado é ato de **gestão**. A conc
 [`config/retaguarda_menu.php`](../../../config/retaguarda_menu.php); depois disso quem concede e
 quem tira é o Modo Gerente.
 
-### RN-08 — Uma fonte, dois consumidores
+### RN-08 — Uma fonte, três consumidores
 
-A estrutura é lida pela **própria tela** e pela **Caixa de Entrada** (que dela deriva a equipe
-sugerida) — as duas pelo mesmo `EstruturaFicticia`. Duplicar a lista faria a sugestão discordar do
-cadastro no primeiro ajuste: a tela mostraria um bloco e a triagem sugeriria outra equipe.
+A estrutura é lida pela **própria tela**, pela **Caixa de Entrada** (que dela deriva a equipe
+sugerida) e pelas telas de **Denúncias** (que dela derivam a área sugerida pelo bairro, o gestor de
+cada área e o recorte do que cada gestor vê) — as três pelo mesmo `EstruturaFicticia`. Duplicar a
+lista faria a sugestão discordar do cadastro no primeiro ajuste: a tela mostraria um bloco e a
+triagem sugeriria outra equipe.
 
 ### RN-09 — A listagem exporta o recorte visível
 
@@ -130,6 +162,9 @@ algo. **No sistema real esta rota não existe:** cadastro não se reinicia.
 - **Histórico de alteração da estrutura.** Quando a estrutura virar tabela, mudar a área de um
   bairro passa a ser fato datado — as demandas antigas continuam apontando para a equipe que as
   atendeu.
+- **Cadastrar o gestor pela tela.** O nome do gestor é mostrado (RN-01b) e não é editável aqui: o
+  vínculo definitivo é usuário↔área, e cadastrá-lo por este formulário criaria um cadastro de
+  pessoa que não é o cadastro de usuário do sistema — dois donos para a mesma identidade.
 
 ---
 
@@ -137,4 +172,5 @@ algo. **No sistema real esta rota não existe:** cadastro não se reinicia.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 02/09/2026 | José Nascimento | Áreas e Equipes | A área ganha **gestor** (RN-01b): quem responde por ela dentro do sistema, distinto do encarregado de campo, com o papel escrito no rótulo dos dois, aviso na área sem gestor e o nome entrando na busca. | O dono decidiu que o **gestor é de uma área** e que só lhe interessa o que for direcionado a ela — então a área precisa saber quem a responde, e é desta estrutura que as telas de Denúncias derivam o recorte de cada gestor e o nome que o triador vê antes de encaminhar. |
 | 02/09/2026 | José Nascimento | Áreas e Equipes | Nasce a tela, como **protótipo**, com a estrutura real do documento de 17/04/2026: 8 áreas em cartões, a ficha de cada equipe, os fiscais, o bloco de bairros em fichas com inclusão e remoção, os três recortes (bairros / corredores / cidade por turno) e o aviso de bairro em mais de uma área. | Decisão da reunião com o cliente de 02/09/2026: Área › Equipe › bloco de bairros é estrutura permanente (a operação é evento; a equipe é organização), e é dela que sai a equipe sugerida para cada demanda da Caixa de Entrada. |

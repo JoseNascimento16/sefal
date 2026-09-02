@@ -210,50 +210,55 @@ class HandleInertiaRequests extends Middleware
             $itens = [];
 
             foreach ($secao['itens'] ?? [] as $item) {
-                if (! Route::has($item['rota'])) {
-                    continue;
-                }
+                $filhos = (array) ($item['filhos'] ?? []);
 
                 /*
-                 * Item marcado como oculto sai do MENU e nada mais: a rota segue
-                 * viva, a permissão segue no Modo Gerente e a tela segue abrindo
-                 * pelo endereço. É o jeito de tirar o atalho de uma tela pronta que
-                 * ainda não vai ao ar para o usuário final — sem apagar código, que
-                 * é o que transforma "esconder" em "refazer depois".
+                 * Item de PASTA: ele não tem tela nem permissão próprias — quem as
+                 * tem são os filhos. Ele sobrevive se sobrar ao menos um filho
+                 * visível, e desaparece quando não sobra nenhum: uma pasta vazia
+                 * seria um item que abre para não mostrar nada.
                  *
-                 * A conferência vem ANTES da permissão de propósito: esconder é
-                 * decisão de produto, não de acesso, e ler as duas na mesma linha
-                 * faria parecer que uma depende da outra.
+                 * Assim a decisão de acesso continua com um dono só (a matriz, pelo
+                 * filho): a pasta não decide nada, ela agrupa.
                  */
-                if (($item['oculto'] ?? false) === true) {
+                if ($filhos !== []) {
+                    $dentro = [];
+
+                    foreach ($filhos as $filho) {
+                        $resolvido = $this->itemDoMenu($permissoes, $user, $filho);
+
+                        if ($resolvido !== null) {
+                            $dentro[] = $resolvido;
+                        }
+                    }
+
+                    if ($dentro === []) {
+                        continue;
+                    }
+
+                    $itens[] = [
+                        'rotulo' => $item['rotulo'],
+                        // Pasta não navega: não há endereço a oferecer, e inventar
+                        // um (o do primeiro filho) faria o item ativo piscar entre
+                        // pai e filho na mesma navegação.
+                        'url' => null,
+                        'icone' => $item['icone'] ?? 'padrao',
+                        'modal' => null,
+                        'curto' => $item['curto'] ?? Str::upper(Str::before($item['rotulo'], ' ')),
+                        'contador' => isset($item['contador'])
+                            ? ContadoresDoMenu::para((string) $item['contador'])
+                            : null,
+                        'filhos' => $dentro,
+                    ];
+
                     continue;
                 }
 
-                if (! $permissoes->podeVerItemDoMenu($user, $item)) {
-                    continue;
-                }
+                $resolvido = $this->itemDoMenu($permissoes, $user, $item);
 
-                $itens[] = [
-                    'rotulo' => $item['rotulo'],
-                    'url' => route($item['rota'], absolute: false),
-                    'icone' => $item['icone'] ?? 'padrao',
-                    // Item que abre PAINEL sobre a tela atual em vez de navegar
-                    // (ver o cabeçalho de `config/retaguarda_menu.php`). A `url`
-                    // continua indo: é dela que o painel busca os dados.
-                    'modal' => $item['modal'] ?? null,
-                    /*
-                     * O rótulo curto do menu RETRAÍDO (a doca), onde cabem umas
-                     * nove letras. Sem declaração, a primeira palavra do rótulo —
-                     * que resolve "Relatórios" e não resolve as seis telas que
-                     * começam em "Tipos de…", daí a chave `curto` na config.
-                     */
-                    'curto' => $item['curto'] ?? Str::upper(Str::before($item['rotulo'], ' ')),
-                    // O número vivo, quando o item declara um (melhor esforço:
-                    // contagem que falha vira `null` e o item aparece sem número).
-                    'contador' => isset($item['contador'])
-                        ? ContadoresDoMenu::para((string) $item['contador'])
-                        : null,
-                ];
+                if ($resolvido !== null) {
+                    $itens[] = $resolvido;
+                }
             }
 
             // Seção sem nenhum item visível E sem recado de "em construção" não
@@ -270,5 +275,68 @@ class HandleInertiaRequests extends Middleware
         }
 
         return $secoes;
+    }
+
+    /**
+     * Um item de menu que aponta para uma TELA, resolvido para esta pessoa — ou
+     * `null` quando ele não deve aparecer.
+     *
+     * Está numa função porque o menu tem dois lugares que resolvem item: o nível
+     * de cima e o de dentro das pastas. Com o código repetido nos dois, a regra
+     * nova (um `oculto` novo, um contador novo) entraria só num deles, e o item de
+     * dentro da pasta escaparia dela sem nada acusar.
+     *
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>|null
+     */
+    private function itemDoMenu(PermissaoService $permissoes, User $user, array $item): ?array
+    {
+        if (! is_string($item['rota'] ?? null) || ! Route::has($item['rota'])) {
+            return null;
+        }
+
+        /*
+         * Item marcado como oculto sai do MENU e nada mais: a rota segue viva, a
+         * permissão segue no Modo Gerente e a tela segue abrindo pelo endereço. É o
+         * jeito de tirar o atalho de uma tela pronta que ainda não vai ao ar para o
+         * usuário final — sem apagar código, que é o que transforma "esconder" em
+         * "refazer depois".
+         *
+         * A conferência vem ANTES da permissão de propósito: esconder é decisão de
+         * produto, não de acesso, e ler as duas na mesma linha faria parecer que
+         * uma depende da outra.
+         */
+        if (($item['oculto'] ?? false) === true) {
+            return null;
+        }
+
+        if (! $permissoes->podeVerItemDoMenu($user, $item)) {
+            return null;
+        }
+
+        return [
+            'rotulo' => $item['rotulo'],
+            'url' => route($item['rota'], absolute: false),
+            'icone' => $item['icone'] ?? 'padrao',
+            // Item que abre PAINEL sobre a tela atual em vez de navegar (ver o
+            // cabeçalho de `config/retaguarda_menu.php`). A `url` continua indo: é
+            // dela que o painel busca os dados.
+            'modal' => $item['modal'] ?? null,
+            /*
+             * O rótulo curto do menu RETRAÍDO (a doca), onde cabem umas nove
+             * letras. Sem declaração, a primeira palavra do rótulo — que resolve
+             * "Relatórios" e não resolve as seis telas que começam em "Tipos de…",
+             * daí a chave `curto` na config.
+             */
+            'curto' => $item['curto'] ?? Str::upper(Str::before($item['rotulo'], ' ')),
+            // O número vivo, quando o item declara um (melhor esforço: contagem que
+            // falha vira `null` e o item aparece sem número).
+            'contador' => isset($item['contador'])
+                ? ContadoresDoMenu::para((string) $item['contador'])
+                : null,
+            // Folha: a lista de filhos vai vazia, e não ausente — a tela lê
+            // `item.filhos.length` de qualquer item, sem leitura defensiva.
+            'filhos' => [],
+        ];
     }
 }

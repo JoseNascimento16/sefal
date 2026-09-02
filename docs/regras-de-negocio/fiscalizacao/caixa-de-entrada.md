@@ -39,7 +39,7 @@ o que chega na mão dele.
 
 ### RN-02 — Quatro origens, lista fechada
 
-`e-Salvador`, `Fala Salvador 156`, `Nova licença` e `Ofício`. É de onde o documento veio, não texto
+`e-Salvador`, `Fala Salvador`, `Nova licença` e `Ofício`. É de onde o documento veio, não texto
 livre — e é essa distinção que um dia separa o que chega por integração do que é interno.
 
 O catálogo vem do **servidor**, que é quem valida a escolha. Escrito também na tela, um dia os dois
@@ -166,4 +166,4 @@ sistema real esta rota não existe:** caixa de entrada não se reinicia.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
-| 02/09/2026 | José Nascimento | Caixa de Entrada | Nasce o módulo, como **protótipo**: grade com busca inteligente e exportação, cadastro da demanda com as duas saídas (encaminhar / devolver-arquivar), sugestão de equipe pelo bairro com o caso do bairro compartilhado, e o trâmite de cada demanda. | Decisão da reunião com o cliente de 02/09/2026: o sistema recebe demanda de fora (e-Salvador, Fala Salvador 156, pedido de nova licença) e o administrativo precisa de onde registrar, triar e recusar com justificativa. Entregue como protótipo para o dono aprovar a forma antes de virar tabela e regra. |
+| 02/09/2026 | José Nascimento | Caixa de Entrada | Nasce o módulo, como **protótipo**: grade com busca inteligente e exportação, cadastro da demanda com as duas saídas (encaminhar / devolver-arquivar), sugestão de equipe pelo bairro com o caso do bairro compartilhado, e o trâmite de cada demanda. | Decisão da reunião com o cliente de 02/09/2026: o sistema recebe demanda de fora (e-Salvador, Fala Salvador, pedido de nova licença) e o administrativo precisa de onde registrar, triar e recusar com justificativa. Entregue como protótipo para o dono aprovar a forma antes de virar tabela e regra. |

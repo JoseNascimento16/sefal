@@ -750,6 +750,126 @@ table.data-table tbody tr.pendente td:first-child {
     color: #fff;
     font-weight: 650;
 }
+/* ── Item que é PASTA (tem filhos) ───────────────────────────────────────────
+   A cabeça da pasta é um item normal com uma seta. Ela NÃO usa `.ativo`: pasta
+   não é destino, e pintá-la de ativo faria parecer que a tela aberta é ela. O que
+   ela ganha é `com-ativo` — uma marca discreta de "a tela aberta está aqui
+   dentro", que é a informação que o menu precisa dar a quem entrou por um filho. */
+.rt-menu-pasta .rt-menu-seta {
+    flex-shrink: 0;
+    opacity: 0.65;
+    transition: transform 0.18s ease;
+}
+.rt-menu-pasta .rt-menu-seta.aberta {
+    transform: rotate(180deg);
+}
+.rt-menu-item.com-ativo {
+    border-left-color: #4d9fdc;
+    color: var(--sm-menu-texto-forte);
+}
+/* Os filhos descem por baixo do pai, presos a um trilho: sem o trilho, eles leem
+   como itens de primeiro nível apenas indentados. */
+.rt-menu-filhos {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 2px 0 6px 22px;
+    padding-left: 12px;
+    border-left: 1px solid var(--sm-menu-linha);
+}
+.rt-menu-filho {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 12px;
+    background: none;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    text-align: left;
+    color: var(--sm-menu-texto-fraco);
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-menu-filho:hover {
+    background: rgba(122, 175, 220, 0.1);
+    color: var(--sm-menu-texto-forte);
+}
+.rt-menu-filho.ativo {
+    background: linear-gradient(
+        90deg,
+        rgba(0, 102, 178, 0.45),
+        rgba(0, 102, 178, 0.1)
+    );
+    color: #fff;
+    font-weight: 650;
+}
+/* ── A pasta na DOCA ─────────────────────────────────────────────────────────
+   Em 96px não cabe lista, então o ícone ganha só uma marca de "abre" e o conteúdo
+   vai para um painel flutuante. A marca existe porque, sem ela, o ícone da pasta é
+   indistinguível de um item que navega. */
+.rt-doca-pasta-marca {
+    position: absolute;
+    right: 7px;
+    bottom: 7px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    opacity: 0.7;
+}
+/* O painel flutuante da pasta. Mora no `<body>` e é posicionado pelo JS a partir
+   do retângulo do botão (ao lado quando cabe, para cima quando a doca deita no
+   pé), então aqui só vem a aparência — nunca posição. */
+.rt-doca-flutuante {
+    position: fixed;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px;
+    border-radius: 18px;
+    background: linear-gradient(178deg, #12233d, #0a1628);
+    box-shadow:
+        0 22px 50px rgba(8, 18, 35, 0.45),
+        inset 0 1px 0 rgba(122, 175, 220, 0.18);
+    color: var(--sm-menu-texto);
+}
+.rt-doca-flutuante-titulo {
+    margin: 2px 8px 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sm-menu-texto-fraco);
+}
+.rt-doca-flutuante-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--sm-menu-texto);
+    transition: var(--sm-transicao);
+}
+.rt-doca-flutuante-item:hover {
+    background: rgba(122, 175, 220, 0.12);
+    color: var(--sm-menu-texto-forte);
+}
+.rt-doca-flutuante-item.ativo {
+    background: linear-gradient(90deg, #0d6cb5, rgba(0, 102, 178, 0.35));
+    color: #fff;
+    font-weight: 650;
+}
+.rt-doca-flutuante-item .rt-menu-contador {
+    margin-left: auto;
+}
 /* O número vivo do item. Neutro é TAMANHO: fica quieto, do lado, sem competir com
    o nome. */
 .rt-menu-contador {

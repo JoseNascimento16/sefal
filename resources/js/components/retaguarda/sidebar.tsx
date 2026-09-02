@@ -1,6 +1,13 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { useState } from 'react';
+import {
+    ChevronDown,
+    LogOut,
+    PanelLeftClose,
+    PanelLeftOpen,
+} from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { iconeDoMenu } from '@/lib/icones-menu';
@@ -20,12 +27,32 @@ import type { MenuContador, MenuItem } from '@/types/navigation';
  *  · **estendido** — nome do item, contador à direita, cartão do usuário no pé;
  *  · **doca** (retraído) — cartão flutuante estreito, ícone + rótulo curto,
  *    contador virando selo no canto. Quem escolhe é a pessoa, e a escolha fica
- *    guardada (ver o `retaguarda-layout`).
+ *    guardada (ver o `retaguarda-layout`). Em tela estreita a doca deita no pé.
+ *
+ * ── Item que é PASTA ────────────────────────────────────────────────────────
+ *
+ * Um item pode ter `filhos`: aí ele não leva a lugar nenhum, ele ABRE. As três
+ * formas da casca resolvem isso de jeitos diferentes, porque a largura manda:
+ *
+ *  · estendido — os filhos descem por baixo do pai, indentados;
+ *  · doca (96px) — não cabe lista nenhuma, então o clique abre um painel FLUTUANTE
+ *    ao lado do ícone;
+ *  · doca deitada no pé — o mesmo painel, abrindo para CIMA.
+ *
+ * O painel flutuante é desenhado no `<body>` e posicionado a partir do retângulo
+ * do botão. Não é capricho: a fila de itens da doca deitada rola na horizontal
+ * (`overflow-x`), e um painel posicionado dentro dela seria CORTADO justamente na
+ * forma em que ele é mais necessário.
+ *
+ * O pai abre sozinho quando um filho está ativo, e mostra o próprio estado ativo:
+ * sem isso, quem entrasse por um filho veria a pasta fechada e o menu não diria
+ * onde a pessoa está.
  *
  * As seções e os itens vêm PRONTOS do servidor (`config/retaguarda_menu.php`,
  * montado no `HandleInertiaRequests`): é lá que se decide o que existe, quem vê o
  * quê e qual número cada item mostra. A tela não conhece regra de acesso — se
- * conhecesse, a mesma decisão teria dois donos e um dia divergiria.
+ * conhecesse, a mesma decisão teria dois donos e um dia divergiria. Pasta sem
+ * filho visível não chega aqui.
  *
  * Seção sem tela pronta aparece com o recado do que vem por aí, em vez de sumir:
  * quem usa o sistema enxerga o caminho que está sendo construído.
@@ -49,6 +76,11 @@ function Selo({ contador }: { contador: MenuContador }) {
     );
 }
 
+/** Identidade de um item para o estado da tela — a pasta não tem endereço. */
+function chaveDoItem(item: MenuItem): string {
+    return item.url ?? `pasta:${item.rotulo}`;
+}
+
 export function Sidebar({
     emDoca,
     onAlternarRetracao,
@@ -70,6 +102,77 @@ export function Sidebar({
     const { isCurrentUrl } = useCurrentUrl();
     const [confirmandoSaida, setConfirmandoSaida] = useState(false);
     const [saindo, setSaindo] = useState(false);
+
+    /**
+     * As pastas que a PESSOA abriu ou fechou à mão.
+     *
+     * Só o que ela mexeu entra aqui: o estado natural é derivado (pasta com filho
+     * ativo nasce aberta). Guardar o estado de todas faria a pasta do filho ativo
+     * aparecer fechada até alguém clicar nela — e o menu deixaria de dizer onde a
+     * pessoa está.
+     */
+    const [pastas, setPastas] = useState<Record<string, boolean>>({});
+
+    /** A pasta cujo painel flutuante está aberto na doca, e onde desenhá-lo. */
+    const [flutuante, setFlutuante] = useState<{
+        chave: string;
+        item: MenuItem;
+        estilo: CSSProperties;
+    } | null>(null);
+
+    const painelFlutuante = useRef<HTMLDivElement | null>(null);
+
+    /*
+     * O painel flutuante fecha com Escape, com um clique fora dele e quando a
+     * janela muda de tamanho — este último porque a posição foi CALCULADA a partir
+     * do retângulo do botão, e ela deixa de valer quando a doca se move (é
+     * exatamente o que acontece quando a barra deita no pé).
+     */
+    useEffect(() => {
+        if (flutuante === null) {
+            return;
+        }
+
+        function noEscape(e: KeyboardEvent) {
+            if (e.key === 'Escape') {
+                setFlutuante(null);
+            }
+        }
+
+        function foraDoPainel(e: PointerEvent) {
+            const alvo = e.target;
+
+            if (alvo instanceof Node && painelFlutuante.current?.contains(alvo)) {
+                return;
+            }
+
+            // Clique no próprio botão da pasta: quem trata é o `onClick` dele, que
+            // alterna. Fechar aqui também faria o painel abrir e fechar no mesmo
+            // clique.
+            if (alvo instanceof Element && alvo.closest('[data-pasta-da-doca]')) {
+                return;
+            }
+
+            setFlutuante(null);
+        }
+
+        // Nomeada, e não uma função inline no `addEventListener`: inline, a
+        // remoção na limpeza não casaria com nada e o ouvinte ficaria pendurado a
+        // cada abertura do painel.
+        function fechar() {
+            setFlutuante(null);
+        }
+
+        window.addEventListener('keydown', noEscape);
+        window.addEventListener('pointerdown', foraDoPainel);
+        window.addEventListener('resize', fechar);
+
+        return () => {
+            window.removeEventListener('keydown', noEscape);
+            window.removeEventListener('pointerdown', foraDoPainel);
+            window.removeEventListener('resize', fechar);
+        };
+    }, [flutuante]);
 
     /** Iniciais para o avatar — duas letras, ou "?" quando não há nome. */
     const iniciais =
@@ -95,6 +198,19 @@ export function Sidebar({
         if (item.modal !== null) {
             onAbrirPainel(item.modal);
         }
+
+        // Navegar por um filho fecha o painel flutuante: ele cobria a tela nova.
+        setFlutuante(null);
+    }
+
+    /** Este item é o que está aberto agora? Pasta não é destino, então nunca é. */
+    function estaAtivo(item: MenuItem): boolean {
+        return item.modal === null && item.url !== null && isCurrentUrl(item.url);
+    }
+
+    /** A pasta está mostrando a tela aberta? É o que faz o pai se marcar. */
+    function comFilhoAtivo(item: MenuItem): boolean {
+        return item.filhos.some((filho) => estaAtivo(filho));
     }
 
     /*
@@ -103,23 +219,24 @@ export function Sidebar({
      * "abrir em nova aba" do navegador contam a mesma história que a tela: aqui
      * não se vai a lugar nenhum.
      */
-    function ItemEstendido({ item }: { item: MenuItem }) {
+    function ItemEstendido({ item, filho = false }: { item: MenuItem; filho?: boolean }) {
         const Icone = iconeDoMenu(item.icone);
-        const ativo = item.modal === null && isCurrentUrl(item.url);
+        const ativo = estaAtivo(item);
+        const classe = cn(filho ? 'rt-menu-filho' : 'rt-menu-item', ativo && 'ativo');
 
         const dentro = (
             <>
-                <Icone size={18} aria-hidden />
+                <Icone size={filho ? 16 : 18} aria-hidden />
                 <span className="rt-menu-rotulo">{item.rotulo}</span>
                 {item.contador && <Contador contador={item.contador} />}
             </>
         );
 
-        if (item.modal !== null) {
+        if (item.modal !== null || item.url === null) {
             return (
                 <button
                     type="button"
-                    className="rt-menu-item"
+                    className={classe}
                     onClick={() => acionar(item)}
                 >
                     {dentro}
@@ -131,7 +248,7 @@ export function Sidebar({
             <Link
                 href={item.url}
                 onClick={() => acionar(item)}
-                className={cn('rt-menu-item', ativo && 'ativo')}
+                className={classe}
                 aria-current={ativo ? 'page' : undefined}
             >
                 {dentro}
@@ -139,10 +256,49 @@ export function Sidebar({
         );
     }
 
+    /** A pasta no menu estendido: cabeça que abre e os filhos descendo por baixo. */
+    function PastaEstendida({ item }: { item: MenuItem }) {
+        const Icone = iconeDoMenu(item.icone);
+        const chave = chaveDoItem(item);
+        const dentroAtivo = comFilhoAtivo(item);
+        // Sem mexida da pessoa, a pasta do filho ativo nasce ABERTA.
+        const aberta = pastas[chave] ?? dentroAtivo;
+
+        return (
+            <>
+                <button
+                    type="button"
+                    className={cn('rt-menu-item', 'rt-menu-pasta', dentroAtivo && 'com-ativo')}
+                    aria-expanded={aberta}
+                    onClick={() =>
+                        setPastas((atual) => ({ ...atual, [chave]: !aberta }))
+                    }
+                >
+                    <Icone size={18} aria-hidden />
+                    <span className="rt-menu-rotulo">{item.rotulo}</span>
+                    {item.contador && <Contador contador={item.contador} />}
+                    <ChevronDown
+                        size={16}
+                        aria-hidden
+                        className={cn('rt-menu-seta', aberta && 'aberta')}
+                    />
+                </button>
+
+                {aberta && (
+                    <div className="rt-menu-filhos">
+                        {item.filhos.map((f) => (
+                            <ItemEstendido key={chaveDoItem(f)} item={f} filho />
+                        ))}
+                    </div>
+                )}
+            </>
+        );
+    }
+
     /** O mesmo item na doca: ícone grande, rótulo curto embaixo, selo no canto. */
     function ItemDaDoca({ item }: { item: MenuItem }) {
         const Icone = iconeDoMenu(item.icone);
-        const ativo = item.modal === null && isCurrentUrl(item.url);
+        const ativo = estaAtivo(item);
 
         const dentro = (
             <>
@@ -154,7 +310,7 @@ export function Sidebar({
 
         // O nome inteiro vai no `title` e no rótulo acessível: o rótulo curto é
         // recorte visual, e ninguém deve depender dele para saber onde clica.
-        if (item.modal !== null) {
+        if (item.modal !== null || item.url === null) {
             return (
                 <button
                     type="button"
@@ -182,6 +338,90 @@ export function Sidebar({
         );
     }
 
+    /**
+     * A pasta na doca: o clique abre um painel flutuante com os filhos.
+     *
+     * A posição é calculada do retângulo do botão, e a DIREÇÃO também: abre ao lado
+     * quando cabe (doca em pé, à esquerda) e para cima quando não cabe (doca
+     * deitada no pé da tela). Direção fixa deixaria metade do painel fora da tela
+     * numa das duas formas.
+     */
+    function PastaDaDoca({ item }: { item: MenuItem }) {
+        const Icone = iconeDoMenu(item.icone);
+        const chave = chaveDoItem(item);
+        const dentroAtivo = comFilhoAtivo(item);
+        const aberta = flutuante?.chave === chave;
+
+        const LARGURA = 224;
+        const FOLGA = 10;
+
+        function abrir(e: React.MouseEvent<HTMLButtonElement>) {
+            if (aberta) {
+                setFlutuante(null);
+
+                return;
+            }
+
+            const r = e.currentTarget.getBoundingClientRect();
+
+            /*
+             * A altura que o painel vai ocupar, estimada dos filhos (título + uma
+             * linha por filho + respiro). Estimativa porque a decisão de direção
+             * acontece ANTES de ele existir na tela.
+             *
+             * Ela é o que faltava: decidir a direção só pela largura punha o painel
+             * fora da tela justamente na barra deitada no pé — largura sobrando de
+             * lado, e nenhuma altura abaixo do botão. Verificado em 560×820, com o
+             * painel vazando por baixo.
+             */
+            const altura = 44 + item.filhos.length * 40 + 20;
+            const cabeAoLado =
+                r.right + FOLGA + LARGURA < window.innerWidth &&
+                r.top + altura + 12 <= window.innerHeight;
+
+            // Preso dentro da tela nas duas direções: o item pode estar na borda
+            // (a fila da barra deitada rola), e sem o limite o painel sairia por
+            // ali.
+            const presoNaHorizontal = Math.min(
+                Math.max(r.left + r.width / 2 - LARGURA / 2, 12),
+                Math.max(window.innerWidth - LARGURA - 12, 12),
+            );
+
+            const estilo: CSSProperties = cabeAoLado
+                ? { left: r.right + FOLGA, top: r.top, width: LARGURA }
+                : {
+                      left: presoNaHorizontal,
+                      bottom: window.innerHeight - r.top + FOLGA,
+                      width: LARGURA,
+                      // Se nem acima couber (tela muito baixa), o painel rola em
+                      // vez de vazar — some é pior que apertado.
+                      maxHeight: Math.max(r.top - FOLGA - 12, 120),
+                      overflowY: 'auto',
+                  };
+
+            setFlutuante({ chave, item, estilo });
+        }
+
+        return (
+            <button
+                type="button"
+                data-pasta-da-doca
+                className={cn('rt-doca-item', (dentroAtivo || aberta) && 'ativo')}
+                title={item.rotulo}
+                aria-label={item.rotulo}
+                aria-expanded={aberta}
+                onClick={abrir}
+            >
+                <Icone size={21} aria-hidden />
+                <span className="rt-doca-rotulo">{item.curto}</span>
+                {item.contador && <Selo contador={item.contador} />}
+                {/* A marca de "tem coisa dentro": sem ela o ícone da pasta é
+                    indistinguível de um item que navega. */}
+                <span className="rt-doca-pasta-marca" aria-hidden />
+            </button>
+        );
+    }
+
     /** Sair PERGUNTA antes: a sessão leva embora formulário aberto. */
     const perguntaDeSaida = confirmandoSaida && (
         <ModalConfirm
@@ -204,6 +444,42 @@ export function Sidebar({
         />
     );
 
+    /*
+     * O painel flutuante mora no `<body>`, e não dentro da doca: a fila de itens da
+     * doca deitada rola na horizontal, e ali dentro o painel seria cortado.
+     */
+    const painelDaPasta =
+        flutuante !== null &&
+        createPortal(
+            <div
+                ref={painelFlutuante}
+                className="rt-doca-flutuante"
+                style={flutuante.estilo}
+                role="group"
+                aria-label={flutuante.item.rotulo}
+            >
+                <p className="rt-doca-flutuante-titulo">{flutuante.item.rotulo}</p>
+
+                {flutuante.item.filhos.map((f) => {
+                    const ativo = estaAtivo(f);
+
+                    return f.url === null ? null : (
+                        <Link
+                            key={chaveDoItem(f)}
+                            href={f.url}
+                            onClick={() => acionar(f)}
+                            className={cn('rt-doca-flutuante-item', ativo && 'ativo')}
+                            aria-current={ativo ? 'page' : undefined}
+                        >
+                            {f.rotulo}
+                            {f.contador && <Contador contador={f.contador} />}
+                        </Link>
+                    );
+                })}
+            </div>,
+            document.body,
+        );
+
     if (emDoca) {
         return (
             <>
@@ -224,9 +500,13 @@ export function Sidebar({
                     <nav className="rt-doca-itens">
                         {menu.map((secao) => (
                             <div key={secao.rotulo} className="rt-doca-grupo">
-                                {secao.itens.map((item) => (
-                                    <ItemDaDoca key={item.url} item={item} />
-                                ))}
+                                {secao.itens.map((item) =>
+                                    item.filhos.length > 0 ? (
+                                        <PastaDaDoca key={chaveDoItem(item)} item={item} />
+                                    ) : (
+                                        <ItemDaDoca key={chaveDoItem(item)} item={item} />
+                                    ),
+                                )}
                             </div>
                         ))}
                     </nav>
@@ -253,6 +533,7 @@ export function Sidebar({
                     </div>
                 </aside>
 
+                {painelDaPasta}
                 {perguntaDeSaida}
             </>
         );
@@ -320,9 +601,13 @@ export function Sidebar({
                                 A primeira seção não precisa de régua acima. */}
                             {i > 0 && <div className="rt-menu-regua" />}
 
-                            {secao.itens.map((item) => (
-                                <ItemEstendido key={item.url} item={item} />
-                            ))}
+                            {secao.itens.map((item) =>
+                                item.filhos.length > 0 ? (
+                                    <PastaEstendida key={chaveDoItem(item)} item={item} />
+                                ) : (
+                                    <ItemEstendido key={chaveDoItem(item)} item={item} />
+                                ),
+                            )}
 
                             {secao.itens.length === 0 && secao.vazio && (
                                 <p className="rt-menu-vazio">{secao.vazio}</p>

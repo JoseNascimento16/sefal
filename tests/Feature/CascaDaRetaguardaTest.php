@@ -24,12 +24,24 @@ use Illuminate\Support\Facades\Schema;
 
 beforeEach(fn () => $this->seed(SetoresSeeder::class));
 
-/** O menu como o servidor o entrega a esta pessoa. */
+/**
+ * O menu como o servidor o entrega a esta pessoa — ACHATADO, com os itens de
+ * dentro das pastas no mesmo saco.
+ *
+ * O achatamento importa: um item pode ser PASTA e a tela morar no filho. Sem
+ * descer, os testes-lei desta suíte (rótulo curto, contador) deixariam de cobrir
+ * justamente as telas agrupadas — que são as que ninguém lembra de conferir.
+ */
 function itensDoMenu(User $u): array
 {
     $menu = test()->actingAs($u)->get('/retaguarda/inicio')->viewData('page')['props']['menu'];
 
-    return collect($menu)->pluck('itens')->flatten(1)->keyBy('rotulo')->all();
+    return collect($menu)
+        ->pluck('itens')
+        ->flatten(1)
+        ->flatMap(fn (array $item): array => [$item, ...$item['filhos']])
+        ->keyBy('rotulo')
+        ->all();
 }
 
 /** Um gestor, que enxerga o cadastro de ambulante. */
