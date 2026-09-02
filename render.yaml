@@ -41,6 +41,10 @@ services:
         value: "true"
       - key: APP_LOCALE
         value: pt_BR
+      # Endereco publico do servico: o Laravel usa para montar links absolutos
+      # (e-mail de senha, redirecionamentos). Casa com o nome do servico.
+      - key: APP_URL
+        value: https://sefal-demo.onrender.com
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL

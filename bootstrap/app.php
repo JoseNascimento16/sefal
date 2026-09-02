@@ -28,6 +28,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // sairia sem código nenhum.
         $middleware->prepend(RequestId::class);
 
+        // Atrás de um proxy que termina o TLS (o roteador do OKD, o balanceador do
+        // ambiente de demonstração), a aplicação recebe a requisição em HTTP puro e,
+        // sem esta linha, gera os endereços de CSS/JS com "http://" numa página
+        // servida em "https://" — o navegador bloqueia como conteúdo misto, sem erro
+        // visível, e a tela fica EM BRANCO (o React nunca monta). Confiar nos
+        // cabeçalhos de encaminhamento resolve; no ambiente local é inócuo, porque
+        // não existe proxy nenhum na frente.
+        $middleware->trustProxies(at: '*');
+
         // O cookie de tema fica em texto claro porque a página precisa lê-lo no
         // servidor para pintar o fundo certo já na primeira renderização (sem ele,
         // quem usa o tema escuro vê um lampejo branco a cada visita).
