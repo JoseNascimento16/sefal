@@ -120,7 +120,7 @@ return [
      */
     'motivos_de_devolucao' => [
         'Endereço insuficiente para localizar o ponto',
-        'Fora da competência da SEMOP',
+        'Fora da competência da SEFAL',
         'Denúncia duplicada — já existe registro do mesmo fato',
         'Situação já regularizada em vistoria anterior',
         'Relato sem elementos mínimos para vistoria',
@@ -531,7 +531,7 @@ return [
             'endereco_impreciso' => false,
             'anexos' => [],
             'situacao' => 'Devolvida',
-            'motivo' => 'Fora da competência da SEMOP',
+            'motivo' => 'Fora da competência da SEFAL',
             'justificativa' => 'Obra em imóvel privado é atribuição da SEDUR, não da fiscalização de '
                 .'ambulantes. Devolvida ao canal de origem com a indicação do órgão competente para que '
                 .'o cidadão não perca o prazo.',

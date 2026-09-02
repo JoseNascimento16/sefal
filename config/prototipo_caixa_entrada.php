@@ -65,7 +65,7 @@ return [
      */
     'motivos_de_devolucao' => [
         'Endereço insuficiente para localizar o ponto',
-        'Fora da competência da SEMOP',
+        'Fora da competência da SEFAL',
         'Demanda duplicada — já existe registro do mesmo fato',
         'Objeto já regularizado',
         'Pedido de licença sem a documentação exigida',
@@ -250,7 +250,7 @@ return [
             'anexo' => 'esalvador-30901.pdf',
             'situacao' => 'Arquivada',
             'equipe' => null,
-            'motivo' => 'Fora da competência da SEMOP',
+            'motivo' => 'Fora da competência da SEFAL',
             'justificativa' => 'O objeto é conservação de pavimento, atribuição de outro órgão. Arquivada '
                 .'nesta caixa e comunicada ao requerente pelo próprio canal.',
             'destino' => 'Arquivada',
