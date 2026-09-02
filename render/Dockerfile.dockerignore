@@ -1,0 +1,58 @@
+# Ignore-file específico do build de DEMONSTRAÇÃO (render/Dockerfile).
+# O BuildKit usa ESTE arquivo no lugar do /.dockerignore quando se builda com
+# -f render/Dockerfile, então precisa ser completo. Diferença chave vs. o /.dockerignore:
+# aqui o database/sefal_demo.sqlite É INCLUÍDO (é o banco da demonstração).
+
+/vendor
+/node_modules
+/bootstrap/cache/*.php
+/public/build
+/public/hot
+/public/storage
+
+# ⚠️ Segredos — NUNCA na imagem.
+.env
+.env.*
+!.env.example
+auth.json
+
+# Material interno e artefatos de dev (as três gavetas: nada de ferramental na imagem).
+/docs
+/.claude
+/.superpowers
+/.aicr
+/.aicr.json
+/referencia-design
+.git
+.gitignore
+.gitattributes
+.githooks
+.higiene-proibidos
+/.vscode
+CLAUDE.md
+FERRAMENTAL.md
+
+# Os outros SQLite locais não são usados pela demo.
+/database/database.sqlite
+/database/fiscalizacao_dev.sqlite
+/SEFAL
+
+/storage/logs/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/*.key
+/.phpunit.cache
+.phpunit.result.cache
+/bootstrap/ssr
+
+/tests
+*.md
+
+# Deploy de verdade (OKD) não vai dentro da imagem de demonstração.
+dockerfile_redhat
+docker-compose.homolog.yml
+/docker
+
+.DS_Store
+npm-debug.log

@@ -1,0 +1,72 @@
+# Blueprint do Render — ambiente de DEMONSTRAÇÃO do SEFAL (free tier).
+#
+# É o "Modo A" (dev local em SQLite) rodando na nuvem: sem Oracle, sem VPN, link público
+# para mostrar o sistema ao cliente e para os fiscais experimentarem o aplicativo no
+# celular. O deploy de VERDADE é outro: OKD do cliente, via /dockerfile_redhat.
+#
+# O serviço observa a branch `demo`, que reúne o que está aprovado visualmente (Retaguarda
+# + aplicativo de campo + protótipos) — a `develop` continua sendo o registro do que
+# passou por teste e revisão.
+#
+# Observações do free tier:
+#   - hiberna após ~15 min sem tráfego (cold start de 30-50s no primeiro acesso);
+#   - filesystem EFÊMERO: o que for gravado em runtime (cadastros novos, sessões) some no
+#     próximo deploy — o banco volta sempre ao sefal_demo.sqlite versionado.
+#
+# APP_KEY entra com `sync: false` → o Render pede o valor no painel ao criar o serviço
+# (o segredo fica fora do git). Gere com `php artisan key:generate --show`.
+
+services:
+  - type: web
+    name: sefal-demo
+    runtime: docker
+    dockerfilePath: ./render/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    branch: demo
+    autoDeploy: true
+    healthCheckPath: /login
+    envVars:
+      # Segredo — informar no painel do Render (não fica no git).
+      - key: APP_KEY
+        sync: false
+
+      - key: APP_NAME
+        value: SEFAL
+      - key: APP_ENV
+        value: production
+      # Mantenha true no primeiro deploy para diagnosticar; troque para false depois.
+      - key: APP_DEBUG
+        value: "true"
+      - key: APP_LOCALE
+        value: pt_BR
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: debug
+
+      # Banco: SQLite versionado. DB_DRIVER=sqlite faz o AppServiceProvider ignorar o
+      # Oracle (que só existe atrás da VPN da Prefeitura).
+      - key: DB_DRIVER
+        value: sqlite
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/www/html/database/sefal_demo.sqlite
+
+      # Sessão/cache/fila em banco (mesma decisão do produto — ver errata da spec).
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+
+      # O Render bloqueia SMTP de saída no free tier: e-mail vai para o log.
+      - key: MAIL_MAILER
+        value: log
+
+      # Permissões da Retaguarda: bloqueio ativo, como em produção.
+      - key: PERMISSAO_ENFORCE
+        value: block
