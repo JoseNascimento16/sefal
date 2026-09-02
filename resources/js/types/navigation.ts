@@ -20,7 +20,11 @@ export type MenuContador = {
 /** Item do menu lateral, já resolvido pelo servidor. */
 export type MenuItem = {
     rotulo: string;
-    url: string;
+    /**
+     * `null` quando o item é uma PASTA: ele não leva a lugar nenhum, ele abre. A
+     * tela mora nos `filhos`.
+     */
+    url: string | null;
     /** Chave do ícone — traduzida em `@/lib/icones-menu`. */
     icone: string;
     /**
@@ -33,6 +37,14 @@ export type MenuItem = {
     curto: string;
     /** `null` quando o item não declara número, ou quando a contagem falhou. */
     contador: MenuContador | null;
+    /**
+     * Os itens de dentro de uma PASTA — vazio no item que aponta para uma tela.
+     *
+     * Vem sempre presente (vazio em vez de ausente) para a barra ler
+     * `filhos.length` de qualquer item, sem leitura defensiva espalhada. Um nível
+     * só de aninhamento: menu que abre menu que abre menu é índice, não caminho.
+     */
+    filhos: MenuItem[];
 };
 
 /** Seção do menu lateral. `vazio` é o recado de "ainda vem por aí". */

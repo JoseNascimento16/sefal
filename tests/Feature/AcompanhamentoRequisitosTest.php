@@ -3,6 +3,7 @@
 use App\Models\PermissaoSetor;
 use App\Models\Setor;
 use App\Models\User;
+use App\Support\CatalogoFuncionalidades;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -130,18 +131,20 @@ test('toda tela do menu tem linha no acompanhamento — nada entregue fica fora 
     $mapeadas = array_filter(array_column(linhasDoAcompanhamento(), 'rota'));
     $foraDoMapa = [];
 
-    foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
-        foreach ((array) ($secao['itens'] ?? []) as $item) {
-            $rota = $item['rota'] ?? null;
+    // Percorre pelo caminhador do MENU, que desce nas pastas (`filhos`): a tela
+    // agrupada dentro de uma pasta é entrega como qualquer outra, e varrer só o
+    // primeiro nível deixaria a cobertura mentir exatamente sobre ela.
+    foreach (CatalogoFuncionalidades::folhasDoMenu() as $folha) {
+        $item = $folha['item'];
+        $rota = $item['rota'] ?? null;
 
-            // Item cujo destino ainda não existe já é descartado do próprio menu.
-            if (! is_string($rota) || ! Route::has($rota)) {
-                continue;
-            }
+        // Item cujo destino ainda não existe já é descartado do próprio menu.
+        if (! is_string($rota) || ! Route::has($rota)) {
+            continue;
+        }
 
-            if (! in_array($rota, $mapeadas, true)) {
-                $foraDoMapa[] = (string) ($item['rotulo'] ?? $rota);
-            }
+        if (! in_array($rota, $mapeadas, true)) {
+            $foraDoMapa[] = (string) ($item['rotulo'] ?? $rota);
         }
     }
 

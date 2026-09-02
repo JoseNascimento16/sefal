@@ -35,7 +35,21 @@ return [
     |             segue viva (acessível por endereço), a permissão segue no Modo
     |             Gerente e a tela segue funcionando: o que se tira é o atalho. Serve
     |             para tela pronta que ainda não vai ao ar para o usuário final.
-    |   contador— opcional: o NÚMERO VIVO ao lado do item. O valor é uma chave do
+    |   filhos  — opcional: o item é uma PASTA. Ele não leva a lugar nenhum: ele
+|             ABRE, mostrando os itens de dentro. Cada filho é um item completo
+|             (`rotulo`, `rota`, `icone`, `slug`, `setores`, `curto`…), e a pasta
+|             declara só `rotulo`, `icone` e `curto`.
+|
+|             A pasta NÃO declara `rota`, `slug` nem `setores`: quem tem tela,
+|             permissão e concessão são os filhos. Ela aparece quando sobra ao
+|             menos um filho visível para aquela pessoa, e desaparece quando não
+|             sobra nenhum — assim a decisão de acesso continua tendo um dono só.
+|
+|             É estrutura GENÉRICA, e não um caso especial: qualquer conjunto de
+|             telas irmãs pode virar pasta sem mexer em código. Um nível só de
+|             aninhamento, de propósito — menu que abre menu que abre menu é
+|             índice, não caminho de trabalho.
+|   contador— opcional: o NÚMERO VIVO ao lado do item. O valor é uma chave do
     |             catálogo em `App\Support\ContadoresDoMenu`, que decide como
     |             apurar e com que tom (neutro = tamanho, alerta = fila). Só
     |             declare onde o número muda a decisão de quem olha: cada contador
@@ -126,21 +140,39 @@ return [
             'rotulo' => 'Denúncias',
             'vazio' => 'As denúncias recebidas das ouvidorias aparecem aqui quando você tiver acesso a elas.',
             'itens' => [
+                /*
+                 * Item de PASTA: ele não leva a lugar nenhum, ele ABRE — os dois
+                 * canais são os filhos (decisão do dono, 02/09/2026, depois de ver
+                 * os dois soltos no mesmo nível dos demais itens).
+                 *
+                 * Uma pasta não declara `rota`, `slug` nem `setores`: quem tem
+                 * tela, permissão e concessão são os filhos, e a pasta aparece
+                 * quando SOBRA ao menos um filho visível. Declarar `setores` aqui
+                 * criaria um segundo dono para "quem entra em denúncia" — o filho
+                 * diria uma coisa e a pasta outra.
+                 */
                 [
-                    'rotulo' => 'e-Salvador',
-                    'rota' => 'retaguarda.denuncias.e-salvador.index',
+                    'rotulo' => 'Denúncias',
                     'icone' => 'denuncias',
-                    'slug' => 'denuncias',
-                    'curto' => 'E-SALV',
-                    'setores' => ['administrador', 'gestor'],
-                ],
-                [
-                    'rotulo' => 'Fala Salvador',
-                    'rota' => 'retaguarda.denuncias.fala-salvador.index',
-                    'icone' => 'denuncias',
-                    'slug' => 'denuncias',
-                    'curto' => 'FALA',
-                    'setores' => ['administrador', 'gestor'],
+                    'curto' => 'DENÚNCIA',
+                    'filhos' => [
+                        [
+                            'rotulo' => 'e-Salvador',
+                            'rota' => 'retaguarda.denuncias.e-salvador.index',
+                            'icone' => 'denuncias',
+                            'slug' => 'denuncias',
+                            'curto' => 'E-SALV',
+                            'setores' => ['administrador', 'administrativo', 'gestor'],
+                        ],
+                        [
+                            'rotulo' => 'Fala Salvador',
+                            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+                            'icone' => 'denuncias',
+                            'slug' => 'denuncias',
+                            'curto' => 'FALA',
+                            'setores' => ['administrador', 'administrativo', 'gestor'],
+                        ],
+                    ],
                 ],
             ],
         ],
@@ -226,8 +258,11 @@ return [
                  * licença, ofício) entra por aqui, é triada e só então vira
                  * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
                  *
-                 * Concessão inicial: administrador e gestor. O FISCAL não entra —
-                 * triar o que chega, encaminhar e devolver com justificativa é ato
+                 * Concessão inicial: administrativo, administrador e gestor. O
+                 * ADMINISTRATIVO é o dono do trabalho — registrar o que chega em
+                 * papel é a função dele (decisão do dono, 02/09/2026); o gestor
+                 * acompanha o que foi encaminhado. O FISCAL não entra — triar o que
+                 * chega, encaminhar e devolver com justificativa é ato
                  * administrativo, e a demanda encaminhada chega a ele pelo
                  * aplicativo, já dirigida. Dar-lhe a caixa permitiria escolher o
                  * próprio trabalho e arquivar o que não quisesse atender.
@@ -238,7 +273,7 @@ return [
                     'icone' => 'caixa',
                     'slug' => 'caixa-de-entrada',
                     'curto' => 'ENTRADA',
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'administrativo', 'gestor'],
                 ],
                 [
                     'rotulo' => 'Fiscalizações',

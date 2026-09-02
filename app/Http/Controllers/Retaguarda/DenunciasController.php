@@ -42,10 +42,23 @@ use Inertia\Response;
  * ── As duas etapas têm dois donos, e a tela obedece ─────────────────────────
  *
  * A permissão de ABRIR a tela é uma só (slug `denuncias`, no Modo Gerente). O
- * que separa os papéis é a ETAPA, derivada do setor de quem entrou:
- * administrador tria, gestor direciona, e o administrador do sistema vê as
- * duas — é ele que demonstra o fluxo inteiro. A conferência acontece AQUI, no
- * servidor, e não só na tela: esconder o botão é conforto, nunca fronteira.
+ * que separa os papéis é a ETAPA, derivada do setor de quem entrou: o
+ * ADMINISTRATIVO tria, o GESTOR direciona, e o administrador do sistema exerce
+ * as duas — é ele que demonstra o fluxo inteiro e que cobre a ausência do outro.
+ * A conferência acontece AQUI, no servidor, e não só na tela: esconder o botão é
+ * conforto, nunca fronteira.
+ *
+ * ── E o gestor é gestor de uma ÁREA ─────────────────────────────────────────
+ *
+ * "Pra ele só interessa o que for direcionado para a área dele" (decisão do dono,
+ * 02/09/2026). Então o gestor tem RECORTE: a listagem dele traz só as denúncias
+ * da área que ele responde, e a ação sobre denúncia de outra área é RECUSADA com
+ * o motivo escrito. As duas coisas, e não uma: esconder da lista sem barrar a
+ * ação deixaria a fronteira valendo apenas para quem não sabe mandar a
+ * requisição.
+ *
+ * O administrador continua vendo tudo — é o dono do sistema. O administrativo
+ * também, porque quem tria precisa saber o que aconteceu com o que encaminhou.
  *
  * ⚠️ PROTÓTIPO: nada é gravado em banco. As denúncias de partida vêm da config
  * e as decisões ficam na sessão de quem está navegando (ver
@@ -91,7 +104,7 @@ class DenunciasController extends Controller
         $dados = $request->validate([
             'destinos' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'destinos.*.id' => ['required', 'integer'],
-            'destinos.*.area' => ['required', Rule::in(self::areas())],
+            'destinos.*.area' => ['required', Rule::in(EstruturaFicticia::nomesDeArea())],
             'observacao' => ['nullable', 'string', 'max:500'],
         ], [
             'destinos.required' => 'Escolha ao menos uma denúncia para encaminhar.',
@@ -182,6 +195,11 @@ class DenunciasController extends Controller
         ]);
 
         $ids = array_map('intval', $dados['ids']);
+
+        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+            return $recusa;
+        }
+
         $equipe = (string) $dados['equipe'];
         $justificativa = trim((string) ($dados['justificativa'] ?? ''));
 
@@ -227,7 +245,7 @@ class DenunciasController extends Controller
 
             // Operação nova: o mínimo para ela ser reconhecível depois.
             'nome' => ['exclude_unless:nova,true', 'required', 'string', 'min:5', 'max:120'],
-            'area' => ['exclude_unless:nova,true', 'required', Rule::in(self::areas())],
+            'area' => ['exclude_unless:nova,true', 'required', Rule::in(EstruturaFicticia::nomesDeArea())],
             'equipe' => ['exclude_unless:nova,true', 'required', Rule::in(EstruturaFicticia::codigosDeEquipe())],
             'periodo' => ['exclude_unless:nova,true', 'nullable', 'string', 'max:80'],
             'foco' => ['exclude_unless:nova,true', 'nullable', 'string', 'max:300'],
@@ -239,11 +257,17 @@ class DenunciasController extends Controller
             'equipe.required' => 'Diga qual equipe executa a operação.',
         ]);
 
+        $ids = array_map('intval', $dados['ids']);
+
+        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+            return $recusa;
+        }
+
         $operacao = $nova
             ? DenunciasFicticias::criarOperacao($dados)['nome']
             : (string) $dados['operacao'];
 
-        $efeito = DenunciasFicticias::anexarAOperacao(array_map('intval', $dados['ids']), $operacao);
+        $efeito = DenunciasFicticias::anexarAOperacao($ids, $operacao);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -280,9 +304,22 @@ class DenunciasController extends Controller
         /** @var array<string, mixed> $configuracao */
         $configuracao = (array) config("prototipo_denuncias.canais.{$canal}", []);
 
+        $usuario = $request->user();
+        $areasDoGestor = self::areasDoGestor($usuario);
+        $comRecorte = self::temRecorteDeArea($usuario);
+
         return Inertia::render("Retaguarda/Denuncias/{$pagina}", [
             'canal' => $configuracao,
-            'denuncias' => DenunciasFicticias::doCanal($canal),
+            // O gestor recebe SÓ o que é da área dele — o recorte é feito aqui, e
+            // não na tela: filtro de front esconde, não protege, e a lista inteira
+            // teria viajado até o navegador de quem não deve vê-la.
+            'denuncias' => $comRecorte
+                ? array_values(array_filter(
+                    DenunciasFicticias::doCanal($canal),
+                    static fn (array $d): bool => is_string($d['area'] ?? null)
+                        && in_array($d['area'], $areasDoGestor, true),
+                ))
+                : DenunciasFicticias::doCanal($canal),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
             // uma opção que o servidor recusa.
@@ -290,39 +327,33 @@ class DenunciasController extends Controller
             'motivos' => array_values((array) config('prototipo_denuncias.motivos_de_devolucao', [])),
             'destinos' => array_values((array) config('prototipo_denuncias.destinos_de_retorno', [])),
             'equipes' => EstruturaFicticia::equipes(),
-            'areas' => self::areas(),
+            'areas' => EstruturaFicticia::nomesDeArea(),
+            // Quem responde por cada área. É o que o triador precisa ver ANTES de
+            // encaminhar: "vai para a Área 5" só diz metade; a outra metade é para
+            // quem.
+            'gestores' => EstruturaFicticia::gestoresPorArea(),
             'operacoes' => DenunciasFicticias::operacoes(),
             // A etapa de quem entrou — é ela que decide o que a tela oferece, e a
             // mesma resposta governa a recusa no servidor.
-            'etapas' => self::etapas($request->user()),
+            'etapas' => self::etapas($usuario),
+            // As áreas que esta pessoa responde, e se a listagem está recortada
+            // por elas. A tela usa isso para dizer QUAL é a sua área no selo, e
+            // para explicar que a lista não é o universo.
+            'areasDoGestor' => $areasDoGestor,
+            'recorteDeArea' => $comRecorte,
             'alterada' => DenunciasFicticias::alterada(),
         ]);
     }
 
     /**
-     * As áreas da estrutura de fiscalização, sem repetição e na ordem em que ela
-     * as declara — a lista que a validação aceita e que a tela oferece.
-     *
-     * Sai de `EstruturaFicticia`, que é a MESMA fonte da tela de Áreas e Equipes
-     * e da derivação bairro → área. Uma segunda lista aqui discordaria dela no
-     * primeiro ajuste, e a tela ofereceria uma área que o servidor recusa.
-     *
-     * @return list<string>
-     */
-    private static function areas(): array
-    {
-        return array_values(array_unique(array_map(
-            static fn (array $e): string => (string) $e['area'],
-            EstruturaFicticia::equipes(),
-        )));
-    }
-
-    /**
      * As etapas do fluxo que esta pessoa exerce.
      *
-     * O papel vem do SETOR, não de uma coluna nova: `administrador` tria,
-     * `gestor` direciona, e quem administra o sistema (`admin`) exerce as duas —
-     * é ele quem demonstra o fluxo inteiro e quem cobre a ausência do outro.
+     * O papel vem do SETOR, não de uma coluna nova: `administrativo` tria,
+     * `gestor` direciona, e quem administra o sistema exerce as duas — é ele quem
+     * demonstra o fluxo inteiro e quem cobre a ausência do outro. O setor
+     * `administrador` não precisa de linha própria aqui: `ehAdmin()` já o
+     * reconhece, e uma segunda conta do mesmo papel um dia discordaria da
+     * primeira.
      *
      * Devolve lista, e não um valor único, porque acumular papéis SOMA — a mesma
      * regra da matriz de permissões, em que quem tem dois setores fica com a
@@ -344,7 +375,7 @@ class DenunciasController extends Controller
 
         $etapas = [];
 
-        if (in_array('administrador', $setores, true)) {
+        if (in_array('administrativo', $setores, true)) {
             $etapas[] = 'triagem';
         }
 
@@ -353,6 +384,46 @@ class DenunciasController extends Controller
         }
 
         return $etapas;
+    }
+
+    /**
+     * As áreas que esta pessoa responde como gestora — vazio para quem não é
+     * gestor de área nenhuma.
+     *
+     * ⚠️ PROTÓTIPO: o vínculo mora em `config/prototipo_estrutura.php`, junto da
+     * área, e liga pela matrícula. Em produção ele é entre USUÁRIO e área (uma
+     * pessoa pode responder por mais de uma, e gestor entra e sai), e isso é
+     * tabela — está registrado como pendência no doc de regra. Quem chama aqui já
+     * trata LISTA, então a modelagem definitiva não obriga a mexer em quem lê.
+     *
+     * @return list<string>
+     */
+    private static function areasDoGestor(?User $usuario): array
+    {
+        return $usuario === null
+            ? []
+            : EstruturaFicticia::areasDoGestor($usuario->login);
+    }
+
+    /**
+     * A listagem desta pessoa é recortada pela área dela?
+     *
+     * É o gestor, e só ele: quem TRIA precisa ver o universo (não se tria o que
+     * não se vê, e quem encaminhou precisa saber o que aconteceu depois), e o
+     * administrador é o dono do sistema. Um gestor que também seja administrativo
+     * não é recortado — o papel que amplia ganha, a mesma regra da união de
+     * setores na matriz de permissões.
+     */
+    private static function temRecorteDeArea(?User $usuario): bool
+    {
+        if ($usuario === null || $usuario->ehAdmin()) {
+            return false;
+        }
+
+        $etapas = self::etapas($usuario);
+
+        return in_array('direcionamento', $etapas, true)
+            && ! in_array('triagem', $etapas, true);
     }
 
     /**
@@ -370,10 +441,74 @@ class DenunciasController extends Controller
         }
 
         $recado = $etapa === 'triagem'
-            ? 'A triagem das denúncias é do setor administrativo. Você acompanha o que já foi encaminhado à sua área.'
+            ? 'A triagem das denúncias é do setor administrativo. Você acompanha o que foi encaminhado à sua área.'
             : 'O direcionamento é do gestor da área. A triagem encaminha; quem escolhe equipe ou operação é ele.';
 
         return back()->with('flash.erro', $recado);
+    }
+
+    /**
+     * Recusa a ação do gestor sobre denúncia que NÃO é da área dele.
+     *
+     * Existe porque esconder da listagem não é fronteira: a lista do gestor já vem
+     * recortada, mas quem souber montar a requisição alcançaria a denúncia de
+     * outra área — e o lote é justamente o caminho fácil para isso, porque manda
+     * uma lista de identificadores.
+     *
+     * A conferência é contra a área GRAVADA em cada denúncia e o vínculo do
+     * usuário, as duas coisas que o corpo da requisição não controla. O
+     * administrador passa: é o dono do sistema. Quem não é gestor de área nenhuma
+     * também passa aqui — quem o barra é a guarda de ETAPA, que roda antes.
+     *
+     * @param  list<int>  $ids
+     */
+    private function exigirArea(Request $request, array $ids): ?RedirectResponse
+    {
+        $usuario = $request->user();
+
+        if ($usuario === null || $usuario->ehAdmin()) {
+            return null;
+        }
+
+        $minhas = self::areasDoGestor($usuario);
+
+        /*
+         * Gestor SEM área vinculada não é caso de passar batido: ele exerce a etapa
+         * de direcionamento (senão não chegaria aqui) e não tem área para
+         * direcionar. Recusar dizendo isso é o que faz alguém corrigir o cadastro —
+         * deixar passar daria a ele o sistema inteiro.
+         */
+        if ($minhas === []) {
+            return back()->with(
+                'flash.erro',
+                'Sua conta não está vinculada a nenhuma área de fiscalização, então não há o que '
+                .'direcionar. Procure quem administra o sistema para registrar a sua área.',
+            );
+        }
+
+        $deFora = [];
+
+        foreach ($ids as $id) {
+            $denuncia = DenunciasFicticias::denuncia($id);
+            $area = $denuncia === null ? null : ($denuncia['area'] ?? null);
+
+            if (! is_string($area) || ! in_array($area, $minhas, true)) {
+                $deFora[] = $denuncia['protocolo'] ?? "#{$id}";
+            }
+        }
+
+        if ($deFora === []) {
+            return null;
+        }
+
+        return back()->with(
+            'flash.erro',
+            'Você responde por '.implode(', ', $minhas).', e '
+            .(count($deFora) === 1 ? 'a denúncia ' : 'as denúncias ')
+            .implode(', ', $deFora)
+            .(count($deFora) === 1 ? ' não é dessa área' : ' não são dessa área')
+            .'. Nada foi alterado — recarregue a listagem.',
+        );
     }
 
     /**

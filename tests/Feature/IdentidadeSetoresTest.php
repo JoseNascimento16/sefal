@@ -9,8 +9,21 @@ use Illuminate\Support\Facades\Hash;
 
 beforeEach(fn () => $this->seed(SetoresSeeder::class));
 
-test('seeder cria os tres setores do sistema', function () {
-    expect(Setor::pluck('slug')->sort()->values()->all())->toBe(['administrador', 'fiscal', 'gestor']);
+test('seeder cria o catalogo de setores declarado na config', function () {
+    /*
+     * A afirmação é contra a CONFIG, e não contra uma lista escrita aqui: a config
+     * é a fonte única do catálogo, e o que se quer provar é que o seeder a
+     * reproduz inteira. Com a lista repetida no teste, acrescentar um setor
+     * quebrava um teste que estava certo — e a tentação era corrigir o número em
+     * vez de conferir o efeito.
+     */
+    $daConfig = array_keys((array) config('retaguarda.setores'));
+    sort($daConfig);
+
+    expect(Setor::pluck('slug')->sort()->values()->all())->toBe($daConfig)
+        // E o catálogo tem de conter os quatro papéis do fluxo: perder um deles em
+        // silêncio é perder o acesso de quem o exerce.
+        ->and($daConfig)->toContain('administrador', 'administrativo', 'fiscal', 'gestor');
 });
 
 test('usuario pertence a N setores e ehAdmin reconhece o setor administrador', function () {
@@ -161,5 +174,8 @@ test('fp:criar-usuario-dev rodado duas vezes nao duplica usuario nem vinculo', f
 test('seeder de setores e idempotente', function () {
     $this->seed(SetoresSeeder::class);
 
-    expect(Setor::count())->toBe(3);
+    // A conta sai da CONFIG: o que se prova é que rodar de novo não DUPLICA, e
+    // isso não muda quando o catálogo cresce. Com o número escrito à mão, cada
+    // setor novo quebrava um teste que continuava certo.
+    expect(Setor::count())->toBe(count((array) config('retaguarda.setores')));
 });

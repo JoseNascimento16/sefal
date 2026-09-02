@@ -95,9 +95,15 @@ interface Props {
     destinos: string[];
     equipes: EquipeResumo[];
     areas: string[];
+    /** Quem responde por cada área — o triador precisa ver para QUEM encaminha. */
+    gestores: Record<string, { nome: string; matricula: string | null }>;
     operacoes: Operacao[];
     /** As etapas do fluxo que esta pessoa exerce — quem responde é o servidor. */
     etapas: Etapa[];
+    /** As áreas que esta pessoa responde como gestora (vazio para quem não é). */
+    areasDoGestor: string[];
+    /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
+    recorteDeArea: boolean;
     /** A sessão já decidiu algo sobre a demonstração? */
     alterada: boolean;
 }
@@ -245,14 +251,31 @@ export function PainelDeDenuncias({
     destinos,
     equipes,
     areas,
+    gestores,
     operacoes,
     etapas,
+    areasDoGestor,
+    recorteDeArea,
     alterada,
 }: Props) {
     const { enviando, ocupado, enviar } = useEnvio();
 
     const tria = etapas.includes('triagem');
     const direciona = etapas.includes('direcionamento');
+
+    /** "Área 5 — Boca do Rio", como o selo da etapa e os avisos a nomeiam. */
+    const nomeDaArea = (area: string): string => {
+        const equipe = equipes.find((e) => e.area === area);
+
+        return equipe === undefined ? area : `${area} — ${equipe.regiao}`;
+    };
+
+    /** O gestor de uma área, ou null quando a estrutura não registra nenhum. */
+    const gestorDa = (area: string): string | null => {
+        const nome = gestores[area]?.nome ?? '';
+
+        return nome.trim() === '' ? null : nome;
+    };
 
     const [aba, setAba] = useState<Aba>(
         tria ? 'triagem' : direciona ? 'direcionamento' : 'todas',
@@ -685,7 +708,25 @@ export function PainelDeDenuncias({
                         {direciona && (
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
                                 <span className="rt-chip-dot" />
-                                Sua etapa: direcionamento — você escolhe equipe ou operação
+                                {/* A ÁREA vai no selo: "sua etapa é direcionamento"
+                                    sem dizer de onde deixaria o gestor sem saber
+                                    por que a lista dele é curta. */}
+                                Sua etapa: direcionamento
+                                {areasDoGestor.length > 0
+                                    ? ` · ${areasDoGestor.map(nomeDaArea).join(' e ')}`
+                                    : ''}{' '}
+                                — você escolhe equipe ou operação
+                            </li>
+                        )}
+
+                        {/* Gestor sem área vinculada: ele exerce a etapa e não tem
+                            de onde. Dito na cara, e não em lista vazia sem
+                            explicação — a lista vazia parece sistema quebrado. */}
+                        {direciona && areasDoGestor.length === 0 && (
+                            <li className="rt-chip" style={{ color: 'var(--sm-perigo)' }}>
+                                <span className="rt-chip-dot" />
+                                Sua conta não está vinculada a nenhuma área — procure quem
+                                administra o sistema
                             </li>
                         )}
                         {!tria && !direciona && (
@@ -703,25 +744,38 @@ export function PainelDeDenuncias({
                     <button
                         type="button"
                         className="rt-numero"
-                        title="Ver todas as denúncias deste canal"
+                        title={
+                            recorteDeArea
+                                ? 'Ver todas as denúncias da sua área neste canal'
+                                : 'Ver todas as denúncias deste canal'
+                        }
                         onClick={() => {
                             setBusca('');
                             trocarAba('todas');
                         }}
                     >
                         <strong>{numeros.total}</strong>
-                        <span>recebidas</span>
+                        <span>{recorteDeArea ? 'na sua área' : 'recebidas'}</span>
                     </button>
-                    <div className="rt-numeros-separador" />
-                    <button
-                        type="button"
-                        className="rt-numero alerta"
-                        title="Ver as que aguardam triagem"
-                        onClick={() => irParaEtapa('triagem', tria, 'recebida')}
-                    >
-                        <strong>{numeros.triar}</strong>
-                        <span>a triar</span>
-                    </button>
+
+                    {/* O número "a triar" só existe para quem TRIA. Para o gestor
+                        ele apareceria em zero — a denúncia recebida ainda não tem
+                        área, então ela não está na lista dele —, e zero ali leria
+                        como "não há nada a triar", que é falso. */}
+                    {tria && (
+                        <>
+                            <div className="rt-numeros-separador" />
+                            <button
+                                type="button"
+                                className="rt-numero alerta"
+                                title="Ver as que aguardam triagem"
+                                onClick={() => irParaEtapa('triagem', tria, 'recebida')}
+                            >
+                                <strong>{numeros.triar}</strong>
+                                <span>a triar</span>
+                            </button>
+                        </>
+                    )}
                     <div className="rt-numeros-separador" />
                     <button
                         type="button"
@@ -772,6 +826,27 @@ export function PainelDeDenuncias({
                     </div>
                 </div>
             </div>
+
+            {/* A lista do gestor NÃO é o universo, e a tela diz isso. Sem o aviso,
+                ele contaria as denúncias, acharia o número baixo e concluiria que o
+                canal está parado. */}
+            {recorteDeArea && (
+                <div className="rt-sugestao" style={{ marginBottom: 18 }}>
+                    <Info size={16} aria-hidden />
+                    <div>
+                        <strong>
+                            Você está vendo só o que foi encaminhado a{' '}
+                            {areasDoGestor.map(nomeDaArea).join(' e ')}.
+                        </strong>
+                        <div>
+                            As denúncias das outras áreas e as que ainda esperam a
+                            triagem do administrativo não aparecem aqui — e a ação
+                            sobre denúncia de outra área é recusada pelo sistema, não
+                            só escondida.
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="card-premium">
                 <div className="abas" role="tablist" aria-label={`Denúncias do ${canal.nome}`}>
@@ -1139,9 +1214,16 @@ export function PainelDeDenuncias({
                                                                 }
                                                             >
                                                                 <option value="">Escolha a área…</option>
+                                                                {/* O nome do GESTOR vai na opção:
+                                                                    encaminhar é entregar trabalho a
+                                                                    alguém, e "Área 5" não diz a quem.
+                                                                    Vai aqui, e não numa linha extra,
+                                                                    para não dobrar a altura da grade. */}
                                                                 {areas.map((a) => (
                                                                     <option key={a} value={a}>
-                                                                        {a}
+                                                                        {gestorDa(a) === null
+                                                                            ? a
+                                                                            : `${a} — ${gestorDa(a)}`}
                                                                     </option>
                                                                 ))}
                                                             </select>
@@ -1311,6 +1393,13 @@ export function PainelDeDenuncias({
                                         (aberta.area_sugerida === null
                                             ? 'sem área definida'
                                             : `${aberta.area_sugerida.area} (sugerida pelo bairro)`)}
+                                    {/* Quem responde pela área — a informação que
+                                        falta para "encaminhada" ter destinatário. */}
+                                    {aberta.area !== null && gestorDa(aberta.area) !== null && (
+                                        <div style={{ color: 'var(--sm-texto-fraco)' }}>
+                                            Gestor: {gestorDa(aberta.area)}
+                                        </div>
+                                    )}
                                 </dd>
                             </div>
                             <div>
@@ -1530,10 +1619,27 @@ export function PainelDeDenuncias({
                         {resumoPorArea.map(([area, quantas]) => (
                             <li key={area} className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                {area}: {contar(quantas, 'denúncia', 'denúncias')}
+                                {/* Área E gestor: é a última tela antes de o
+                                    trabalho sair da mão de quem tria, e é aqui que
+                                    ele confere para quem está entregando. */}
+                                {area}
+                                {gestorDa(area) === null ? '' : ` · ${gestorDa(area)}`}:{' '}
+                                {contar(quantas, 'denúncia', 'denúncias')}
                             </li>
                         ))}
                     </ul>
+
+                    {/* Área sem gestor registrado na estrutura: a denúncia é
+                        encaminhada e fica sem quem a receba. Aviso, não bloqueio —
+                        o cadastro do gestor é de fora desta tela. */}
+                    {resumoPorArea.some(([area]) => gestorDa(area) === null) && (
+                        <p className="form-erro" style={{ marginBottom: 12 }}>
+                            <TriangleAlert size={15} aria-hidden /> Há área sem gestor
+                            registrado na estrutura: a denúncia chega lá e ninguém é
+                            avisado. Vale registrar o gestor em Estrutura › Áreas e
+                            Equipes.
+                        </p>
+                    )}
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="encaminhar-observacao">

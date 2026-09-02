@@ -331,7 +331,13 @@ return [
             'bairro' => 'Mussurunga',
             'endereco_impreciso' => false,
             'anexos' => ['foto-canteiro-central.jpg'],
-            'situacao' => 'Recebida',
+            // Já encaminhada à Área 5, que é a do `gestor1`: cada gestor com conta
+            // de demonstração precisa de fila NOS DOIS canais, senão a etapa de
+            // direcionamento abre vazia e não há o que demonstrar. Mussurunga é
+            // bairro compartilhado (Área 5 e Área 6), então esta linha também
+            // mostra a escolha que a triagem tomou.
+            'situacao' => 'Encaminhada à área',
+            'area' => 'Área 5',
         ],
 
         [
@@ -583,7 +589,9 @@ return [
             'atendente' => 'Central 156 — atendente 4402',
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
-            'situacao' => 'Recebida',
+            // Fila do `gestor1` (Área 5) neste canal — ver a nota da denúncia 6.
+            'situacao' => 'Encaminhada à área',
+            'area' => 'Área 5',
         ],
 
         [
@@ -704,12 +712,15 @@ return [
             'logradouro' => 'Rua Álvaro Adorno',
             'numero' => '77',
             'referencia' => 'portão principal da escola municipal',
-            'bairro' => 'Tancredo Neves',
+            'bairro' => 'Pernambués',
             'endereco_impreciso' => false,
             'atendente' => 'Central 156 — atendente 4433',
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
-            'situacao' => 'Recebida',
+            // Fila do `gestor3` (Área 3) neste canal, e com o PRAZO JÁ VENCIDO: o
+            // gestor precisa ver na própria lista dele que há coisa atrasada.
+            'situacao' => 'Encaminhada à área',
+            'area' => 'Área 3',
         ],
 
         [

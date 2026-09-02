@@ -20,6 +20,43 @@ use App\Services\PermissaoService;
 class CatalogoFuncionalidades
 {
     /**
+     * Todo item de menu que aponta para uma TELA, na ordem do menu — descendo nas
+     * pastas (`filhos`).
+     *
+     * É o caminhador ÚNICO do menu, e existe porque o menu deixou de ser plano: um
+     * item pode ser PASTA, e a tela mora no filho. Quem percorresse só
+     * `secao.itens` passaria ao largo das telas de dentro das pastas — o catálogo
+     * de permissões não as veria (e elas ficariam fora do controle de acesso), e os
+     * testes-lei que varrem o menu deixariam de cobri-las sem nada acusar.
+     *
+     * A pasta em si não entra: ela não tem tela, rota nem permissão.
+     *
+     * @return list<array{item: array<string, mixed>, secao: array<string, mixed>}>
+     */
+    public static function folhasDoMenu(): array
+    {
+        $folhas = [];
+
+        foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
+            foreach ((array) ($secao['itens'] ?? []) as $item) {
+                $filhos = (array) ($item['filhos'] ?? []);
+
+                if ($filhos === []) {
+                    $folhas[] = ['item' => $item, 'secao' => $secao];
+
+                    continue;
+                }
+
+                foreach ($filhos as $filho) {
+                    $folhas[] = ['item' => $filho, 'secao' => $secao];
+                }
+            }
+        }
+
+        return $folhas;
+    }
+
+    /**
      * As telas controláveis, na ordem do menu.
      *
      * @return list<array{slug: string, rotulo: string, secao: string}>
@@ -43,27 +80,27 @@ class CatalogoFuncionalidades
 
         $itens = [];
 
-        foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
-            foreach ((array) ($secao['itens'] ?? []) as $item) {
-                $slug = $item['slug'] ?? null;
+        foreach (self::folhasDoMenu() as $folha) {
+            ['item' => $item, 'secao' => $secao] = $folha;
 
-                if (! is_string($slug) || $slug === '') {
-                    continue;
-                }
+            $slug = $item['slug'] ?? null;
 
-                if (isset($itens[$slug])) {
-                    continue;
-                }
-
-                $itens[$slug] = [
-                    'slug' => $slug,
-                    // Slug compartilhado usa o nome da SEÇÃO; slug de uma tela só, o dela.
-                    'rotulo' => ($compartilhados[$slug] ?? 0) > 1
-                        ? (string) ($secao['rotulo'] ?? $slug)
-                        : (string) ($item['rotulo'] ?? $slug),
-                    'secao' => (string) ($secao['rotulo'] ?? ''),
-                ];
+            if (! is_string($slug) || $slug === '') {
+                continue;
             }
+
+            if (isset($itens[$slug])) {
+                continue;
+            }
+
+            $itens[$slug] = [
+                'slug' => $slug,
+                // Slug compartilhado usa o nome da SEÇÃO; slug de uma tela só, o dela.
+                'rotulo' => ($compartilhados[$slug] ?? 0) > 1
+                    ? (string) ($secao['rotulo'] ?? $slug)
+                    : (string) ($item['rotulo'] ?? $slug),
+                'secao' => (string) ($secao['rotulo'] ?? ''),
+            ];
         }
 
         return array_values($itens);
@@ -78,13 +115,11 @@ class CatalogoFuncionalidades
     {
         $slugs = [];
 
-        foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
-            foreach ((array) ($secao['itens'] ?? []) as $item) {
-                $slug = $item['slug'] ?? null;
+        foreach (self::folhasDoMenu() as $folha) {
+            $slug = $folha['item']['slug'] ?? null;
 
-                if (is_string($slug) && $slug !== '') {
-                    $slugs[] = $slug;
-                }
+            if (is_string($slug) && $slug !== '') {
+                $slugs[] = $slug;
             }
         }
 
@@ -178,30 +213,30 @@ class CatalogoFuncionalidades
      */
     private static function semente(string $slug): array
     {
-        foreach ((array) config('retaguarda_menu.secoes', []) as $secao) {
-            foreach ((array) ($secao['itens'] ?? []) as $item) {
-                if (($item['slug'] ?? null) !== $slug) {
+        foreach (self::folhasDoMenu() as $folha) {
+            $item = $folha['item'];
+
+            if (($item['slug'] ?? null) !== $slug) {
+                continue;
+            }
+
+            $semente = [];
+
+            foreach ((array) ($item['setores'] ?? []) as $chave => $valor) {
+                // Chave numérica = a forma curta, em que o VALOR é o setor.
+                if (is_int($chave)) {
+                    $semente[(string) $valor] = [];
+
                     continue;
                 }
 
-                $semente = [];
-
-                foreach ((array) ($item['setores'] ?? []) as $chave => $valor) {
-                    // Chave numérica = a forma curta, em que o VALOR é o setor.
-                    if (is_int($chave)) {
-                        $semente[(string) $valor] = [];
-
-                        continue;
-                    }
-
-                    $semente[(string) $chave] = array_map(
-                        static fn (mixed $ligada): bool => (bool) $ligada,
-                        (array) $valor,
-                    );
-                }
-
-                return $semente;
+                $semente[(string) $chave] = array_map(
+                    static fn (mixed $ligada): bool => (bool) $ligada,
+                    (array) $valor,
+                );
             }
+
+            return $semente;
         }
 
         return [];

@@ -1,8 +1,8 @@
 # Denúncias das ouvidorias (e-Salvador e Fala Salvador)
 
-**Onde fica:** Menu → Denúncias → **e-Salvador** (`/retaguarda/denuncias/e-salvador`) e
-Menu → Denúncias → **Fala Salvador** (`/retaguarda/denuncias/fala-salvador`).
-**Quem usa:** administrador e gestor. **O fiscal não entra** (ver RN-11).
+**Onde fica:** Menu → **Denúncias** (item que expande) → **e-Salvador**
+(`/retaguarda/denuncias/e-salvador`) e **Fala Salvador** (`/retaguarda/denuncias/fala-salvador`).
+**Quem usa:** administrativo, gestor e administrador. **O fiscal não entra** (ver RN-11).
 
 > ## ⚠️ ESTE MÓDULO É UM PROTÓTIPO
 >
@@ -100,6 +100,40 @@ escolher uma em silêncio esconderia a decisão de quem tem de tomá-la.
 A sugestão é **calculada na leitura**, nunca gravada junto da denúncia: a estrutura de áreas é
 editável, e uma sugestão congelada continuaria apontando para a área de antes do ajuste.
 
+**O triador vê PARA QUEM está encaminhando.** Cada opção de área traz o nome do **gestor** que vai
+receber ("Área 5 — Lourdes Figueiredo Sales"), e o resumo do lote, antes de confirmar, lista área
+**e** gestor. "Encaminhei para a Área 5" diz metade; a outra metade é a pessoa que passa a responder
+por aquilo. Área **sem** gestor registrado gera aviso — a denúncia chegaria lá e ninguém seria
+avisado.
+
+### RN-05b — O gestor é gestor de UMA ÁREA, e só vê o que é dela
+
+> "Pra ele só interessa o que for direcionado para a área dele" — decisão do dono, 02/09/2026.
+
+O gestor tem **área vinculada** (ver [Áreas e Equipes](../estrutura/areas-e-equipes.md), RN-01b), e o
+recorte vale nas **duas** pontas:
+
+1. **a listagem traz só as denúncias da área dele** — as das outras áreas e as que ainda esperam a
+   triagem (que ainda não têm área) não aparecem. O recorte é feito **no servidor**: filtro de front
+   esconde, não protege, e a lista inteira teria viajado até o navegador de quem não deve vê-la;
+2. **a ação sobre denúncia de outra área é RECUSADA**, com o motivo escrito e sem alterar nada. As
+   duas coisas, e não uma: esconder da lista sem barrar a ação deixaria a fronteira valendo apenas
+   para quem não sabe montar a requisição — e o **lote** é justamente o caminho fácil para isso,
+   porque manda uma lista de identificadores.
+
+A tela **explica o recorte** em vez de deixar a lista curta sem motivo ("Você está vendo só o que foi
+encaminhado a Área 5 — Boca do Rio"), e o selo da etapa passa a nomear a área. Sem isso o gestor
+contaria as denúncias, acharia o número baixo e concluiria que o canal está parado.
+
+**Gestor sem área vinculada** é recusado dizendo isso, e a tela avisa na cara: ele exerce a etapa e
+não tem de onde. Deixar passar daria a ele o sistema inteiro; lista vazia sem explicação pareceria
+sistema quebrado.
+
+**Quem NÃO é recortado:** o **administrador** (é o dono do sistema) e o **administrativo** — quem
+tria precisa ver o universo, porque não se tria o que não se vê, e quem encaminhou precisa saber o
+que aconteceu depois. Um gestor que também seja administrativo não é recortado: o papel que amplia
+ganha, a mesma regra da união de setores na matriz de permissões.
+
 ### RN-06 — ETAPA 2, direcionamento: o gestor da área escolhe COMO o trabalho acontece
 
 A denúncia **`Encaminhada à área`** espera o gestor daquela área, que tem **duas saídas**:
@@ -167,7 +201,7 @@ administrativo, não a exceção:
 O botão do lote e o do detalhe chamam o **mesmo** endereço: dois caminhos seriam a mesma regra duas
 vezes, e um dia só um deles ganharia a validação nova.
 
-### RN-11 — Uma permissão para o módulo; o fiscal não entra
+### RN-11 — Uma permissão para o módulo, num item de menu que EXPANDE; o fiscal não entra
 
 As duas telas declaram o **mesmo slug** (`denuncias`) porque moram sob o mesmo primeiro trecho do
 caminho (`/retaguarda/denuncias/…`), que é de onde as guardas deduzem a tela. A permissão é **uma**,
@@ -175,28 +209,37 @@ para o conjunto, e aparece no Modo Gerente com o nome da seção: quem cuida de 
 origens, e separar a permissão do e-Salvador da do Fala Salvador seria uma decisão que ninguém precisa
 tomar.
 
-**Concessão inicial:** administrador e gestor — os dois papéis do fluxo. **O fiscal não entra:** dar
-a ele estas telas permitiria escolher o próprio trabalho e arquivar o que não quisesse atender. A
-denúncia chega a ele pelo aplicativo, **já dirigida**.
+No menu elas são os **filhos de um item "Denúncias" que expande** (decisão do dono, 02/09/2026,
+depois de vê-las soltas no mesmo nível dos demais itens). A **pasta não decide acesso**: ela não
+declara rota, slug nem setor — quem tem tela e permissão são os filhos, e ela aparece quando sobra ao
+menos um filho visível. Se ela também declarasse setor, a mesma decisão teria dois donos.
+
+**Concessão inicial:** administrativo, gestor e administrador — os papéis do fluxo. **O fiscal não
+entra:** dar a ele estas telas permitiria escolher o próprio trabalho e arquivar o que não quisesse
+atender. A denúncia chega a ele pelo aplicativo, **já dirigida**.
 
 ### RN-12 — A etapa de quem entrou vem do SETOR, e a tela diz qual é a sua
 
 | Setor | Etapa |
 |---|---|
-| `administrador` (ou usuário administrador do sistema) | **triagem** — e o administrador exerce as duas, porque é ele que demonstra e que cobre a ausência do outro |
-| `gestor` | **direcionamento** |
+| `administrativo` | **triagem** — o setor de retaguarda que recebe o que chega de fora (setor criado em 02/09/2026 por decisão do dono: não é o administrador do sistema) |
+| `gestor` | **direcionamento**, restrito à área dele (RN-05b) |
+| administrador do sistema | **as duas** — é ele que demonstra o fluxo inteiro e que cobre a ausência do outro |
 
-A tela mostra um **selo "Sua etapa: …"** no cabeçalho e oferece **só as abas da sua etapa** —
+A tela mostra um **selo "Sua etapa: …"** no cabeçalho — que para o gestor nomeia a **área**
+("Sua etapa: direcionamento · Área 5 — Boca do Rio") — e oferece **só as abas da sua etapa**:
 "A triar" para quem tria, "A direcionar" para quem direciona, "Todas" para acompanhar. Quem exerce as
-duas vê as duas, na ordem do fluxo.
+duas vê as duas, na ordem do fluxo. O número **"a triar"** também só existe para quem tria: para o
+gestor ele apareceria em zero, e zero ali leria como "não há nada a triar", que é falso.
 
 A conferência acontece **no servidor**, e não só na tela: quem pedir a ação da etapa que não é a sua
 é recusado **com o motivo escrito** (nunca em silêncio, nunca com tela de erro seca) e nada é
 alterado. Esconder o botão é conforto; a fronteira é a recusa.
 
-⚠️ **Limite conhecido do protótipo:** o gestor vê as denúncias de **todas** as áreas, não só das
-dele. O vínculo entre gestor e área ainda não existe no sistema — é pergunta aberta ao cliente (ver
-Pendências, abaixo).
+**O setor `administrativo` também é o dono da [Caixa de Entrada](caixa-de-entrada.md)** — registrar o
+que chega em papel é a mesma função. Nada além dessas duas telas lhe foi concedido: cadastro,
+operação, mapa e relatório são de gestão, e alargar a concessão é ato do gestor no Modo Gerente, não
+decisão embutida na semente.
 
 ### RN-13 — A busca é o filtro único; a aba é que troca a fonte
 
@@ -238,15 +281,22 @@ cena com os dois papéis.
 
 | Usuário | Senha | O que vê |
 |---|---|---|
-| `admin` | `prototipo123` | as **duas** etapas — tria e direciona, o fluxo inteiro |
-| `gestor1` | `gestor123` | só o **direcionamento**: as denúncias já encaminhadas às áreas |
+| `admin` | `prototipo123` | as **duas** etapas e **todas** as áreas — o fluxo inteiro |
+| `administrativo1` | `adm123` | só a **triagem**, sobre o universo (Célia Andrade Portela) |
+| `gestor1` | `gestor123` | só o **direcionamento**, e só da **Área 5 — Boca do Rio** (Lourdes Figueiredo Sales) |
+| `gestor2` | `gestor123` | idem, **Área 1 — Centro** (Marta Nogueira Prado) |
+| `gestor3` | `gestor123` | idem, **Área 3 — Brotas** (Verônica Lins Barreto) |
 | `fiscal1` | `fiscal123` | **não entra** — é levado à tela inicial com o motivo na tela |
 
-Roteiro: entre como `admin`, selecione algumas denúncias em "A triar", confira as áreas sugeridas na
-linha (procure uma com o selo *bairro compartilhado*) e clique em **Encaminhar selecionadas**;
-devolva outra com justificativa. Depois entre como `gestor1`, abra "A direcionar" e mande um lote à
-equipe (tente uma equipe de fora da área para ver a justificativa passar a ser obrigatória) e outro
-para a **Operação Verão — Orla**.
+Roteiro: entre como `administrativo1`, selecione algumas denúncias em "A triar", confira as áreas
+sugeridas na linha (procure uma com o selo *bairro compartilhado*) e repare no **nome do gestor** em
+cada opção; clique em **Encaminhar selecionadas** e confira o resumo por área e gestor. Devolva outra
+com justificativa — note que ele **não** tem a aba "A direcionar".
+
+Depois entre como `gestor1`: a lista é só da Área 5, o selo nomeia a área e o aviso explica o
+recorte. Mande um lote à equipe (tente uma equipe de fora da área para ver a justificativa passar a
+ser obrigatória) e outro para a **Operação Verão — Orla**. Entre como `gestor2` para provar o
+recorte: a lista é outra, e o que era do gestor1 não aparece.
 
 ---
 
@@ -257,8 +307,12 @@ para a **Operação Verão — Orla**.
 - **Prazo real de atendimento** de cada canal — o protótipo usa 10 dias para os dois.
 - **Canal de devolução**: por onde o e-Salvador e o 156 aceitam o retorno com a justificativa
   (**PEND-025**).
-- **Vínculo gestor ↔ área**: hoje o gestor vê todas as áreas (RN-12). Definir se o gestor é de uma
-  área, de várias, ou se existe um gestor geral.
+- **Modelagem definitiva do vínculo gestor ↔ área.** A regra está decidida (RN-05b: o gestor é de uma
+  área), mas no protótipo o vínculo mora em `config/prototipo_estrutura.php` e liga pela matrícula.
+  Em produção ele é **tabela usuário↔área**: uma pessoa pode responder por mais de uma, gestor entra
+  e sai, e a troca é fato datado. O código já trata **lista** de áreas por gestor, para a modelagem
+  real não obrigar a reescrever quem lê. Falta também definir se existe **gestor geral** (que vê
+  todas) e quem cobre a área cujo gestor está ausente.
 - **Numeração definitiva** do protocolo interno: no protótipo é `DEN-NNNN` calculado; no sistema sai
   de `App\Support\Protocolo::proximo()`, a fonte única de numeração.
 - **Ligação com a fiscalização de campo**: hoje `Em campo` e `Concluída` são estados semeados. Quando
@@ -272,4 +326,5 @@ para a **Operação Verão — Orla**.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | **Retorno do dono, três mudanças.** (1) As duas telas passam a ser **filhas de um item de menu "Denúncias" que expande**, e não itens soltos — estrutura genérica de pasta no config, com as três formas da casca resolvidas (RN-11). (2) O **gestor é de uma área**: vínculo gestor↔área na estrutura, listagem recortada pela área dele, ação sobre denúncia de outra área recusada no servidor, selo da etapa nomeando a área e o triador passando a ver o **nome do gestor** que vai receber (RN-05b e RN-05). (3) Nasce o setor **`administrativo`**, dono da triagem e também da Caixa de Entrada — a triagem deixa de ser do setor `administrador` (RN-12). | Respostas do dono às perguntas estruturais que o protótipo abriu: "pra ele só interessa o que for direcionado para a área dele" e "não é o admin do sistema, mas o admin pode fazer também". O submenu veio do print do dono, que mostrava os dois canais no mesmo nível dos demais itens do menu. |
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | Nasce o módulo, como **protótipo**: duas telas de canal com a mesma mecânica, denúncias semeadas como se tivessem chegado por integração (com carimbo de recebimento e número de origem), fluxo de duas etapas com dois papéis — triagem encaminhando à área derivada do bairro e gestor direcionando à equipe ou a uma operação —, decisão em lote e individual, devolução/arquivamento com justificativa, trâmite por ato, busca inteligente e exportação. | Pedido do dono de 02/09/2026, a partir do cenário da reunião com o cliente: as ouvidorias da Prefeitura passarão a entregar denúncia ao SEFAL por API, e o setor precisa de onde triar, encaminhar à área e direcionar o trabalho — fluxo NOVO e paralelo ao da Caixa de Entrada, que continua sendo o que chega em papel. Entregue como protótipo para o dono aprovar a forma antes de virar tabela, migration e contrato de integração. |

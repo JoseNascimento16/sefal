@@ -126,6 +126,9 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                 a.regiao,
                 a.equipe,
                 a.encarregado,
+                // O gestor entra na busca: quem procura pelo nome dele quer achar
+                // a área dele, e ele agora é dado da estrutura como o encarregado.
+                a.gestor?.nome,
                 a.bairros.join(' '),
                 a.fiscais.map((f) => `${f.nome} ${f.matricula}`).join(' '),
             ]);
@@ -622,8 +625,48 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                                     <dd>{aberta.equipe}</dd>
                                 </div>
                                 <div>
-                                    <dt>Encarregado</dt>
+                                    <dt>Encarregado (campo)</dt>
                                     <dd>{aberta.encarregado}</dd>
+                                </div>
+                                {/* Duas pessoas diferentes, e é fácil confundi-las:
+                                    o encarregado chefia a equipe EM RUA; o gestor
+                                    responde pela área DENTRO do sistema — é ele que
+                                    recebe a denúncia encaminhada e decide equipe ou
+                                    operação. Por isso os rótulos dizem qual é qual. */}
+                                <div>
+                                    <dt>Gestor da área (sistema)</dt>
+                                    <dd>
+                                        {aberta.gestor === null ||
+                                        aberta.gestor.nome.trim() === '' ? (
+                                            <span style={{ color: 'var(--sm-aviso)' }}>
+                                                sem gestor registrado — denúncia
+                                                encaminhada a esta área fica sem quem
+                                                a receba
+                                            </span>
+                                        ) : (
+                                            <>
+                                                {aberta.gestor.nome}
+                                                {aberta.gestor.matricula === null ? (
+                                                    <div
+                                                        style={{
+                                                            color: 'var(--sm-texto-fraco)',
+                                                        }}
+                                                    >
+                                                        ainda sem acesso ao sistema
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            color: 'var(--sm-texto-fraco)',
+                                                        }}
+                                                    >
+                                                        matrícula{' '}
+                                                        {aberta.gestor.matricula.toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </dd>
                                 </div>
                                 <div>
                                     <dt>Recorte</dt>
