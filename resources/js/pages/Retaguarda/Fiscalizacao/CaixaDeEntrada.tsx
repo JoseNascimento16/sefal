@@ -114,7 +114,7 @@ const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
         expressao: /\bprazo vencido\b|\bvencid\w*\b|\batrasad\w*\b/,
         valor: { tipo: 'prazo-vencido' },
     },
-    { expressao: /\bfala salvador\b|\b156\b/, valor: { tipo: 'origem', valor: 'Fala Salvador 156' } },
+    { expressao: /\bfala salvador\b|\b156\b/, valor: { tipo: 'origem', valor: 'Fala Salvador' } },
     { expressao: /\be-?salvador\b/, valor: { tipo: 'origem', valor: 'e-Salvador' } },
     { expressao: /\bnova licenca\b|\blicenca\b/, valor: { tipo: 'origem', valor: 'Nova licença' } },
     { expressao: /\boficio\b/, valor: { tipo: 'origem', valor: 'Ofício' } },
@@ -374,7 +374,7 @@ export default function CaixaDeEntrada({
                     <h1>Caixa de Entrada</h1>
                     <p>
                         O que chega de <strong>fora</strong> e em papel —
-                        e-Salvador, Fala Salvador 156, pedido de nova licença e
+                        e-Salvador, Fala Salvador, pedido de nova licença e
                         ofício. Aqui o administrativo registra, decide e{' '}
                         <strong>encaminha à equipe da área do bairro</strong> ou
                         devolve com justificativa.
@@ -483,7 +483,7 @@ export default function CaixaDeEntrada({
                                 'aguardando triagem',
                                 'anônimas',
                                 'prazo vencido',
-                                'fala salvador 156',
+                                'fala salvador',
                                 'nova licença',
                                 'recebidas hoje',
                             ]}
