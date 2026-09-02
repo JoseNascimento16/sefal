@@ -4,10 +4,13 @@ import {
     CircleDot,
     ClipboardCheck,
     FileBarChart,
+    Flame,
     KeyRound,
     LayoutGrid,
     ListChecks,
     Map,
+    MapPinned,
+    Siren,
     ScrollText,
     SlidersHorizontal,
     Store,
@@ -29,6 +32,12 @@ const ICONES: Record<string, LucideIcon> = {
     perfil: UserRound,
     permissionarios: Store,
     fiscalizacoes: ClipboardCheck,
+    // Operação é ação planejada de rua — a sirene, não o mapa.
+    operacoes: Siren,
+    // O mapa ao vivo tem o alfinete: ele mostra ONDE cada coisa está agora.
+    mapa: MapPinned,
+    // O de calor tem a chama: ele mostra onde a coisa se concentra.
+    calor: Flame,
     areas: Map,
     usuarios: Users,
     documentos: ScrollText,

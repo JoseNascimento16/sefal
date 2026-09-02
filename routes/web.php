@@ -14,6 +14,7 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeInfracaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
+use App\Http\Controllers\Retaguarda\TelasEmPreparacaoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,6 +46,25 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ModoGerenteController::class, 'index'])->name('index');
         Route::post('/', [ModoGerenteController::class, 'salvar'])->name('salvar');
     });
+
+    /*
+     * As telas do caminho da fiscalização que ainda não existem — Cadastro de
+     * Operação, Fiscalizações, Mapa ao Vivo e Mapa de Calor.
+     *
+     * Elas abrem e dizem, em uma linha, o que vão ser e em que fase chegam (ver o
+     * cabeçalho do controller). O laço nasce do catálogo do próprio controller, e
+     * não de uma segunda lista aqui: a tela real, quando chegar, toma o slug e a
+     * rota, e a entrada sai de LÁ — sem deixar aqui um caminho apontando para
+     * andaime removido.
+     *
+     * O nome da rota é `retaguarda.<slug>.index`, o mesmo padrão das telas de
+     * verdade: assim o menu não precisa saber que se trata de um stub, e trocar o
+     * andaime pela tela é trocar o destino de uma linha.
+     */
+    foreach (TelasEmPreparacaoController::slugs() as $slugEmPreparacao) {
+        Route::get('retaguarda/'.$slugEmPreparacao, [TelasEmPreparacaoController::class, 'mostrar'])
+            ->name('retaguarda.'.$slugEmPreparacao.'.index');
+    }
 
     /*
      * Relatórios — documento oficial, pedido de propósito, com período e totais.

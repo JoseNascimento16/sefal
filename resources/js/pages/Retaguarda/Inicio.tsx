@@ -1,6 +1,15 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ClipboardCheck, LayoutGrid, Map, Store, UserRound } from 'lucide-react';
+import {
+    ClipboardCheck,
+    Flame,
+    LayoutGrid,
+    MapPinned,
+    Siren,
+    Store,
+    UserRound,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { primeiroNome, saudacaoAgora } from '@/lib/saudacao';
 import { inicio } from '@/routes/retaguarda';
 
 /**
@@ -18,29 +27,27 @@ interface Atalho {
  * O ícone de cada atalho. É só isto que a tela decide sobre eles — quais existem,
  * o que dizem e para onde levam vem do servidor, que é quem sabe se a rota
  * existe e se a pessoa entra.
+ *
+ * São os MESMOS ícones do menu para as mesmas telas: o cartão da tela inicial e o
+ * item da barra têm de ser reconhecíveis como a mesma coisa.
  */
 const ICONES: Record<string, LucideIcon> = {
     perfil: UserRound,
     permissionarios: Store,
+    operacoes: Siren,
     fiscalizacoes: ClipboardCheck,
-    areas: Map,
+    mapa: MapPinned,
+    calor: Flame,
 };
 
-/** Bom dia / boa tarde / boa noite — pelo relógio de quem está olhando. */
-function saudacao(): string {
-    const hora = new Date().getHours();
-
-    if (hora < 12) {
-        return 'Bom dia';
-    }
-
-    return hora < 18 ? 'Boa tarde' : 'Boa noite';
-}
-
-/** Primeiro nome: "Bom dia, Maria" soa com gente; o nome completo, com cadastro. */
-function primeiroNome(nome: string): string {
-    return nome.trim().split(/\s+/)[0] ?? nome;
-}
+/*
+ * A saudação e o primeiro nome vêm da FONTE ÚNICA (`@/lib/saudacao`) — a mesma que
+ * o splash de boas-vindas usa.
+ *
+ * Antes esta tela tinha a sua própria cópia, com o corte só em `hora < 12`: às 3h
+ * da manhã ela dizia "Bom dia". Como o splash aparece POR CIMA dela na entrada, as
+ * duas se contradiriam na mesma tela, no mesmo segundo.
+ */
 
 function Atalho({
     icone: Icone,
@@ -99,9 +106,12 @@ export default function Inicio({ atalhos }: { atalhos: Atalho[] }) {
             <div className="rt-page-head">
                 <div>
                     <p className="sobrancelha">Retaguarda · SEMOP</p>
+                    {/* Sem ponto final escrito aqui: quem o põe é o cabeçalho
+                        editorial (`.rt-page-head h1::after`), para toda tela ter
+                        a mesma assinatura sem ninguém lembrar de digitá-la. */}
                     <h1>
-                        {saudacao()}
-                        {auth.user ? `, ${primeiroNome(auth.user.name)}` : ''}.
+                        {saudacaoAgora()}
+                        {auth.user ? `, ${primeiroNome(auth.user.name)}` : ''}
                     </h1>
                     <p>
                         Fiscalização de permissionários — comerciantes
@@ -111,7 +121,7 @@ export default function Inicio({ atalhos }: { atalhos: Atalho[] }) {
 
                 {auth.user && (
                     <div style={{ textAlign: 'right' }}>
-                        <p className="rt-usuario-matricula">
+                        <p className="form-ajuda">
                             Matrícula {auth.user.login.toUpperCase()}
                         </p>
                         <p style={{ marginTop: 6 }}>

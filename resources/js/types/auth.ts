@@ -17,6 +17,12 @@ export type User = {
 export type Auth = {
     /** `null` nas telas públicas e de acesso. */
     user: User | null;
+    /**
+     * Verdadeiro APENAS na primeira tela renderizada depois do login — é o que
+     * faz o splash de boas-vindas aparecer uma vez só. Ver
+     * `HandleInertiaRequests::share()`.
+     */
+    boas_vindas: boolean;
 };
 
 /**

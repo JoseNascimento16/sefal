@@ -29,6 +29,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class Permissao
 {
+    /** O motivo, escrito uma vez: as duas formas de negar dizem a MESMA coisa. */
+    private const SEM_ACESSO = 'Você não tem acesso a essa tela.';
+
     public function __construct(private PermissaoService $servico) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -83,8 +86,18 @@ class Permissao
             return $next($request);
         }
 
-        return redirect()->route('retaguarda.inicio')
-            ->with('flash.erro', 'Você não tem acesso a essa tela.');
+        /*
+         * Leitura pedida em JSON (o painel do Modo Gerente buscando a matriz)
+         * recebe a negativa COM O MOTIVO, e não um redirecionamento: quem chamou
+         * é código, não navegador — seguir o redirecionamento devolveria a página
+         * inicial em HTML, o painel não conseguiria ler aquilo e mostraria "falha
+         * ao carregar", que é justamente a barrada em silêncio que a lei proíbe.
+         */
+        if ($request->wantsJson()) {
+            return response()->json(['erro' => self::SEM_ACESSO], 403);
+        }
+
+        return redirect()->route('retaguarda.inicio')->with('flash.erro', self::SEM_ACESSO);
     }
 
     /**

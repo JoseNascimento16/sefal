@@ -47,16 +47,25 @@ class InicioRetaguardaTest extends TestCase
         );
     }
 
-    public function test_atalho_de_tela_que_ainda_nao_existe_nasce_sem_endereco()
+    public function test_atalho_de_tela_em_preparacao_leva_a_tela_que_explica_a_espera()
     {
-        // O outro lado: o cartão de uma tela das próximas entregas fica à vista e
-        // sem endereço (é assim que a tela o desenha esmaecido, dizendo "Em
-        // construção"). Anunciar como pronto o que não existe é o defeito
-        // simétrico.
-        $atalhos = $this->atalhosDe(User::factory()->create(['admin' => true]));
+        /*
+         * As telas do caminho da fiscalização deixaram de ser cartão esmaecido sem
+         * link: elas TÊM endereço, e a tela que abre diz o que vai ser e em que fase
+         * chega (`TelasEmPreparacaoController`). A espera passou a morar dentro da
+         * tela, que é onde ela pode ser explicada — em vez de num cartão que não
+         * responde ao clique.
+         *
+         * O que este teste trava é isso: o atalho leva a algum lugar, e o lugar
+         * abre.
+         */
+        $admin = User::factory()->create(['admin' => true]);
+        $atalhos = $this->atalhosDe($admin);
 
-        $this->assertNull($atalhos['fiscalizacoes']['href']);
-        $this->assertNull($atalhos['areas']['href']);
+        foreach (['operacoes', 'fiscalizacoes', 'mapa', 'calor'] as $chave) {
+            $this->assertNotNull($atalhos[$chave]['href'], "o atalho `{$chave}` ficou sem endereço");
+            $this->actingAs($admin)->get($atalhos[$chave]['href'])->assertOk();
+        }
     }
 
     public function test_atalho_de_tela_que_a_pessoa_nao_pode_abrir_nao_aparece()

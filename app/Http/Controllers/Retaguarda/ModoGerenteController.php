@@ -8,14 +8,27 @@ use App\Models\PermissaoSetor;
 use App\Models\Setor;
 use App\Services\PermissaoService;
 use App\Support\CatalogoFuncionalidades;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Inertia\Inertia;
-use Inertia\Response;
 
 /**
- * Modo Gerente — a tela onde se decide quem entra onde.
+ * Modo Gerente — onde se decide quem entra onde.
+ *
+ * NÃO é uma página: é o PAINEL que abre sobre a tela em que a pessoa está, pelo
+ * item do menu Sistema (ver `config/retaguarda_menu.php` e
+ * `resources/js/components/retaguarda/modo-gerente-permissoes.tsx`). Quem
+ * distribui acesso está no meio de uma conferência, e mandá-la para outra página
+ * fazia perder o lugar.
+ *
+ * Por isso este `index` responde de duas formas pela MESMA rota — que é o que
+ * mantém a guarda de leitura valendo para as duas:
+ *
+ *  · pedido em JSON (o painel buscando os dados) → a matriz;
+ *  · navegação de navegador (endereço digitado, favorito antigo) → a tela inicial
+ *    com o pedido de abrir o painel lá. Devolver uma página que não existe mais
+ *    deixaria a pessoa olhando para um endereço que não leva a nada.
  *
  * Mostra a matriz `tela × setor × ação` inteira, de uma vez: quem distribui
  * acesso precisa ver o conjunto para perceber o que ficou aberto demais. Cada
@@ -24,26 +37,40 @@ use Inertia\Response;
  * O administrador aparece na matriz travado, e não editável: o acesso total dele
  * é desvio no código ({@see PermissaoService}) e não uma linha que alguém possa
  * desmarcar — o primeiro efeito de desmarcá-la seria ninguém mais conseguir
- * abrir esta tela para remarcar.
+ * abrir o painel para remarcar.
  */
 class ModoGerenteController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): JsonResponse|RedirectResponse
     {
-        return Inertia::render('Retaguarda/Sistema/ModoGerente', [
+        if ($request->wantsJson()) {
+            return response()->json($this->painel());
+        }
+
+        return redirect()->route('retaguarda.inicio')->with('abrir.painel', 'modo-gerente');
+    }
+
+    /**
+     * A matriz como o painel precisa dela.
+     *
+     * @return array<string, mixed>
+     */
+    private function painel(): array
+    {
+        return [
             'setores' => $this->setores(),
             'funcionalidades' => CatalogoFuncionalidades::itens(),
             'matriz' => $this->matriz(),
             'acoes' => self::ACOES_NA_TELA,
-            // A tela diz em voz alta se o bloqueio está de fato ligado. Sem isso,
-            // quem configura acha que tirou um acesso e não tirou — a matriz já
-            // vale, mas o modo `log` só observa.
+            // O painel diz em voz alta se o bloqueio está de fato ligado. Sem
+            // isso, quem configura acha que tirou um acesso e não tirou — a
+            // matriz já vale, mas o modo `log` só observa.
             // Config faltando cai em `block`, o mesmo padrão da guarda — a tela
             // anunciando `log` enquanto o servidor barra seria pior que não
             // anunciar nada.
             'enforce' => (string) config('retaguarda.permissao_enforce', 'block'),
             'historico' => $this->historico(),
-        ]);
+        ];
     }
 
     /**

@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * Uma linha de grade que ABRE o registro — o mesmo comportamento em toda a
@@ -18,12 +19,19 @@ import type { KeyboardEvent } from 'react';
  * que coluna cada valor pertence — a grade fica navegável e ilegível. A linha
  * continua sendo linha; o que ela ganhou é foco e tecla.
  *
+ * `classes` acrescenta classes de ESTADO da linha (por exemplo `pendente`, que
+ * põe a marca laranja na ponta). Elas entram por aqui, e não num `className` ao
+ * lado do espalhamento, porque `className` declarado duas vezes no mesmo elemento
+ * é sobrescrita silenciosa — o `clicavel` se perderia e a linha deixaria de
+ * mostrar que abre.
+ *
  * @example
- *   <tr {...linhaClicavel(() => abrir(item), 'Abrir o cadastro')}>
+ *   <tr {...linhaClicavel(() => abrir(item), 'Abrir o cadastro', pendente && 'pendente')}>
  */
 export function linhaClicavel(
     abrir: () => void,
     descricao = 'Abrir o registro',
+    ...classes: (string | false | null | undefined)[]
 ): {
     className: string;
     tabIndex: number;
@@ -32,7 +40,7 @@ export function linhaClicavel(
     onKeyDown: (evento: KeyboardEvent<HTMLTableRowElement>) => void;
 } {
     return {
-        className: 'clicavel',
+        className: cn('clicavel', ...classes),
         tabIndex: 0,
         title: descricao,
         onClick: abrir,

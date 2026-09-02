@@ -1,10 +1,23 @@
 /* ============================================================================
    SEMOP · SEFAL — Design System da Retaguarda
    ----------------------------------------------------------------------------
-   Identidade própria: PETRÓLEO (#0d5c63) como cor institucional e ÂMBAR
-   (#f4a300) como cor de ação e de sinalização — a dupla que a fiscalização de
-   rua usa em placa, cone e faixa. A tipografia é a mesma do resto do app
+   Identidade da PREFEITURA DE SALVADOR, e uma só: AZUL. O azul oficial do
+   brasão (#0066b2) é a cor de AÇÃO — o botão que grava, o campo em foco, o
+   traço que diz "aqui se clica" — e um azul profundo da mesma família (#14477e)
+   veste a estrutura: item de menu ativo, cabeçalho, aba selecionada, brasão. O
+   sistema não tem duas cores de marca. A tipografia é a mesma do resto do app
    (nenhuma fonte nova é carregada; o `body` já aplica a família).
+
+   ⚠️ COR DE MARCA ≠ COR DE ESTADO. O verde de "deu certo", o âmbar de aviso e o
+   vermelho de perigo são SEMÂNTICA: dizem o que aconteceu com o registro, não a
+   que órgão o sistema pertence. Eles NÃO acompanharam a marca para o azul —
+   pintá-los de azul apagaria a informação que carregam. O âmbar, porém, deixou
+   de ser cor de MARCA: nenhum botão, nenhum título e nenhum realce de
+   identidade o usa mais (o que sobrou dele é aviso, e só).
+
+   Os cinzas também são AZUIS. Cinza neutro ao lado de azul profundo puxa para o
+   amarelado e faz a tela parecer suja — é a mesma escolha que o aplicativo do
+   fiscal já tinha consagrado.
 
    COMO ESTE ARQUIVO CONVIVE COM O TAILWIND
    Os tokens são prefixados `--sm-*` de propósito. O tema do Tailwind/shadcn usa
@@ -19,38 +32,50 @@
    trecho). Os dois trocam os MESMOS tokens: nenhuma cor pode ter valor único
    dentro de um só gatilho, senão o outro caminho mostra a tela pela metade.
 
+   O escuro é AZUL MARINHO — não é o claro rebaixado, é outra família: a mesma
+   noite de plantão do aplicativo do fiscal, que separa de longe o modo de
+   trabalho e não puxa para o verde.
+
    @keyframes ficam no FIM e no NÍVEL RAIZ: aninhados em @layer, o minificador
    da build de produção (lightningcss) os descarta em silêncio.
    ============================================================================ */
 
 :root {
-    /* --- Marca --- */
-    --sm-primaria: #0d5c63;
-    --sm-primaria-forte: #0a474d;
-    --sm-primaria-suave: rgba(13, 92, 99, 0.1);
-    --sm-primaria-brilho: rgba(13, 92, 99, 0.18);
-    --sm-acao: #f4a300;
-    --sm-acao-forte: #d68f00;
-    --sm-acao-suave: rgba(244, 163, 0, 0.14);
+    /* --- Marca: estrutura (azul profundo) e ação (azul do brasão) --- */
+    --sm-primaria: #14477e;
+    --sm-primaria-forte: #0e3560;
+    --sm-primaria-suave: rgba(20, 71, 126, 0.1);
+    --sm-primaria-brilho: rgba(20, 71, 126, 0.18);
+    /* #0066b2 é o azul do brasão da Prefeitura, medido no arquivo do kit. */
+    --sm-acao: #0066b2;
+    --sm-acao-forte: #00559a;
+    --sm-acao-suave: rgba(0, 102, 178, 0.12);
 
     /* --- Superfícies e texto (tema claro) --- */
-    --sm-app: #f7f8f8;
+    --sm-app: #f2f5fa;
     --sm-superficie: #ffffff;
-    --sm-superficie-2: #fbfcfc;
-    --sm-muted: #eef1f1;
-    --sm-texto: #15292b;
-    --sm-texto-corpo: #35494b;
-    --sm-texto-fraco: #6b8082;
-    --sm-borda: #dfe5e5;
-    --sm-borda-forte: #c3cfcf;
+    --sm-superficie-2: #f8fafd;
+    --sm-muted: #eef1f7;
+    --sm-texto: #0e1a2c;
+    --sm-texto-corpo: #33445e;
+    /* Um tom mais fechado do que o cinza-azul do aplicativo do fiscal (#64748f):
+       aqui este token também é usado DIRETO sobre o fundo da aplicação (subtítulo
+       de página, paginação, apoio do menu), e lá ele media 4,33:1 — abaixo dos
+       4,5:1 exigidos. Sobre este valor: 4,72:1 no fundo da aplicação e 5,16:1 no
+       cartão branco. */
+    --sm-texto-fraco: #5f6e88;
+    --sm-borda: #d9e0ee;
+    --sm-borda-forte: #b6c2d8;
 
-    /* --- Sinalização --- */
+    /* --- Sinalização (SEMÂNTICA: não acompanha a marca) --- */
     --sm-perigo: #b3261e;
     --sm-perigo-suave: rgba(179, 38, 30, 0.1);
     --sm-ok: #0f7a52;
     --sm-ok-suave: rgba(15, 122, 82, 0.12);
     --sm-aviso: #8a5300;
     --sm-aviso-suave: rgba(244, 163, 0, 0.16);
+    /* O azul de INFORMAÇÃO puxa para o ciano de propósito: ao lado do azul da
+       marca, dois azuis iguais deixariam de informar qualquer coisa. */
     --sm-info: #0b6f8c;
     --sm-info-suave: rgba(11, 111, 140, 0.12);
 
@@ -60,47 +85,49 @@
     --sm-raio-lg: 20px;
     --sm-raio-full: 9999px;
 
-    --sm-sombra-sm: 0 2px 8px rgba(15, 41, 43, 0.06);
-    --sm-sombra-md: 0 10px 24px rgba(15, 41, 43, 0.09);
-    --sm-sombra-lg: 0 24px 48px rgba(15, 41, 43, 0.16);
+    --sm-sombra-sm: 0 2px 8px rgba(13, 30, 56, 0.07);
+    --sm-sombra-md: 0 10px 24px rgba(13, 30, 56, 0.1);
+    --sm-sombra-lg: 0 24px 48px rgba(13, 30, 56, 0.18);
 
     --sm-transicao: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    --sm-menu-largura: 272px;
+    --sm-menu-largura: 292px;
     --sm-topbar-altura: 68px;
 }
 
 .dark,
 [data-theme='dark'] {
-    --sm-primaria: #4cb3ba;
-    --sm-primaria-forte: #6ec7cd;
-    --sm-primaria-suave: rgba(76, 179, 186, 0.16);
-    --sm-primaria-brilho: rgba(76, 179, 186, 0.24);
-    --sm-acao: #f7b733;
-    --sm-acao-forte: #ffc857;
-    --sm-acao-suave: rgba(247, 183, 51, 0.18);
+    /* A família inteira clareia para continuar legível sobre o marinho, mas
+       continua sendo a MESMA família — nada de um segundo azul. */
+    --sm-primaria: #6aa6f0;
+    --sm-primaria-forte: #8cbdf7;
+    --sm-primaria-suave: rgba(106, 166, 240, 0.18);
+    --sm-primaria-brilho: rgba(106, 166, 240, 0.26);
+    --sm-acao: #4d9fdc;
+    --sm-acao-forte: #6fb5e8;
+    --sm-acao-suave: rgba(77, 159, 220, 0.2);
 
-    --sm-app: #0a1214;
-    --sm-superficie: #111d1f;
-    --sm-superficie-2: #16262a;
-    --sm-muted: #16262a;
-    --sm-texto: #e8f1f1;
-    --sm-texto-corpo: #c3d4d5;
-    --sm-texto-fraco: #8ba4a6;
-    --sm-borda: #23383b;
-    --sm-borda-forte: #33504f;
+    --sm-app: #0a1628;
+    --sm-superficie: #0f1d33;
+    --sm-superficie-2: #132542;
+    --sm-muted: #132542;
+    --sm-texto: #e9effb;
+    --sm-texto-corpo: #c4d2e8;
+    --sm-texto-fraco: #8d9ec0;
+    --sm-borda: #1e3252;
+    --sm-borda-forte: #2f4a76;
 
-    --sm-perigo: #f28b84;
-    --sm-perigo-suave: rgba(242, 139, 132, 0.16);
+    --sm-perigo: #ff8c84;
+    --sm-perigo-suave: rgba(255, 140, 132, 0.18);
     --sm-ok: #4ddba4;
     --sm-ok-suave: rgba(77, 219, 164, 0.16);
-    --sm-aviso: #f7b733;
-    --sm-aviso-suave: rgba(247, 183, 51, 0.18);
-    --sm-info: #57c4e3;
-    --sm-info-suave: rgba(87, 196, 227, 0.16);
+    --sm-aviso: #ff9a4d;
+    --sm-aviso-suave: rgba(255, 154, 77, 0.18);
+    --sm-info: #7cc4ff;
+    --sm-info-suave: rgba(124, 196, 255, 0.16);
 
-    --sm-sombra-sm: 0 2px 8px rgba(0, 0, 0, 0.34);
-    --sm-sombra-md: 0 12px 28px rgba(0, 0, 0, 0.42);
-    --sm-sombra-lg: 0 24px 48px rgba(0, 0, 0, 0.5);
+    --sm-sombra-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --sm-sombra-md: 0 12px 28px rgba(0, 0, 0, 0.5);
+    --sm-sombra-lg: 0 24px 48px rgba(0, 0, 0, 0.58);
 
     /* Controles nativos do navegador (lista do <select>, barra de rolagem,
        seletor de data) desenhados no escuro. Sem isto o Chromium abre a lista
@@ -132,22 +159,33 @@
     width: 100%;
 }
 
-/* Primário = petróleo com um fio de âmbar embaixo: a assinatura visual do
-   sistema aparece já no botão principal. */
+/* Primário = o AZUL DO BRASÃO com um fio do azul profundo embaixo: a assinatura
+   visual do sistema aparece já no botão principal, e é o botão que grava que
+   carrega a cor de ação — não a moldura da tela. */
 .btn-primary {
-    background: var(--sm-primaria);
+    background: var(--sm-acao);
     color: #fff;
-    box-shadow: inset 0 -2px 0 var(--sm-acao);
+    box-shadow: inset 0 -2px 0 var(--sm-primaria-forte);
 }
 .btn-primary:hover {
-    background: var(--sm-primaria-forte);
+    background: var(--sm-acao-forte);
     box-shadow:
-        inset 0 -2px 0 var(--sm-acao),
+        inset 0 -2px 0 var(--sm-primaria-forte),
         var(--sm-sombra-md);
 }
+/* No escuro o azul clareia, e branco sobre ele não chega aos 4,5:1 exigidos: o
+   texto vira tinta marinho (5,69:1 medido). O fio de baixo também inverte —
+   sobre um azul claro, o azul profundo do tema claro sumiria. */
 .dark .btn-primary,
 [data-theme='dark'] .btn-primary {
-    color: #06181a;
+    color: #04213a;
+    box-shadow: inset 0 -2px 0 rgba(4, 33, 58, 0.55);
+}
+.dark .btn-primary:hover,
+[data-theme='dark'] .btn-primary:hover {
+    box-shadow:
+        inset 0 -2px 0 rgba(4, 33, 58, 0.55),
+        var(--sm-sombra-md);
 }
 
 .btn-secondary {
@@ -309,24 +347,34 @@ select.form-control {
     color: var(--sm-texto-fraco);
 }
 
-/* ============================ TABELA ============================ */
+/* ============================ TABELA ============================
+   As linhas são CARTÕES, e não linhas de grade: cada registro é uma coisa do
+   mundo (uma pessoa que trabalha na rua), e o cartão dá a ela um corpo próprio —
+   com borda esquerda quando há pendência, que é o que faz a fila salta ao olho
+   sem ninguém ler coluna por coluna.
+
+   Tecnicamente isso é `border-spacing` no lugar de `border-collapse`: é o único
+   jeito de uma linha de tabela ter raio e sombra. Segue sendo `<table>` — a
+   semântica de tabela é o que faz leitor de tela anunciar "coluna Situação,
+   Regular" em vez de ler quatro textos soltos. */
 .table-wrap {
     overflow-x: auto;
 }
 table.data-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0 10px;
     font-size: 14px;
 }
 table.data-table th {
     text-align: left;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.09em;
     color: var(--sm-texto-fraco);
-    padding: 0 14px 12px;
-    border-bottom: 1px solid var(--sm-borda);
+    padding: 0 18px 10px;
+    border-bottom: 2px solid var(--sm-borda);
 }
 /* O espaçamento do cabeçalho ordenável passa para DENTRO do botão, e a célula
    fica sem o dela. Com o padding no `<th>`, a faixa de 14px nas laterais e 12px
@@ -373,20 +421,42 @@ table.data-table th.ord.ord-ativa .ord-ico {
     opacity: 1;
 }
 table.data-table td {
-    padding: 14px;
-    border-bottom: 1px solid var(--sm-borda);
+    padding: 15px 18px;
+    background: var(--sm-superficie);
     color: var(--sm-texto-corpo);
     vertical-align: middle;
     overflow-wrap: break-word;
+    /* A sombra do cartão é declarada NA CÉLULA porque `<tr>` não a desenha em
+       todos os navegadores; o raio é aplicado só nas pontas, abaixo. */
+    box-shadow: 0 1px 2px rgba(13, 30, 56, 0.05);
+    /* Só o que muda no `:hover`, e não `all`: numa grade de 20 linhas × 6 colunas,
+       `all` põe 120 células animando a cada troca de tema. */
+    transition:
+        background-color 0.18s ease,
+        box-shadow 0.18s ease;
 }
-table.data-table tbody tr:hover {
-    background: var(--sm-muted);
+table.data-table td:first-child {
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
 }
-table.data-table tbody tr:last-child td {
-    border-bottom: none;
+table.data-table td:last-child {
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+}
+table.data-table tbody tr:hover td {
+    background: var(--sm-superficie-2);
+    box-shadow: 0 2px 4px rgba(13, 30, 56, 0.07);
 }
 table.data-table tbody tr.clicavel {
     cursor: pointer;
+}
+/* Linha com PENDÊNCIA — o que espera alguém agir. A borda laranja na ponta
+   esquerda é lida de relance, sem precisar chegar até a coluna de situação: é a
+   mesma cor de incidência do resto do sistema. Ponha `pendente` na `<tr>`. */
+table.data-table tbody tr.pendente td:first-child {
+    box-shadow:
+        inset 3px 0 0 var(--sm-aviso),
+        0 1px 2px rgba(13, 30, 56, 0.05);
 }
 /* Protocolo, número e documento não se quebram no meio: com a quebra, o texto
    fica ilegível e impossível de copiar. A largura sobra rolando o .table-wrap. */
@@ -439,15 +509,28 @@ table.data-table tbody tr.clicavel {
     white-space: nowrap;
 }
 
-/* ============================ SELOS ============================ */
+/* ============================ SELOS ============================
+   Chip de situação. Quem quiser o PONTO na frente — o glóbulo de cor com halo,
+   que dá a leitura de "estado" antes de a palavra ser lida — põe um
+   `<span class="selo-dot" />` dentro do selo. O halo é `box-shadow`, não borda:
+   borda ocuparia espaço e desalinharia o texto do chip. */
 .selo {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 11px;
+    gap: 7px;
+    padding: 5px 12px;
     border-radius: var(--sm-raio-full);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 650;
+}
+.selo-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    /* Herda a cor do selo: um dono só para a cor do estado. */
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
 }
 .selo-neutro {
     background: var(--sm-muted);
@@ -470,139 +553,465 @@ table.data-table tbody tr.clicavel {
     color: var(--sm-info);
 }
 
-/* ============================ ESTRUTURA DA RETAGUARDA ============================ */
+/* ==================== A CASCA: EDITORIAL CURVO ====================
+   O desenho aprovado pelo dono. Duas ideias sustentam tudo o que vem abaixo:
+
+   1. **A moldura é escura, o trabalho é claro.** O painel do menu é navy nos DOIS
+      temas — a cidade de noite de um lado, a mesa iluminada do outro —, com o
+      canto direito curvado, o que faz o miolo parecer uma folha apoiada sobre ele
+      em vez de duas colunas encostadas. Por ser fixo, o painel NÃO usa os tokens
+      de superfície: no tema claro ele ficaria branco e a moldura desapareceria.
+
+   2. **O topo da tela pertence à PÁGINA, não ao sistema.** Não há barra superior.
+      A sobrancelha da seção, o título grande e o subtítulo — que cada tela já
+      escrevia no seu `.rt-page-head` — passam a ser o cabeçalho editorial. Tema e
+      avisos viram um cluster discreto no canto (`.rt-cluster`); identidade e sair
+      moram no cartão do usuário, no pé do menu. A barra antiga gastava 68px de
+      altura em toda tela para repetir, em corpo 13, o que o título já diz.
+
+   As cores fixas do painel vivem aqui, com nome: são a paleta da moldura, e a
+   troca de tema não as alcança de propósito. */
+:root {
+    --sm-menu-fundo: linear-gradient(200deg, #123054 0%, #0d1f3c 45%, #0a1628 100%);
+    --sm-menu-texto: #b9cde3;
+    --sm-menu-texto-forte: #eaf2fa;
+    --sm-menu-texto-fraco: rgba(214, 230, 245, 0.55);
+    --sm-menu-linha: rgba(122, 175, 220, 0.18);
+    --sm-menu-cartao: rgba(10, 22, 40, 0.55);
+    --sm-menu-curva: 44px;
+}
+
 .rt-shell {
     display: flex;
     min-height: 100vh;
     background: var(--sm-app);
     color: var(--sm-texto-corpo);
 }
+
+/* ── O painel estendido ──────────────────────────────────────────────────── */
 .rt-sidebar {
+    /* GRUDADO no alto e da altura da janela: o painel é moldura, não conteúdo que
+       rola. Sem isto ele crescia junto com a página, e numa tela longa o cartão do
+       usuário — que é onde mora o SAIR — ficava metros abaixo da dobra. Com a
+       altura fixa, quem rola por dentro é a lista de itens (`.rt-menu`). */
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    isolation: isolate;
+    z-index: 1;
     width: var(--sm-menu-largura);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 20px 16px;
-    background: var(--sm-superficie);
-    border-right: 1px solid var(--sm-borda);
+    gap: 14px;
+    padding: 28px 0 22px;
+    overflow: hidden;
+    background: var(--sm-menu-fundo);
+    border-radius: 0 var(--sm-menu-curva) var(--sm-menu-curva) 0;
+    box-shadow: 12px 0 44px rgba(10, 22, 40, 0.25);
+    color: var(--sm-menu-texto);
 }
-@media (max-width: 900px) {
-    .rt-sidebar {
-        position: fixed;
-        inset: 0 auto 0 0;
-        z-index: 60;
-        transform: translateX(-100%);
-        transition: transform 0.25s ease;
-        box-shadow: var(--sm-sombra-lg);
-    }
-    .rt-sidebar.aberta {
-        transform: translateX(0);
-    }
+/* No escuro o painel e o fundo da aplicação são da mesma família: sem uma linha
+   de luz na borda, a curva desaparece e as duas áreas viram uma só. */
+.dark .rt-sidebar,
+[data-theme='dark'] .rt-sidebar {
+    box-shadow:
+        12px 0 44px rgba(0, 0, 0, 0.45),
+        inset -1px 0 0 rgba(122, 175, 220, 0.14);
 }
-.rt-veu {
-    position: fixed;
-    inset: 0;
-    z-index: 55;
-    background: rgba(10, 18, 20, 0.5);
+/* A malha de ruas no pé do painel: a cidade por baixo do menu. Decoração — nenhum
+   traço ali é dado do sistema. */
+.rt-sidebar-malha {
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 220px;
+    opacity: 0.35;
+    pointer-events: none;
 }
-/* O botão que abre o menu e o ponto em que a barra passa a deslizar por cima do
-   conteúdo compartilham ESTE limite. Com dois valores diferentes (por exemplo o
-   `md` do Tailwind, 768px, e os 900px da barra), sobra uma faixa de larguras em
-   que a barra está escondida e o botão de abrir também: o menu fica inalcançável. */
-.rt-menu-botao {
-    display: none;
-}
-@media (max-width: 900px) {
-    .rt-menu-botao {
-        display: inline-flex;
-    }
+
+.rt-marca-linha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px 4px 26px;
 }
 .rt-marca {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
 }
-.rt-marca-selo {
-    display: grid;
-    place-items: center;
-    width: 42px;
-    height: 42px;
-    flex-shrink: 0;
-    border-radius: var(--sm-raio-md);
-    background: linear-gradient(
-        140deg,
-        var(--sm-primaria),
-        var(--sm-primaria-forte)
-    );
-    color: #fff;
-    box-shadow: inset 0 -3px 0 var(--sm-acao);
+.rt-marca img {
+    display: block;
+    width: 46px;
+    height: auto;
+    flex: 0 0 46px;
 }
 .rt-marca-nome {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    color: var(--sm-texto);
-    line-height: 1.15;
+    display: block;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.1;
+    color: var(--sm-menu-texto-forte);
 }
 .rt-marca-sub {
+    display: block;
+    margin-top: 2px;
     font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.7px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--sm-texto-fraco);
+    color: var(--sm-menu-texto-fraco);
 }
+/* O botão de retrair vive na linha da marca, e não no miolo: ele é sobre o MENU,
+   e controle de uma coisa fica junto da coisa. */
+.rt-marca-recolher {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sm-menu-texto-fraco);
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-marca-recolher:hover {
+    background: rgba(122, 175, 220, 0.14);
+    color: var(--sm-menu-texto-forte);
+}
+
 .rt-menu {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 3px;
     flex: 1;
     min-height: 0;
+    padding: 0 14px;
     overflow-y: auto;
 }
-.rt-menu-secao-titulo {
-    padding: 0 10px 6px;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: 0.9px;
-    text-transform: uppercase;
-    color: var(--sm-texto-fraco);
+.rt-menu-secao {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+/* A régua substitui o título de seção. Com sete títulos em caixa alta o painel
+   virava índice; a régua separa os grupos sem gritar o nome de cada um. */
+.rt-menu-regua {
+    height: 1px;
+    margin: 12px 12px;
+    background: var(--sm-menu-linha);
 }
 .rt-menu-item {
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 10px 12px;
-    border-radius: var(--sm-raio-sm);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--sm-texto-corpo);
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: 14px;
+    background: none;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 500;
+    text-align: left;
+    color: var(--sm-menu-texto);
+    cursor: pointer;
     transition: var(--sm-transicao);
 }
+.rt-menu-rotulo {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .rt-menu-item:hover {
-    background: var(--sm-muted);
-    color: var(--sm-texto);
+    background: rgba(122, 175, 220, 0.1);
+    color: var(--sm-menu-texto-forte);
 }
 .rt-menu-item.ativo {
-    background: var(--sm-primaria);
+    background: linear-gradient(
+        90deg,
+        rgba(0, 102, 178, 0.45),
+        rgba(0, 102, 178, 0.12)
+    );
+    border-left-color: #4d9fdc;
     color: #fff;
-    box-shadow: var(--sm-sombra-sm);
+    font-weight: 650;
 }
-.dark .rt-menu-item.ativo,
-[data-theme='dark'] .rt-menu-item.ativo {
-    color: #06181a;
+/* O número vivo do item. Neutro é TAMANHO: fica quieto, do lado, sem competir com
+   o nome. */
+.rt-menu-contador {
+    flex-shrink: 0;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: rgba(10, 22, 40, 0.5);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(214, 230, 245, 0.85);
+}
+/* Alerta é FILA: laranja, o mesmo da incidência no resto do sistema. Ele só
+   aparece quando há o que fazer — o servidor não manda alerta em zero. */
+.rt-menu-contador.alerta {
+    background: rgba(224, 112, 32, 0.28);
+    color: #ffb877;
+    font-weight: 700;
 }
 .rt-menu-vazio {
-    padding: 8px 12px 10px;
+    padding: 6px 14px 10px;
     font-size: 12.5px;
     line-height: 1.5;
-    color: var(--sm-texto-fraco);
+    color: var(--sm-menu-texto-fraco);
 }
-.rt-sidebar-pe {
-    padding-top: 14px;
-    border-top: 1px solid var(--sm-borda);
+
+/* O cartão de quem entrou, no pé do painel: identidade e saída no mesmo lugar,
+   longe das ações de trabalho. */
+.rt-usuario-cartao {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(122, 175, 220, 0.2);
+    border-radius: 16px;
+    background: var(--sm-menu-cartao);
+}
+.rt-avatar {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    background: linear-gradient(160deg, #17568f, #14477e);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+.rt-usuario-texto {
+    flex: 1;
+    min-width: 0;
+}
+.rt-usuario-nome {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--sm-menu-texto-forte);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rt-usuario-papel {
+    display: block;
     font-size: 11.5px;
-    color: var(--sm-texto-fraco);
+    text-transform: capitalize;
+    color: var(--sm-menu-texto-fraco);
+}
+.rt-usuario-sair {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #8fb4d4;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-usuario-sair:hover {
+    background: rgba(255, 140, 132, 0.16);
+    color: #ff8c84;
+}
+
+/* ── A DOCA: o menu retraído ─────────────────────────────────────────────────
+   Cartão navy flutuante, destacado das bordas — o mesmo painel reduzido ao osso:
+   ícone, rótulo de uma palavra e o número virando selo no canto. A pessoa escolhe
+   a forma e a escolha fica guardada (ver o `retaguarda-layout`). */
+.rt-doca {
+    position: fixed;
+    z-index: 60;
+    left: 18px;
+    top: 18px;
+    bottom: 18px;
+    width: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 0 14px;
+    border-radius: 24px;
+    background: linear-gradient(178deg, #0e1c34, #0a1628);
+    box-shadow:
+        0 22px 50px rgba(8, 18, 35, 0.35),
+        inset 0 1px 0 rgba(122, 175, 220, 0.18);
+    color: var(--sm-menu-texto);
+}
+/* O miolo cede a largura da doca mais as duas folgas. */
+.rt-shell-doca .rt-principal {
+    margin-left: 132px;
+}
+.rt-doca-marca {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.rt-doca-marca img {
+    display: block;
+    width: 40px;
+    height: auto;
+}
+.rt-doca-marca span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--sm-menu-texto-forte);
+}
+.rt-doca-itens {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    /* Com catorze itens a coluna passa da altura da tela em telas curtas: ela rola
+       por dentro em vez de empurrar o avatar e o botão de expandir para fora. */
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.rt-doca-itens::-webkit-scrollbar {
+    display: none;
+}
+.rt-doca-grupo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+/* Grupo seguinte separado por uma régua curta — a mesma ideia do painel
+   estendido, no espaço que a doca tem. */
+.rt-doca-grupo + .rt-doca-grupo {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--sm-menu-linha);
+    width: 52px;
+}
+.rt-doca-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 66px;
+    padding: 10px 2px 8px;
+    border: none;
+    border-radius: 16px;
+    background: none;
+    font: inherit;
+    color: #8fb4d4;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-doca-item:hover {
+    background: rgba(122, 175, 220, 0.12);
+    color: var(--sm-menu-texto-forte);
+}
+.rt-doca-item.ativo {
+    background: linear-gradient(180deg, #0d6cb5, #0066b2);
+    box-shadow: 0 8px 18px rgba(0, 102, 178, 0.45);
+    color: #fff;
+}
+.rt-doca-rotulo {
+    max-width: 100%;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rt-doca-item.ativo .rt-doca-rotulo {
+    font-weight: 700;
+}
+.rt-doca-selo {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: rgba(10, 22, 40, 0.85);
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(214, 230, 245, 0.9);
+}
+.rt-doca-selo.alerta {
+    background: #e07020;
+    color: #fff;
+}
+.rt-doca-pe {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+.rt-doca-acao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: #8fb4d4;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-doca-acao:hover {
+    background: rgba(122, 175, 220, 0.14);
+    color: var(--sm-menu-texto-forte);
+}
+.rt-doca-avatar {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(122, 175, 220, 0.35);
+    border-radius: 14px;
+    background: linear-gradient(160deg, #17568f, #14477e);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-doca-avatar:hover {
+    border-color: rgba(255, 140, 132, 0.6);
 }
 
 .rt-principal {
@@ -610,109 +1019,41 @@ table.data-table tbody tr.clicavel {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
-.rt-topbar {
+
+/* ── O cluster de sistema: tema e avisos ─────────────────────────────────────
+   Fica no canto, acima do cabeçalho da página, e é a única coisa do SISTEMA no
+   topo do miolo. Não é barra: não tem fundo, não tem borda e não reserva altura —
+   o cabeçalho editorial da tela sobe até o topo por baixo dele. */
+.rt-cluster {
+    position: absolute;
+    z-index: 30;
+    top: 20px;
+    right: 26px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    min-height: var(--sm-topbar-altura);
-    padding: 12px 26px;
-    background: var(--sm-superficie);
-    border-bottom: 1px solid var(--sm-borda);
-    position: sticky;
-    top: 0;
-    z-index: 40;
+    gap: 8px;
 }
+/* A trilha só aparece quando tem mais de um nível — aí ela diz o caminho de
+   volta, que o título da página não diz. Ver o componente `Topbar`. */
 .rt-trilha {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    margin-right: 6px;
+    font-size: 12.5px;
     color: var(--sm-texto-fraco);
-    flex-wrap: wrap;
-    /* Sem isto a trilha não encolhe abaixo do próprio conteúdo (é o mínimo
-       automático do flex), empurra as ações para fora da barra — e a barra NÃO
-       rola na horizontal, então o que sai da tela fica inalcançável. Foi assim
-       que o botão de sair desapareceu no telefone. */
     min-width: 0;
+}
+.rt-trilha-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 .rt-trilha-atual {
     font-weight: 700;
     color: var(--sm-texto);
-}
-.rt-topbar-acoes {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto;
-    /* Tema, avisos e SAIR não cedem espaço: são as ações que acompanham o sistema
-       inteiro, e "sair" precisa estar alcançável em qualquer largura. */
-    flex-shrink: 0;
-}
-.rt-usuario {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 12px 5px 6px;
-    border-radius: var(--sm-raio-full);
-    border: 1px solid var(--sm-borda);
-    background: var(--sm-superficie);
-}
-.rt-avatar {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(
-        140deg,
-        var(--sm-primaria),
-        var(--sm-primaria-forte)
-    );
-    color: #fff;
-    font-size: 12.5px;
-    font-weight: 800;
-}
-.rt-usuario-nome {
-    font-size: 13.5px;
-    font-weight: 700;
-    color: var(--sm-texto);
-    line-height: 1.15;
-}
-.rt-usuario-matricula {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    color: var(--sm-texto-fraco);
-}
-/* ── A barra superior no telefone ────────────────────────────────────────────
-   Em 375px de largura, o nome e a matrícula do usuário ocupavam 174px e jogavam
-   o botão de SAIR 93px fora da tela. E a barra não rola na horizontal, então o
-   que saía não era só deslocado: era inalcançável — a pessoa ficava sem como
-   encerrar a sessão.
-
-   A escolha é explícita: identidade é conforto, sair é função. Abaixo de 620px o
-   avatar sozinho continua dizendo de quem é a sessão (o nome inteiro está em Meu
-   Perfil), e tema, avisos e sair permanecem os três à vista. */
-@media (max-width: 620px) {
-    .rt-usuario-texto {
-        display: none;
-    }
-    /* Sem o texto, a cápsula em volta do avatar não tem mais o que emoldurar. */
-    .rt-usuario {
-        padding: 0;
-        border-color: transparent;
-        background: none;
-    }
-}
-@media (max-width: 480px) {
-    .rt-topbar {
-        gap: 8px;
-        padding: 10px 12px;
-    }
-    .rt-trilha {
-        font-size: 12px;
-    }
 }
 .rt-pop {
     position: absolute;
@@ -727,41 +1068,103 @@ table.data-table tbody tr.clicavel {
     box-shadow: var(--sm-sombra-lg);
     text-align: left;
 }
+
 .rt-conteudo {
     flex: 1;
-    padding: 26px;
+    padding: 30px 38px 30px;
 }
+
+/* ── O cabeçalho editorial da página ────────────────────────────────────────
+   Sobrancelha da seção, título grande com o ponto azul, subtítulo. A direita é
+   um slot: a tela põe ali os números do dia quando tiver (ver a de
+   Permissionários) — e, quando não tem, o cabeçalho respira sozinho.
+
+   O ponto final é do CSS, e não escrito em cada tela: assim toda tela nova nasce
+   com a assinatura, e ninguém precisa lembrar de digitá-lo. */
 .rt-page-head {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 18px;
+    gap: 24px;
     flex-wrap: wrap;
-    margin-bottom: 22px;
+    /* Espaço à direita para o cluster de tema/avisos não encostar no conteúdo do
+       cabeçalho nas larguras médias. */
+    padding-right: 118px;
+    margin-bottom: 24px;
 }
 .rt-page-head .sobrancelha {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    margin-bottom: 6px;
-    font-size: 11.5px;
-    font-weight: 800;
-    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
     text-transform: uppercase;
-    color: var(--sm-acao-forte);
+    color: var(--sm-acao);
 }
 .rt-page-head h1 {
-    font-size: 26px;
-    font-weight: 800;
+    font-size: 42px;
+    font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--sm-texto);
-    line-height: 1.15;
+    line-height: 1;
+}
+.rt-page-head h1::after {
+    content: '.';
+    color: var(--sm-acao);
 }
 .rt-page-head p {
-    margin-top: 6px;
-    font-size: 14.5px;
+    margin-top: 10px;
+    max-width: 62ch;
+    font-size: 15px;
+    line-height: 1.5;
     color: var(--sm-texto-fraco);
 }
+
+/* Os números do dia, à direita do cabeçalho. Cartão claro sobre o fundo da
+   aplicação: é leitura de relance, não tabela. */
+.rt-numeros {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 16px 26px;
+    border-radius: 18px;
+    background: var(--sm-superficie);
+    box-shadow: var(--sm-sombra-sm), var(--sm-sombra-md);
+}
+.rt-numero {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.rt-numero strong {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--sm-texto);
+}
+.rt-numero span {
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--sm-texto-fraco);
+}
+.rt-numero.ok strong {
+    color: var(--sm-ok);
+}
+.rt-numero.alerta strong {
+    color: var(--sm-aviso);
+}
+.rt-numero.info strong {
+    color: var(--sm-primaria);
+}
+.rt-numeros-separador {
+    width: 1px;
+    height: 34px;
+    background: var(--sm-borda);
+}
+
 .rt-grid-atalhos {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -784,6 +1187,430 @@ table.data-table tbody tr.clicavel {
 }
 .rt-atalho.em-breve {
     opacity: 0.62;
+}
+
+/* ============== TELA EM PREPARAÇÃO (a funcionalidade que ainda vem) ==============
+   Ela abre, e diz o que vai ser. Duas variantes: a das telas de MAPA, que se
+   explicam mostrando a cidade, e a sóbria das telas de lista — desenhar um mapa
+   decorativo numa tela de lista prometeria a coisa errada.
+
+   O painel da cidade é navy nos DOIS temas, como o menu: é a mesma moldura escura
+   da identidade, não uma superfície do tema. */
+.prep-cidade {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: 40px 44px;
+    min-height: 320px;
+    display: flex;
+    align-items: flex-end;
+    border-radius: var(--sm-raio-lg);
+    background: linear-gradient(150deg, #14284a 0%, #0a1628 60%, #050d1a 100%);
+    box-shadow: var(--sm-sombra-md);
+    color: #fff;
+}
+.prep-malha {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.85;
+}
+/* Um véu leve por baixo do texto: a malha passa atrás dele, e sem isso a frase
+   cairia justamente sobre uma rua clara. */
+.prep-cidade::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        rgba(5, 13, 26, 0.86) 0%,
+        rgba(5, 13, 26, 0.55) 52%,
+        rgba(5, 13, 26, 0.2) 100%
+    );
+}
+.prep-cidade-texto {
+    max-width: 56ch;
+}
+
+.prep-cartao {
+    padding: 30px 32px;
+}
+
+/* A fase é o compromisso: "chega na Fase 2" responde a pergunta que o vazio não
+   responde. Fica antes da frase, pequena, como uma etiqueta. */
+.prep-fase {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+    padding: 4px 12px;
+    border-radius: var(--sm-raio-full);
+    background: rgba(77, 159, 220, 0.2);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8cbdf7;
+}
+/* Na variante clara ela usa os tokens do tema — ali o fundo é o cartão. */
+.prep-fase.clara {
+    background: var(--sm-acao-suave);
+    color: var(--sm-acao-forte);
+}
+.prep-frase {
+    font-size: 22px;
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+}
+.prep-cidade .prep-frase {
+    color: #fff;
+}
+.prep-cartao .prep-frase {
+    color: var(--sm-texto);
+}
+.prep-lista {
+    margin: 18px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    font-size: 14.5px;
+    line-height: 1.45;
+}
+.prep-cidade .prep-lista {
+    color: rgba(255, 255, 255, 0.88);
+}
+.prep-cartao .prep-lista {
+    color: var(--sm-texto-corpo);
+}
+/* O marcador é um traço azul, e não um ponto: são coisas que a tela VAI fazer —
+   uma promessa em fila, não uma lista de itens iguais. */
+.prep-lista li {
+    position: relative;
+    padding-left: 20px;
+}
+.prep-lista li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 11px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--sm-acao);
+}
+.prep-cidade .prep-lista li::before {
+    background: #4d9fdc;
+}
+.prep-nota {
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--sm-borda);
+    max-width: 62ch;
+}
+
+@media (max-width: 620px) {
+    .prep-cidade {
+        padding: 26px 22px;
+        min-height: 260px;
+    }
+    .prep-cartao {
+        padding: 22px 20px;
+    }
+    .prep-frase {
+        font-size: 18.5px;
+    }
+}
+
+/* ── A casca em telas estreitas ──────────────────────────────────────────────
+   Três degraus, e o critério é o mesmo em todos: o menu nunca pode ficar
+   inalcançável, e o trabalho nunca pode ceder mais largura do que tem.
+
+   · até 1100px — o painel estendido (292px) come um terço da tela: a DOCA passa a
+     valer sozinha, independente da preferência guardada. A preferência não é
+     apagada: ela volta a valer quando a janela crescer;
+   · até 620px — a doca vira BARRA INFERIOR, na faixa do polegar, com os itens
+     rolando na horizontal. É o mesmo lugar em que o aplicativo do fiscal põe a
+     navegação, então quem usa os dois não reaprende nada;
+   · o painel estendido, quando aberto pelo botão do menu, desliza por cima. */
+@media (max-width: 1100px) {
+    /* Nesta faixa quem monta o menu é a casca, sempre na forma de doca (ver
+       `LARGURA_DA_DOCA` no `retaguarda-layout`) — o painel estendido não é
+       renderizado. Então o que sobra aqui é esconder o botão de EXPANDIR: com a
+       largura mandando, ele levaria a um painel que não cabe. */
+    .rt-doca-acao {
+        display: none;
+    }
+    .rt-conteudo {
+        padding: 26px 24px;
+    }
+    .rt-page-head {
+        padding-right: 150px;
+    }
+}
+@media (max-width: 620px) {
+    .rt-doca {
+        left: 12px;
+        right: 12px;
+        top: auto;
+        bottom: 12px;
+        width: auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 20px;
+    }
+    .rt-shell-doca .rt-principal {
+        margin-left: 0;
+        /* A barra flutua sobre o conteúdo: o miolo termina acima dela. */
+        padding-bottom: 96px;
+    }
+    /* Na barra inferior a marca sairia no lugar de um item — e o brasão já está no
+       cabeçalho da tela de entrada e no painel estendido. */
+    .rt-doca-marca {
+        display: none;
+    }
+    .rt-doca-itens {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x proximity;
+    }
+    .rt-doca-grupo {
+        flex-direction: row;
+        gap: 6px;
+    }
+    /* Deitada, a régua entre grupos vira uma linha vertical. */
+    .rt-doca-grupo + .rt-doca-grupo {
+        margin: 0 0 0 6px;
+        padding: 0 0 0 10px;
+        border-top: none;
+        border-left: 1px solid var(--sm-menu-linha);
+        width: auto;
+    }
+    .rt-doca-item {
+        flex-shrink: 0;
+        width: 62px;
+        scroll-snap-align: center;
+    }
+    .rt-doca-pe {
+        flex-direction: row;
+        gap: 8px;
+        padding-left: 8px;
+        border-left: 1px solid var(--sm-menu-linha);
+    }
+    .rt-cluster {
+        top: 14px;
+        right: 14px;
+    }
+    .rt-conteudo {
+        padding: 20px 16px;
+    }
+    .rt-page-head {
+        padding-right: 0;
+        /* Sem a folga lateral, o cluster no canto cobriria a sobrancelha: o
+           cabeçalho começa abaixo dele. */
+        padding-top: 44px;
+        margin-bottom: 20px;
+    }
+    .rt-page-head h1 {
+        font-size: 30px;
+    }
+    .rt-page-head .sobrancelha {
+        letter-spacing: 0.18em;
+    }
+    .rt-page-head p {
+        font-size: 14.5px;
+    }
+    .rt-numeros {
+        width: 100%;
+        gap: 18px;
+        padding: 14px 18px;
+    }
+    .rt-numeros-separador {
+        display: none;
+    }
+}
+
+/* ============================ TELA DE ACESSO ============================
+   Duas metades: a CIDADE à esquerda, o formulário à direita.
+
+   A fotografia é a ladeira do Pelourinho — que é onde este sistema trabalha. Ela
+   entra como PANO DE FUNDO, não como ilustração: quem abre a tela precisa ler os
+   campos, e não admirar a foto. Por isso ela vive só na metade que não tem
+   formulário, esmaecida e sob um véu navy.
+
+   O CONTRASTE NÃO FOI ESTIMADO — foi medido pixel a pixel, compondo as três
+   camadas (gradiente navy no fundo, foto a 42%, véu por cima) e procurando o
+   PIOR pixel da imagem em cada faixa. Com a foto a 42% sobre o extremo mais
+   claro do gradiente (#14477e):
+
+     · faixa do topo (marca + SEFAL), véu 0,66 → texto branco 10,1:1
+     · faixa do pé (assinatura institucional), véu 0,76 → branco 12,3:1
+     · piso do véu em qualquer altura (0,30) → branco 5,3:1
+
+   O mínimo exigido é 4,5:1, e o PISO já o cumpre: texto branco em qualquer ponto
+   do painel passa, mesmo que o recorte da foto mude com o tamanho da janela.
+   ⚠️ Se alguém baixar o piso do véu abaixo de 0,30, essa garantia cai. */
+.rt-entrada {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 100svh;
+    background: var(--sm-app);
+}
+
+.rt-entrada-arte {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    /* Os dois blocos de texto ficam nas pontas, e a faixa do meio guarda a
+       fotografia limpa: é lá que o véu é mais leve. */
+    justify-content: space-between;
+    overflow: hidden;
+    padding: 46px 44px;
+    background: linear-gradient(165deg, #14477e 0%, #0e3560 45%, #061125 100%);
+    color: #fff;
+}
+/* Camada 1 — a fotografia. */
+.rt-entrada-arte::before {
+    content: '';
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    background: url('/images/entrada-salvador.jpg') center / cover no-repeat;
+    opacity: 0.42;
+}
+/* Camada 2 — o véu, mais fechado onde mora texto. */
+.rt-entrada-arte::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(6, 17, 37, 0.66) 0%,
+        rgba(6, 17, 37, 0.3) 38%,
+        rgba(6, 17, 37, 0.34) 62%,
+        rgba(6, 17, 37, 0.76) 100%
+    );
+}
+
+.rt-entrada-marca {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.rt-entrada-marca img {
+    display: block;
+    width: 62px;
+    height: auto;
+    flex: 0 0 62px;
+}
+.rt-entrada-nome {
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+}
+.rt-entrada-expansao {
+    margin-top: 4px;
+    font-size: 13.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    /* 0,88 e não 0,60: o texto está sobre fotografia, e o cinza de tela lisa
+       ficaria no limite (medido: 7,1:1 nesta faixa a 0,80). */
+    color: rgba(255, 255, 255, 0.88);
+}
+.rt-entrada-dizeres {
+    max-width: 30ch;
+    font-size: 17px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.94);
+}
+.rt-entrada-pe {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.88);
+}
+.rt-entrada-form {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 46px 32px;
+}
+/* Só o cartão do formulário mora aqui. A marca NÃO se repete deste lado: o
+   escudo, "SEFAL" e o subtítulo já estão no topo do painel da esquerda, e ali eles
+   aparecem grandes — repetir seria a mesma marca duas vezes na mesma tela
+   (decisão do dono). */
+.rt-entrada-caixa {
+    width: 100%;
+    max-width: 420px;
+}
+
+/* ── Telas estreitas ─────────────────────────────────────────────────────────
+   A arte deixa de ser metade e vira FAIXA no topo: mantém a fotografia à vista
+   (é ela que diz de onde o sistema é) sem roubar altura do formulário, que é o
+   que a pessoa veio fazer. Os dizeres saem — não caberiam sem empurrar os campos
+   para baixo da dobra. */
+@media (max-width: 900px) {
+    .rt-entrada {
+        grid-template-columns: minmax(0, 1fr);
+        /* A faixa fica do TAMANHO DELA e o formulário recebe o resto. Sem isto as
+           duas linhas dividem a sobra da altura em partes iguais, e no tablet a
+           fotografia crescia para 319px — espaço tirado de quem só quer digitar a
+           matrícula. */
+        grid-template-rows: auto 1fr;
+    }
+    .rt-entrada-arte {
+        min-height: 172px;
+        padding: 22px 24px;
+        justify-content: center;
+    }
+    .rt-entrada-arte::after {
+        background: linear-gradient(
+            to bottom,
+            rgba(6, 17, 37, 0.62) 0%,
+            rgba(6, 17, 37, 0.5) 60%,
+            rgba(6, 17, 37, 0.72) 100%
+        );
+    }
+    .rt-entrada-nome {
+        font-size: 27px;
+    }
+    .rt-entrada-marca img {
+        width: 48px;
+        flex: 0 0 48px;
+    }
+    /* Escondidos, e não removidos do TSX: a mesma tela serve as duas larguras, e
+       uma segunda árvore de marcação daria dois donos ao mesmo conteúdo. */
+    .rt-entrada-dizeres,
+    .rt-entrada-pe {
+        display: none;
+    }
+    .rt-entrada-form {
+        padding: 30px 20px 44px;
+    }
+}
+@media (max-width: 420px) {
+    .rt-entrada-arte {
+        min-height: 132px;
+        padding: 18px 20px;
+    }
+    .rt-entrada-nome {
+        font-size: 23px;
+    }
+    .rt-entrada-expansao {
+        font-size: 12px;
+    }
 }
 
 /* ============================ BUSCA INTELIGENTE ============================ */
@@ -855,6 +1682,71 @@ table.data-table tbody tr.clicavel {
     padding: 20px;
     background: rgba(10, 18, 20, 0.55);
 }
+/* ── O painel do Modo Gerente ────────────────────────────────────────────────
+   Ele é a janela sobreposta MAIS LARGA do sistema, e por um motivo: a matriz é
+   setor × cinco ações por tela, e quem distribui acesso precisa ver o conjunto
+   de uma vez para notar o que ficou aberto demais. Cortada em coluna estreita,
+   ela deixaria de responder essa pergunta.
+
+   O cabeçalho fica FIXO e só o corpo rola: com o catálogo de telas crescendo, o
+   título e o botão de fechar saíam da vista, e a pessoa rolava de volta para
+   cima só para sair. */
+.mg-painel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1080px;
+    max-height: min(92vh, 100% - 8px);
+    padding: 0;
+    overflow: hidden;
+}
+.mg-cabeca {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    flex-shrink: 0;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--sm-borda);
+}
+.mg-cabeca > div:first-child {
+    min-width: 0;
+}
+.mg-cabeca .icon-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.mg-corpo {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 24px 24px;
+}
+/* Cada tela da matriz é um bloco com moldura própria dentro do painel — cartão
+   dentro de cartão ficaria com duas sombras e dois raios concorrendo. */
+.mg-tela {
+    padding: 16px 18px;
+    border: 1px solid var(--sm-borda);
+    border-radius: var(--sm-raio-md);
+    background: var(--sm-superficie-2);
+}
+.mg-tela + .mg-tela,
+.mg-corpo .mg-tela:not(:first-child) {
+    margin-top: 16px;
+}
+.mg-tela-cabeca {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+@media (max-width: 620px) {
+    .mg-cabeca,
+    .mg-corpo {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
 .sobreposicao-titulo {
     display: flex;
     align-items: center;
@@ -913,7 +1805,238 @@ table.data-table tbody tr.clicavel {
 }
 .dark .paginacao-pagina[aria-current='page'],
 [data-theme='dark'] .paginacao-pagina[aria-current='page'] {
-    color: #06181a;
+    color: #04213a;
+}
+
+/* ==================== BOAS-VINDAS (SPLASH DE ENTRADA) ====================
+   Cobre a tela logo depois do login e some sozinho com fade suave.
+
+   O desenho é a variante aprovada pelo dono: "malha de ruas e pins" — a cidade
+   vista de cima, em azul sobre navy, com manchas de calor onde a fiscalização se
+   concentra e pins pulsando (um laranja, que é a cor de INCIDÊNCIA no sistema).
+
+   Duas leis moram aqui:
+   · `pointer-events: none` — o splash NUNCA bloqueia o clique de quem já quer
+     trabalhar, e se desmonta ao fim do fade (ver o componente);
+   · os @keyframes ficam no FIM do arquivo e no NÍVEL RAIZ. Aninhados em
+     @layer/@media, o lightningcss os descarta na build de produção, em silêncio.
+
+   ⚠️ Este bloco NÃO usa os tokens `--sm-*`: o splash é escuro nos DOIS temas (é
+   a cidade de noite), então as cores são fixas de propósito. Trocá-las por tokens
+   faria o fundo virar branco no tema claro e apagaria o texto branco por cima. */
+.bv-overlay {
+    position: fixed;
+    inset: 0;
+    /* Acima da barra lateral (60), do véu (55) e das janelas sobrepostas (80). */
+    z-index: 200;
+    overflow: hidden;
+    background: linear-gradient(125deg, #14284a 0%, #0a1628 55%, #050d1a 100%);
+    /* Nunca bloqueia o clique de quem já quer trabalhar. */
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 900ms ease;
+}
+.bv-overlay.saindo {
+    opacity: 0;
+}
+
+.bv-mapa {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    animation: bv-mapa-entra 1.6s ease both;
+}
+/* As ruas: duas espessuras de leitura — avenida e travessa. */
+.bv-rua {
+    fill: none;
+    stroke: #1b3a5e;
+    stroke-linecap: round;
+    opacity: 0.9;
+}
+.bv-rua.forte {
+    stroke: #26537e;
+}
+
+.bv-pin-nucleo {
+    fill: #4d9fdc;
+}
+.bv-pin-anel {
+    fill: none;
+    stroke: #4d9fdc;
+    stroke-width: 2;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: bv-pin-pulso 2.6s ease-out infinite;
+}
+/* O ponto irregular. É UM só: laranja é incidência, e vários fariam o splash
+   dizer que a cidade está toda irregular. */
+.bv-pin.incidencia .bv-pin-nucleo {
+    fill: #ff9a4d;
+}
+.bv-pin.incidencia .bv-pin-anel {
+    stroke: #ff9a4d;
+}
+
+/* O véu escurece a ESQUERDA, que é onde mora o texto, e deixa a malha respirar à
+   direita, onde ficam os pins. */
+.bv-veu {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(5, 13, 26, 0.94) 0%,
+        rgba(5, 13, 26, 0.78) 38%,
+        rgba(5, 13, 26, 0.35) 70%,
+        rgba(5, 13, 26, 0.15) 100%
+    );
+}
+
+.bv-marca {
+    position: absolute;
+    top: 34px;
+    right: 44px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    animation: bv-sobe 0.8s ease 0.35s both;
+}
+.bv-marca img {
+    display: block;
+    width: 46px;
+    height: auto;
+}
+.bv-marca-nome {
+    font-size: 21px;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+    color: #fff;
+}
+.bv-marca-orgao {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.bv-bloco {
+    position: absolute;
+    left: 84px;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 620px;
+}
+.bv-kicker {
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 3.4px;
+    color: #4d9fdc;
+    animation: bv-sobe 0.7s ease both;
+}
+.bv-saudacao {
+    margin-top: 14px;
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: #fff;
+    animation: bv-sobe 0.7s ease 0.25s both;
+}
+/* A régua: o traço azul que separa a saudação da frase — a mesma cor de ação do
+   sistema, para o splash não introduzir uma cor que não existe em tela nenhuma. */
+.bv-regua {
+    width: 76px;
+    height: 5px;
+    margin: 26px 0 20px;
+    border-radius: 999px;
+    background: #0066b2;
+    animation: bv-regua-cresce 0.8s ease 0.5s both;
+}
+.bv-frase {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.86);
+    animation: bv-sobe 0.7s ease 0.7s both;
+}
+
+/* ── Telas estreitas ────────────────────────────────────────────────────────
+   O bloco encosta nas margens e a tipografia desce um degrau; a marca encolhe. O
+   pin do meio (`recolhivel`) sai de cena: com a malha cortada pelo `slice`, ele
+   caía justamente sobre o texto. */
+@media (max-width: 900px) {
+    .bv-bloco {
+        left: 26px;
+        right: 26px;
+        max-width: none;
+    }
+    .bv-kicker {
+        font-size: 11px;
+        letter-spacing: 2.4px;
+    }
+    .bv-saudacao {
+        font-size: 36px;
+    }
+    .bv-regua {
+        margin: 20px 0 16px;
+    }
+    .bv-frase {
+        font-size: 15.5px;
+    }
+    .bv-marca {
+        top: 22px;
+        right: 22px;
+        gap: 10px;
+    }
+    .bv-marca img {
+        width: 34px;
+    }
+    .bv-marca-nome {
+        font-size: 17px;
+    }
+    .bv-marca-orgao {
+        font-size: 9.5px;
+        letter-spacing: 1px;
+    }
+    .bv-pin.recolhivel {
+        display: none;
+    }
+    /* Com a tela estreita a malha aparece pouco à direita: o véu abre no pé para
+       os pins que sobraram continuarem visíveis. */
+    .bv-veu {
+        background: linear-gradient(
+            180deg,
+            rgba(5, 13, 26, 0.62) 0%,
+            rgba(5, 13, 26, 0.9) 55%,
+            rgba(5, 13, 26, 0.72) 100%
+        );
+    }
+}
+@media (max-width: 420px) {
+    .bv-saudacao {
+        font-size: 30px;
+    }
+    .bv-frase {
+        font-size: 14.5px;
+    }
+}
+
+/* Quem pede menos movimento recebe o MESMO splash, parado — não um splash a
+   menos: a informação (quem entrou, que horas são) é a mesma. */
+@media (prefers-reduced-motion: reduce) {
+    .bv-mapa,
+    .bv-pin-anel,
+    .bv-marca,
+    .bv-kicker,
+    .bv-saudacao,
+    .bv-regua,
+    .bv-frase {
+        animation: none !important;
+    }
 }
 
 /* ============================ ANIMAÇÕES ============================ */
@@ -921,6 +2044,56 @@ table.data-table tbody tr.clicavel {
 @keyframes girar-acao {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes bv-sobe {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes bv-regua-cresce {
+    from {
+        width: 0;
+        opacity: 0;
+    }
+    to {
+        width: 76px;
+        opacity: 1;
+    }
+}
+
+@keyframes bv-mapa-entra {
+    from {
+        opacity: 0;
+        transform: scale(1.06);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* O anel expandindo — o "sinal saindo do ponto". Some antes de fechar o ciclo
+   para o pulso ter respiro entre uma onda e a próxima. */
+@keyframes bv-pin-pulso {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.9;
+    }
+    70% {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(2.6);
+        opacity: 0;
     }
 }
 

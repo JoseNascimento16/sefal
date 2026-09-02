@@ -41,8 +41,38 @@ Maria" soa com gente; o nome completo soa com cadastro. A matrícula aparece em 
 ela vem no crachá), embora seja guardada em minúscula — a forma canônica é do banco, a legível é da
 tela.
 
+As faixas são **06:00–11:59 bom dia · 12:00–17:59 boa tarde · 18:00–05:59 boa noite**, e a
+**madrugada é NOITE**. Neste sistema isso não é detalhe: fiscalização de ambulante acontece de
+madrugada, em Carnaval e em festa de largo, e quem abre o sistema às 3h não está começando o dia.
+
+A regra tem **um dono só** (`resources/js/lib/saudacao.ts`), porque **duas** telas cumprimentam quem
+entra ao mesmo tempo — esta e o splash de boas-vindas (RN-03). Com uma cópia em cada uma, elas se
+contradiziam: o splash dizia "Boa noite" e a tela por baixo, "Bom dia".
+
 Quem não tem setor definido vê isso dito em tela, e não um espaço vazio: é a pista de que falta
 alguém lhe conceder acesso.
+
+### RN-03 — O splash de boas-vindas aparece UMA vez, e nunca atrapalha
+
+Logo depois do login, a primeira tela renderizada recebe por cima um splash com a saudação, o nome
+de quem entrou e a marca — a cidade vista de cima, com a malha de ruas e os pontos de fiscalização.
+Ele fica ~3,2s em tela e sai sozinho num fade de ~900ms.
+
+Três garantias, e cada uma existe por um motivo:
+
+1. **Uma vez por entrada.** A marca de "acabou de entrar" é gravada na sessão pelo evento de
+   autenticação e **consumida na entrega** dos dados da tela — não por flash de sessão. A diferença
+   importa: entre o login e a primeira tela pode haver redirecionamento (a guarda de permissão
+   devolvendo alguém à tela inicial), e flash morre nesse salto. Assim o splash aparece na primeira
+   tela DE VERDADE, quantos saltos houver, e não reaparece nas seguintes.
+2. **Nunca bloqueia.** O splash não captura clique (`pointer-events: none`) e **se desmonta** ao fim
+   do fade: quem já quer trabalhar clica através dele. Splash que fica, ou que engole o clique,
+   deixa de ser recepção e vira porta trancada.
+3. **É recepção, não informação.** Nada nele é dado do sistema: as ruas, os pontos e as manchas são
+   desenho. Quem precisa de número abre a tela, não o splash.
+
+Quem pede menos movimento (`prefers-reduced-motion`) recebe o **mesmo** splash, parado — não um
+splash a menos: a informação (quem entrou, que horas são) é a mesma.
 
 ---
 
@@ -59,3 +89,4 @@ alguém lhe conceder acesso.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 26/08/2026 | José Nascimento | Início | Os atalhos passam a vir do servidor, com endereço resolvido e filtrados por permissão (RN-01); o cartão de Permissionários passa a levar à tela. | O cartão dizia "Em construção" para uma tela pronta, no menu e no Acompanhamento de Requisitos: a primeira tela do sistema desmentia a entrega principal da fase. Escrito na tela, o cartão não tinha como saber que a rota nasceu. |
+| 27/08/2026 | José Nascimento | Início | Entra o splash de boas-vindas na primeira tela depois do login (RN-03), e a saudação passa a ter **um dono só** — com as faixas 6/12/18 e a madrugada como NOITE (RN-02). | Esta tela cortava só em `hora < 12`: às 3h da manhã ela dizia "Bom dia", e fiscalização de ambulante acontece de madrugada. Com o splash aparecendo por cima dela e trazendo a própria cópia da regra, as duas se contradiriam na mesma tela, no mesmo segundo. |

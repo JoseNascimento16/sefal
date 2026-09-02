@@ -16,7 +16,7 @@
            Helvetica, limitada à tabela Windows-1252, e aí seta (→), separador de breadcrumb (›) e
            travessão (—) saem como "?" no arquivo entregue. A DejaVu é Unicode e cobre esses glifos. */
         * { font-family: 'DejaVu Sans', sans-serif; }
-        body { margin: 0; color: #15292b; font-size: 11px; line-height: 1.4; }
+        body { margin: 0; color: #0e1a2c; font-size: 11px; line-height: 1.4; }
 
         /* Paisagem com muitas colunas: células mais compactas para a tabela não estourar. */
         body.landscape table.dados th { padding: 4px 2px; font-size: 8px; }
@@ -26,28 +26,28 @@
 
         .topo { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
         .topo td { border: none; vertical-align: middle; }
-        .marca-titulo { font-size: 22px; font-weight: bold; color: #0d5c63; letter-spacing: -0.5px; line-height: 1; }
-        .marca-sub { font-size: 8.5px; color: #35494b; font-weight: bold; }
-        .rel-titulo { font-size: 15px; font-weight: bold; color: #0a474d; text-align: right; }
-        .rel-emitido { font-size: 9px; color: #6b8082; text-align: right; margin-top: 3px; }
-        .hr { border: none; border-top: 1px solid #dfe5e5; margin: 8px 0 14px; }
+        .marca-titulo { font-size: 22px; font-weight: bold; color: #14477e; letter-spacing: -0.5px; line-height: 1; }
+        .marca-sub { font-size: 8.5px; color: #33445e; font-weight: bold; }
+        .rel-titulo { font-size: 15px; font-weight: bold; color: #0e3560; text-align: right; }
+        .rel-emitido { font-size: 9px; color: #64748f; text-align: right; margin-top: 3px; }
+        .hr { border: none; border-top: 1px solid #d9e0ee; margin: 8px 0 14px; }
 
-        .recorte-label { font-size: 10px; font-weight: bold; color: #6b8082; letter-spacing: 0.5px; margin-bottom: 6px; }
-        .recorte-card { border: 0.5px solid #dfe5e5; border-left: 3px solid #f4a300; border-radius: 8px; padding: 8px 12px; margin-bottom: 18px; }
-        .recorte-card .val { font-size: 11px; font-weight: bold; color: #15292b; }
+        .recorte-label { font-size: 10px; font-weight: bold; color: #64748f; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .recorte-card { border: 0.5px solid #d9e0ee; border-left: 3px solid #0066b2; border-radius: 8px; padding: 8px 12px; margin-bottom: 18px; }
+        .recorte-card .val { font-size: 11px; font-weight: bold; color: #0e1a2c; }
 
-        .secao-titulo { font-size: 12.5px; font-weight: bold; color: #15292b; border-left: 3px solid #0d5c63; padding: 3px 0 3px 8px; margin: 18px 0 8px; }
+        .secao-titulo { font-size: 12.5px; font-weight: bold; color: #0e1a2c; border-left: 3px solid #14477e; padding: 3px 0 3px 8px; margin: 18px 0 8px; }
 
         table.dados { width: 100%; border-collapse: collapse; }
-        table.dados th { background: #0d5c63; color: #ffffff; font-size: 9px; font-weight: bold; padding: 7px 10px; border: 0.5px solid #0a474d; text-transform: uppercase; }
-        table.dados td { padding: 6px 10px; font-size: 10px; color: #15292b; border-left: 0.5px solid #dfe5e5; border-right: 0.5px solid #dfe5e5; border-bottom: 0.5px solid #eef1f1; }
-        table.dados tr.total td { background: #f7f8f8; font-weight: bold; border-top: 0.5px solid #dfe5e5; border-bottom: 0.5px solid #dfe5e5; }
-        table.dados tr.total-cheia td { background: #e7efef; color: #0a474d; font-weight: bold; font-size: 11px; padding: 8px 10px; border: 0.5px solid #c3cfcf; }
+        table.dados th { background: #14477e; color: #ffffff; font-size: 9px; font-weight: bold; padding: 7px 10px; border: 0.5px solid #0e3560; text-transform: uppercase; }
+        table.dados td { padding: 6px 10px; font-size: 10px; color: #0e1a2c; border-left: 0.5px solid #d9e0ee; border-right: 0.5px solid #d9e0ee; border-bottom: 0.5px solid #eef1f7; }
+        table.dados tr.total td { background: #f2f5fa; font-weight: bold; border-top: 0.5px solid #d9e0ee; border-bottom: 0.5px solid #d9e0ee; }
+        table.dados tr.total-cheia td { background: #eaf1fa; color: #0e3560; font-weight: bold; font-size: 11px; padding: 8px 10px; border: 0.5px solid #b6c2d8; }
 
         .ac { text-align: center; }
         .ar { text-align: right; }
 
-        .rodape { position: fixed; bottom: -10px; left: 0; right: 0; font-size: 8px; color: #6b8082; border-top: 1px solid #dfe5e5; padding-top: 5px; }
+        .rodape { position: fixed; bottom: -10px; left: 0; right: 0; font-size: 8px; color: #64748f; border-top: 1px solid #d9e0ee; padding-top: 5px; }
     </style>
 </head>
 <body class="{{ ($r['metadados']['orientacao'] ?? '') === 'landscape' ? 'landscape' : '' }}">

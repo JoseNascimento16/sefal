@@ -17,6 +17,12 @@ declare module '@inertiajs/core' {
             menu: MenuSecao[];
             acoes: AcoesDaTela | null;
             flash: Recado;
+            /**
+             * Painel a abrir ao chegar nesta tela (ou `null`). Serve a quem
+             * digita o endereço de algo que hoje é painel sobreposto — ver
+             * `HandleInertiaRequests::painel`.
+             */
+            painel: string | null;
             [key: string]: unknown;
         };
     }

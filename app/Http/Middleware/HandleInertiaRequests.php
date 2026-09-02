@@ -4,8 +4,10 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Services\PermissaoService;
+use App\Support\ContadoresDoMenu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -45,11 +47,53 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user ? $this->usuario($user) : null,
+                /*
+                 * A marca de "acabou de entrar", que o splash de boas-vindas lê
+                 * uma vez e nunca mais.
+                 *
+                 * ⚠️ É consumida AQUI, na ENTREGA (`pull` = lê e apaga) e dentro
+                 * de uma closure — e as duas coisas importam. A closure só roda
+                 * quando os props são de fato serializados, ou seja quando a
+                 * requisição termina numa TELA. Um redirecionamento não serializa
+                 * props, então a marca atravessa quantos saltos internos houver
+                 * entre o login e a primeira tela (a guarda de permissão pode
+                 * mandar a pessoa para outro lugar). Fosse flash de sessão comum,
+                 * ela morreria nesse salto e o splash nunca apareceria para quem
+                 * cai num redirecionamento — foi exatamente o que aconteceu em
+                 * homologação no sistema irmão.
+                 */
+                'boas_vindas' => fn (): bool => $request->hasSession()
+                    && (bool) $request->session()->pull('boas_vindas', false),
             ],
             'menu' => $user ? $this->menu($user) : [],
             'acoes' => $this->acoes($request, $user),
             'flash' => $this->recado($request),
+            'painel' => $this->painel($request),
         ];
+    }
+
+    /**
+     * O painel a ABRIR ao chegar nesta tela — ou `null`, que é o normal.
+     *
+     * Existe para um caso só: alguém digita (ou tem nos favoritos) o endereço de
+     * algo que hoje é painel sobreposto, e não página. O servidor manda a pessoa
+     * para a tela inicial pedindo que o painel abra lá, em vez de devolver uma
+     * página que não existe mais — ninguém fica olhando para um endereço que não
+     * leva a nada.
+     *
+     * Vai pela sessão (flash), e não na URL: assim vale uma vez, não fica no
+     * histórico do navegador e não põe nada no endereço — o WAF da Prefeitura
+     * inspeciona query string.
+     */
+    protected function painel(Request $request): ?string
+    {
+        if (! $request->hasSession()) {
+            return null;
+        }
+
+        $painel = $request->session()->get('abrir.painel');
+
+        return is_string($painel) ? $painel : null;
     }
 
     /**
@@ -170,6 +214,21 @@ class HandleInertiaRequests extends Middleware
                     continue;
                 }
 
+                /*
+                 * Item marcado como oculto sai do MENU e nada mais: a rota segue
+                 * viva, a permissão segue no Modo Gerente e a tela segue abrindo
+                 * pelo endereço. É o jeito de tirar o atalho de uma tela pronta que
+                 * ainda não vai ao ar para o usuário final — sem apagar código, que
+                 * é o que transforma "esconder" em "refazer depois".
+                 *
+                 * A conferência vem ANTES da permissão de propósito: esconder é
+                 * decisão de produto, não de acesso, e ler as duas na mesma linha
+                 * faria parecer que uma depende da outra.
+                 */
+                if (($item['oculto'] ?? false) === true) {
+                    continue;
+                }
+
                 if (! $permissoes->podeVerItemDoMenu($user, $item)) {
                     continue;
                 }
@@ -178,6 +237,22 @@ class HandleInertiaRequests extends Middleware
                     'rotulo' => $item['rotulo'],
                     'url' => route($item['rota'], absolute: false),
                     'icone' => $item['icone'] ?? 'padrao',
+                    // Item que abre PAINEL sobre a tela atual em vez de navegar
+                    // (ver o cabeçalho de `config/retaguarda_menu.php`). A `url`
+                    // continua indo: é dela que o painel busca os dados.
+                    'modal' => $item['modal'] ?? null,
+                    /*
+                     * O rótulo curto do menu RETRAÍDO (a doca), onde cabem umas
+                     * nove letras. Sem declaração, a primeira palavra do rótulo —
+                     * que resolve "Relatórios" e não resolve as seis telas que
+                     * começam em "Tipos de…", daí a chave `curto` na config.
+                     */
+                    'curto' => $item['curto'] ?? Str::upper(Str::before($item['rotulo'], ' ')),
+                    // O número vivo, quando o item declara um (melhor esforço:
+                    // contagem que falha vira `null` e o item aparece sem número).
+                    'contador' => isset($item['contador'])
+                        ? ContadoresDoMenu::para((string) $item['contador'])
+                        : null,
                 ];
             }
 

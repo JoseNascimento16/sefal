@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Actions\Fortify\AutenticarPorMatricula;
 use App\Actions\Fortify\ResetUserPassword;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -32,6 +34,30 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->marcarEntradaNoSistema();
+    }
+
+    /**
+     * Marca na sessão que a pessoa ACABOU DE ENTRAR — é o que faz o splash de
+     * boas-vindas aparecer uma vez, na primeira tela, e nunca mais.
+     *
+     * O gancho é o evento de autenticação, e não uma resposta de login própria:
+     * assim vale para todo caminho que autentica de verdade (o formulário de
+     * matrícula, o "continuar conectado" que volta pelo cookie, e o que vier
+     * amanhã) sem depender de alguém lembrar de marcar em cada um.
+     *
+     * Quem CONSOME a marca é o `HandleInertiaRequests` — e lá está escrito por que
+     * ela é consumida na entrega, e não por flash de sessão.
+     */
+    private function marcarEntradaNoSistema(): void
+    {
+        Event::listen(function (Login $evento): void {
+            $requisicao = request();
+
+            if ($requisicao->hasSession()) {
+                $requisicao->session()->put('boas_vindas', true);
+            }
+        });
     }
 
     /**

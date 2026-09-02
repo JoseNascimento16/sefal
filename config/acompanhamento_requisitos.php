@@ -43,6 +43,15 @@
  */
 $origemSpec = 'Sem requisito escrito — origem: spec de design 2026-08-24 + decisões do dono.';
 
+/*
+ * A origem das telas que entraram no menu como STUB: elas nasceram da decisão do
+ * dono de deixar o caminho do trabalho visível antes de o conteúdo existir. O texto
+ * declara também O QUE FALTA, que é a informação que a linha tem de carregar
+ * enquanto o conteúdo não chega.
+ */
+$origemStub = 'Sem requisito escrito — origem: decisão do dono 2026-08-27 (o caminho do trabalho '
+    .'aparece no menu antes do conteúdo).';
+
 return [
 
     'telas' => [
@@ -73,7 +82,9 @@ return [
                 .'barrado em outra tela. Por isso ela é a única fora do controle de acesso: barrá-la '
                 .'fecharia um laço de redirecionamento. Os atalhos são decididos pelo servidor: levam à '
                 .'tela quando ela existe, ficam "em construção" quando ela é de entrega futura e não '
-                .'aparecem para quem não pode abri-la.',
+                .'aparecem para quem não pode abri-la. A primeira tela depois do login recebe o splash '
+                .'de boas-vindas, que aparece uma vez por entrada, não captura clique e sai sozinho; a '
+                .'saudação pelo horário tem um dono só, com a madrugada tratada como noite.',
         ],
 
         [
@@ -100,8 +111,11 @@ return [
             'nota' => $origemSpec.' Matriz de quem entra onde: setor × tela × ação, com rastro de cada '
                 .'concessão e revogação — o rastro mostra em tela O QUE mudou, por setor. É a fonte '
                 .'única do acesso: o menu, a abertura da tela e as ações obedecem a ela. Cada tela é '
-                .'salva por si, e a seção com alteração pendente é sinalizada (sair sem salvar pergunta '
-                .'antes).',
+                .'salva por si, e a seção com alteração pendente é sinalizada (fechar sem salvar '
+                .'pergunta antes). Não é uma página: abre como PAINEL sobre a tela em que a pessoa '
+                .'está, pelo item do menu Sistema — quem distribui acesso está no meio de uma '
+                .'conferência, e ir para outra página fazia perder o lugar. Quem chega pelo endereço '
+                .'antigo é levado à tela inicial com o painel abrindo lá.',
         ],
 
         [
@@ -115,6 +129,93 @@ return [
             'nota' => $origemSpec.' Emissão de documento oficial com período, totais e identificação de '
                 .'quem emitiu, em PDF, Excel e Word. Não se confunde com a exportação de listagem, que '
                 .'entrega o recorte visível de uma grade.',
+        ],
+
+        /*
+         * AS QUATRO TELAS EM PREPARAÇÃO — Fases 2 e 3.
+         *
+         * Entram no mapa porque estão ENTREGUES como stub: têm endereço, permissão
+         * e uma tela que abre dizendo o que vai ser. O mapa é de funcionalidade
+         * entregue, e o que existe pela metade é justamente o que precisa aparecer
+         * com o estado escrito — senão passa por pronto na leitura de cima.
+         */
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Cadastro de Operação',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.operacoes.index',
+            'breadcrumb' => 'Fiscalização › Cadastro de Operação',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemStub.' Stub aguardando a Fase 2. A tela abre e anuncia o que vai fazer — abrir '
+                .'operação com data, área e equipe, acompanhar o que ela produziu em campo e '
+                .'encerrá-la com o resultado. Rota, permissão e item de menu já valem; o conteúdo '
+                .'chega com a fase.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Fiscalizações',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.fiscalizacoes.index',
+            'breadcrumb' => 'Fiscalização › Fiscalizações',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemStub.' Stub aguardando a Fase 2. Vai receber o que o aplicativo do fiscal registra '
+                .'na rua: consulta por permissionário, área e período, com foto, ponto de GPS, o '
+                .'documento emitido na hora e o prazo de retorno de quem foi notificado. Nada se '
+                .'perde à espera dela — o aplicativo guarda o registro.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Mapa ao Vivo',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.mapa.index',
+            'breadcrumb' => 'Fiscalização › Mapa ao Vivo',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemStub.' Stub aguardando a Fase 3. Vai mostrar a cidade agora: fiscais em campo com o '
+                .'último ponto conhecido, o que foi registrado nas últimas horas e as áreas de '
+                .'atuação desenhadas sobre o mapa. O desenho da tela de mapa já está decidido '
+                .'(padrão imersivo, em docs/regras-de-negocio/design-retaguarda.md).',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Mapa de Calor',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.mapa-de-calor.index',
+            'breadcrumb' => 'Fiscalização › Mapa de Calor',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemStub.' Stub aguardando a Fase 3. Vai mostrar onde a ocorrência se concentra, por '
+                .'região e por período, para a operação ir aonde precisa — inclusive o foco do dia '
+                .'sugerido a partir dos últimos trinta dias.',
+        ],
+
+        /*
+         * A CASCA — sem item de menu, e presente em toda tela autenticada. Entra
+         * aqui pelo mesmo motivo da exportação: o mapa é de funcionalidade
+         * entregue, e o que vale em todas as telas é justamente o que ninguém
+         * lembra de conferir depois.
+         */
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Casca da Retaguarda (menu, doca e cabeçalho editorial)',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.inicio',
+            'breadcrumb' => 'Presente em toda tela da Retaguarda',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemSpec.' Menu lateral navy de canto curvado, com número vivo ao lado do '
+                .'item que declara um (neutro = tamanho, laranja = fila, e fila em zero não aparece) e '
+                .'o cartão de quem entrou no pé, com a saída. O menu tem duas formas — painel e doca '
+                .'flutuante —, a escolha é da pessoa e fica guardada no navegador dela; abaixo de '
+                .'1100px a doca vale sozinha e abaixo de 620px vira barra no pé da tela. Não há barra '
+                .'superior nem menu escondido atrás de botão: o topo de cada tela é o cabeçalho dela '
+                .'(seção, título, subtítulo) e o menu está sempre à vista. Desenho e decisões em '
+                .'docs/regras-de-negocio/design-retaguarda.md.',
         ],
 
         /*
