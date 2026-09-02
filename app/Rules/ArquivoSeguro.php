@@ -32,7 +32,7 @@ class ArquivoSeguro implements ValidationRule
     /** Documentos aceitos em anexo de cadastro/processo. */
     public const DOCUMENTOS = ['pdf', 'doc', 'docx', 'odt', 'txt', 'rtf'];
 
-    /** Imagens (foto do permissionário, foto da fiscalização, logo, fundo de tela). */
+    /** Imagens (foto do ambulante, foto da fiscalização, logo, fundo de tela). */
     public const IMAGENS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
 
     /** Planilhas (importação e anexo de listagem). */

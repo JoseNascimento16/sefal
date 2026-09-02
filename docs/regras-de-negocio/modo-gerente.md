@@ -118,7 +118,7 @@ esta tela.
 O normal é o **pacote inteiro** (vê, opera, inclui e exclui): é o que "este setor
 usa esta tela" quer dizer. A declaração aceita **ajuste por setor** para o caso em
 que não é isso — `'fiscal' => ['incluir' => false, 'excluir' => false]`. Foi
-preciso justamente no cadastro de permissionário: o fiscal precisa **consultar**
+preciso justamente no cadastro de ambulante: o fiscal precisa **consultar**
 quem está cadastrado (chegar na calçada sem saber é trabalhar às cegas) e não
 cria nem apaga por lá — ele cadastra em rua, pelo aplicativo, e o que nasce em
 rua entra em quarentena para o gestor conferir. Cadastro criado de mesa por ele

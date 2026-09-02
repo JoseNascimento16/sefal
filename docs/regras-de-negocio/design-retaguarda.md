@@ -35,7 +35,7 @@ sistema — é a cidade por baixo do menu, e nada mais.
 ### RN-02 — Não há barra superior: o topo da tela é o cabeçalho da PÁGINA
 
 A tela abre com **sobrancelha da seção** (azul, espaçada), **título grande com
-ponto azul final** ("Permissionários.") e **subtítulo**. É o `.rt-page-head`, que
+ponto azul final** ("Ambulantes.") e **subtítulo**. É o `.rt-page-head`, que
 cada tela já escrevia — o que mudou foi o peso: ele passou a ser o topo da tela.
 
 O ponto final é do CSS (`.rt-page-head h1::after`), e não digitado em cada tela:
@@ -135,29 +135,50 @@ E eles contam a lista **inteira**, não o resultado da busca: respondem "como es
 cadastro", não "quantos casaram com o que eu digitei". Mudar de valor enquanto
 alguém digita faria o painel de números virar um segundo resultado de busca.
 
-### RN-07 — Telas de MAPA usarão o padrão imersivo (decidido, ainda não construído)
+### RN-07 — Telas de MAPA usam o padrão imersivo (construído em 02/09/2026)
 
-As duas telas de mapa existem hoje apenas como **tela em preparação** (RN-09), na
-casca normal. Quando ganharem conteúdo, **não** usarão a casca da RN-01: usarão o
-padrão **imersivo** do mockup aprovado, que é outro registro para outro trabalho.
-
-O que está decidido:
+As duas telas de mapa (**Mapa ao Vivo** e **Mapa de Calor**) **não** usam a casca
+da RN-01 no miolo: elas usam o padrão **imersivo** do mockup aprovado, que é outro
+registro para outro trabalho. As regras de cada uma estão em
+[`fiscalizacao/mapa-ao-vivo.md`](fiscalizacao/mapa-ao-vivo.md) e
+[`fiscalizacao/mapa-de-calor.md`](fiscalizacao/mapa-de-calor.md); o que é **da
+casca** está aqui.
 
 - **o mapa é o fundo**, sangrando de borda a borda — não um cartão dentro do
   miolo. Quem abre um mapa está olhando a cidade, não uma tela com um mapa dentro;
-- **navegação em pílula** flutuando no topo, sobre o mapa (não o painel lateral):
-  em tela de mapa, largura é informação;
+- **o menu PERMANECE.** O mockup punha a navegação numa pílula flutuante no topo,
+  no lugar do painel lateral. Foi a única peça dele que não veio: o imersivo é
+  sobre o **conteúdo**, e trocar a casca em duas telas faria o gestor perder o
+  menu justamente onde ele mais precisa pular para "Cadastro de Operação" — e
+  criaria uma segunda navegação para manter. O que o modo imersivo faz na casca
+  são três coisas, e só: o miolo perde o preenchimento, a página perde a rolagem
+  (quem rola é o mapa) e o cluster de tema/avisos clareia, porque em texto escuro
+  ele desapareceria na cidade à noite;
 - **painéis de vidro** (fundo translúcido escuro, borda de 1px azul, desfoque
   atrás) para os blocos de leitura — "a cidade agora", foco do dia, últimos
   registros — e para o cartão de detalhe do ponto selecionado;
 - **pontos pulsando**, com o anel expandindo: laranja para o que está fora do
-  esperado, azul para o que é rotina. A mesma gramática do splash de boas-vindas;
+  esperado, azul para o que é rotina. A mesma gramática do splash de boas-vindas.
+  **Só dois tipos pulsam** — pulso em tudo não destaca nada;
 - **manchas de calor** radiais para concentração, sem número em cima delas: o
   número fica no painel, a mancha diz onde olhar.
 
-⚠️ Isto **não** autoriza construir a tela: a decisão registrada é de desenho, e o
-fluxo (o que o mapa mostra, quem pode ver, de onde vem o ponto) continua sendo da
-fase que a construir.
+A tela declara o modo por **propriedade de layout**, junto da trilha:
+
+```ts
+MinhaTelaDeMapa.layout = { imersivo: true, breadcrumbs: [...] };
+```
+
+**A paleta do vidro é FIXA nos dois temas** (tokens `--sm-mapa-*`), pelo mesmo
+motivo do menu (RN-01): é moldura sobre a cidade à noite. E as imagens do mapa são
+**escurecidas por filtro** em vez de vir de outro provedor — a mesma receita que o
+aplicativo do fiscal usa no tema escuro, o que evita uma segunda origem de rede.
+
+⚠️ **Por baixo das imagens fica o navy com a malha de ruas**, e isso não é
+enfeite: é o que a tela mostra enquanto os blocos de imagem chegam, e o que ela
+mostra **se eles não chegarem** (rede da Prefeitura, proxy, servidor fora do ar).
+A tela degrada para o desenho aprovado, não para um retângulo vazio. Tela de mapa
+nova deve manter isso.
 
 ### RN-08 — Esconder do menu é tirar o ATALHO, nunca desligar a tela
 
@@ -190,13 +211,21 @@ vai permitir fazer. Duas variantes, e a diferença é conteúdo, não enfeite:
   numa tela de lista prometeria a coisa errada.
 
 Em uso hoje (`TelasEmPreparacaoController`): **Cadastro de Operação** e
-**Fiscalizações** (Fase 2), **Mapa ao Vivo** e **Mapa de Calor** (Fase 3).
+**Fiscalizações** (Fase 2). O **Mapa ao Vivo** e o **Mapa de Calor** saíram do
+catálogo em 02/09/2026, quando passaram a existir — é a troca que o ⚠️ abaixo
+prevê, e ela não tocou o menu.
+
+⚠️ Com a saída dos dois, **nenhuma entrada usa a variante `mapa` hoje**. Ela fica
+porque é ela que a próxima tela em preparação com cara de mapa vai querer; se
+ficar sem uso por muito tempo, o certo é apagá-la junto com o `.prep-cidade` do
+CSS, e não deixá-la envelhecendo aqui.
 
 ⚠️ Isto é **andaime**. Quando a tela real nascer, ela toma o `slug` e a rota, e a
 entrada sai do catálogo do controller — o nome de rota já segue o padrão das telas
 de verdade (`retaguarda.<slug>.index`) justamente para essa troca não tocar no menu.
 
-**A concessão inicial das quatro** segue o critério das telas prontas: o fiscal
+**A concessão inicial das quatro telas do caminho** segue o critério das telas
+prontas (e continua valendo para as duas de mapa, agora que elas existem): o fiscal
 consulta o que é do trabalho dele — o que registrou em campo (Fiscalizações) e onde
 a cidade está agora (Mapa ao Vivo) — e não entra no que é de gestão (planejar
 operação, analisar concentração). Ele não grava nada pela Retaguarda: grava em rua,
@@ -241,4 +270,5 @@ como o menu (RN-01); o formulário de acesso, esse sim, acompanha o tema.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 27/08/2026 | José Nascimento | Casca da Retaguarda | Criação do doc. A casca passa a ser a "editorial curva" (RN-01), a barra superior sai e o topo da tela vira o cabeçalho da página (RN-02), o menu ganha número vivo declarado por item (RN-03) e duas formas — painel e doca, com barra inferior no telefone (RN-04); as linhas de grade viram cartões com marca de pendência e chip com ponto (RN-05); números de cabeçalho saem da própria lista da tela (RN-06). Registrada a diretriz para as telas de mapa (RN-07). | A casca anterior era genérica: barra superior repetindo o título em corpo 13, menu branco encostado em miolo branco, grade de linhas sem hierarquia e nenhum número à vista — quem abria o sistema não sabia por onde começar o dia. O menu, abaixo de 900px, ficava escondido atrás de um hambúrguer. |
+| 02/09/2026 | José Nascimento | Casca da Retaguarda · telas de mapa | A RN-07 sai de "decidido, ainda não construído" para **construído**: as duas telas de mapa nascem no padrão imersivo, declarado por propriedade de layout (`imersivo: true`). Registrada a única divergência do mockup — o **menu permanece** — e o que o modo imersivo faz na casca (miolo sem preenchimento, página sem rolagem, cluster clareado). Registrados também a paleta fixa `--sm-mapa-*`, o escurecimento das imagens por filtro e a malha de ruas por baixo como degradação. A RN-09 perde as duas do catálogo de telas em preparação. | O desenho já estava aprovado em mockup e as duas telas existiam como andaime prometendo a Fase 3. O cenário da reunião de 02/09 (estrutura Área › Equipe › bairros) deu a elas o conteúdo que faltava: é o que transforma um mapa bonito em decisão de operação. |
 | 27/08/2026 | José Nascimento | Casca da Retaguarda | As seis telas de Parametrização saem do menu por flag, sem nada ser desligado (RN-08); as quatro telas do caminho da fiscalização entram no menu como tela que abre e explica a espera (RN-09); o tema padrão passa de "do aparelho" para CLARO (RN-10). | O menu mostrava telas de manutenção interna e não mostrava o caminho do trabalho — quem abria o sistema não via que fiscalização, operação e mapa fazem parte dele. E o padrão "do aparelho" fazia quem tem o sistema operacional no escuro abrir a Retaguarda em navy sem nunca ter pedido. |

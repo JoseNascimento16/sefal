@@ -1,13 +1,20 @@
-# Cadastro de Permissionário — a identidade de quem é fiscalizado
+# Cadastro de Ambulante — a identidade de quem é fiscalizado
 
-**Onde fica:** Menu → Fiscalização → **Permissionários** (`/retaguarda/permissionarios`).
+**Onde fica:** Menu → Fiscalização → **Ambulantes** (`/retaguarda/ambulantes`).
 **Quem usa:** administrador, gestor e **fiscal**. É a tela-núcleo da fiscalização: sem um
-permissionário cadastrado, não há a quem ligar uma vistoria.
+ambulante cadastrado, não há a quem ligar uma vistoria.
 
 O desenho desta tela responde a uma realidade concreta da rua, e não a um cadastro de escritório: **o
 alvo muitas vezes não tem documento à mão**, não tem endereço fixo e às vezes não quer dizer o nome.
 Uma tela que exigisse CPF simplesmente faria o cadastro em campo não acontecer — e a pessoa
 continuaria trabalhando sem constar de lugar nenhum.
+
+> **A entidade é o AMBULANTE, e ser permissionário é um ATRIBUTO dele** (decisão da área de negócio
+> em 02/09/2026, que fechou a PEND-010). A fiscalização de rua encontra quem tem permissão da SEMOP e
+> quem não tem — e quem não tem é a maior parte do trabalho educativo. Enquanto a tela se chamava
+> "Cadastro de Permissionário", ela mentia sobre metade dos registros, e não havia como responder
+> "quantos têm permissão?". O SGCI é a base de quem TEM; este cadastro é de quem a fiscalização
+> encontra na calçada, com permissão ou sem.
 
 ---
 
@@ -23,6 +30,36 @@ Quem identifica a pessoa em rua é a **foto** e o **apelido** (o nome de guerra 
 conhecida no ponto). Por isso a listagem mostra o retrato ao lado do nome e, **quando não há foto,
 mostra as iniciais** — nunca um quadrado em branco: o fiscal precisa reconhecer alguém, e vazio não
 reconhece ninguém.
+
+### RN-01-b — **Ser permissionário é atributo**, e o número da permissão é o que o sustenta
+
+`permissionario` (sim/não) responde "tem permissão da SEMOP?". É o campo que dá sentido a
+`numero_permissao` e `validade_permissao` — antes eles ficavam pendurados em todo cadastro, inclusive
+no de quem nunca teve permissão nenhuma. É também o que o vínculo futuro com o **SGCI** vai
+preencher.
+
+Um cadastro novo nasce **sem permissão**: é a resposta honesta para o que ninguém conferiu, e é
+também o caso mais comum na rua. Afirmar permissão que ninguém viu é pior do que não afirmar nada.
+
+**Marcado, o nº da permissão passa a ser obrigatório.** Sem essa amarra, marcar a opção seria só um
+clique, e o cadastro passaria a dizer "tem permissão" sem nada que se pudesse conferir depois. O
+formulário só mostra número e validade quando a resposta é sim — exibi-los sempre era o que fazia
+todo cadastro parecer permissionário.
+
+**A validade continua OPCIONAL, e isso é decisão consciente.** Em rua o papel está desbotado, rasgado
+ou simplesmente não está com a pessoa; exigir a data faria alguém inventar uma — e data inventada é
+pior que data ausente, porque a busca por *"permissão vencida"* passaria a acusar com base nela.
+Ausente, ela não acusa ninguém (a faceta trata nulo como "não vencida", nunca como "vencida").
+
+**Desmarcar LIMPA número e validade**, na tela e no servidor. Guardar a permissão de quem o cadastro
+diz não ter deixaria a base afirmando duas coisas contrárias — e a busca acusaria alguém por um papel
+que o próprio sistema diz que não existe.
+
+⚠️ **A situação é INDEPENDENTE disto.** `Regular` / `Irregular` / `Cadastrado em campo` responde outra
+pergunta: um ambulante **sem permissão pode estar regular** (ponto autorizado por outra via) e um
+**permissionário pode estar irregular** (fora do que a permissão dele autoriza). Deduzir uma da outra
+apagaria as duas informações — por isso são dois campos, duas colunas na grade e dois filtros no
+relatório.
 
 ### RN-02 — Documento informado é validado, **normalizado** e único
 
@@ -61,10 +98,16 @@ achar quem está esperando ("cadastrado em campo", "quarentena").
 
 ### RN-04 — O código do cadastro nasce sozinho, pelo gerador de protocolo
 
-`codigo` = `PER` + data + sequencial do dia (`App\Support\Protocolo`), nunca digitado. O gerador
+`codigo` = `AMB` + data + sequencial do dia (`App\Support\Protocolo`), nunca digitado. O gerador
 recebe o model e a coluna: assim, se a linha do contador do dia não existir (banco restaurado, carga
 anterior), o número **continua de onde o que já está gravado parou**, em vez de recomeçar em 001 e
 colidir.
+
+⚠️ **Os cadastros anteriores a 02/09/2026 continuam com o prefixo `PER`, e ficam assim.** O código é
+identidade **visível** — ele é lido no documento entregue em rua, citado em ofício e usado para achar
+o cadastro. Reescrevê-lo em massa mudaria o número de registros que já circularam no papel, para
+ganhar coerência estética. Os dois prefixos convivem, e a busca acha os dois: o contador é por
+prefixo + data, então `AMB` começa a própria sequência sem colidir com nada.
 
 ### RN-05 — A atividade apontada tem de estar **em uso**, no cadastro novo
 
@@ -76,7 +119,7 @@ apenas no registro que a usa.
 
 ### RN-06 — Excluir a atividade em uso é **recusado na Parametrização**
 
-Uma atividade apontada por qualquer permissionário **não pode ser excluída**: a tela de
+Uma atividade apontada por qualquer ambulante **não pode ser excluída**: a tela de
 *Parametrização → Atividades do Ambulante* recusa dizendo **quantos** cadastros dependem dela e
 manda desmarcar **"Em uso"**. Sem essa recusa, quem respondia era a chave estrangeira do banco — com
 um erro cru de integridade, que para quem está na tela é o sistema quebrando sem motivo.
@@ -113,7 +156,7 @@ senão a imagem fica no disco sem nada apontando para ela, e nada a recolhe depo
 
 ### RN-07-b — A foto sai por **rota autenticada**, nunca por URL de disco público
 
-O arquivo mora em disco **privado** e só é servido por `GET /retaguarda/permissionarios/{id}/foto`,
+O arquivo mora em disco **privado** e só é servido por `GET /retaguarda/ambulantes/{id}/foto`,
 que passa pela guarda de leitura como qualquer outra tela: **quem não abre o cadastro não vê o
 retrato de quem está nele**. Cadastro sem foto, ou com o arquivo sumido do disco, responde **404** —
 a tela já trata a ausência mostrando as iniciais (RN-01), e uma resposta vazia com código 200 faria
@@ -125,6 +168,10 @@ quem tivesse a URL (histórico de estação compartilhada, log de proxy, cabeça
 encaminhado) abriria a imagem sem estar autenticado. Nome de arquivo difícil de adivinhar reduz a
 chance de tropeçar nele; **não é controle de acesso**.
 
+A foto nova é guardada na pasta `ambulantes/` desse disco; as anteriores continuam onde estão
+(`permissionarios/`) e continuam abrindo, porque **é a coluna do cadastro que guarda o caminho** —
+não há convenção deduzida em tempo de execução para quebrar. Nenhum arquivo precisou ser movido.
+
 **Consequência no deploy:** a pasta privada é tão volátil quanto a pública — o que não estiver em
 volume/PVC some a cada subida de imagem, **sem erro nenhum**, e só aparece quando um gestor abre um
 cadastro antigo e não vê o retrato. Por isso a persistência declarada em `docker-compose.homolog.yml`
@@ -135,10 +182,16 @@ um dia eles divergem em silêncio.
 ### RN-08 — Busca inteligente: uma barra só
 
 O campo único interpreta a frase em facetas do domínio + termos livres, sem acento: `regular`,
-`irregular`, `cadastrado em campo` / `quarentena`, `sem documento`, `com documento`, `permissão
-vencida` — e **o nome de qualquer atividade da parametrização**, que vira faceta em tempo de
-execução (a lista é do gestor; escrita na tela, envelheceria no primeiro ramo renomeado). Como
-faceta, "bebidas" filtra pelo **ramo**, e não casa por acaso com um apelido que tenha a palavra.
+`irregular`, `cadastrado em campo` / `quarentena`, `sem documento`, `com documento`,
+**`permissionários`** / **`sem permissão`**, `permissão vencida` — e **o nome de qualquer atividade da
+parametrização**, que vira faceta em tempo de execução (a lista é do gestor; escrita na tela,
+envelheceria no primeiro ramo renomeado). Como faceta, "bebidas" filtra pelo **ramo**, e não casa por
+acaso com um apelido que tenha a palavra.
+
+As três facetas de permissão dividem a mesma palavra, então a ordem entre elas é regra e não detalhe:
+`permissão vencida` é reconhecida **antes** de `sem permissão`, que vem **antes** de `permissionários`
+— declarada ao contrário, a mais genérica engoliria as outras duas e "sem permissão" filtraria
+justamente quem tem.
 
 O que sobra casa contra nome, apelido, código, nº da permissão, atividade e situação — e
 **também contra o documento sem máscara**, para quem digita `123.456.789-09` achar quem está gravado
@@ -163,7 +216,7 @@ nunca o universo, nunca só a página atual. Datas saem em **dd/mm/aaaa** e o do
 
 ### RN-10 — Quem entra: o fiscal CONSULTA; criar e apagar é da gestão
 
-A tela é controlada pela permissão **`permissionarios`** (primeiro trecho do caminho), semeada para
+A tela é controlada pela permissão **`ambulantes`** (primeiro trecho do caminho), semeada para
 **administrador, gestor e fiscal**. O fiscal está na lista porque chegar à calçada sem saber quem está
 cadastrado é trabalhar às cegas.
 
@@ -198,7 +251,7 @@ cadastro — ponto, apóstrofo, hífen, **vírgula e E comercial** (`Ana D'Ávil
 ponto e vírgula, barras, caractere invisível e **dois hífens seguidos**.
 
 A vírgula e o `&` estão na lista porque o documento aceita **CNPJ** (RN-02), e portanto há
-permissionário **pessoa jurídica**: razão social é escrita com eles o tempo todo. Recusá-los
+ambulante **pessoa jurídica**: razão social é escrita com eles o tempo todo. Recusá-los
 obrigava quem cadastrava a alterar a razão social para o formulário aceitar — e aí o nome deixava de
 bater com o documento que ele representa. Nenhum dos dois é assinatura de SQL para o WAF nem abre
 marcação HTML, então admiti-los não afrouxa o que a regra existe para barrar.
@@ -221,7 +274,7 @@ identificam ninguém.
   mão (RN-03).
 - **Prontuário / trilha de movimentação.** O histórico geoespacial nasce das fiscalizações, que
   ainda não existem.
-- **Bloqueio de exclusão do permissionário por vínculo.** Hoje nada aponta para ele, então excluir é
+- **Bloqueio de exclusão do ambulante por vínculo.** Hoje nada aponta para ele, então excluir é
   livre (com a confirmação que a tela pede). Quando a cadeia de fiscalização existir, a recusa entra
   no `destroy()` desta tela — como a Parametrização faz com a atividade (RN-06).
 - **`client_id`.** A coluna já existe (é o que fará o reenvio da fila do aplicativo reconhecer o
@@ -234,6 +287,7 @@ identificam ninguém.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 02/09/2026 | José Nascimento | Cadastro de Ambulante | **A entidade passa de Permissionário a Ambulante em todo o sistema** — tabela, model, controller, rota/slug (`ambulantes`), permissão da tela, relatório, menu, títulos e textos —, e ganha o atributo **é permissionário da SEMOP** (RN-01-b): número da permissão passa a ser exigido de quem é marcado, a validade segue opcional, desmarcar limpa os dois, a grade e o relatório distinguem os dois públicos e a busca ganha as facetas "permissionários" e "sem permissão". O prefixo do código passa a ser `AMB`; os cadastros antigos continuam `PER` (RN-04). | A fiscalização de rua encontra quem tem permissão e quem não tem, e quem não tem é a maior parte do trabalho educativo: chamar a base de "permissionários" obrigava a mentir sobre metade dos registros e não deixava responder quantos de fato têm permissão. O número e a validade ficavam pendurados em quem nunca teve permissão nenhuma, e a marcação sem número seria uma afirmação que ninguém consegue conferir depois. |
 | 25/08/2026 | José Nascimento | Cadastro de Permissionário | Criação da tela com listagem, inclusão, alteração e exclusão; documento opcional validado e normalizado quando informado; foto com allowlist de anexos e limpeza do arquivo anterior; situação com quarentena; código pelo gerador de protocolo; busca inteligente e exportação do recorte visível. | É a identidade de quem é fiscalizado: sem ela não há a quem ligar uma vistoria, e o cadastro precisa caber na realidade da rua, onde não há documento à mão. |
 | 25/08/2026 | José Nascimento | Parametrização → Atividades do Ambulante | Exclusão passa a ser recusada quando algum permissionário aponta a atividade, dizendo quantos são e mandando inativar. | Excluir deixaria os cadastros apontando para o nada, e quem responderia seria a chave estrangeira do banco — com um erro cru na cara de quem está na tela. |
 | 26/08/2026 | José Nascimento | Cadastro de Permissionário | Foto anterior passa a ser apagada só depois de a gravação dar certo (e a do excluído, depois de a linha sair); busca mista passa a casar termo a termo (texto ou documento); "Cadastrado em campo" sai das opções da inclusão pela Retaguarda, com recusa no servidor, e a inclusão propõe "Regular". | Apagar antes de gravar deixava o cadastro vivo apontando para arquivo inexistente — perda da identidade de campo. A busca não achava ninguém quando a frase misturava apelido e documento. E cadastro feito de mesa não é cadastro de rua: entrando em quarentena, sujava a fila de conferência. |

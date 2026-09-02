@@ -46,7 +46,7 @@ export default function AuthSimpleLayout({
 
                 <p className="rt-entrada-dizeres">
                     A fiscalização de rua da Prefeitura de Salvador, do cadastro
-                    do permissionário ao que o fiscal registra na calçada.
+                    do ambulante ao que o fiscal registra na calçada.
                 </p>
 
                 {/* Só o TEXTO institucional no pé. O lockup gráfico da Prefeitura

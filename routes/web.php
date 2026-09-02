@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
-use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
+use App\Http\Controllers\Retaguarda\AreasEEquipesController;
+use App\Http\Controllers\Retaguarda\CadastroAmbulanteController;
+use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\InicioController;
 use App\Http\Controllers\Retaguarda\LogsController;
+use App\Http\Controllers\Retaguarda\MapaAoVivoController;
+use App\Http\Controllers\Retaguarda\MapaDeCalorController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
 use App\Http\Controllers\Retaguarda\MonitoramentoParametrizacoesController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\AtividadesDoAmbulanteController;
@@ -48,8 +52,25 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /*
+     * As duas telas de MAPA — PROTÓTIPO, no padrão imersivo (RN-07).
+     *
+     * Só GET: mapa é leitura. Quem grava fiscalização é o aplicativo do fiscal,
+     * em rua; quem cria operação é o Cadastro de Operação, para onde a
+     * recomendação do mapa de calor leva.
+     *
+     * Elas TOMARAM o slug e o nome de rota que o catálogo de telas em preparação
+     * lhes emprestava (`retaguarda.mapa.index`, `retaguarda.mapa-de-calor.index`)
+     * — é a troca prevista pela RN-09, e por isso o menu não foi tocado.
+     */
+    Route::get('retaguarda/mapa', [MapaAoVivoController::class, 'index'])
+        ->name('retaguarda.mapa.index');
+
+    Route::get('retaguarda/mapa-de-calor', [MapaDeCalorController::class, 'index'])
+        ->name('retaguarda.mapa-de-calor.index');
+
+    /*
      * As telas do caminho da fiscalização que ainda não existem — Cadastro de
-     * Operação, Fiscalizações, Mapa ao Vivo e Mapa de Calor.
+     * Operação e Fiscalizações.
      *
      * Elas abrem e dizem, em uma linha, o que vão ser e em que fase chegam (ver o
      * cabeçalho do controller). O laço nasce do catálogo do próprio controller, e
@@ -115,29 +136,75 @@ Route::middleware(['auth'])->group(function () {
         ->name('retaguarda.acompanhamento-de-requisitos.index');
 
     /*
-     * Permissionários — a identidade de quem é fiscalizado.
+     * Ambulantes — a identidade de quem é fiscalizado.
      *
-     * O primeiro trecho do caminho é o slug da tela (`permissionarios`), que é de
+     * O primeiro trecho do caminho é o slug da tela (`ambulantes`), que é de
      * onde as guardas deduzem a permissão: as rotas nascem protegidas, e a rota
      * que vier amanhã (prontuário, validação de quarentena) já chega junto.
      *
      * O identificador vai como NÚMERO, e não o código nem o nome: o WAF da
      * Prefeitura barra assinatura de SQL na URL, e nome de gente é texto livre.
      */
-    Route::prefix('retaguarda/permissionarios')->name('retaguarda.permissionarios.')->group(function () {
-        Route::get('/', [CadastroPermissionarioController::class, 'index'])->name('index');
+    Route::prefix('retaguarda/ambulantes')->name('retaguarda.ambulantes.')->group(function () {
+        Route::get('/', [CadastroAmbulanteController::class, 'index'])->name('index');
 
         // A foto sai por aqui, e não por URL de disco público: é retrato de
         // cidadão fiscalizado, e mora sob o caminho da tela justamente para a
         // guarda de leitura conferir a permissão antes de entregar a imagem.
-        Route::get('{permissionario}/foto', [CadastroPermissionarioController::class, 'foto'])
-            ->name('foto')->whereNumber('permissionario');
+        Route::get('{ambulante}/foto', [CadastroAmbulanteController::class, 'foto'])
+            ->name('foto')->whereNumber('ambulante');
 
-        Route::post('/', [CadastroPermissionarioController::class, 'store'])->name('store');
-        Route::put('{permissionario}', [CadastroPermissionarioController::class, 'update'])
-            ->name('update')->whereNumber('permissionario');
-        Route::delete('{permissionario}', [CadastroPermissionarioController::class, 'destroy'])
-            ->name('destroy')->whereNumber('permissionario');
+        Route::post('/', [CadastroAmbulanteController::class, 'store'])->name('store');
+        Route::put('{ambulante}', [CadastroAmbulanteController::class, 'update'])
+            ->name('update')->whereNumber('ambulante');
+        Route::delete('{ambulante}', [CadastroAmbulanteController::class, 'destroy'])
+            ->name('destroy')->whereNumber('ambulante');
+    });
+
+    /*
+     * Caixa de Entrada do Administrativo — PROTÓTIPO.
+     *
+     * A porta por onde a demanda de fora entra: e-Salvador, Fala Salvador 156,
+     * pedido de nova licença e ofício chegam em PAPEL, e é aqui que o
+     * administrativo digita, decide e encaminha à equipe da área do bairro.
+     *
+     * O primeiro trecho do caminho é o slug da tela (`caixa-de-entrada`), de onde
+     * as guardas deduzem a permissão: as mutações abaixo nascem protegidas pela
+     * convenção de nomes (`.store` inclui, o resto opera) — nada a declarar em
+     * `config/permissao_acoes.php`.
+     *
+     * O identificador vai como NÚMERO: o WAF da Prefeitura barra assinatura de
+     * SQL na URL, e protocolo é texto.
+     */
+    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.caixa-de-entrada.')->group(function () {
+        Route::get('/', [CaixaDeEntradaController::class, 'index'])->name('index');
+        Route::post('/', [CaixaDeEntradaController::class, 'store'])->name('store');
+        Route::post('{demanda}/encaminhar', [CaixaDeEntradaController::class, 'encaminhar'])
+            ->name('encaminhar')->whereNumber('demanda');
+        Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
+            ->name('devolver')->whereNumber('demanda');
+        // Só existe porque é protótipo: devolve a caixa ao estado de demonstração.
+        Route::post('reiniciar', [CaixaDeEntradaController::class, 'reiniciar'])->name('reiniciar');
+    });
+
+    /*
+     * Áreas e Equipes — PROTÓTIPO da estrutura permanente de fiscalização.
+     *
+     * Área > Equipe > bloco de bairros. É desta estrutura que sai a derivação
+     * bairro → equipe usada pela Caixa de Entrada, então as duas telas leem a
+     * MESMA fonte (`App\Support\Prototipo\EstruturaFicticia`): duplicar a lista
+     * faria a sugestão discordar do cadastro no primeiro ajuste.
+     */
+    Route::prefix('retaguarda/areas-e-equipes')->name('retaguarda.areas-e-equipes.')->group(function () {
+        Route::get('/', [AreasEEquipesController::class, 'index'])->name('index');
+        Route::post('/', [AreasEEquipesController::class, 'store'])->name('store');
+        Route::put('{area}', [AreasEEquipesController::class, 'update'])
+            ->name('update')->whereNumber('area');
+        Route::delete('{area}', [AreasEEquipesController::class, 'destroy'])
+            ->name('destroy')->whereNumber('area');
+        Route::post('{area}/bairros', [AreasEEquipesController::class, 'bairros'])
+            ->name('bairros')->whereNumber('area');
+        Route::post('reiniciar', [AreasEEquipesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*

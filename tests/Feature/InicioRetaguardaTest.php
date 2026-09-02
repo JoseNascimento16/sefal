@@ -31,7 +31,7 @@ class InicioRetaguardaTest extends TestCase
     public function test_o_atalho_de_uma_tela_ja_entregue_leva_a_ela_em_vez_de_dizer_em_construcao()
     {
         /*
-         * O defeito que este teste tranca: o cartão de Permissionários continuou
+         * O defeito que este teste tranca: o cartão de Ambulantes continuou
          * anunciando "Em construção" depois de a tela ficar pronta e entrar no
          * menu. A primeira coisa que o usuário enxerga desmentia a entrega — e
          * quem lê "não existe" não procura no menu ao lado.
@@ -42,8 +42,8 @@ class InicioRetaguardaTest extends TestCase
         $atalhos = $this->atalhosDe(User::factory()->create(['admin' => true]));
 
         $this->assertSame(
-            route('retaguarda.permissionarios.index', absolute: false),
-            $atalhos['permissionarios']['href'],
+            route('retaguarda.ambulantes.index', absolute: false),
+            $atalhos['ambulantes']['href'],
         );
     }
 
@@ -80,16 +80,16 @@ class InicioRetaguardaTest extends TestCase
 
         $semAcesso = User::factory()->create(['admin' => false]);
         $semAcesso->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
-        PermissaoSetor::where('setor', 'gestor')->where('slug', 'permissionarios')->delete();
+        PermissaoSetor::where('setor', 'gestor')->where('slug', 'ambulantes')->delete();
 
-        $this->assertArrayNotHasKey('permissionarios', $this->atalhosDe($semAcesso->fresh()));
+        $this->assertArrayNotHasKey('ambulantes', $this->atalhosDe($semAcesso->fresh()));
 
         PermissaoSetor::updateOrCreate(
-            ['setor' => 'gestor', 'slug' => 'permissionarios'],
+            ['setor' => 'gestor', 'slug' => 'ambulantes'],
             ['visivel' => true, 'habilitado' => true],
         );
 
-        $this->assertArrayHasKey('permissionarios', $this->atalhosDe($semAcesso->fresh()));
+        $this->assertArrayHasKey('ambulantes', $this->atalhosDe($semAcesso->fresh()));
     }
 
     public function test_guests_are_redirected_to_the_login_page()

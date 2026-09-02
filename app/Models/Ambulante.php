@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Support\Documento;
-use Database\Factories\PermissionarioFactory;
+use Database\Factories\AmbulanteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +12,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * O permissionário — a pessoa que é fiscalizada.
+ * O ambulante — a pessoa que é fiscalizada.
+ *
+ * Ele **pode ser permissionário, ou não**: "permissionário" é um ATRIBUTO
+ * (`permissionario`, tem permissão da SEMOP), e não a categoria de todo mundo
+ * que está aqui. A fiscalização de rua encontra os dois, e quem não tem
+ * permissão é a maior parte do trabalho.
  *
  * A identidade dele é **flexível por desenho** (ver a migration): documento é
  * opcional, e quem o identifica em rua é foto + apelido. Este model é o dono de
@@ -32,6 +37,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $rg
  * @property string|null $foto
  * @property string|null $telefone
+ * @property bool $permissionario
  * @property string|null $numero_permissao
  * @property Carbon|null $validade_permissao
  * @property int $atividade_id
@@ -49,21 +55,22 @@ use Illuminate\Support\Carbon;
     'rg',
     'foto',
     'telefone',
+    'permissionario',
     'numero_permissao',
     'validade_permissao',
     'atividade_id',
     'situacao',
     'client_id',
 ])]
-class Permissionario extends Model
+class Ambulante extends Model
 {
-    /** @use HasFactory<PermissionarioFactory> */
+    /** @use HasFactory<AmbulanteFactory> */
     use HasFactory;
 
     /** Cadastro em regra com a SEMOP. */
     public const SITUACAO_REGULAR = 'Regular';
 
-    /** Trabalha sem permissão válida, ou fora do que ela autoriza. */
+    /** Trabalha fora do que a regra (ou a permissão dele) autoriza. */
     public const SITUACAO_IRREGULAR = 'Irregular';
 
     /**
@@ -76,6 +83,11 @@ class Permissionario extends Model
 
     /**
      * O catálogo fechado de situações, na ordem em que a tela as oferece.
+     *
+     * ⚠️ A situação é INDEPENDENTE de ter permissão: um ambulante sem permissão
+     * pode estar `Regular` (ponto autorizado por outra via) e um permissionário
+     * pode estar `Irregular` (fora do que a permissão dele autoriza). Deduzir uma
+     * da outra apagaria as duas informações.
      *
      * @var list<string>
      */
@@ -105,14 +117,17 @@ class Permissionario extends Model
         self::SITUACAO_IRREGULAR,
     ];
 
-    protected $table = 'permissionarios';
+    protected $table = 'ambulantes';
 
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return ['validade_permissao' => 'date'];
+        return [
+            'permissionario' => 'boolean',
+            'validade_permissao' => 'date',
+        ];
     }
 
     /**
@@ -141,7 +156,7 @@ class Permissionario extends Model
 
     /**
      * O ramo autorizado. A coluna é obrigatória e tem chave estrangeira, então a
-     * relação sempre existe — não há caso de permissionário sem atividade.
+     * relação sempre existe — não há caso de ambulante sem atividade.
      *
      * @return BelongsTo<AtividadeAmbulante, $this>
      */
@@ -164,5 +179,15 @@ class Permissionario extends Model
     public function scopeEmQuarentena(Builder $query): void
     {
         $query->where('situacao', self::SITUACAO_CAMPO);
+    }
+
+    /**
+     * Os que têm permissão da SEMOP.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopePermissionarios(Builder $query): void
+    {
+        $query->where('permissionario', true);
     }
 }

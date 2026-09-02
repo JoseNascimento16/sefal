@@ -72,11 +72,11 @@ test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () 
             expect($rotulos)
                 ->toContain('Início')
                 ->toContain('Meu Perfil')
-                ->toContain('Permissionários');
+                ->toContain('Ambulantes');
 
             $fiscalizacao = $menu->firstWhere('rotulo', 'Fiscalização');
             expect($fiscalizacao)->not->toBeNull();
-            expect(collect($fiscalizacao['itens'])->pluck('rotulo'))->toContain('Permissionários');
+            expect(collect($fiscalizacao['itens'])->pluck('rotulo'))->toContain('Ambulantes');
         });
 });
 

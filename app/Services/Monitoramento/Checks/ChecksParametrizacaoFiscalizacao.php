@@ -14,7 +14,7 @@ use App\Support\Texto;
  *
  * É exatamente o caso que a tela de Monitoramento existe para pegar: inativar o
  * último registro de uma lista obrigatória não avisa ninguém. O gestor tira de
- * circulação a última atividade, e dias depois o cadastro de permissionário
+ * circulação a última atividade, e dias depois o cadastro de ambulante
  * simplesmente não salva — com uma mensagem de campo que ninguém relaciona a uma
  * decisão tomada em outra tela.
  *
@@ -24,7 +24,7 @@ use App\Support\Texto;
  * declarada. Das seis listas de parametrização, entram duas — e as severidades
  * são diferentes de propósito:
  *
- *  - **Atividade do ambulante** → `falha`. O cadastro de permissionário exige a
+ *  - **Atividade do ambulante** → `falha`. O cadastro de ambulante exige a
  *    atividade autorizada e recusa a inativada: sem nenhuma ativa, ninguém
  *    cadastra mais ninguém, e é dele que a fiscalização parte;
  *  - **Tipo de infração** → `aviso`. Hoje nada consome a lista (o enquadramento
@@ -61,14 +61,14 @@ class ChecksParametrizacaoFiscalizacao
                         return ResultadoCheck::falha(
                             'Nenhuma atividade do ambulante em uso'
                             .($inativas > 0 ? ' (há '.Texto::contar($inativas, 'fora de uso', 'fora de uso').')' : '')
-                            .' — o cadastro de permissionário exige a atividade autorizada, então NINGUÉM consegue '
+                            .' — o cadastro de ambulante exige a atividade autorizada, então NINGUÉM consegue '
                             .'ser cadastrado enquanto a lista estiver assim. E é do cadastro que a fiscalização parte.',
                         );
                     }
 
                     return ResultadoCheck::ok(
                         Texto::contar($ativas, 'atividade em uso', 'atividades em uso')
-                        .' — há o que escolher no cadastro de permissionário.',
+                        .' — há o que escolher no cadastro de ambulante.',
                     );
                 },
                 rota: 'retaguarda.parametrizacao.atividades-do-ambulante.index',

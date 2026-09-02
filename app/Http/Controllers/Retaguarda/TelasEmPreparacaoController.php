@@ -35,9 +35,15 @@ class TelasEmPreparacaoController extends Controller
      * A chave é o `slug`, que é também o primeiro trecho do caminho — é dele que as
      * guardas deduzem a permissão, sem ninguém declarar nada.
      *
-     * `variante` escolhe o corpo: `mapa` desenha a cidade (painel navy com a malha
-     * de ruas), porque as duas telas de mapa se explicam melhor mostrando o que
-     * elas vão mostrar; `cartao` é o aviso sóbrio, para as telas de lista.
+     * `variante` escolhe o corpo: `cartao` é o aviso sóbrio, para as telas de
+     * lista; `mapa` desenha a cidade (painel navy com a malha de ruas), porque uma
+     * tela de mapa se explica melhor mostrando o que ela vai mostrar.
+     *
+     * ⚠️ Nenhuma entrada usa a variante `mapa` HOJE — as duas telas de mapa
+     * deixaram o catálogo em 02/09/2026, quando passaram a existir. A variante fica
+     * porque é ela que a próxima tela em preparação com cara de mapa vai querer, e
+     * porque o desenho dela está registrado na RN-09; se ficar sem uso por muito
+     * tempo, o certo é apagá-la junto com o `.prep-cidade` do CSS.
      *
      * @var array<string, array{
      *     secao: string,
@@ -71,37 +77,21 @@ class TelasEmPreparacaoController extends Controller
             'variante' => 'cartao',
             'fase' => 'Fase 2',
             'itens' => [
-                'Consultar a fiscalização pelo permissionário, pela área ou pelo período.',
+                'Consultar a fiscalização pelo ambulante, pela área ou pelo período.',
                 'Ver foto, ponto de GPS e o documento que saiu na hora.',
                 'Acompanhar o prazo de retorno de quem foi notificado.',
             ],
         ],
-        'mapa' => [
-            'secao' => 'Fiscalização',
-            'titulo' => 'Mapa ao Vivo',
-            'subtitulo' => 'A cidade agora: onde estão os fiscais e o que acabou de ser registrado.',
-            'frase' => 'A cidade agora, em tempo real — onde a fiscalização está neste momento.',
-            'variante' => 'mapa',
-            'fase' => 'Fase 3',
-            'itens' => [
-                'Os fiscais em campo, com o último ponto conhecido.',
-                'O que foi registrado nas últimas horas, ponto por ponto.',
-                'As áreas de atuação desenhadas sobre o mapa.',
-            ],
-        ],
-        'mapa-de-calor' => [
-            'secao' => 'Fiscalização',
-            'titulo' => 'Mapa de Calor',
-            'subtitulo' => 'Onde a irregularidade se concentra, para a operação ir aonde precisa.',
-            'frase' => 'Onde a cidade concentra ocorrência — o mapa que decide a próxima operação.',
-            'variante' => 'mapa',
-            'fase' => 'Fase 3',
-            'itens' => [
-                'Concentração de ocorrências por região e por período.',
-                'Comparação entre áreas, para priorizar a operação.',
-                'O foco do dia, sugerido a partir dos últimos trinta dias.',
-            ],
-        ],
+        /*
+         * O Mapa ao Vivo e o Mapa de Calor SAÍRAM daqui em 02/09/2026: as duas
+         * telas passaram a existir como protótipo, e tomaram o slug e o nome de
+         * rota que este catálogo emprestava a elas
+         * ({@see MapaAoVivoController}, {@see MapaDeCalorController}).
+         *
+         * É a troca que o cabeçalho desta classe prevê — o andaime sai quando a
+         * tela chega, e o menu não é tocado, porque o nome da rota já era o das
+         * telas de verdade.
+         */
     ];
 
     /**

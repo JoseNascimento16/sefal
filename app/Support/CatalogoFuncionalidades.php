@@ -131,7 +131,7 @@ class CatalogoFuncionalidades
      * O normal é o pacote inteiro — "este setor usa esta tela" quer dizer ver,
      * operar, incluir e excluir. Mas há caso em que o pacote inteiro não é o que
      * se quer dizer, e aí a semente precisa saber disso: o **fiscal** apenas
-     * CONSULTA o cadastro de permissionário (chegar na calçada sem saber quem
+     * CONSULTA o cadastro de ambulante (chegar na calçada sem saber quem
      * está cadastrado é trabalhar às cegas) e não grava nada por lá — ele
      * cadastra em rua, pelo aplicativo, e o que nasce em rua entra em quarentena
      * para o gestor conferir. Deixá-lo alterar de mesa permitiria que ele mesmo

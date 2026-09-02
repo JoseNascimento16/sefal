@@ -2,25 +2,27 @@
 
 namespace Database\Factories;
 
+use App\Models\Ambulante;
 use App\Models\AtividadeAmbulante;
-use App\Models\Permissionario;
 use App\Support\Protocolo;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * Permissionários realistas — como eles chegam da rua, não como um cadastro
- * de escritório gostaria que fossem.
+ * Ambulantes realistas — como eles chegam da rua, não como um cadastro de
+ * escritório gostaria que fossem.
  *
- * Por isso o padrão é **sem documento**: é o caso comum, e é o que os testes
- * precisam exercitar. Quem quiser um documento pede `comDocumento()`, que gera
- * um CPF com dígitos verificadores válidos — CPF inventado seria recusado pela
- * validação, e o teste passaria a provar a coisa errada.
+ * Por isso o padrão é **sem documento e sem permissão**: é o caso comum, e é o
+ * que os testes precisam exercitar. Quem quiser um documento pede
+ * `comDocumento()`, que gera um CPF com dígitos verificadores válidos — CPF
+ * inventado seria recusado pela validação, e o teste passaria a provar a coisa
+ * errada. Quem quiser um permissionário pede `permissionario()`, e aí o número
+ * da permissão vem junto: ele é o que sustenta a afirmação.
  *
- * @extends Factory<Permissionario>
+ * @extends Factory<Ambulante>
  */
-class PermissionarioFactory extends Factory
+class AmbulanteFactory extends Factory
 {
-    protected $model = Permissionario::class;
+    protected $model = Ambulante::class;
 
     /**
      * @return array<string, mixed>
@@ -32,20 +34,27 @@ class PermissionarioFactory extends Factory
         return [
             // Pelo gerador de protocolo, com a rede do model: é a fonte única da
             // numeração, e um código inventado aqui divergiria dela no formato.
-            'codigo' => Protocolo::proximo('PER', null, Permissionario::class, 'codigo'),
+            'codigo' => Protocolo::proximo('AMB', null, Ambulante::class, 'codigo'),
             'nome' => fake()->name(),
             'apelido' => fake()->randomElement($apelidos),
             'documento' => null,
             'rg' => null,
             'foto' => null,
             'telefone' => fake()->numerify('(71) 9####-####'),
-            'numero_permissao' => fake()->numerify('SEMOP-#####'),
-            'validade_permissao' => fake()->dateTimeBetween('-6 months', '+2 years')->format('Y-m-d'),
+            /*
+             * SEM permissão, e por isso sem número nem validade: é o retrato de
+             * quem a fiscalização mais encontra. Antes o padrão trazia número e
+             * validade em todo mundo, o que era exatamente a mentira que o rename
+             * veio desfazer — todo cadastro parecia permissionário.
+             */
+            'permissionario' => false,
+            'numero_permissao' => null,
+            'validade_permissao' => null,
             // Reaproveita o que a semeadura já criou; só inventa uma atividade
             // se a base estiver de fato vazia.
             'atividade_id' => fn (): int => (int) (AtividadeAmbulante::query()->value('id')
                 ?? AtividadeAmbulante::create(['nome' => 'Atividade '.fake()->unique()->word(), 'ativo' => true])->id),
-            'situacao' => Permissionario::SITUACAO_REGULAR,
+            'situacao' => Ambulante::SITUACAO_REGULAR,
             'client_id' => null,
         ];
     }
@@ -56,11 +65,26 @@ class PermissionarioFactory extends Factory
         return $this->state(fn (): array => ['documento' => $documento ?? self::cpfValido()]);
     }
 
+    /**
+     * Com permissão da SEMOP — o número vem junto porque é ele que a sustenta.
+     *
+     * A validade fica opcional de propósito (é assim que a regra a trata): quem
+     * quiser uma data passa por cima com `->permissionario(validade: '...')`.
+     */
+    public function permissionario(?string $numero = null, ?string $validade = null): static
+    {
+        return $this->state(fn (): array => [
+            'permissionario' => true,
+            'numero_permissao' => $numero ?? fake()->numerify('SEMOP-#####'),
+            'validade_permissao' => $validade,
+        ]);
+    }
+
     /** Nascido em rua, esperando a validação do Gestor. */
     public function emQuarentena(): static
     {
         return $this->state(fn (): array => [
-            'situacao' => Permissionario::SITUACAO_CAMPO,
+            'situacao' => Ambulante::SITUACAO_CAMPO,
             'client_id' => fake()->uuid(),
         ]);
     }

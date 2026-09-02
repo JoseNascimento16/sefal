@@ -43,7 +43,7 @@ a rede dele**:
 | 2 | **Secret de clone** (`kubernetes.io/basic-auth`) | com a annotation `build.openshift.io/source-secret-match-uri-1` o OKD usa o secret sozinho ao clonar aquele GitLab |
 | 3 | **ImageStream + BuildConfig** | `strategy: Docker` com `dockerfilePath: dockerfile_redhat`; o `npm run build` come RAM (considere `resources.limits.memory: 4Gi`) |
 | 4 | **Secret do `.env`** (chave `.env`, o arquivo inteiro) | montado por `subPath` no pod |
-| 5 | **PVC** em `storage/app` | `ReadWriteMany`; cobre `public/` **e** `private/` — **sem ele todo upload do usuário desaparece a cada deploy**, inclusive a foto do permissionário, que mora no disco privado (`storage/app/private`) e nunca esteve em `public` |
+| 5 | **PVC** em `storage/app` | `ReadWriteMany`; cobre `public/` **e** `private/` — **sem ele todo upload do usuário desaparece a cada deploy**, inclusive a foto do ambulante, que mora no disco privado (`storage/app/private`) e nunca esteve em `public` |
 | 6 | **Deployment + Service + Route** | ver as três envs obrigatórias abaixo |
 
 **As três coisas que mais quebram no Deployment:**
@@ -53,7 +53,7 @@ a rede dele**:
 - Annotation `image.openshift.io/triggers` apontando para `<app>:latest` — sem ela a build nova
   termina e o pod continua com a imagem antiga.
 - Volume do `.env` montado com `subPath` **e** o PVC em `/opt/app-root/src/storage/app` (a pasta
-  inteira: montá-lo só em `public` deixa a foto do permissionário, que é privada, fora da
+  inteira: montá-lo só em `public` deixa a foto do ambulante, que é privada, fora da
   persistência — ela some no deploy seguinte sem erro nenhum). O Apache só serve `/public`, então
   a pasta privada continua fora da web.
 

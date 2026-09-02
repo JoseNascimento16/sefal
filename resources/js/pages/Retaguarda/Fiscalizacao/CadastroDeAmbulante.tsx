@@ -27,11 +27,11 @@ import { casaTermos, parseConsulta, semAcento } from '@/lib/busca';
 import { dataBR, hojeISO, VAZIO } from '@/lib/datas';
 import { linhaClicavel } from '@/lib/linha-clicavel';
 import { maskCpfCnpj, maskTelefone } from '@/lib/masks';
-import { index, store, update, destroy } from '@/routes/retaguarda/permissionarios';
+import { index, store, update, destroy } from '@/routes/retaguarda/ambulantes';
 import { cn } from '@/lib/utils';
 
 /**
- * Cadastro de Permissionário — a identidade de quem é fiscalizado.
+ * Cadastro de Ambulante — a identidade de quem é fiscalizado.
  *
  * A tela existe para uma realidade concreta: **o alvo muitas vezes não tem
  * documento à mão**. Por isso o documento é opcional e a identidade que a tela
@@ -44,7 +44,7 @@ import { cn } from '@/lib/utils';
  * para alterar sem querer.
  */
 
-interface Permissionario {
+interface Ambulante {
     id: number;
     codigo: string;
     nome: string;
@@ -55,6 +55,8 @@ interface Permissionario {
     documento_formatado: string;
     rg: string | null;
     telefone: string | null;
+    /** Tem permissão da SEMOP? É atributo, não categoria: a base tem os dois. */
+    permissionario: boolean;
     numero_permissao: string | null;
     /** ISO — quem escreve dd/mm/aaaa é esta tela. */
     validade_permissao: string | null;
@@ -80,6 +82,8 @@ type Faceta =
     | { tipo: 'atividade'; valor: number }
     | { tipo: 'sem-documento' }
     | { tipo: 'com-documento' }
+    | { tipo: 'permissionario' }
+    | { tipo: 'sem-permissao' }
     | { tipo: 'permissao-vencida' };
 
 /**
@@ -90,7 +94,11 @@ const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
     { expressao: /\bcadastrad\w* em campo\b|\bquarentena\b|\baguardando validacao\b/, valor: { tipo: 'situacao', valor: 'Cadastrado em campo' } },
     { expressao: /\bsem documento\b|\bsem cpf\b|\bnao identificad\w*\b/, valor: { tipo: 'sem-documento' } },
     { expressao: /\bcom documento\b|\bcom cpf\b/, valor: { tipo: 'com-documento' } },
+    /* "permissao vencida" ANTES de "sem permissao" e de "permissionario": as
+       três dividem a palavra "permissão", e a mais específica tem de ganhar. */
     { expressao: /\bpermissao vencida\b|\bvencid\w*\b/, valor: { tipo: 'permissao-vencida' } },
+    { expressao: /\bsem permissao\b|\bnao permissionari\w*\b|\bsem licenca\b/, valor: { tipo: 'sem-permissao' } },
+    { expressao: /\bpermissionari\w*\b|\bcom permissao\b/, valor: { tipo: 'permissionario' } },
     { expressao: /\bregular(es)?\b/, valor: { tipo: 'situacao', valor: 'Regular' } },
     { expressao: /\birregular(es)?\b/, valor: { tipo: 'situacao', valor: 'Irregular' } },
 ];
@@ -181,7 +189,7 @@ function Retrato({
     p,
     tamanho = 34,
 }: {
-    p: Pick<Permissionario, 'nome' | 'apelido' | 'foto_url'>;
+    p: Pick<Ambulante, 'nome' | 'apelido' | 'foto_url'>;
     tamanho?: number;
 }) {
     const estilo = {
@@ -229,19 +237,24 @@ interface Formulario {
     documento: string;
     rg: string;
     telefone: string;
+    /** Texto porque o corpo é multipart (a foto viaja junto) — "1" ou "0". */
+    permissionario: string;
     numero_permissao: string;
     validade_permissao: string;
     atividade_id: string;
     situacao: string;
 }
 
-function formularioDe(p: Permissionario | null, situacaoPadrao: string): Formulario {
+function formularioDe(p: Ambulante | null, situacaoPadrao: string): Formulario {
     return {
         nome: p?.nome ?? '',
         apelido: p?.apelido ?? '',
         documento: p?.documento_formatado ?? '',
         rg: p?.rg ?? '',
         telefone: p?.telefone ?? '',
+        // Cadastro novo nasce SEM permissão: é a resposta honesta para quem
+        // ninguém conferiu, e é também o caso mais comum na rua.
+        permissionario: p?.permissionario ? '1' : '0',
         numero_permissao: p?.numero_permissao ?? '',
         validade_permissao: p?.validade_permissao ?? '',
         atividade_id: p ? String(p.atividade_id) : '',
@@ -249,13 +262,13 @@ function formularioDe(p: Permissionario | null, situacaoPadrao: string): Formula
     };
 }
 
-export default function CadastroDePermissionario({
-    permissionarios,
+export default function CadastroDeAmbulante({
+    ambulantes,
     atividades,
     situacoes,
     situacoesDeInclusao,
 }: {
-    permissionarios: Permissionario[];
+    ambulantes: Ambulante[];
     atividades: Atividade[];
     /** As três, para o registro já existente. */
     situacoes: string[];
@@ -267,7 +280,7 @@ export default function CadastroDePermissionario({
     situacoesDeInclusao: string[];
 }) {
     const [aba, setAba] = useState<Aba>('localizar');
-    const [aberto, setAberto] = useState<Permissionario | null>(null);
+    const [aberto, setAberto] = useState<Ambulante | null>(null);
     const [modo, setModo] = useState<Modo>('edicao');
     // A inclusão de mesa PROPÕE "Regular": é o caso comum de quem cadastra com o
     // documento em mão.
@@ -310,7 +323,7 @@ export default function CadastroDePermissionario({
         // mesma ordem dos termos, para o casamento ser por termo (ver abaixo).
         const termosSemMascara = termos.map((t) => t.replace(/[^0-9a-z]/g, ''));
 
-        return permissionarios.filter((p) => {
+        return ambulantes.filter((p) => {
             for (const faceta of facetas) {
                 if (faceta.tipo === 'situacao' && p.situacao !== faceta.valor) {
                     return false;
@@ -325,6 +338,14 @@ export default function CadastroDePermissionario({
                 }
 
                 if (faceta.tipo === 'com-documento' && p.documento === null) {
+                    return false;
+                }
+
+                if (faceta.tipo === 'permissionario' && !p.permissionario) {
+                    return false;
+                }
+
+                if (faceta.tipo === 'sem-permissao' && p.permissionario) {
                     return false;
                 }
 
@@ -354,7 +375,7 @@ export default function CadastroDePermissionario({
                 ]) || casaNoDocumento(termosSemMascara[i], p.documento),
             );
         });
-    }, [permissionarios, atividades, busca]);
+    }, [ambulantes, atividades, busca]);
 
     const ord = useOrdenacao(filtrados, { campo: 'nome', acessor: 'nome' });
     const pag = usePaginacao(ord.itens);
@@ -371,7 +392,7 @@ export default function CadastroDePermissionario({
      */
     /*
      * A quarentena, pelo nome que o SERVIDOR usa: é a terceira do catálogo
-     * (`Permissionario::SITUACOES`). Escrever "Cadastrado em campo" aqui daria dois
+     * (`Ambulante::SITUACOES`). Escrever "Cadastrado em campo" aqui daria dois
      * donos ao mesmo texto — e no dia em que ele mudasse, a marca de pendência
      * sumiria da grade sem nada quebrar.
      */
@@ -381,15 +402,20 @@ export default function CadastroDePermissionario({
         const [regular, irregular, campo] = situacoes;
 
         return {
-            total: permissionarios.length,
-            regulares: permissionarios.filter((p) => p.situacao === regular).length,
-            irregulares: permissionarios.filter((p) => p.situacao === irregular)
+            total: ambulantes.length,
+            regulares: ambulantes.filter((p) => p.situacao === regular).length,
+            irregulares: ambulantes.filter((p) => p.situacao === irregular)
                 .length,
-            emCampo: permissionarios.filter((p) => p.situacao === campo).length,
+            emCampo: ambulantes.filter((p) => p.situacao === campo).length,
+            // Quantos têm permissão da SEMOP. É o número que o cenário novo
+            // pede: quem NÃO tem é a maior parte do trabalho de campo, e ler
+            // isso de relance é o que a antiga tela de "permissionários" não
+            // permitia — ali todo mundo parecia ter.
+            comPermissao: ambulantes.filter((p) => p.permissionario).length,
         };
-    }, [permissionarios, situacoes]);
+    }, [ambulantes, situacoes]);
 
-    function abrir(p: Permissionario) {
+    function abrir(p: Ambulante) {
         setAberto(p);
         setForm(formularioDe(p, situacoes[0] ?? ''));
         limparAnexo();
@@ -504,6 +530,8 @@ export default function CadastroDePermissionario({
         documento: p.documento_formatado || VAZIO,
         atividade: p.atividade || VAZIO,
         situacao: p.situacao,
+        // "Não" é resposta, não ausência de resposta — por isso não vira traço.
+        permissionario: p.permissionario ? 'Sim' : 'Não',
         numero_permissao: p.numero_permissao || VAZIO,
         validade_permissao: dataBR(p.validade_permissao),
     }));
@@ -517,14 +545,15 @@ export default function CadastroDePermissionario({
 
     return (
         <>
-            <Head title="Permissionários" />
+            <Head title="Ambulantes" />
 
             <div className="rt-page-head">
                 <div>
                     <p className="sobrancelha">Fiscalização</p>
-                    <h1>Permissionários</h1>
+                    <h1>Ambulantes</h1>
                     <p>
-                        Quem é fiscalizado em rua. O documento é opcional: muita
+                        Quem é fiscalizado em rua — <strong>com permissão da
+                        SEMOP ou sem</strong>. O documento é opcional: muita
                         gente é cadastrada em campo pela foto e pelo apelido — e
                         esse cadastro fica marcado como <strong>Cadastrado em
                         campo</strong> até alguém conferir.
@@ -538,6 +567,14 @@ export default function CadastroDePermissionario({
                     <div className="rt-numero">
                         <strong>{numeros.total}</strong>
                         <span>cadastrados</span>
+                    </div>
+                    <div className="rt-numeros-separador" />
+                    {/* Com permissão da SEMOP. Neutro de propósito: não ter
+                        permissão não é irregularidade — é o público do trabalho
+                        educativo, e pintá-lo de vermelho já daria o veredito. */}
+                    <div className="rt-numero">
+                        <strong>{numeros.comPermissao}</strong>
+                        <span>permissionários</span>
                     </div>
                     <div className="rt-numeros-separador" />
                     <div className="rt-numero ok">
@@ -558,7 +595,7 @@ export default function CadastroDePermissionario({
             </div>
 
             <div className="card-premium">
-                <div className="abas" role="tablist" aria-label="Permissionários">
+                <div className="abas" role="tablist" aria-label="Ambulantes">
                     <button
                         type="button"
                         role="tab"
@@ -601,8 +638,10 @@ export default function CadastroDePermissionario({
                             /* O exemplo entra no próprio campo: "procure por
                                nome, apelido…" ensina o que a busca aceita, e a
                                frase de exemplo ensina COMO se pergunta. */
-                            placeholder='Nome, apelido, documento, atividade ou situação — ex.: "irregulares sem documento"'
+                            placeholder='Nome, apelido, documento, atividade, permissão ou situação — ex.: "irregulares sem permissão"'
                             exemplos={[
+                                'permissionários',
+                                'sem permissão',
                                 'cadastrado em campo',
                                 'sem documento',
                                 'irregular',
@@ -638,8 +677,8 @@ export default function CadastroDePermissionario({
                             {/* Exportar é LEITURA: sai o mesmo recorte que a tela
                                 já mostrou, então vale para quem só consulta. */}
                             <BotaoExportar
-                                titulo="Permissionários"
-                                subtitulo="Fiscalização › Permissionários"
+                                titulo="Ambulantes"
+                                subtitulo="Fiscalização › Ambulantes"
                                 contexto={
                                     busca.trim()
                                         ? `Busca: "${busca.trim()}"`
@@ -652,6 +691,11 @@ export default function CadastroDePermissionario({
                                     { chave: 'documento', titulo: 'Documento' },
                                     { chave: 'atividade', titulo: 'Atividade' },
                                     { chave: 'situacao', titulo: 'Situação' },
+                                    {
+                                        chave: 'permissionario',
+                                        titulo: 'Permissionário',
+                                        alinhar: 'center',
+                                    },
                                     {
                                         chave: 'numero_permissao',
                                         titulo: 'Nº da permissão',
@@ -681,11 +725,11 @@ export default function CadastroDePermissionario({
                                 <thead>
                                     <tr>
                                         <ThOrdenavel campo="nome" acessor="nome" ord={ord}>
-                                            Permissionário
+                                            Ambulante
                                         </ThOrdenavel>
                                         <ThOrdenavel
                                             campo="documento"
-                                            acessor={(p: Permissionario) =>
+                                            acessor={(p: Ambulante) =>
                                                 p.documento_formatado
                                             }
                                             ord={ord}
@@ -694,16 +738,31 @@ export default function CadastroDePermissionario({
                                         </ThOrdenavel>
                                         <ThOrdenavel
                                             campo="atividade"
-                                            acessor={(p: Permissionario) =>
+                                            acessor={(p: Ambulante) =>
                                                 p.atividade ?? ''
                                             }
                                             ord={ord}
                                         >
                                             Atividade
                                         </ThOrdenavel>
+                                        {/* A coluna que o rename tornou
+                                            necessária: a grade tem os dois
+                                            públicos, e sem ela não se sabe qual
+                                            é qual — a validade em branco pode
+                                            ser "não tem permissão" ou "tem, mas
+                                            ninguém anotou a data". */}
+                                        <ThOrdenavel
+                                            campo="permissionario"
+                                            acessor={(p: Ambulante) =>
+                                                p.permissionario ? '0' : '1'
+                                            }
+                                            ord={ord}
+                                        >
+                                            Permissão
+                                        </ThOrdenavel>
                                         <ThOrdenavel
                                             campo="validade_permissao"
-                                            acessor={(p: Permissionario) =>
+                                            acessor={(p: Ambulante) =>
                                                 p.validade_permissao ?? ''
                                             }
                                             ord={ord}
@@ -712,7 +771,7 @@ export default function CadastroDePermissionario({
                                         </ThOrdenavel>
                                         <ThOrdenavel
                                             campo="situacao"
-                                            acessor={(p: Permissionario) => p.situacao}
+                                            acessor={(p: Ambulante) => p.situacao}
                                             ord={ord}
                                         >
                                             Situação
@@ -723,9 +782,9 @@ export default function CadastroDePermissionario({
                                 <tbody>
                                     {pag.visiveis.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="tabela-vazia">
-                                                {permissionarios.length === 0
-                                                    ? 'Nenhum permissionário cadastrado ainda. Use "Incluir" para cadastrar o primeiro — é dele que a fiscalização parte.'
+                                            <td colSpan={6} className="tabela-vazia">
+                                                {ambulantes.length === 0
+                                                    ? 'Nenhum ambulante cadastrado ainda. Use "Incluir" para cadastrar o primeiro — é dele que a fiscalização parte.'
                                                     : 'Ninguém casa com a busca. Limpe o campo para ver a base inteira.'}
                                             </td>
                                         </tr>
@@ -777,6 +836,29 @@ export default function CadastroDePermissionario({
                                                 </td>
                                                 <td>{p.documento_formatado || VAZIO}</td>
                                                 <td>{p.atividade || VAZIO}</td>
+                                                <td>
+                                                    {/* Sem permissão NÃO é um
+                                                        vazio: é a resposta, e é
+                                                        o caso da maioria. Um
+                                                        traço aqui seria lido
+                                                        como "não sei". */}
+                                                    <span
+                                                        className={cn(
+                                                            'selo',
+                                                            p.permissionario
+                                                                ? 'selo-info'
+                                                                : 'selo-neutro',
+                                                        )}
+                                                    >
+                                                        <span
+                                                            className="selo-dot"
+                                                            aria-hidden
+                                                        />
+                                                        {p.permissionario
+                                                            ? 'Permissionário'
+                                                            : 'Sem permissão'}
+                                                    </span>
+                                                </td>
                                                 <td>{dataBR(p.validade_permissao)}</td>
                                                 <td>
                                                     {/* Ponto de cor antes da
@@ -1038,55 +1120,138 @@ export default function CadastroDePermissionario({
                                 )}
                             </div>
 
+                            {/* A pergunta que governa as duas seguintes. Fica
+                                ANTES delas de propósito: perguntar o número da
+                                permissão para depois perguntar se ela existe
+                                seria pedir o dado na ordem contrária. */}
                             <div className="form-group">
-                                <label className="form-label" htmlFor="perm-permissao">
-                                    Nº da permissão
+                                <label
+                                    className="form-label"
+                                    htmlFor="perm-permissionario"
+                                >
+                                    É permissionário da SEMOP?{' '}
+                                    <span aria-hidden>*</span>
                                 </label>
-                                <input
-                                    id="perm-permissao"
+                                <select
+                                    id="perm-permissionario"
                                     className="form-control"
-                                    value={form.numero_permissao}
-                                    maxLength={30}
+                                    value={form.permissionario}
                                     disabled={!emEdicao}
-                                    onChange={(e) =>
-                                        campo('numero_permissao', e.target.value)
-                                    }
-                                />
-                                {erros.numero_permissao && (
+                                    onChange={(e) => {
+                                        const marcado = e.target.value === '1';
+
+                                        /*
+                                         * Desmarcar LIMPA número e validade na
+                                         * hora. Sem isso os dois seguiriam
+                                         * preenchidos, escondidos, e voltariam
+                                         * no envio — o servidor os anula, mas
+                                         * quem está na tela não veria isso
+                                         * acontecer e acharia que a permissão
+                                         * continua guardada.
+                                         */
+                                        setForm((atual) => ({
+                                            ...atual,
+                                            permissionario: marcado ? '1' : '0',
+                                            numero_permissao: marcado
+                                                ? atual.numero_permissao
+                                                : '',
+                                            validade_permissao: marcado
+                                                ? atual.validade_permissao
+                                                : '',
+                                        }));
+                                    }}
+                                >
+                                    <option value="0">Não</option>
+                                    <option value="1">Sim</option>
+                                </select>
+                                <p className="form-ajuda">
+                                    A fiscalização encontra os dois na rua. Quem
+                                    não tem permissão pode estar regular por
+                                    outra via — a <strong>situação</strong> é
+                                    outra pergunta.
+                                </p>
+                                {erros.permissionario && (
                                     <p className="form-erro">
-                                        {erros.numero_permissao}
+                                        {erros.permissionario}
                                     </p>
                                 )}
                             </div>
 
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="perm-validade">
-                                    Validade da permissão
-                                </label>
-                                {/* A forma ISO existe só aqui dentro, que é o que
-                                    o campo de data do navegador entende; o que a
-                                    tela MOSTRA é sempre dd/mm/aaaa. */}
-                                <input
-                                    id="perm-validade"
-                                    type="date"
-                                    className="form-control"
-                                    value={form.validade_permissao}
-                                    disabled={!emEdicao}
-                                    onChange={(e) =>
-                                        campo('validade_permissao', e.target.value)
-                                    }
-                                />
-                                {form.validade_permissao && (
-                                    <p className="form-ajuda">
-                                        Vence em {dataBR(form.validade_permissao)}.
-                                    </p>
-                                )}
-                                {erros.validade_permissao && (
-                                    <p className="form-erro">
-                                        {erros.validade_permissao}
-                                    </p>
-                                )}
-                            </div>
+                            {/* Número e validade só existem para quem TEM
+                                permissão. Mostrá-los sempre era o que fazia todo
+                                cadastro parecer permissionário. */}
+                            {form.permissionario === '1' && (
+                                <>
+                                    <div className="form-group">
+                                        <label
+                                            className="form-label"
+                                            htmlFor="perm-permissao"
+                                        >
+                                            Nº da permissão{' '}
+                                            <span aria-hidden>*</span>
+                                        </label>
+                                        <input
+                                            id="perm-permissao"
+                                            className="form-control"
+                                            value={form.numero_permissao}
+                                            maxLength={30}
+                                            disabled={!emEdicao}
+                                            onChange={(e) =>
+                                                campo(
+                                                    'numero_permissao',
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                        <p className="form-ajuda">
+                                            É o número que sustenta a permissão —
+                                            sem ele, "é permissionário" não se
+                                            confere depois.
+                                        </p>
+                                        {erros.numero_permissao && (
+                                            <p className="form-erro">
+                                                {erros.numero_permissao}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label
+                                            className="form-label"
+                                            htmlFor="perm-validade"
+                                        >
+                                            Validade da permissão
+                                        </label>
+                                        {/* A forma ISO existe só aqui dentro, que
+                                            é o que o campo de data do navegador
+                                            entende; o que a tela MOSTRA é sempre
+                                            dd/mm/aaaa. */}
+                                        <input
+                                            id="perm-validade"
+                                            type="date"
+                                            className="form-control"
+                                            value={form.validade_permissao}
+                                            disabled={!emEdicao}
+                                            onChange={(e) =>
+                                                campo(
+                                                    'validade_permissao',
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                        <p className="form-ajuda">
+                                            {form.validade_permissao
+                                                ? `Vence em ${dataBR(form.validade_permissao)}.`
+                                                : 'Pode ficar em branco: em rua o papel está desbotado ou não está com a pessoa, e data inventada faria a busca acusar quem está em dia.'}
+                                        </p>
+                                        {erros.validade_permissao && (
+                                            <p className="form-erro">
+                                                {erros.validade_permissao}
+                                            </p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
 
                             <div className="form-group">
                                 <label className="form-label" htmlFor="perm-situacao">
@@ -1213,6 +1378,6 @@ export default function CadastroDePermissionario({
     );
 }
 
-CadastroDePermissionario.layout = {
-    breadcrumbs: [{ title: 'Permissionários', href: index() }],
+CadastroDeAmbulante.layout = {
+    breadcrumbs: [{ title: 'Ambulantes', href: index() }],
 };

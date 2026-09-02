@@ -11,7 +11,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * para as regras já existentes ({@see Cpf} / {@see Cnpj}). Aceita com ou sem máscara e o **CNPJ
  * alfanumérico** (novo formato) — a normalização preserva letras ({@see Documento::normalizar}).
  *
- * Use nos campos que aceitam os dois (ex.: o `documento` do permissionário, onde o front usa
+ * Use nos campos que aceitam os dois (ex.: o `documento` do ambulante, onde o front usa
  * `maskCpfCnpj`). Quando o campo aceita só um dos tipos, prefira `new Cpf` ou `new Cnpj`.
  *
  * Passe `$campo` (rótulo da seção/campo) quando a tela tiver mais de um CPF/CNPJ — a mensagem sai

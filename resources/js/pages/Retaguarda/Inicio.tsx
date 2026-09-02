@@ -2,7 +2,9 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ClipboardCheck,
     Flame,
+    Inbox,
     LayoutGrid,
+    Map as MapIcon,
     MapPinned,
     Siren,
     Store,
@@ -33,8 +35,10 @@ interface Atalho {
  */
 const ICONES: Record<string, LucideIcon> = {
     perfil: UserRound,
-    permissionarios: Store,
+    ambulantes: Store,
     operacoes: Siren,
+    caixa: Inbox,
+    areas: MapIcon,
     fiscalizacoes: ClipboardCheck,
     mapa: MapPinned,
     calor: Flame,
@@ -114,7 +118,7 @@ export default function Inicio({ atalhos }: { atalhos: Atalho[] }) {
                         {auth.user ? `, ${primeiroNome(auth.user.name)}` : ''}
                     </h1>
                     <p>
-                        Fiscalização de permissionários — comerciantes
+                        Fiscalização de ambulantes — comerciantes
                         ambulantes de rua de Salvador.
                     </p>
                 </div>

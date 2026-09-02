@@ -1077,7 +1077,7 @@ table.data-table tbody tr.pendente td:first-child {
 /* ── O cabeçalho editorial da página ────────────────────────────────────────
    Sobrancelha da seção, título grande com o ponto azul, subtítulo. A direita é
    um slot: a tela põe ali os números do dia quando tiver (ver a de
-   Permissionários) — e, quando não tem, o cabeçalho respira sozinho.
+   Ambulantes) — e, quando não tem, o cabeçalho respira sozinho.
 
    O ponto final é do CSS, e não escrito em cada tela: assim toda tela nova nasce
    com a assinatura, e ninguém precisa lembrar de digitá-lo. */
@@ -2105,5 +2105,1098 @@ table.data-table tbody tr.pendente td:first-child {
 @media (prefers-reduced-motion: reduce) {
     .spinner-acao {
         animation-duration: 2s;
+    }
+}
+
+/* ==================== FICHA, TRÂMITE E ESCOLHA (telas administrativas) ====================
+   Peças que nasceram com a Caixa de Entrada e o cadastro de Áreas e Equipes, e
+   que valem para qualquer tela do mesmo desenho: um formulário em duas colunas,
+   uma ficha de leitura, a linha do tempo de um trâmite e a escolha entre dois
+   caminhos que não são "salvar/cancelar".
+
+   Tudo em cima dos tokens do tema (nada de cor solta): o tema escuro redefine os
+   tokens e estas peças acompanham sem uma segunda paleta. */
+
+/* O número do cabeçalho quando ele FILTRA a lista. Continua sendo o mesmo cartão
+   de leitura — o que muda é que ele responde ao clique, e isso não pode virar um
+   botão com cara de botão no meio do resumo. */
+button.rt-numero {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--sm-raio-sm);
+    transition: opacity 0.18s ease;
+}
+button.rt-numero:hover {
+    opacity: 0.72;
+}
+button.rt-numero:focus-visible {
+    outline: 2px solid var(--sm-primaria);
+    outline-offset: 3px;
+}
+
+/* Formulário em colunas: dois campos por linha em tela larga, um por linha em
+   tela estreita. O `min()` dentro do `minmax` evita o estouro clássico de grade
+   com um <select> de rótulo longo dentro. */
+.rt-form-linha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: 0 18px;
+}
+
+/* A SUGESTÃO do sistema — "bairro X, equipe Y". É informação, não alerta: usa o
+   tom de informação, e diz que a escolha final é de gente. */
+.rt-sugestao {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 6px 0 2px;
+    padding: 11px 13px;
+    border-radius: var(--sm-raio-sm);
+    border: 1px solid color-mix(in srgb, var(--sm-info) 35%, transparent);
+    background: var(--sm-info-suave);
+    color: var(--sm-texto-corpo);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+.rt-sugestao svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--sm-info);
+}
+
+/* Escolha entre CAMINHOS (encaminhar, devolver), não entre valores de um campo.
+   Cartão em vez de lista de opções porque cada caminho tem consequência
+   diferente, e a consequência tem de caber ao lado do rótulo. */
+.rt-escolha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 12px;
+    margin: 14px 0 20px;
+}
+.rt-escolha-cartao {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px 15px;
+    border-radius: var(--sm-raio-md);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie);
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+.rt-escolha-cartao:hover {
+    border-color: var(--sm-primaria);
+}
+.rt-escolha-cartao.ativo {
+    border-color: var(--sm-primaria);
+    box-shadow: 0 0 0 3px var(--sm-primaria-suave);
+}
+.rt-escolha-cartao input {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+.rt-escolha-cartao > span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.rt-escolha-cartao strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    color: var(--sm-texto);
+}
+.rt-escolha-cartao > span > span {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--sm-texto-fraco);
+}
+
+/* Cabeça do registro aberto: identificação à esquerda, situação à direita. */
+.rt-detalhe-cabeca {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+/* Ficha de LEITURA: rótulo em cima, valor embaixo, em colunas. Não é formulário
+   desabilitado, de propósito: campo cinza convida a tentar editar e não deixa. */
+.rt-ficha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 14px 22px;
+    margin: 0;
+}
+.rt-ficha dt {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sm-texto-fraco);
+    margin-bottom: 3px;
+}
+.rt-ficha dd {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--sm-texto-corpo);
+}
+
+/* A linha do tempo do trâmite. O fio vertical liga os atos: é o que faz a lista
+   ler como percurso, e não como quatro frases soltas. */
+.rt-tramite {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0 0 0 22px;
+    border-left: 2px solid var(--sm-borda);
+}
+.rt-tramite li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--sm-texto-corpo);
+}
+.rt-tramite li:last-child {
+    padding-bottom: 0;
+}
+.rt-tramite li::before {
+    content: '';
+    position: absolute;
+    left: -29px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--sm-raio-full);
+    background: var(--sm-primaria);
+    box-shadow: 0 0 0 3px var(--sm-superficie);
+}
+.rt-tramite strong {
+    color: var(--sm-texto);
+}
+.rt-tramite-quando {
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--sm-texto-fraco);
+}
+/* O passo que AINDA NÃO aconteceu, dito como próximo passo, com o ponto vazado
+   para não se confundir com ato registrado. */
+.rt-tramite-futuro {
+    opacity: 0.75;
+}
+.rt-tramite-futuro::before {
+    background: var(--sm-superficie);
+    box-shadow:
+        0 0 0 2px var(--sm-borda),
+        0 0 0 5px var(--sm-superficie);
+}
+
+/* Separador entre dois blocos de decisão dentro do mesmo cartão. */
+.rt-regua {
+    margin: 26px 0 22px;
+    border: 0;
+    border-top: 1px solid var(--sm-borda);
+}
+
+/* ==================== ÁREAS E EQUIPES ====================
+   Os cartões de área: cada um é a equipe inteira de relance (quem responde,
+   quantos fiscais, quantos bairros), e o bloco de bairros abre embaixo. */
+.rt-cartoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+    gap: 16px;
+}
+.rt-cartao-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px;
+    border-radius: var(--sm-raio-md);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+.rt-cartao-area:hover {
+    border-color: var(--sm-primaria);
+    box-shadow: var(--sm-sombra-sm);
+}
+.rt-cartao-area.ativo {
+    border-color: var(--sm-primaria);
+    box-shadow: 0 0 0 3px var(--sm-primaria-suave);
+}
+.rt-cartao-area-topo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.rt-cartao-area h3 {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--sm-texto);
+}
+.rt-cartao-area-regiao {
+    font-size: 12px;
+    color: var(--sm-texto-fraco);
+}
+.rt-cartao-area-numeros {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--sm-texto-fraco);
+}
+.rt-cartao-area-numeros strong {
+    color: var(--sm-texto);
+}
+
+/* O bloco de bairros: fichas pequenas, muitas, que se leem varrendo. */
+.rt-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+}
+.rt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--sm-raio-full);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie-2);
+    font-size: 12px;
+    color: var(--sm-texto-corpo);
+}
+/* Bairro que também pertence a outra área. AVISO, não erro: o vínculo
+   bairro-equipe não é exclusivo — a Caixa de Entrada sugere e gente confirma. */
+.rt-chip.compartilhado {
+    border-color: color-mix(in srgb, var(--sm-aviso) 55%, transparent);
+    background: var(--sm-aviso-suave);
+    color: var(--sm-aviso);
+}
+.rt-chip button {
+    appearance: none;
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--sm-raio-full);
+    background: none;
+    color: inherit;
+    opacity: 0.55;
+    cursor: pointer;
+}
+.rt-chip button:hover {
+    opacity: 1;
+    color: var(--sm-perigo);
+}
+
+/* ==================== MAPA IMERSIVO (Mapa ao Vivo e Mapa de Calor) ====================
+   O padrão IMERSIVO da RN-07, do mockup aprovado pelo dono: o mapa é o FUNDO,
+   sangrando de borda a borda, e a leitura flutua sobre a cidade em painéis de
+   VIDRO. Quem abre um mapa está olhando a cidade, não uma tela com um mapa
+   dentro dela.
+
+   O menu PERMANECE — o imersivo é sobre o conteúdo, não sobre a casca. Foi
+   decisão explícita: a navegação em pílula do mockup substituía o painel
+   lateral, e trocar a casca só nestas duas telas faria o gestor perder o menu
+   justamente onde ele mais precisa pular para "Cadastro de Operação".
+
+   A PALETA daqui é FIXA nos dois temas, e tem nome próprio (--sm-mapa-*), pelo
+   mesmo motivo do menu (RN-01): o painel de vidro é moldura sobre a cidade à
+   noite. No tema claro, vidro claro sobre imagens de rua viraria papel molhado —
+   e o mapa, que é escuro por desenho, continuaria escuro por baixo.
+
+   As animações do pulso ficam no NÍVEL RAIZ, no fim do arquivo — dentro de
+   @layer o minificador da build de produção as descarta em silêncio. */
+:root {
+    --sm-mapa-fundo: linear-gradient(165deg, #0a1628, #0f1d33 55%, #132542);
+    --sm-mapa-vidro: rgba(13, 26, 46, 0.82);
+    --sm-mapa-vidro-forte: rgba(13, 26, 46, 0.93);
+    --sm-mapa-linha: rgba(77, 159, 220, 0.22);
+    --sm-mapa-linha-alerta: rgba(255, 154, 77, 0.34);
+    --sm-mapa-texto: #eaf2fa;
+    --sm-mapa-texto-fraco: #8fb4d4;
+    --sm-mapa-acao: #4d9fdc;
+    --sm-mapa-alerta: #ffb877;
+    --sm-mapa-sombra: 0 20px 50px rgba(4, 10, 22, 0.5);
+}
+
+/* ── A casca em modo imersivo ─────────────────────────────────────────────────
+   Três efeitos, e só: o miolo perde o preenchimento, a página perde a rolagem
+   (quem rola é o mapa, e barra de rolagem de página sobre um mapa de tela cheia
+   é sempre acidente) e o cluster de tema/avisos clareia — em texto escuro ele
+   desapareceria na cidade à noite. */
+.rt-shell-imersivo {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+}
+.rt-shell-imersivo .rt-conteudo {
+    position: relative;
+    padding: 0;
+    overflow: hidden;
+}
+.rt-shell-imersivo .rt-cluster .icon-btn {
+    border-color: var(--sm-mapa-linha);
+    background: var(--sm-mapa-vidro);
+    color: var(--sm-mapa-texto);
+    backdrop-filter: blur(10px);
+}
+.rt-shell-imersivo .rt-trilha {
+    color: var(--sm-mapa-texto-fraco);
+}
+.rt-shell-imersivo .rt-trilha-atual {
+    color: var(--sm-mapa-texto);
+}
+
+/* ── O mapa, que é o fundo ──────────────────────────────────────────────────── */
+.rt-mapa-tela {
+    position: absolute;
+    inset: 0;
+    /* ⚠️ Este `z-index: 0` NÃO é enfeite: ele PRENDE o mapa numa camada só.
+       O Leaflet empilha as camadas dele em z-index próprio (imagens 200,
+       marcadores 600, balões 700), e sem um contexto de empilhamento aqui esses
+       números competem com o resto da página. Foi por isso que a camada de vidro
+       precisava de 500 — e, com 500, a sobreposição do sistema (diálogos, que
+       vivem em 80) abria ATRÁS do mapa: a exportação do ranking parecia não
+       responder ao clique. Com o mapa fechado em 0, a pilha volta a ser
+       pequena: mapa 0 · leitura 1 · cluster 30 · diálogos 80. */
+    z-index: 0;
+    /* O navy com a malha de ruas do resto do sistema fica POR BAIXO das imagens:
+       é o que a tela mostra enquanto os tiles chegam — e o que ela mostra se eles
+       não chegarem (rede da Prefeitura, proxy, servidor de imagens fora). A tela
+       degrada para o desenho do mockup, e não para um retângulo cinza. */
+    background: var(--sm-mapa-fundo);
+}
+.rt-mapa-malha {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.rt-mapa-tela .leaflet-container {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    font-family: inherit;
+}
+/* As imagens do OpenStreetMap são CLARAS por natureza, e o vidro escuro sobre
+   elas ficaria ilegível. Inverter o painel de tiles (a mesma receita que o
+   aplicativo do fiscal usa no tema escuro) dá o mapa noturno sem trocar de
+   provedor — e sem uma segunda origem de rede para o WAF barrar.
+
+   Aqui o filtro vale nos DOIS temas: o mapa é escuro por desenho. */
+.rt-mapa-tela .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(200deg) brightness(0.78) contrast(0.92) saturate(0.55);
+}
+.rt-mapa-tela .leaflet-control-attribution {
+    background: rgba(4, 10, 22, 0.6);
+    color: var(--sm-mapa-texto-fraco);
+    font-size: 10.5px;
+}
+.rt-mapa-tela .leaflet-control-attribution a {
+    color: var(--sm-mapa-acao);
+}
+.rt-mapa-tela .leaflet-control-zoom a {
+    border: 1px solid var(--sm-mapa-linha);
+    background: var(--sm-mapa-vidro);
+    color: var(--sm-mapa-texto);
+    backdrop-filter: blur(10px);
+}
+.rt-mapa-tela .leaflet-control-zoom a:hover {
+    background: var(--sm-mapa-vidro-forte);
+    color: #fff;
+}
+.rt-mapa-tela .leaflet-bottom.leaflet-right {
+    margin-bottom: 26px;
+    margin-right: 22px;
+}
+
+/* ── O pino: ponto luminoso com anel ────────────────────────────────────────
+   Não é a gota do aplicativo do fiscal, e a diferença é de propósito: lá cada
+   pino é UM ponto que se vai visitar; aqui são dezenas vistos de cima, e a gota
+   com emoji dentro viraria confete em escala de cidade. */
+.rt-pino {
+    position: relative;
+    /* A caixa é maior que o ponto de propósito: o ponto é pequeno para a cidade
+       não virar confete, mas alvo de 10px é alvo que se erra. A caixa é o que se
+       clica; o ponto é o que se vê. */
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+.rt-pino::before {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 14px currentColor;
+}
+/* O anel que expande — a mesma gramática do splash de boas-vindas. Só nasce nos
+   dois tipos que PEDEM olhar: o retorno vencido (fora do esperado) e o que
+   acabou de entrar (rotina viva). Pulso em tudo não destaca nada. */
+.rt-pino > i {
+    position: absolute;
+    inset: -7px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    opacity: 0;
+}
+.rt-pino-regular {
+    color: #4ddba4;
+}
+.rt-pino-irregular {
+    color: #ff9a4d;
+}
+.rt-pino-retorno {
+    color: #ff7043;
+}
+.rt-pino-retorno > i {
+    animation: rt-pino-pulso 2.6s ease-out infinite;
+}
+.rt-pino-hoje {
+    color: #4d9fdc;
+}
+.rt-pino-hoje > i {
+    animation: rt-pino-pulso 3.4s ease-out infinite;
+    animation-delay: 1.1s;
+}
+.rt-pino-fiscal {
+    color: #7cc4ff;
+}
+.rt-pino-fiscal::before {
+    width: 13px;
+    height: 13px;
+    border: 2.5px solid #fff;
+    box-shadow: 0 0 0 7px rgba(124, 196, 255, 0.24);
+}
+/* "há 3 dias" colado no pino do retorno vencido: é a informação que faz o gestor
+   agir, e ela não pode depender de um clique para aparecer. */
+.rt-pino-selo {
+    position: absolute;
+    top: -9px;
+    left: 20px;
+    padding: 2px 7px;
+    border-radius: var(--sm-raio-full);
+    background: #ff7043;
+    color: #24100a;
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Os painéis de vidro ─────────────────────────────────────────────────────
+   Fundo translúcido escuro, borda de 1px azul, desfoque atrás. Eles flutuam
+   sobre a cidade em vez de ocupar coluna: em tela de mapa, largura é
+   informação. */
+.rt-mapa-camada {
+    position: absolute;
+    inset: 0;
+    /* Um degrau acima do mapa, e abaixo do cluster (30) e dos diálogos do
+       sistema (80) — ver a nota do `z-index` em `.rt-mapa-tela`. */
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 26px 26px;
+    gap: 14px;
+    /* A camada é moldura sem corpo: o clique atravessa para o mapa, e só as
+       peças dela recebem clique. Sem isto o mapa inteiro fica inerte. */
+    pointer-events: none;
+    overflow: hidden;
+}
+.rt-mapa-camada > * {
+    pointer-events: auto;
+}
+.rt-vidro {
+    padding: 18px 20px;
+    border: 1px solid var(--sm-mapa-linha);
+    border-radius: 18px;
+    background: var(--sm-mapa-vidro);
+    box-shadow: var(--sm-mapa-sombra);
+    backdrop-filter: blur(14px);
+    color: var(--sm-mapa-texto);
+}
+.rt-vidro.alerta {
+    border-color: var(--sm-mapa-linha-alerta);
+}
+.rt-vidro-titulo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 13px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--sm-mapa-texto-fraco);
+}
+.rt-vidro.alerta .rt-vidro-titulo {
+    color: var(--sm-mapa-alerta);
+}
+.rt-vidro p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #dce9f7;
+}
+.rt-vidro-fraco {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--sm-mapa-texto-fraco);
+}
+.rt-vidro-selo {
+    padding: 3px 10px;
+    border-radius: var(--sm-raio-full);
+    background: rgba(224, 112, 32, 0.25);
+    color: var(--sm-mapa-alerta);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+/* O cabeçalho editorial da tela, agora sobre a cidade: a sobrancelha e o título
+   continuam sendo o topo da tela (RN-02), só mudaram de fundo. */
+.rt-mapa-topo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding-right: 118px;
+    flex-wrap: wrap;
+    /* O cabeçalho é TEXTO, e ocupa a faixa toda do topo. Recebendo clique, ele
+       come tanto o arrasto do mapa embaixo dele quanto o cluster de tema/avisos
+       que fica no mesmo canto. */
+    pointer-events: none;
+}
+.rt-mapa-topo .sobrancelha {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--sm-mapa-acao);
+    /* Um véu por trás do texto: o título cai sobre imagens de rua, e sem isto
+       ele encontraria justamente uma avenida clara. */
+    text-shadow: 0 2px 12px rgba(4, 10, 22, 0.95);
+}
+.rt-mapa-topo h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    color: var(--sm-mapa-texto);
+    text-shadow: 0 2px 16px rgba(4, 10, 22, 0.95);
+}
+.rt-mapa-topo h1::after {
+    content: '.';
+    color: var(--sm-mapa-acao);
+}
+.rt-mapa-sub {
+    margin-top: 6px;
+    max-width: 54ch;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #c2d4e8;
+    text-shadow: 0 1px 10px rgba(4, 10, 22, 0.95);
+}
+
+/* ── Os filtros do gestor: chips de vidro sobre o mapa ─────────────────────── */
+.rt-mapa-filtros {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 5px;
+    border: 1px solid var(--sm-mapa-linha);
+    border-radius: 14px;
+    background: var(--sm-mapa-vidro);
+    box-shadow: var(--sm-mapa-sombra);
+    backdrop-filter: blur(12px);
+}
+.rt-mapa-grupo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.rt-mapa-grupo + .rt-mapa-grupo {
+    margin-left: 4px;
+    padding-left: 8px;
+    border-left: 1px solid var(--sm-mapa-linha);
+}
+.rt-mapa-rotulo {
+    padding: 0 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sm-mapa-texto-fraco);
+}
+button.rt-chip-vidro {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: #c2d4e8;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+button.rt-chip-vidro:hover {
+    background: rgba(77, 159, 220, 0.16);
+    color: var(--sm-mapa-texto);
+}
+button.rt-chip-vidro.ativo {
+    background: var(--sm-acao);
+    color: #fff;
+}
+button.rt-chip-vidro:focus-visible {
+    outline: 2px solid var(--sm-mapa-acao);
+    outline-offset: 2px;
+}
+/* O ponto de cor antes da palavra, como o chip de situação da grade (RN-05): o
+   estado é lido de relance, e a palavra confirma. */
+.rt-chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+}
+
+/* ── O corpo da tela: painéis à esquerda, mapa livre no meio ───────────────── */
+.rt-mapa-corpo {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 0;
+    /* ⚠️ ESTA linha é o que mantém o MAPA clicável. A camada devolve o clique ao
+       mapa (`pointer-events: none`) e o reativa nos filhos diretos dela — e este
+       invólucro é um filho direto que ocupa a tela toda. Sem cancelá-lo aqui,
+       ele vira um vidro invisível sobre a cidade: os pinos deixam de responder ao
+       clique e não há nada em tela que explique por quê. */
+    pointer-events: none;
+}
+.rt-mapa-coluna {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 352px;
+    max-height: 100%;
+    /* Em janela baixa a coluna rola por dentro — e não empurra o painel para
+       fora da tela, que é o que acontecia com o último cartão. */
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 4px;
+    /* A barra de rolagem da coluna cai SOBRE o mapa escuro, e o navegador a
+       desenha com a cor do tema da página: no tema claro saía uma faixa branca
+       atravessando a cidade de cima a baixo. Aqui ela é escura nos dois temas,
+       como o resto da camada. */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(122, 175, 220, 0.35) transparent;
+    /* Volta a receber clique: quem o dispensa é o invólucro acima. */
+    pointer-events: auto;
+}
+.rt-mapa-coluna::-webkit-scrollbar {
+    width: 8px;
+}
+.rt-mapa-coluna::-webkit-scrollbar-track {
+    background: transparent;
+}
+.rt-mapa-coluna::-webkit-scrollbar-thumb {
+    border-radius: var(--sm-raio-full);
+    background: rgba(122, 175, 220, 0.35);
+}
+.rt-mapa-coluna::-webkit-scrollbar-thumb:hover {
+    background: rgba(122, 175, 220, 0.55);
+}
+.rt-mapa-coluna.direita {
+    width: 330px;
+}
+
+/* Os números do painel "a cidade agora". Grandes, porque são a resposta; o
+   rótulo pequeno embaixo, porque é só a etiqueta dela. */
+.rt-mapa-numeros {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+}
+.rt-mapa-numero {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 62px;
+}
+.rt-mapa-numero b {
+    font-size: 29px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--sm-mapa-texto);
+}
+.rt-mapa-numero b.alerta {
+    color: #ff9a4d;
+}
+.rt-mapa-numero b.acao {
+    color: var(--sm-mapa-acao);
+}
+.rt-mapa-numero span {
+    font-size: 12px;
+    color: var(--sm-mapa-texto-fraco);
+}
+
+/* Uma linha de "últimos registros": inicial em quadrado colorido, nome, e o
+   lugar/tempo/fiscal embaixo. */
+.rt-mapa-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+}
+.rt-mapa-item + .rt-mapa-item {
+    margin-top: 11px;
+}
+.rt-mapa-item:hover .rt-mapa-item-nome {
+    color: #fff;
+    text-decoration: underline;
+}
+.rt-mapa-item-marca {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 33px;
+    height: 33px;
+    border-radius: 11px;
+    font-size: 15px;
+}
+.rt-mapa-item-nome {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--sm-mapa-texto);
+}
+.rt-mapa-item-apoio {
+    display: block;
+    margin-top: 1px;
+    font-size: 12px;
+    color: var(--sm-mapa-texto-fraco);
+}
+
+/* O botão do painel de vidro: chapado, azul de ação, largura toda. É a única
+   coisa em que se clica dentro do painel, e não pode competir com o texto. */
+.rt-vidro-acao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #0d6cb5, #0066b2);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-vidro-acao:hover {
+    background: linear-gradient(180deg, #1a7cc7, #0a72c0);
+}
+.rt-vidro-acao.fantasma {
+    background: none;
+    border: 1px solid var(--sm-mapa-linha);
+    color: var(--sm-mapa-acao);
+}
+.rt-vidro-acao.fantasma:hover {
+    background: rgba(77, 159, 220, 0.14);
+    color: #fff;
+}
+.rt-vidro-acao:focus-visible {
+    outline: 2px solid var(--sm-mapa-acao);
+    outline-offset: 2px;
+}
+
+/* ── O cartão de detalhe do ponto selecionado ─────────────────────────────────
+   Ele mora no TOPO da coluna da direita, e não flutuando junto ao pino como no
+   mockup: solto, ele cobria o painel de quem está na rua justamente quando o
+   gestor acabara de clicar num ponto para comparar as duas coisas. Lugar fixo
+   também dá previsibilidade — a resposta do clique aparece sempre no mesmo
+   canto. O que fica do mockup é o vidro mais fechado: é a peça em foco. */
+.rt-mapa-coluna .rt-vidro.detalhe {
+    background: var(--sm-mapa-vidro-forte);
+}
+.rt-mapa-fechar {
+    appearance: none;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--sm-mapa-texto-fraco);
+    cursor: pointer;
+}
+.rt-mapa-fechar:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+.rt-mapa-ficha {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 5px 12px;
+    margin: 12px 0 0;
+    font-size: 12.5px;
+}
+.rt-mapa-ficha dt {
+    color: var(--sm-mapa-texto-fraco);
+    white-space: nowrap;
+}
+.rt-mapa-ficha dd {
+    color: #dce9f7;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* ── A legenda ──────────────────────────────────────────────────────────────── */
+.rt-mapa-legenda {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-self: flex-start;
+    padding: 9px 15px;
+    border: 1px solid var(--sm-mapa-linha);
+    border-radius: var(--sm-raio-full);
+    background: var(--sm-mapa-vidro);
+    box-shadow: var(--sm-mapa-sombra);
+    backdrop-filter: blur(12px);
+    font-size: 12px;
+    color: var(--sm-mapa-texto-fraco);
+    /* A legenda é leitura, não controle: deixa o clique passar para o mapa em
+       vez de criar uma faixa morta no pé da cidade. */
+    pointer-events: none;
+}
+.rt-mapa-legenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+.rt-mapa-regua {
+    width: 92px;
+    height: 9px;
+    border-radius: var(--sm-raio-full);
+}
+
+/* ── O ranking do mapa de calor ─────────────────────────────────────────────── */
+.rt-mapa-rank {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.rt-mapa-rank-linha {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+}
+.rt-mapa-rank-topo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.rt-mapa-rank-nome {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--sm-mapa-texto);
+}
+.rt-mapa-rank-linha:hover .rt-mapa-rank-nome {
+    color: #fff;
+    text-decoration: underline;
+}
+.rt-mapa-rank-apoio {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--sm-mapa-texto-fraco);
+}
+/* A barra é a fatia do período — a leitura de relance que o número não dá. Ela
+   usa o gradiente do calor para o ranking e a mancha falarem a mesma língua. */
+.rt-mapa-rank-barra {
+    height: 5px;
+    margin-top: 7px;
+    border-radius: var(--sm-raio-full);
+    background: rgba(122, 175, 220, 0.16);
+    overflow: hidden;
+}
+.rt-mapa-rank-barra > i {
+    display: block;
+    height: 100%;
+    border-radius: var(--sm-raio-full);
+    background: linear-gradient(90deg, #fdae61, #d7191c);
+}
+/* Subiu é LARANJA e caiu é VERDE, e não o contrário: aqui "mais" é mais
+   ocorrência de irregularidade — a variação positiva é a má notícia. */
+.rt-mapa-var {
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.rt-mapa-var.subiu {
+    color: #ff9a4d;
+}
+.rt-mapa-var.caiu {
+    color: #4ddba4;
+}
+.rt-mapa-var.estavel {
+    color: var(--sm-mapa-texto-fraco);
+}
+
+/* A frase de leitura: o que a tela diz a quem tem trinta segundos. Corpo maior
+   que o resto do painel de propósito — ela vem ANTES do mapa na ordem de
+   leitura, mesmo estando ao lado dele. */
+.rt-mapa-leitura {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: #eaf2fa;
+}
+.rt-mapa-leitura strong {
+    font-weight: 750;
+    color: #fff;
+}
+
+/* ── Telas estreitas ─────────────────────────────────────────────────────────
+   O mapa continua sangrando, e os painéis passam a rolar sobre ele em UMA
+   coluna. Painel de vidro lado a lado abaixo de 1100px cobriria a cidade
+   inteira, e um mapa 100% coberto não é mapa. */
+@media (max-width: 1240px) {
+    .rt-mapa-coluna {
+        width: 314px;
+    }
+    .rt-mapa-coluna.direita {
+        width: 292px;
+    }
+}
+@media (max-width: 1100px) {
+    .rt-mapa-camada {
+        padding: 18px 18px 22px;
+    }
+    .rt-mapa-topo {
+        padding-right: 150px;
+    }
+    .rt-mapa-corpo {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        /* Aqui quem rola é o invólucro, e não cada coluna — então ele volta a
+           receber o clique (e a roda do mouse). O mapa continua alcançável pela
+           faixa livre à direita e pelos próprios controles dele. */
+        overflow-y: auto;
+        pointer-events: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(122, 175, 220, 0.35) transparent;
+    }
+    .rt-mapa-coluna,
+    .rt-mapa-coluna.direita {
+        width: min(100%, 420px);
+        max-height: none;
+        overflow: visible;
+    }
+}
+@media (max-width: 620px) {
+    /* A barra inferior do menu flutua sobre o conteúdo, e a camada já reserva o
+       espaço dela: o miolo não precisa reservar de novo (reservaria por fora do
+       mapa, e sobraria uma faixa vazia embaixo da cidade). */
+    .rt-shell-imersivo.rt-shell-doca .rt-principal {
+        padding-bottom: 0;
+    }
+    .rt-mapa-camada {
+        padding: 52px 14px 104px;
+    }
+    .rt-mapa-topo {
+        padding-right: 0;
+    }
+    .rt-mapa-topo h1 {
+        font-size: 25px;
+    }
+    .rt-mapa-tela .leaflet-bottom.leaflet-right {
+        margin-bottom: 96px;
+    }
+}
+
+/* Nível raiz, nunca dentro de @layer nem de @media — ver o cabeçalho do arquivo.
+   O anel expandindo do pino: some antes de fechar o ciclo, para o pulso ter
+   respiro entre uma onda e a próxima. É a mesma gramática do splash. */
+@keyframes rt-pino-pulso {
+    0% {
+        transform: scale(0.45);
+        opacity: 0.85;
+    }
+    70% {
+        transform: scale(2.3);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(2.3);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rt-pino > i {
+        animation: none;
+        opacity: 0.35;
     }
 }

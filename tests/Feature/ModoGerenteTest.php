@@ -387,7 +387,7 @@ test('o item do Modo Gerente no menu ABRE PAINEL — nao navega', function () {
 
     expect($itens->firstWhere('rotulo', 'Modo Gerente')['modal'])->toBe('modo-gerente')
         // E o resto do menu continua navegando: `modal` é a exceção declarada.
-        ->and($itens->firstWhere('rotulo', 'Permissionários')['modal'])->toBeNull();
+        ->and($itens->firstWhere('rotulo', 'Ambulantes')['modal'])->toBeNull();
 });
 
 test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', function () {
@@ -652,7 +652,7 @@ test('a semeadura nasce do menu — tela restrita a setor nasce concedida a ele'
 
 test('a semente pode AJUSTAR o pacote de um setor — e o fiscal apenas CONSULTA na Retaguarda', function () {
     /*
-     * O fiscal enxerga o cadastro de permissionário (chegar na calçada sem saber
+     * O fiscal enxerga o cadastro de ambulante (chegar na calçada sem saber
      * quem está cadastrado é trabalhar às cegas) e não grava nada por lá: ele
      * cadastra em RUA, pelo aplicativo, e o que nasce em rua entra em quarentena
      * até o gestor conferir.
@@ -665,7 +665,7 @@ test('a semente pode AJUSTAR o pacote de um setor — e o fiscal apenas CONSULTA
      * A conferência é sobre a configuração REAL do menu, e não sobre um exemplo
      * montado no teste: é a concessão inicial entregue que se quer travar.
      */
-    $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->firstOrFail();
+    $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'ambulantes')->firstOrFail();
 
     expect($fiscal->visivel)->toBeTrue()
         ->and($fiscal->apenas_leitura)->toBeTrue()
@@ -675,7 +675,7 @@ test('a semente pode AJUSTAR o pacote de um setor — e o fiscal apenas CONSULTA
 
     // O gestor continua com o pacote inteiro: validar e corrigir cadastro de
     // campo é o trabalho dele.
-    $gestor = PermissaoSetor::where('setor', 'gestor')->where('slug', 'permissionarios')->firstOrFail();
+    $gestor = PermissaoSetor::where('setor', 'gestor')->where('slug', 'ambulantes')->firstOrFail();
 
     expect($gestor->incluir)->toBeTrue()
         ->and($gestor->excluir)->toBeTrue();
@@ -752,8 +752,16 @@ test('a correcao da concessao do fiscal respeita o que o gestor decidiu na tela'
      * Mas ela só toca a linha que AINDA ESTÁ como a semente antiga a deixou. Se
      * alguém mexeu, a linha não casa e fica intacta: migration não desfaz decisão
      * de gente. É o que este teste trava — nos dois sentidos.
+     *
+     * ⚠️ O slug volta para `permissionarios` antes de tudo. A tela foi renomeada
+     * para `ambulantes` em 02/09/2026, e esta migration é de ANTES: ela roda na
+     * ordem em que nasceu, quando a tela ainda tinha o nome antigo. Reescrevê-la
+     * para o slug novo faria o teste passar contra um mundo que nunca existiu —
+     * a base que ela conserta é justamente a que ainda não passou pelo rename.
      */
     $migration = require database_path('migrations/2026_08_26_120000_fiscal_apenas_consulta_permissionarios.php');
+
+    PermissaoSetor::where('slug', 'ambulantes')->update(['slug' => 'permissionarios']);
 
     // (a) A linha intocada, com a impressão digital da semente antiga.
     PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->update([
@@ -788,6 +796,66 @@ test('a correcao da concessao do fiscal respeita o que o gestor decidiu na tela'
     expect($manual->habilitado)->toBeTrue()
         ->and($manual->incluir)->toBeTrue()
         ->and($manual->apenas_leitura)->toBeFalse();
+});
+
+test('o rename da tela leva o slug da matriz junto — ninguem perde acesso no caminho', function () {
+    /*
+     * O slug não é rótulo: é a chave pela qual a guarda decide quem abre a tela.
+     * Renomear a rota para `ambulantes` sem mexer na matriz deixaria as linhas
+     * gravadas apontando para uma tela que não existe mais — e o efeito é o pior
+     * possível: quem tinha acesso o perde EM SILÊNCIO, e o gestor teria de
+     * reconceder à mão, setor por setor.
+     *
+     * A semente não resolve: ela é `firstOrCreate`, então criaria linhas novas
+     * com as decisões de fábrica e jogaria fora o que o gestor ajustou na tela.
+     * É a decisão dele que esta migration preserva, não só o acesso.
+     */
+    $migration = require database_path('migrations/2026_09_02_090100_renomeia_slug_da_tela_para_ambulantes.php');
+
+    // A base como estava antes do rename, com um ajuste feito à mão pelo gestor.
+    PermissaoSetor::where('slug', 'ambulantes')->update(['slug' => 'permissionarios']);
+    PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')
+        ->update(['incluir' => true]);
+
+    $migration->up();
+
+    expect(PermissaoSetor::where('slug', 'permissionarios')->count())->toBe(0);
+
+    $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'ambulantes')->firstOrFail();
+
+    expect($fiscal->visivel)->toBeTrue()
+        // O ajuste do gestor veio junto — é o que separa renomear de semear de novo.
+        ->and($fiscal->incluir)->toBeTrue();
+});
+
+test('slug renomeado sobre linha que a semente ja criou fica com a que tem historico', function () {
+    /*
+     * Cenário de base onde a semente rodou DEPOIS do rename: existem as duas
+     * linhas para o mesmo setor. O par (setor, slug) é único, então um `update`
+     * cru estouraria e a migration morreria no meio.
+     *
+     * Fica a linha renomeada, que carrega o histórico das decisões — e não a que
+     * a semente acabou de inventar com os valores de fábrica.
+     */
+    $migration = require database_path('migrations/2026_09_02_090100_renomeia_slug_da_tela_para_ambulantes.php');
+
+    PermissaoSetor::create([
+        'setor' => 'fiscal',
+        'slug' => 'permissionarios',
+        'visivel' => true,
+        'habilitado' => false,
+        'apenas_leitura' => true,
+        'incluir' => true,
+        'excluir' => false,
+    ]);
+
+    $migration->up();
+
+    $linhas = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'ambulantes')->get();
+
+    expect($linhas)->toHaveCount(1)
+        ->and($linhas->first()->incluir)->toBeTrue()
+        ->and(PermissaoSetor::where('slug', 'permissionarios')->count())->toBe(0);
 });
 
 test('slug compartilhado por varias telas aparece na matriz com o nome do CONJUNTO', function () {

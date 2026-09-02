@@ -16,7 +16,7 @@ use Inertia\Response;
  *
  * Ela existia como `Route::inertia`, sem servidor nenhum por trás, e os atalhos
  * eram quatro cartões escritos na própria tela. O resultado foi o defeito que
- * essa forma sempre produz: o cartão de Permissionários continuou dizendo "Em
+ * essa forma sempre produz: o cartão de Ambulantes continuou dizendo "Em
  * construção" depois de a tela ficar pronta, e a primeira coisa que o usuário
  * enxergava desmentia a entrega principal — enquanto o menu, ao lado, abria a
  * tela normalmente.
@@ -57,21 +57,22 @@ class InicioController extends Controller
             'slug' => null,
         ],
         [
-            'chave' => 'permissionarios',
-            'titulo' => 'Permissionários',
+            'chave' => 'ambulantes',
+            'titulo' => 'Ambulantes',
             'descricao' => 'Cadastro, validação do que veio da rua e prontuário.',
-            'rota' => 'retaguarda.permissionarios.index',
-            'slug' => 'permissionarios',
+            'rota' => 'retaguarda.ambulantes.index',
+            'slug' => 'ambulantes',
         ],
         /*
-         * As quatro do caminho da fiscalização. Elas TÊM endereço — a tela abre e
-         * diz o que vai ser (ver `TelasEmPreparacaoController`) —, então deixam de
-         * ser cartão esmaecido sem link: a espera passou a morar dentro da tela, que
-         * é onde ela pode ser explicada.
+         * As quatro do caminho da fiscalização. As duas de MAPA já existem
+         * (protótipo, 02/09/2026); Cadastro de Operação e Fiscalizações têm
+         * endereço e uma tela que abre dizendo o que vão ser (ver
+         * `TelasEmPreparacaoController`) — então nenhuma das quatro é cartão
+         * esmaecido sem link: a espera, onde ainda há, mora dentro da tela, que é
+         * onde ela pode ser explicada.
          *
-         * O `slug` está declarado porque agora existe permissão de verdade para
-         * cada uma: quem não a tem não vê o atalho, em vez de ser convidado para
-         * uma recusa.
+         * O `slug` está declarado porque existe permissão de verdade para cada uma:
+         * quem não a tem não vê o atalho, em vez de ser convidado para uma recusa.
          */
         [
             'chave' => 'operacoes',
@@ -79,6 +80,18 @@ class InicioController extends Controller
             'descricao' => 'As operações de rua planejadas: onde, quando e quem vai.',
             'rota' => 'retaguarda.operacoes.index',
             'slug' => 'operacoes',
+        ],
+        /*
+         * A Caixa de Entrada vem ANTES de Fiscalizações, como no menu: é o começo
+         * da cadeia — a demanda de fora entra, é triada, e só então vira trabalho
+         * de campo. A ordem dos atalhos conta essa sequência.
+         */
+        [
+            'chave' => 'caixa',
+            'titulo' => 'Caixa de Entrada',
+            'descricao' => 'O que chega de fora em papel: registre, encaminhe à equipe ou devolva.',
+            'rota' => 'retaguarda.caixa-de-entrada.index',
+            'slug' => 'caixa-de-entrada',
         ],
         [
             'chave' => 'fiscalizacoes',
@@ -100,6 +113,13 @@ class InicioController extends Controller
             'descricao' => 'Onde a irregularidade se concentra, para a operação ir aonde precisa.',
             'rota' => 'retaguarda.mapa-de-calor.index',
             'slug' => 'mapa-de-calor',
+        ],
+        [
+            'chave' => 'areas',
+            'titulo' => 'Áreas e Equipes',
+            'descricao' => 'A divisão da cidade: área, equipe, encarregado e o bloco de bairros.',
+            'rota' => 'retaguarda.areas-e-equipes.index',
+            'slug' => 'areas-e-equipes',
         ],
     ];
 

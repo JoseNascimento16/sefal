@@ -29,7 +29,7 @@ São três estados, portanto: **leva à tela**, **em construção** e **ausente*
 últimos é o defeito que esta regra existe para impedir.
 
 ⚠️ **Por que no servidor.** Os atalhos eram quatro cartões escritos na própria tela, e o resultado foi
-o defeito que essa forma sempre produz: o cartão de Permissionários continuou anunciando
+o defeito que essa forma sempre produz: o cartão de Ambulantes (então "Permissionários") continuou anunciando
 "Em construção" depois de a tela ficar pronta e entrar no menu. A primeira coisa que o usuário
 enxergava **desmentia a entrega principal da fase** — e quem lê "não existe" não vai procurar no menu
 ao lado. Mesma informação, dois donos: um dia divergem.
