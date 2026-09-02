@@ -2425,6 +2425,274 @@ button.rt-numero:focus-visible {
         0 0 0 5px var(--sm-superficie);
 }
 
+/* ==================== TRÂMITE NAVEGÁVEL ====================
+   A linha do tempo à esquerda e o conteúdo do passo escolhido ao lado.
+
+   Existe porque o trâmite deixou de ser uma lista de frases: quando a denúncia
+   anda até a vistoria, um passo produz relato, fotos, coordenada e às vezes um
+   documento inteiro. Empilhar tudo em texto corrido faria o trâmite de sete
+   passos virar uma parede que ninguém lê.
+
+   A largura da coluna dos passos é FIXA em faixa (240–300px) e o detalhe fica
+   com o resto: com as duas em `1fr`, o documento — que é o conteúdo mais largo —
+   ficaria comprimido na metade da tela justamente onde ele precisa de espaço. */
+.rt-tramite-nav {
+    display: grid;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    margin-top: 14px;
+}
+@media (max-width: 900px) {
+    /* No retrato do tablet a linha do tempo vai para CIMA, inteira, e o detalhe
+       embaixo. Duas colunas em 560px de largura dariam 260px para o documento —
+       e aí quem rola é a página na horizontal, que é o que nunca pode acontecer. */
+    .rt-tramite-nav {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* O contêiner carrega o FIO vertical, e não a lista de abas: o "próximo passo"
+   pendura no mesmo fio e não é aba (não tem conteúdo para mostrar). Elemento que
+   não é aba dentro de um `tablist` confunde o leitor de tela. */
+.rt-tramite-passos {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 0 22px;
+    border-left: 2px solid var(--sm-borda);
+    min-width: 0;
+}
+.rt-tramite-abas {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Cada passo é um BOTÃO — `role="tab"` de verdade, com foco e tecla. O reset é
+   explícito porque o botão não pode parecer botão: ele é uma linha da linha do
+   tempo, e um retângulo cinza a cada passo transformaria o percurso num
+   formulário. */
+.rt-tramite-passo {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    margin: 0 0 4px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--sm-raio-md);
+    background: none;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: left;
+    color: var(--sm-texto-corpo);
+    cursor: pointer;
+    transition: var(--sm-transicao);
+}
+.rt-tramite-passo:last-child {
+    margin-bottom: 0;
+}
+.rt-tramite-passo::before {
+    content: '';
+    position: absolute;
+    left: -29px;
+    top: 13px;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--sm-raio-full);
+    background: var(--sm-primaria);
+    box-shadow: 0 0 0 3px var(--sm-superficie);
+}
+.rt-tramite-passo:hover {
+    background: var(--sm-superficie-2);
+}
+/* O passo ESCOLHIDO tem de ser inconfundível: quem escolheu precisa saber de
+   qual passo é o conteúdo ao lado. Fundo, borda e ponto maior — as três coisas,
+   porque só cor não sobrevive a monitor ruim nem a daltonismo. */
+.rt-tramite-passo.ativo {
+    background: var(--sm-primaria-suave);
+    border-color: var(--sm-primaria);
+}
+.rt-tramite-passo.ativo::before {
+    width: 13px;
+    height: 13px;
+    left: -30px;
+    top: 12px;
+}
+.rt-tramite-passo.ativo strong {
+    color: var(--sm-primaria);
+}
+.rt-tramite-passo strong {
+    color: var(--sm-texto);
+}
+.rt-tramite-passo-quem {
+    font-size: 12px;
+    color: var(--sm-texto-fraco);
+    overflow-wrap: anywhere;
+}
+/* O texto do próximo passo (o que vai acontecer, e por quem). Só o passo futuro
+   o tem: nos passos registrados esse lugar é o painel ao lado. */
+.rt-tramite-passo-detalhe {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--sm-texto-fraco);
+}
+.rt-tramite-passo-selos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+/* O que vem DEPOIS: ponto vazado, para não se confundir com ato registrado. Não
+   é aba (não tem conteúdo), então também não é botão nem recebe foco. */
+.rt-tramite-passo.futuro {
+    opacity: 0.75;
+    cursor: default;
+}
+.rt-tramite-passo.futuro::before {
+    background: var(--sm-superficie);
+    box-shadow:
+        0 0 0 2px var(--sm-borda),
+        0 0 0 5px var(--sm-superficie);
+}
+
+.rt-tramite-detalhe {
+    min-width: 0;
+    padding: 16px 18px;
+    border: 1px solid var(--sm-borda);
+    border-radius: var(--sm-raio-lg);
+    background: var(--sm-superficie-2);
+}
+.rt-tramite-detalhe-cabeca {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.rt-tramite-detalhe-texto {
+    margin: 0 0 14px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--sm-texto-corpo);
+}
+.rt-tramite-secao {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--sm-borda);
+}
+.rt-tramite-secao-titulo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sm-texto-fraco);
+}
+
+/* ==================== DOCUMENTO DE CAMPO, EM LEITURA ====================
+   A forma do PAPEL: órgão no alto, número no canto, título em caixa alta, campos
+   na ordem do impresso, caixas assinaladas, assinaturas e o rodapé do setor.
+
+   Fundo branco e borda mais forte de propósito: o documento é um objeto DENTRO
+   do painel, e precisa ler como folha — não como mais uma seção do trâmite. É
+   LEITURA, e não formulário desabilitado: campo cinza convida a tentar editar e
+   não deixa, e aqui a Retaguarda não emite documento nenhum. */
+.rt-documento {
+    padding: 16px 18px;
+    border: 1px solid var(--sm-borda-forte);
+    border-radius: var(--sm-raio-md);
+    background: var(--sm-superficie);
+}
+.rt-documento-cabeca {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--sm-borda);
+}
+.rt-documento-orgao {
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--sm-texto);
+}
+.rt-documento-setor {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--sm-texto-fraco);
+}
+.rt-documento-numero {
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--sm-perigo);
+}
+.rt-documento-titulo {
+    margin: 12px 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-align: center;
+    color: var(--sm-texto);
+}
+.rt-documento-lista {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--sm-borda);
+}
+.rt-documento-secao {
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sm-texto-fraco);
+}
+.rt-documento-lista ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--sm-texto-corpo);
+}
+.rt-documento-assinaturas {
+    list-style: none;
+    padding-left: 0;
+}
+.rt-documento-assinaturas li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--sm-borda);
+}
+.rt-documento-assinaturas li:last-child {
+    border-bottom: 0;
+}
+.rt-documento-rodape {
+    margin: 14px 0 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--sm-borda);
+    font-size: 11.5px;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--sm-texto-fraco);
+}
+
 /* Separador entre dois blocos de decisão dentro do mesmo cartão. */
 .rt-regua {
     margin: 26px 0 22px;

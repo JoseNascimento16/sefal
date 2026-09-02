@@ -89,6 +89,34 @@ class EstruturaFicticia
         ], self::cruas()));
     }
 
+    /**
+     * A equipe de um código (`C1`, `A2`…) como ela está na estrutura — com o
+     * encarregado e os fiscais, que a lista rasa de `equipes()` não carrega.
+     *
+     * Existe para quem precisa NOMEAR quem agiu: o trâmite avançado de uma
+     * denúncia diz "vistoria feita pelo fiscal da equipe", e o nome tem de sair
+     * daqui. Escrito no dado da denúncia, ele daria dois donos ao mesmo cadastro
+     * — e um fiscal removido da equipe continuaria assinando vistoria.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function equipeDoCodigo(?string $codigo): ?array
+    {
+        if ($codigo === null || trim($codigo) === '') {
+            return null;
+        }
+
+        $procurado = mb_strtoupper(trim($codigo));
+
+        foreach (self::cruas() as $area) {
+            if (mb_strtoupper((string) $area['equipe']) === $procurado) {
+                return $area;
+            }
+        }
+
+        return null;
+    }
+
     /** Os códigos de equipe existentes — a lista que a validação aceita. */
     public static function codigosDeEquipe(): array
     {

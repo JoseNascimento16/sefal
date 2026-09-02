@@ -2,6 +2,8 @@
 
 namespace App\Support\Prototipo;
 
+use App\Support\Texto;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Session;
@@ -66,6 +68,26 @@ class DenunciasFicticias
 
     /** As situações em que ela espera o DIRECIONAMENTO do gestor da área. */
     public const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada à área'];
+
+    /**
+     * Os papéis que um passo de trâmite pode declarar em `quem`.
+     *
+     * O passo declara o PAPEL, e o nome da pessoa é resolvido contra
+     * `config/prototipo_estrutura.php` na hora de servir. É a lista que o teste
+     * do catálogo confere: papel escrito errado no arquivo de dados apareceria
+     * na tela como um passo sem autor, e ninguém olha um trâmite de dez linhas
+     * procurando o que falta.
+     */
+    public const PAPEIS_DO_TRAMITE = [
+        'integracao',
+        'administrativo',
+        'gestor',
+        'encarregado',
+        'equipe',
+        'fiscal',
+        'fiscal2',
+        'fiscal3',
+    ];
 
     /**
      * As denúncias de UM canal, da mais recente para a mais antiga.
@@ -407,6 +429,8 @@ class DenunciasFicticias
             $canal = (string) $bruta['canal'];
             $nomeDoCanal = (string) config("prototipo_denuncias.canais.{$canal}.nome", $canal);
 
+            $tramites = self::tramitesDePartida($bruta, $recebidaEm->format('Y-m-d H:i'), $nomeDoCanal);
+
             $denuncia = [
                 // Os campos que TODA denúncia tem, com o valor neutro declarado:
                 // o front lê `d.operacao` de qualquer linha, e uma chave ausente
@@ -425,7 +449,13 @@ class DenunciasFicticias
                 'recebida_em' => $recebidaEm->format('Y-m-d'),
                 'recebida_em_hora' => $recebidaEm->format('Y-m-d H:i'),
                 'prazo' => now()->addDays((int) ($bruta['prazo_em_dias'] ?? 0))->format('Y-m-d'),
-                'tramites' => self::tramitesDePartida($bruta, $recebidaEm->format('Y-m-d H:i'), $nomeDoCanal),
+                'tramites' => $tramites,
+                // COMO a vistoria terminou. Sai do trâmite — do último passo que
+                // declarou desfecho —, e não de um campo escrito ao lado da
+                // situação: a mesma informação com dois donos divergiria, e o
+                // resumo continuaria dizendo "notificado" depois de o trâmite
+                // registrar "regularizado no local".
+                'desfecho' => self::desfechoDoTramite($tramites),
             ];
 
             unset($denuncia['recebida_ha_horas'], $denuncia['prazo_em_dias']);
@@ -435,39 +465,56 @@ class DenunciasFicticias
     }
 
     /**
-     * O histórico que a denúncia já traria, montado a partir da situação em que
-     * ela aparece no arquivo de dados.
+     * O histórico que a denúncia já traria ao abrir a tela.
+     *
+     * Duas formas, e cada denúncia usa UMA (ver o cabeçalho de
+     * `config/prototipo_denuncias.php`):
+     *
+     *  • **declarada** — a denúncia que já foi a campo traz `tramites` escritos
+     *    passo a passo, porque cada passo tem conteúdo próprio (o que o fiscal
+     *    encontrou, as fotos, o documento lavrado). Isso não se deriva de uma
+     *    palavra de situação;
+     *  • **derivada** — a que ainda não foi a campo declara só a `situacao`, e o
+     *    histórico dela é montado aqui. Cada passo produziu uma DECISÃO e nada
+     *    mais, e derivar evita repetir a mesma sequência em vinte registros.
      *
      * A primeira linha é sempre o RECEBIMENTO POR INTEGRAÇÃO, e ela é assinada
      * pelo canal, não por pessoa: é o que deixa visível que ninguém digitou
      * aquilo aqui dentro.
      *
      * @param  array<string, mixed>  $bruta
-     * @return list<array<string, string>>
+     * @return list<array<string, mixed>>
      */
     private static function tramitesDePartida(array $bruta, string $recebidaEm, string $nomeDoCanal): array
     {
+        $declarados = $bruta['tramites'] ?? null;
+
+        if (is_array($declarados) && $declarados !== []) {
+            return self::tramitesDeclarados($declarados, $bruta, $recebidaEm, $nomeDoCanal);
+        }
+
         $situacao = (string) ($bruta['situacao'] ?? 'Recebida');
         $area = (string) ($bruta['area'] ?? '');
         $equipe = (string) ($bruta['equipe'] ?? '');
 
-        $tramites = [[
+        $tramites = [self::passo([
             'em' => $recebidaEm,
             'quem' => "Integração · {$nomeDoCanal}",
             'o_que' => 'Recebida por integração',
-            'detalhe' => "Entregue automaticamente pelo {$nomeDoCanal} sob o número "
-                .((string) $bruta['protocolo_origem']).'. Nenhum dado foi digitado no SEFAL.',
-        ]];
+            'detalhe' => self::detalheDaIntegracao($bruta, $nomeDoCanal),
+            'situacao' => 'Recebida',
+        ])];
 
         $passoDepois = static fn (int $horas): string => Date::parse($recebidaEm)->addHours($horas)->format('Y-m-d H:i');
 
         if (in_array($situacao, ['Devolvida', 'Arquivada'], true)) {
-            $tramites[] = [
+            $tramites[] = self::passo([
                 'em' => $passoDepois(6),
                 'quem' => 'Setor Administrativo',
                 'o_que' => $situacao === 'Arquivada' ? 'Arquivada na triagem' : 'Devolvida ao canal de origem',
                 'detalhe' => ((string) ($bruta['motivo'] ?? '')).' — '.((string) ($bruta['justificativa'] ?? '')),
-            ];
+                'situacao' => $situacao,
+            ]);
 
             return $tramites;
         }
@@ -476,62 +523,414 @@ class DenunciasFicticias
             return $tramites;
         }
 
-        $tramites[] = [
+        $tramites[] = self::passo([
             'em' => $passoDepois(5),
             'quem' => 'Setor Administrativo',
             'o_que' => 'Triada e encaminhada à área',
             'detalhe' => "Encaminhada à {$area} para direcionamento do gestor.",
-        ];
+            'situacao' => 'Encaminhada à área',
+        ]);
 
         if ($situacao === 'Encaminhada à área') {
             return $tramites;
         }
 
+        $gestor = self::pessoaDoPasso('gestor', $bruta, $nomeDoCanal)['texto'];
+
         if ($situacao === 'Em operação') {
-            $tramites[] = [
+            $tramites[] = self::passo([
                 'em' => $passoDepois(9),
-                'quem' => 'Gestor da '.$area,
+                'quem' => $gestor,
                 'o_que' => 'Incluída em operação',
                 'detalhe' => 'Anexada à '.((string) ($bruta['operacao'] ?? ''))
                     .($equipe === '' ? '.' : ", executada pela Equipe {$equipe}."),
-            ];
+                'situacao' => 'Em operação',
+            ]);
         } else {
-            $tramites[] = [
+            $tramites[] = self::passo([
                 'em' => $passoDepois(9),
-                'quem' => 'Gestor da '.$area,
+                'quem' => $gestor,
                 'o_que' => 'Direcionada à equipe',
                 'detalhe' => "Direcionada à Equipe {$equipe} para vistoria."
                     .(($bruta['justificativa_equipe'] ?? null) !== null
                         ? ' '.((string) $bruta['justificativa_equipe'])
                         : ''),
-            ];
+                'situacao' => 'Direcionada à equipe',
+            ]);
         }
 
         if ($situacao === 'Em campo') {
-            $tramites[] = [
+            $tramites[] = self::passo([
                 'em' => $passoDepois(24),
                 'quem' => "Equipe {$equipe}",
                 'o_que' => 'Em campo',
                 'detalhe' => 'A equipe recebeu a denúncia no aplicativo e está em rota para o local.',
-            ];
-        }
-
-        if ($situacao === 'Concluída') {
-            $tramites[] = [
-                'em' => $passoDepois(24),
-                'quem' => "Equipe {$equipe}",
-                'o_que' => 'Em campo',
-                'detalhe' => 'A equipe recebeu a denúncia no aplicativo e foi ao local.',
-            ];
-            $tramites[] = [
-                'em' => $passoDepois(30),
-                'quem' => "Equipe {$equipe}",
-                'o_que' => 'Concluída',
-                'detalhe' => 'Vistoria registrada em campo, com desfecho lançado pelo aplicativo do fiscal.',
-            ];
+                'situacao' => 'Em campo',
+            ]);
         }
 
         return $tramites;
+    }
+
+    /**
+     * Os passos DECLARADOS de uma denúncia que já andou até a vistoria.
+     *
+     * Duas coisas são resolvidas aqui, e não escritas no arquivo de dados:
+     *
+     *  • a **hora** de cada passo, somada ao recebimento (`ha_horas`). Data fixa
+     *    envelhece — uma semana depois da demonstração o trâmite inteiro estaria
+     *    no passado remoto, e o prazo de uma notificação apareceria vencido
+     *    quando o caso é justamente o de prazo correndo;
+     *  • **quem** agiu: o passo declara o PAPEL e o nome sai da estrutura de
+     *    áreas e equipes. Nome escrito aqui daria dois donos ao mesmo cadastro, e
+     *    um fiscal removido da equipe continuaria assinando vistoria.
+     *
+     * @param  list<array<string, mixed>>  $passos
+     * @param  array<string, mixed>  $bruta
+     * @return list<array<string, mixed>>
+     */
+    private static function tramitesDeclarados(array $passos, array $bruta, string $recebidaEm, string $nomeDoCanal): array
+    {
+        $resolvidos = [];
+
+        foreach ($passos as $passo) {
+            $papel = (string) ($passo['quem'] ?? 'administrativo');
+            $integracao = $papel === 'integracao';
+            $em = Date::parse($recebidaEm)->addHours((int) ($passo['ha_horas'] ?? 0));
+            $pessoa = self::pessoaDoPasso($papel, $bruta, $nomeDoCanal);
+
+            $resolvidos[] = self::passo([
+                'em' => $em->format('Y-m-d H:i'),
+                'quem' => $pessoa['texto'],
+                // O passo de integração não repete o texto em cada denúncia: ele
+                // é o MESMO para todas, e escrito 30 vezes divergiria na primeira
+                // correção de redação.
+                'o_que' => (string) ($passo['o_que'] ?? ($integracao ? 'Recebida por integração' : '')),
+                'detalhe' => (string) ($passo['detalhe'] ?? ($integracao ? self::detalheDaIntegracao($bruta, $nomeDoCanal) : '')),
+                'situacao' => (string) ($passo['situacao'] ?? ($integracao ? 'Recebida' : '')),
+                'desfecho' => isset($passo['desfecho']) ? (string) $passo['desfecho'] : null,
+                'campos' => array_values((array) ($passo['campos'] ?? [])),
+                'campo' => isset($passo['campo']) ? self::campoResolvido((array) $passo['campo']) : null,
+                'documento' => isset($passo['documento'])
+                    ? self::documentoResolvido((array) $passo['documento'], $bruta, $em, $pessoa['assinante'])
+                    : null,
+            ]);
+        }
+
+        return $resolvidos;
+    }
+
+    /**
+     * O passo do trâmite com TODAS as chaves declaradas, mesmo as vazias.
+     *
+     * A tela lê `t.documento` e `t.campo` de qualquer passo, e chave ausente em
+     * metade deles viraria leitura defensiva espalhada pelo front — o mesmo
+     * motivo dos valores neutros da própria denúncia.
+     *
+     * @param  array<string, mixed>  $dados
+     * @return array<string, mixed>
+     */
+    private static function passo(array $dados): array
+    {
+        return [
+            'situacao' => '',
+            'desfecho' => null,
+            'campos' => [],
+            'campo' => null,
+            'documento' => null,
+            ...$dados,
+        ];
+    }
+
+    /** O texto do passo de recebimento — um só, para todas as denúncias. */
+    private static function detalheDaIntegracao(array $bruta, string $nomeDoCanal): string
+    {
+        return "Entregue automaticamente pelo {$nomeDoCanal} sob o número "
+            .((string) $bruta['protocolo_origem']).'. Nenhum dado foi digitado no SEFAL.';
+    }
+
+    /**
+     * QUEM agiu num passo, resolvido a partir do papel.
+     *
+     * `texto` é o que a tela mostra na linha do trâmite; `assinante` é o que vai
+     * na linha "Agente fiscal" do documento — lá o impresso pede nome E
+     * matrícula, e é a matrícula que identifica o agente numa defesa.
+     *
+     * ⚠️ As palavras de papel são NEUTRAS de propósito ("gestão da Área 5",
+     * "chefia da Equipe C1"). A estrutura tem homens e mulheres nos mesmos
+     * cargos — Andréa Rocha é encarregada da B2, Lourdes Figueiredo Sales
+     * responde pela Área 5 —, e "Gestor da Área 5" fixo no molde erra o gênero de
+     * metade da estrutura. Concordância é do dado, não do texto.
+     *
+     * @param  array<string, mixed>  $bruta
+     * @return array{texto: string, assinante: string}
+     */
+    private static function pessoaDoPasso(string $papel, array $bruta, string $nomeDoCanal): array
+    {
+        $area = (string) ($bruta['area'] ?? '');
+        $codigo = (string) ($bruta['equipe'] ?? '');
+        $equipe = EstruturaFicticia::equipeDoCodigo($codigo);
+
+        if ($papel === 'integracao') {
+            return ['texto' => "Integração · {$nomeDoCanal}", 'assinante' => $nomeDoCanal];
+        }
+
+        if ($papel === 'gestor') {
+            $nome = trim((string) (EstruturaFicticia::gestoresPorArea()[$area]['nome'] ?? ''));
+
+            return $nome === ''
+                // Área sem gestor registrado: o passo continua tendo autor
+                // institucional. Devolver texto vazio deixaria a linha do trâmite
+                // sem assinatura, e é justamente o que o módulo existe para não
+                // fazer.
+                ? ['texto' => 'Gestão da '.($area === '' ? 'área' : $area), 'assinante' => 'Gestão da área']
+                : ['texto' => "{$nome} · gestão da ".($area === '' ? 'área' : $area), 'assinante' => $nome];
+        }
+
+        if ($papel === 'encarregado') {
+            $nome = trim((string) ($equipe['encarregado'] ?? ''));
+
+            return $nome === ''
+                ? ['texto' => "Equipe {$codigo}", 'assinante' => "Equipe {$codigo}"]
+                : ['texto' => "{$nome} · chefia da Equipe {$codigo}", 'assinante' => $nome];
+        }
+
+        if (str_starts_with($papel, 'fiscal')) {
+            // `fiscal` é o primeiro da equipe, `fiscal2` o segundo, e assim por
+            // diante: é o que permite ao retorno de fiscalização ser feito por
+            // outra pessoa da mesma equipe, que é o que acontece em rua.
+            $indice = max(0, (int) (mb_substr($papel, 6) ?: '1') - 1);
+            $fiscais = array_values((array) ($equipe['fiscais'] ?? []));
+            $fiscal = (array) ($fiscais[$indice] ?? $fiscais[0] ?? []);
+            $nome = trim((string) ($fiscal['nome'] ?? ''));
+            $matricula = trim((string) ($fiscal['matricula'] ?? ''));
+
+            if ($nome === '') {
+                return ['texto' => "Equipe {$codigo}", 'assinante' => "Equipe {$codigo}"];
+            }
+
+            return [
+                'texto' => "{$nome} · Equipe {$codigo}",
+                'assinante' => $matricula === '' ? $nome : "{$nome} — matrícula {$matricula}",
+            ];
+        }
+
+        if ($papel === 'equipe') {
+            return ['texto' => "Equipe {$codigo}", 'assinante' => "Equipe {$codigo}"];
+        }
+
+        return ['texto' => 'Setor Administrativo', 'assinante' => 'Setor Administrativo'];
+    }
+
+    /**
+     * O que o fiscal registrou em campo, com todas as chaves declaradas.
+     *
+     * `gps` e `precisao_m` vêm juntos porque um ponto ruim é pior que um ponto
+     * ausente disfarçado de bom — a lei do domínio que vale no aplicativo vale na
+     * leitura aqui.
+     *
+     * @param  array<string, mixed>  $campo
+     * @return array<string, mixed>
+     */
+    private static function campoResolvido(array $campo): array
+    {
+        $campo['fotos'] = array_values((array) ($campo['fotos'] ?? []));
+
+        return [
+            'encontrado' => null,
+            'relato' => '',
+            'gps' => null,
+            'precisao_m' => null,
+            'ambulante' => null,
+            'equipamento' => null,
+            ...$campo,
+        ];
+    }
+
+    /**
+     * O documento lavrado em campo, montado na ORDEM DO PAPEL.
+     *
+     * A montagem mora aqui, e não no arquivo de dados, pelo mesmo motivo que ela
+     * mora numa função só no aplicativo do fiscal: a ordem dos campos e a
+     * redação das caixas são do FORMULÁRIO LEGAL. O dado semeado declara o que
+     * varia (quem, onde, quais motivos, qual prazo) e a redação sai de
+     * `config/prototipo_documentos_campo.php`, que é o único dono dela.
+     *
+     * ⚠️ Nenhuma DATA entra em `campos`. A hora da lavratura e o vencimento saem
+     * em chave própria (`emitido_em`, `vence_em`) porque quem escreve data em
+     * dd/mm/aaaa é a TELA — data ISO no meio de um texto livre chegaria à tela
+     * sem ninguém poder distingui-la de um nome de rua.
+     *
+     * @param  array<string, mixed>  $doc
+     * @param  array<string, mixed>  $bruta
+     * @return array<string, mixed>
+     */
+    private static function documentoResolvido(array $doc, array $bruta, CarbonInterface $em, string $agente): array
+    {
+        $tipo = (string) ($doc['tipo'] ?? 'np');
+        $ou = static fn (mixed $valor): string => trim((string) ($valor ?? '')) === '' ? '—' : trim((string) $valor);
+
+        $comum = [
+            'tipo' => $tipo,
+            'numero' => (string) ($doc['numero'] ?? ''),
+            'titulo' => (string) config("prototipo_documentos_campo.titulos.{$tipo}", ''),
+            'emitido_em' => $em->format('Y-m-d H:i'),
+            'agente' => $agente,
+            'assinaturas' => array_values(array_map(static fn (array $a): array => [
+                'nome' => null,
+                ...$a,
+            ], (array) ($doc['assinaturas'] ?? []))),
+        ];
+
+        if ($tipo === 'aa') {
+            $fundamentacao = (array) config('prototipo_documentos_campo.fundamentacao', []);
+            $segub = (array) config('prototipo_documentos_campo.segub', []);
+            $prazo = (array) config('prototipo_documentos_campo.prazos_guarda.'.((string) ($doc['prazo_guarda'] ?? '')), []);
+            $itens = array_values((array) ($doc['itens'] ?? []));
+            $decretos = array_values((array) ($doc['decretos'] ?? []));
+            $volumes = array_sum(array_map(static fn (array $i): int => (int) ($i['quantidade'] ?? 0), $itens));
+
+            return [
+                ...$comum,
+                // O Auto de Apreensão não tem prazo de regularização: o prazo dele
+                // é o de GUARDA dos bens, que não é conta a fazer sobre a
+                // denúncia. Por isso ele não devolve vencimento.
+                'vence_em' => null,
+                'prazo_rotulo' => null,
+                'campos' => [
+                    ['rotulo' => 'Referência', 'valor' => self::referenciaDoDocumento($bruta)],
+                    ['rotulo' => 'Sr.(a)', 'valor' => $ou($doc['notificado'] ?? null)],
+                    ['rotulo' => 'CPF nº', 'valor' => $ou($doc['cpf'] ?? null)],
+                    ['rotulo' => 'Equipamento tipo', 'valor' => $ou($doc['equipamento'] ?? null)],
+                    ['rotulo' => 'Como atividade', 'valor' => $ou($doc['atividade'] ?? null)],
+                    ['rotulo' => 'Localizado na', 'valor' => $ou($doc['local'] ?? null)],
+                    ['rotulo' => 'Fundamento', 'valor' => $ou($fundamentacao['lei'] ?? null)],
+                    // O impresso põe a desinência de plural entre parênteses
+                    // nestes dois rótulos — a folha é impressa em branco e não
+                    // sabe quantos decretos ou artigos serão citados. Aqui
+                    // sabemos: a quantidade está na mão, e empurrar a
+                    // concordância para quem lê é a forma que o projeto proíbe
+                    // (ver `PluralDaInterfaceTest`, que varre até o comentário —
+                    // por isso a forma errada não aparece escrita aqui).
+                    [
+                        'rotulo' => Texto::plural(count($decretos), 'Decreto', 'Decretos'),
+                        'valor' => $ou(implode('; ', $decretos)),
+                    ],
+                    ['rotulo' => 'Artigos', 'valor' => $ou($doc['artigos'] ?? ($fundamentacao['artigos_padrao'] ?? null))],
+                    ['rotulo' => 'Portaria nº', 'valor' => $ou($doc['portaria'] ?? ($fundamentacao['portaria_padrao'] ?? null))],
+                    ['rotulo' => 'Guarda', 'valor' => $ou(($segub['nome'] ?? '').' — '.($segub['endereco'] ?? ''))],
+                    ['rotulo' => 'Prazo máximo de guarda', 'valor' => $ou(
+                        isset($prazo['rotulo']) ? $prazo['rotulo'].' ('.($prazo['extenso'] ?? '').')' : null,
+                    )],
+                    ['rotulo' => 'Após o prazo, os bens serão', 'valor' => $ou(
+                        config('prototipo_documentos_campo.destinacoes_guarda.'.((string) ($doc['destinacao'] ?? ''))),
+                    )],
+                ],
+                'listas' => [[
+                    'titulo' => 'Discriminação do material apreendido',
+                    'itens' => array_map(
+                        static fn (array $i): string => ((int) ($i['quantidade'] ?? 0)).' '
+                            .((string) ($i['unidade'] ?? 'un')).' — '.((string) ($i['descricao'] ?? '')),
+                        $itens,
+                    ),
+                ]],
+                'rodape' => Texto::contar($volumes, 'volume', 'volumes').' '
+                    .Texto::plural($volumes, 'recolhido e encaminhado', 'recolhidos e encaminhados')
+                    .' ao '.((string) ($segub['nome'] ?? 'SEGUB')).' — '.((string) ($segub['endereco'] ?? '')),
+            ];
+        }
+
+        $prazo = (array) config('prototipo_documentos_campo.prazos_np.'.((string) ($doc['prazo'] ?? '')), []);
+        $dias = (int) ($prazo['dias'] ?? 0);
+
+        $motivos = [];
+
+        foreach ((array) ($doc['motivos'] ?? []) as $chave) {
+            $motivo = (array) config('prototipo_documentos_campo.motivos_np.'.((string) $chave), []);
+
+            if ($motivo === []) {
+                continue;
+            }
+
+            $complemento = trim((string) ($doc['complementos'][(string) $chave] ?? ''));
+            $motivos[] = (string) $motivo['texto'].($complemento === '' ? '' : ": {$complemento}");
+        }
+
+        // A 20ª caixa do impresso é "Outros", campo livre — e ela vai no fim da
+        // lista, como está no papel.
+        if (trim((string) ($doc['outros'] ?? '')) !== '') {
+            $motivos[] = 'Outros: '.trim((string) $doc['outros']);
+        }
+
+        return [
+            ...$comum,
+            'vence_em' => $dias > 0 ? $em->addDays($dias)->format('Y-m-d') : null,
+            'prazo_rotulo' => isset($prazo['rotulo']) ? (string) $prazo['rotulo'] : null,
+            'campos' => [
+                ['rotulo' => 'Referência', 'valor' => self::referenciaDoDocumento($bruta)],
+                ['rotulo' => 'Nome', 'valor' => $ou($doc['notificado'] ?? null)],
+                ['rotulo' => 'Endereço', 'valor' => $ou($doc['endereco'] ?? null)],
+                ['rotulo' => 'Inscrição / Processo nº', 'valor' => $ou($doc['inscricao'] ?? null)],
+                ['rotulo' => 'Atividade', 'valor' => $ou($doc['atividade'] ?? null)],
+                ['rotulo' => 'Local da atividade', 'valor' => $ou($doc['local'] ?? null)],
+                ['rotulo' => 'Barraca / Box / Lote / Qda', 'valor' => $ou($doc['equipamento'] ?? null)],
+            ],
+            'listas' => [
+                [
+                    'titulo' => Texto::plural(count($motivos), 'Motivo assinalado', 'Motivos assinalados'),
+                    'itens' => $motivos,
+                ],
+                [
+                    'titulo' => 'Penalidades previstas',
+                    'itens' => array_values(array_filter(array_map(
+                        static fn (string $chave): ?string => config('prototipo_documentos_campo.sancoes_np.'.$chave),
+                        array_map('strval', (array) ($doc['sancoes'] ?? [])),
+                    ))),
+                ],
+            ],
+            'rodape' => (string) config('prototipo_documentos_campo.rodape', ''),
+        ];
+    }
+
+    /**
+     * O campo REFERÊNCIA do impresso: o processo que gerou a ida a campo.
+     *
+     * No bloco de papel ele fica em branco quando a fiscalização é avulsa. Aqui
+     * ele nunca está em branco — todo documento desta tela nasceu de uma
+     * denúncia —, e é ele que amarra o papel na mão do notificado ao registro
+     * que a Retaguarda está lendo.
+     *
+     * @param  array<string, mixed>  $bruta
+     */
+    private static function referenciaDoDocumento(array $bruta): string
+    {
+        $canal = (string) ($bruta['canal'] ?? '');
+        $nome = (string) config("prototipo_denuncias.canais.{$canal}.nome", $canal);
+
+        return sprintf('DEN-%04d', (int) ($bruta['id'] ?? 0))
+            .' · denúncia do '.$nome.' '.((string) ($bruta['protocolo_origem'] ?? ''));
+    }
+
+    /**
+     * O desfecho da denúncia: o do ÚLTIMO passo que declarou um.
+     *
+     * "Último" e não "primeiro" porque a vistoria pode ter mais de um desfecho ao
+     * longo da vida do registro — notificado, depois regularizado —, e o que vale
+     * é onde a coisa parou.
+     *
+     * @param  list<array<string, mixed>>  $tramites
+     */
+    private static function desfechoDoTramite(array $tramites): ?string
+    {
+        $desfecho = null;
+
+        foreach ($tramites as $passo) {
+            if (isset($passo['desfecho']) && trim((string) $passo['desfecho']) !== '') {
+                $desfecho = (string) $passo['desfecho'];
+            }
+        }
+
+        return $desfecho;
     }
 
     /**

@@ -324,6 +324,11 @@ class DenunciasController extends Controller
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
             // uma opção que o servidor recusa.
             'situacoes' => array_values((array) config('prototipo_denuncias.situacoes', [])),
+            // Os desfechos de vistoria — a tela usa para a busca reconhecer
+            // "regularizado no local" e "nada encontrado" como faceta. Vem do
+            // servidor pela mesma razão dos outros catálogos: escrito na tela,
+            // um dia reconheceria um desfecho que já não existe.
+            'desfechos' => array_values((array) config('prototipo_denuncias.desfechos', [])),
             'motivos' => array_values((array) config('prototipo_denuncias.motivos_de_devolucao', [])),
             'destinos' => array_values((array) config('prototipo_denuncias.destinos_de_retorno', [])),
             'equipes' => EstruturaFicticia::equipes(),
