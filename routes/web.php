@@ -186,4 +186,21 @@ Route::middleware(['auth'])->group(function () {
         ->name('retaguarda.exportar-listagem');
 });
 
+/*
+ * PROTÓTIPO do aplicativo do fiscal (PWA).
+ *
+ * Não é tela da Retaguarda: é uma aplicação de página única, servida por uma
+ * casca própria (`resources/views/pwa.blade.php`), com dados FICTÍCIOS escritos
+ * no próprio navegador. Enquanto for protótipo ela não tem servidor por trás —
+ * nada é lido do banco e NADA é gravado —, e por isso mora fora da autenticação
+ * e responde apenas a GET.
+ *
+ * O caminho é livre depois de `/app` porque a navegação interna é do lado do
+ * cliente: quem recarregar a página em qualquer ponto do fluxo recebe a mesma
+ * casca, e o aplicativo se reencontra sozinho.
+ */
+Route::get('app/{caminho?}', fn () => view('pwa'))
+    ->where('caminho', '.*')
+    ->name('pwa');
+
 require __DIR__.'/settings.php';
