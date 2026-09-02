@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
+use App\Http\Controllers\Retaguarda\AreasEEquipesController;
 use App\Http\Controllers\Retaguarda\CadastroPermissionarioController;
+use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\InicioController;
 use App\Http\Controllers\Retaguarda\LogsController;
@@ -138,6 +140,52 @@ Route::middleware(['auth'])->group(function () {
             ->name('update')->whereNumber('permissionario');
         Route::delete('{permissionario}', [CadastroPermissionarioController::class, 'destroy'])
             ->name('destroy')->whereNumber('permissionario');
+    });
+
+    /*
+     * Caixa de Entrada do Administrativo — PROTÓTIPO.
+     *
+     * A porta por onde a demanda de fora entra: e-Salvador, Fala Salvador 156,
+     * pedido de nova licença e ofício chegam em PAPEL, e é aqui que o
+     * administrativo digita, decide e encaminha à equipe da área do bairro.
+     *
+     * O primeiro trecho do caminho é o slug da tela (`caixa-de-entrada`), de onde
+     * as guardas deduzem a permissão: as mutações abaixo nascem protegidas pela
+     * convenção de nomes (`.store` inclui, o resto opera) — nada a declarar em
+     * `config/permissao_acoes.php`.
+     *
+     * O identificador vai como NÚMERO: o WAF da Prefeitura barra assinatura de
+     * SQL na URL, e protocolo é texto.
+     */
+    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.caixa-de-entrada.')->group(function () {
+        Route::get('/', [CaixaDeEntradaController::class, 'index'])->name('index');
+        Route::post('/', [CaixaDeEntradaController::class, 'store'])->name('store');
+        Route::post('{demanda}/encaminhar', [CaixaDeEntradaController::class, 'encaminhar'])
+            ->name('encaminhar')->whereNumber('demanda');
+        Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
+            ->name('devolver')->whereNumber('demanda');
+        // Só existe porque é protótipo: devolve a caixa ao estado de demonstração.
+        Route::post('reiniciar', [CaixaDeEntradaController::class, 'reiniciar'])->name('reiniciar');
+    });
+
+    /*
+     * Áreas e Equipes — PROTÓTIPO da estrutura permanente de fiscalização.
+     *
+     * Área > Equipe > bloco de bairros. É desta estrutura que sai a derivação
+     * bairro → equipe usada pela Caixa de Entrada, então as duas telas leem a
+     * MESMA fonte (`App\Support\Prototipo\EstruturaFicticia`): duplicar a lista
+     * faria a sugestão discordar do cadastro no primeiro ajuste.
+     */
+    Route::prefix('retaguarda/areas-e-equipes')->name('retaguarda.areas-e-equipes.')->group(function () {
+        Route::get('/', [AreasEEquipesController::class, 'index'])->name('index');
+        Route::post('/', [AreasEEquipesController::class, 'store'])->name('store');
+        Route::put('{area}', [AreasEEquipesController::class, 'update'])
+            ->name('update')->whereNumber('area');
+        Route::delete('{area}', [AreasEEquipesController::class, 'destroy'])
+            ->name('destroy')->whereNumber('area');
+        Route::post('{area}/bairros', [AreasEEquipesController::class, 'bairros'])
+            ->name('bairros')->whereNumber('area');
+        Route::post('reiniciar', [AreasEEquipesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*

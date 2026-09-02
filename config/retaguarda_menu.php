@@ -164,6 +164,29 @@ return [
                     // Planejar operação é ato de gestão: o fiscal executa em rua.
                     'setores' => ['administrador', 'gestor'],
                 ],
+                /*
+                 * Caixa de Entrada do Administrativo — PROTÓTIPO (reunião com o
+                 * cliente, 02/09/2026).
+                 *
+                 * Vem ANTES de "Fiscalizações" porque é o começo da cadeia: a
+                 * demanda de fora (e-Salvador, Fala Salvador 156, pedido de nova
+                 * licença, ofício) entra por aqui, é triada e só então vira
+                 * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
+                 *
+                 * Concessão inicial: administrador e gestor. O FISCAL não entra —
+                 * triar o que chega, encaminhar e devolver com justificativa é ato
+                 * administrativo, e a demanda encaminhada chega a ele pelo
+                 * aplicativo, já dirigida. Dar-lhe a caixa permitiria escolher o
+                 * próprio trabalho e arquivar o que não quisesse atender.
+                 */
+                [
+                    'rotulo' => 'Caixa de Entrada',
+                    'rota' => 'retaguarda.caixa-de-entrada.index',
+                    'icone' => 'caixa',
+                    'slug' => 'caixa-de-entrada',
+                    'curto' => 'ENTRADA',
+                    'setores' => ['administrador', 'gestor'],
+                ],
                 [
                     'rotulo' => 'Fiscalizações',
                     'rota' => 'retaguarda.fiscalizacoes.index',
@@ -198,6 +221,34 @@ return [
                     'curto' => 'CALOR',
                     // Concentração histórica serve para PLANEJAR: é leitura de
                     // gestão, não de quem está na calçada agora.
+                    'setores' => ['administrador', 'gestor'],
+                ],
+            ],
+        ],
+
+        /*
+         * Estrutura — como a fiscalização se organiza para cobrir a cidade.
+         *
+         * Seção PRÓPRIA, e não um item dentro de Parametrização, por duas razões:
+         * a Parametrização inteira está oculta hoje (decisão do dono, 27/08), e
+         * Área/Equipe/bloco de bairros não é uma lista de escolha como as outras —
+         * é a organização do trabalho, e é dela que sai a derivação bairro →
+         * equipe que a Caixa de Entrada usa para sugerir o destino de cada
+         * demanda. "A operação é evento; a equipe é organização."
+         *
+         * O fiscal não entra: quem desenha a divisão da cidade e nomeia
+         * encarregado é a gestão.
+         */
+        [
+            'rotulo' => 'Estrutura',
+            'vazio' => 'A estrutura da fiscalização aparece aqui quando você tiver acesso a ela.',
+            'itens' => [
+                [
+                    'rotulo' => 'Áreas e Equipes',
+                    'rota' => 'retaguarda.areas-e-equipes.index',
+                    'icone' => 'areas',
+                    'slug' => 'areas-e-equipes',
+                    'curto' => 'ÁREAS',
                     'setores' => ['administrador', 'gestor'],
                 ],
             ],

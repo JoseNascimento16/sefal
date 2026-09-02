@@ -80,6 +80,18 @@ class InicioController extends Controller
             'rota' => 'retaguarda.operacoes.index',
             'slug' => 'operacoes',
         ],
+        /*
+         * A Caixa de Entrada vem ANTES de Fiscalizações, como no menu: é o começo
+         * da cadeia — a demanda de fora entra, é triada, e só então vira trabalho
+         * de campo. A ordem dos atalhos conta essa sequência.
+         */
+        [
+            'chave' => 'caixa',
+            'titulo' => 'Caixa de Entrada',
+            'descricao' => 'O que chega de fora em papel: registre, encaminhe à equipe ou devolva.',
+            'rota' => 'retaguarda.caixa-de-entrada.index',
+            'slug' => 'caixa-de-entrada',
+        ],
         [
             'chave' => 'fiscalizacoes',
             'titulo' => 'Fiscalizações',
@@ -100,6 +112,13 @@ class InicioController extends Controller
             'descricao' => 'Onde a irregularidade se concentra, para a operação ir aonde precisa.',
             'rota' => 'retaguarda.mapa-de-calor.index',
             'slug' => 'mapa-de-calor',
+        ],
+        [
+            'chave' => 'areas',
+            'titulo' => 'Áreas e Equipes',
+            'descricao' => 'A divisão da cidade: área, equipe, encarregado e o bloco de bairros.',
+            'rota' => 'retaguarda.areas-e-equipes.index',
+            'slug' => 'areas-e-equipes',
         ],
     ];
 

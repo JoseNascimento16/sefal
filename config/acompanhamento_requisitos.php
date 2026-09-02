@@ -52,6 +52,19 @@ $origemSpec = 'Sem requisito escrito — origem: spec de design 2026-08-24 + dec
 $origemStub = 'Sem requisito escrito — origem: decisão do dono 2026-08-27 (o caminho do trabalho '
     .'aparece no menu antes do conteúdo).';
 
+/*
+ * A origem dos dois módulos que nasceram da reunião com o cliente de 02/09/2026 e
+ * foram entregues como PROTÓTIPO — tela navegável com dados fictícios, para o
+ * dono aprovar a forma antes de existir tabela, migration e regra.
+ *
+ * O aviso de que é protótipo fica na nota de cada linha, e não só aqui: quem lê a
+ * tela de acompanhamento tem de saber que aquelas duas linhas não são sistema
+ * pronto — senão a cobertura passa a contar como entregue o que ainda não grava
+ * nada.
+ */
+$origemPrototipo = 'Sem requisito escrito — origem: reunião com o cliente 2026-09-02 '
+    .'(docs/cenario-2026-09-02-reuniao-cliente.md) + documentos do cliente. Entregue como PROTÓTIPO.';
+
 return [
 
     'telas' => [
@@ -295,6 +308,48 @@ return [
                 .'entrega futura, e por ora o gestor troca a situação à mão. Nome e apelido aceitam nome '
                 .'de gente, não marcação nem símbolo. O fiscal CONSULTA o cadastro pela Retaguarda: '
                 .'incluir e excluir por lá são da gestão.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Caixa de Entrada do Administrativo',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.caixa-de-entrada.index',
+            'breadcrumb' => 'Fiscalização › Caixa de Entrada',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemPrototipo.' Porta por onde a demanda de FORA entra: e-Salvador, Fala '
+                .'Salvador 156, pedido de nova licença e ofício chegam em papel e são digitados aqui. '
+                .'Denúncia pode ser ANÔNIMA. O bairro sugere a equipe responsável (a estrutura Área › '
+                .'Equipe), e quem confirma é o administrativo — bairro pertencente a duas áreas tem duas '
+                .'respostas certas. Duas saídas: registrar e encaminhar (vira trabalho dirigido da '
+                .'equipe) ou registrar e devolver/arquivar, com motivo de lista MAIS justificativa por '
+                .'escrito, porque é ato administrativo. Cada decisão acrescenta uma linha ao trâmite da '
+                .'demanda (quem, quando, o quê). ⚠️ É PROTÓTIPO: não há tabela nem gravação — as '
+                .'demandas de partida vêm de config/prototipo_caixa_entrada.php e as decisões vivem na '
+                .'sessão de quem navega. Pendências que isto abre: prazo de cada canal, canal de retorno '
+                .'ao e-Salvador/156 e a numeração definitiva do protocolo.',
+        ],
+
+        [
+            'modulo' => 'Estrutura',
+            'tela' => 'Áreas e Equipes',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.areas-e-equipes.index',
+            'breadcrumb' => 'Estrutura › Áreas e Equipes',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemPrototipo.' A estrutura PERMANENTE da fiscalização — Área › Equipe › '
+                .'encarregado › fiscais › bloco de bairros —, transcrita do documento do cliente "ÁREAS '
+                .'DAS EQUIPES ATUALIZADA - 17/04/2026": 8 áreas, 8 equipes, 151 bairros distintos e os 3 '
+                .'corredores da Itinerante. Três '
+                .'recortes, e não um: seis áreas cobrem BLOCOS DE BAIRROS, a Itinerante cobre CORREDORES '
+                .'(Avenida Sete, Comércio, Joana Angélica) e a Noturna cobre a CIDADE INTEIRA, com '
+                .'recorte por TURNO. Bairro em mais de uma área é caso NORMAL (Mussurunga, Patamares e '
+                .'Jardim das Margaridas), mostrado como aviso informativo: o vínculo bairro↔equipe não é '
+                .'1:1, a Caixa de Entrada sugere e o administrativo confirma. ⚠️ É PROTÓTIPO: a lista de '
+                .'fiscais de cada equipe é fictícia (o documento nomeia só o encarregado), não há tabela '
+                .'nem gravação, e o que a pessoa mexe vive na sessão dela.',
         ],
 
         /*

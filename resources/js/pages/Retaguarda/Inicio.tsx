@@ -2,7 +2,9 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ClipboardCheck,
     Flame,
+    Inbox,
     LayoutGrid,
+    Map as MapIcon,
     MapPinned,
     Siren,
     Store,
@@ -35,6 +37,8 @@ const ICONES: Record<string, LucideIcon> = {
     perfil: UserRound,
     permissionarios: Store,
     operacoes: Siren,
+    caixa: Inbox,
+    areas: MapIcon,
     fiscalizacoes: ClipboardCheck,
     mapa: MapPinned,
     calor: Flame,

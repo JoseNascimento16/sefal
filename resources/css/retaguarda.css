@@ -2107,3 +2107,310 @@ table.data-table tbody tr.pendente td:first-child {
         animation-duration: 2s;
     }
 }
+
+/* ==================== FICHA, TRÂMITE E ESCOLHA (telas administrativas) ====================
+   Peças que nasceram com a Caixa de Entrada e o cadastro de Áreas e Equipes, e
+   que valem para qualquer tela do mesmo desenho: um formulário em duas colunas,
+   uma ficha de leitura, a linha do tempo de um trâmite e a escolha entre dois
+   caminhos que não são "salvar/cancelar".
+
+   Tudo em cima dos tokens do tema (nada de cor solta): o tema escuro redefine os
+   tokens e estas peças acompanham sem uma segunda paleta. */
+
+/* O número do cabeçalho quando ele FILTRA a lista. Continua sendo o mesmo cartão
+   de leitura — o que muda é que ele responde ao clique, e isso não pode virar um
+   botão com cara de botão no meio do resumo. */
+button.rt-numero {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--sm-raio-sm);
+    transition: opacity 0.18s ease;
+}
+button.rt-numero:hover {
+    opacity: 0.72;
+}
+button.rt-numero:focus-visible {
+    outline: 2px solid var(--sm-primaria);
+    outline-offset: 3px;
+}
+
+/* Formulário em colunas: dois campos por linha em tela larga, um por linha em
+   tela estreita. O `min()` dentro do `minmax` evita o estouro clássico de grade
+   com um <select> de rótulo longo dentro. */
+.rt-form-linha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: 0 18px;
+}
+
+/* A SUGESTÃO do sistema — "bairro X, equipe Y". É informação, não alerta: usa o
+   tom de informação, e diz que a escolha final é de gente. */
+.rt-sugestao {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 6px 0 2px;
+    padding: 11px 13px;
+    border-radius: var(--sm-raio-sm);
+    border: 1px solid color-mix(in srgb, var(--sm-info) 35%, transparent);
+    background: var(--sm-info-suave);
+    color: var(--sm-texto-corpo);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+.rt-sugestao svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--sm-info);
+}
+
+/* Escolha entre CAMINHOS (encaminhar, devolver), não entre valores de um campo.
+   Cartão em vez de lista de opções porque cada caminho tem consequência
+   diferente, e a consequência tem de caber ao lado do rótulo. */
+.rt-escolha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 12px;
+    margin: 14px 0 20px;
+}
+.rt-escolha-cartao {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px 15px;
+    border-radius: var(--sm-raio-md);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie);
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+.rt-escolha-cartao:hover {
+    border-color: var(--sm-primaria);
+}
+.rt-escolha-cartao.ativo {
+    border-color: var(--sm-primaria);
+    box-shadow: 0 0 0 3px var(--sm-primaria-suave);
+}
+.rt-escolha-cartao input {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+.rt-escolha-cartao > span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.rt-escolha-cartao strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    color: var(--sm-texto);
+}
+.rt-escolha-cartao > span > span {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--sm-texto-fraco);
+}
+
+/* Cabeça do registro aberto: identificação à esquerda, situação à direita. */
+.rt-detalhe-cabeca {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+/* Ficha de LEITURA: rótulo em cima, valor embaixo, em colunas. Não é formulário
+   desabilitado, de propósito: campo cinza convida a tentar editar e não deixa. */
+.rt-ficha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 14px 22px;
+    margin: 0;
+}
+.rt-ficha dt {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sm-texto-fraco);
+    margin-bottom: 3px;
+}
+.rt-ficha dd {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--sm-texto-corpo);
+}
+
+/* A linha do tempo do trâmite. O fio vertical liga os atos: é o que faz a lista
+   ler como percurso, e não como quatro frases soltas. */
+.rt-tramite {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0 0 0 22px;
+    border-left: 2px solid var(--sm-borda);
+}
+.rt-tramite li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--sm-texto-corpo);
+}
+.rt-tramite li:last-child {
+    padding-bottom: 0;
+}
+.rt-tramite li::before {
+    content: '';
+    position: absolute;
+    left: -29px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--sm-raio-full);
+    background: var(--sm-primaria);
+    box-shadow: 0 0 0 3px var(--sm-superficie);
+}
+.rt-tramite strong {
+    color: var(--sm-texto);
+}
+.rt-tramite-quando {
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--sm-texto-fraco);
+}
+/* O passo que AINDA NÃO aconteceu, dito como próximo passo, com o ponto vazado
+   para não se confundir com ato registrado. */
+.rt-tramite-futuro {
+    opacity: 0.75;
+}
+.rt-tramite-futuro::before {
+    background: var(--sm-superficie);
+    box-shadow:
+        0 0 0 2px var(--sm-borda),
+        0 0 0 5px var(--sm-superficie);
+}
+
+/* Separador entre dois blocos de decisão dentro do mesmo cartão. */
+.rt-regua {
+    margin: 26px 0 22px;
+    border: 0;
+    border-top: 1px solid var(--sm-borda);
+}
+
+/* ==================== ÁREAS E EQUIPES ====================
+   Os cartões de área: cada um é a equipe inteira de relance (quem responde,
+   quantos fiscais, quantos bairros), e o bloco de bairros abre embaixo. */
+.rt-cartoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+    gap: 16px;
+}
+.rt-cartao-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px;
+    border-radius: var(--sm-raio-md);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+.rt-cartao-area:hover {
+    border-color: var(--sm-primaria);
+    box-shadow: var(--sm-sombra-sm);
+}
+.rt-cartao-area.ativo {
+    border-color: var(--sm-primaria);
+    box-shadow: 0 0 0 3px var(--sm-primaria-suave);
+}
+.rt-cartao-area-topo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.rt-cartao-area h3 {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--sm-texto);
+}
+.rt-cartao-area-regiao {
+    font-size: 12px;
+    color: var(--sm-texto-fraco);
+}
+.rt-cartao-area-numeros {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--sm-texto-fraco);
+}
+.rt-cartao-area-numeros strong {
+    color: var(--sm-texto);
+}
+
+/* O bloco de bairros: fichas pequenas, muitas, que se leem varrendo. */
+.rt-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+}
+.rt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--sm-raio-full);
+    border: 1px solid var(--sm-borda);
+    background: var(--sm-superficie-2);
+    font-size: 12px;
+    color: var(--sm-texto-corpo);
+}
+/* Bairro que também pertence a outra área. AVISO, não erro: o vínculo
+   bairro-equipe não é exclusivo — a Caixa de Entrada sugere e gente confirma. */
+.rt-chip.compartilhado {
+    border-color: color-mix(in srgb, var(--sm-aviso) 55%, transparent);
+    background: var(--sm-aviso-suave);
+    color: var(--sm-aviso);
+}
+.rt-chip button {
+    appearance: none;
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--sm-raio-full);
+    background: none;
+    color: inherit;
+    opacity: 0.55;
+    cursor: pointer;
+}
+.rt-chip button:hover {
+    opacity: 1;
+    color: var(--sm-perigo);
+}

@@ -5,6 +5,7 @@ import {
     ClipboardCheck,
     FileBarChart,
     Flame,
+    Inbox,
     KeyRound,
     LayoutGrid,
     ListChecks,
@@ -32,6 +33,9 @@ const ICONES: Record<string, LucideIcon> = {
     perfil: UserRound,
     permissionarios: Store,
     fiscalizacoes: ClipboardCheck,
+    // A caixa de entrada é a bandeja onde o papel de fora cai: e-Salvador, 156,
+    // pedido de licença e ofício chegam ali antes de virar trabalho de rua.
+    caixa: Inbox,
     // Operação é ação planejada de rua — a sirene, não o mapa.
     operacoes: Siren,
     // O mapa ao vivo tem o alfinete: ele mostra ONDE cada coisa está agora.
