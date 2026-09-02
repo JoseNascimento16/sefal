@@ -14,8 +14,8 @@ import { Icone } from '../icones';
  *
  * O cartão da fila responde "vou ou não vou agora". Esta tela responde "o que
  * eu vou encontrar lá" — o texto do que o cidadão reclamou, o número do
- * processo que vai para o campo REFERÊNCIA do documento e, quando o alvo é
- * permissionário, a ficha do cadastro.
+ * processo que vai para o campo REFERÊNCIA do documento e, quando o ambulante é
+ * permissionário da SEMOP, a ficha da permissão no SGCI.
  */
 export function TelaDemanda({ id }: { id: string | null }) {
     const { registros } = useApp();
@@ -97,13 +97,19 @@ export function TelaDemanda({ id }: { id: string | null }) {
                     <FichaDoCadastro ficha={demanda.sgci} />
                 ) : (
                     <>
-                        <p className="pw-titulo-secao">Cadastro</p>
+                        {/* Não é "cadastro faltando": é ambulante SEM PERMISSÃO,
+                            que é a maior parte de quem a fiscalização encontra —
+                            e é essa resposta que define o prazo do documento. */}
+                        <p className="pw-titulo-secao">Permissão da SEMOP</p>
                         <div className="pw-card">
+                            <p style={{ margin: '0 0 8px', fontSize: 14.5 }}>
+                                <span className="pw-forte">Ambulante sem permissão registrada.</span> Não
+                                há permissão da SEMOP localizada para este endereço no SGCI.
+                            </p>
                             <p style={{ margin: 0, fontSize: 14.5 }}>
-                                Sem cadastro localizado para este endereço. O documento sai com a
-                                identificação colhida em campo, e o prazo para sanar é{' '}
-                                <span className="pw-forte">imediato</span> — é a regra do manual para quem
-                                não tem cadastro.
+                                O documento sai com a identificação colhida em campo, e o prazo para sanar
+                                é <span className="pw-forte">imediato</span> — é a regra do manual para
+                                quem não tem permissão.
                             </p>
                         </div>
                     </>
@@ -155,7 +161,12 @@ export function TelaDemanda({ id }: { id: string | null }) {
 }
 
 /**
- * A ficha do SGCI.
+ * A ficha da permissão no SGCI.
+ *
+ * Ela é a prova do ATRIBUTO: quem o sistema fiscaliza é o ambulante, e ter
+ * permissão da SEMOP é uma característica dele — não a categoria de todos. Por
+ * isso a ficha se apresenta dizendo "ambulante · permissionário SEMOP", e não
+ * apenas "cadastro".
  *
  * ⚠️ Rotulada e emoldurada de propósito: nada aqui foi digitado pelo fiscal, e
  * nada aqui se edita em campo. É o cadastro de comércio informal do município
@@ -164,7 +175,7 @@ export function TelaDemanda({ id }: { id: string | null }) {
 function FichaDoCadastro({ ficha }: { ficha: FichaSgci }) {
     return (
         <>
-            <p className="pw-titulo-secao">Dados do cadastro SGCI</p>
+            <p className="pw-titulo-secao">Permissão da SEMOP</p>
 
             <div className="pw-card pw-card-sgci">
                 <div className="pw-linha-espalha" style={{ marginBottom: 10 }}>
@@ -173,6 +184,10 @@ function FichaDoCadastro({ ficha }: { ficha: FichaSgci }) {
                     </span>
                     <Selo tom={ficha.situacao === 'Ativo' ? 'ok' : 'alerta'}>{ficha.situacao}</Selo>
                 </div>
+
+                <p className="pw-forte" style={{ margin: '0 0 10px', fontSize: 14.5 }}>
+                    Ambulante · permissionário SEMOP
+                </p>
 
                 <dl className="pw-ficha">
                     <dt>Nome</dt>

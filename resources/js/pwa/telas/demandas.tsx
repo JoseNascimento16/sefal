@@ -215,12 +215,16 @@ export function CartaoDemanda({
                 </p>
             )}
 
-            {demanda.sgci && (
-                <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13 }}>
-                    <Icone nome="prancheta" tamanho={13} /> Permissionário no cadastro SGCI ·{' '}
-                    {demanda.sgci.equipamento}
-                </p>
-            )}
+            {/* O ATRIBUTO, dito nos dois casos. Antes o cartão só falava quando
+                havia ficha do SGCI, e o silêncio no outro caso se lia como
+                "não sei" — quando na verdade é "não tem permissão", que é o
+                que muda o prazo do documento lavrado na hora. */}
+            <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13 }}>
+                <Icone nome="prancheta" tamanho={13} />{' '}
+                {demanda.sgci
+                    ? `Ambulante · permissionário SEMOP · ${demanda.sgci.equipamento}`
+                    : 'Ambulante · sem permissão registrada'}
+            </p>
 
             <div className="pw-linha" style={{ gap: 8, marginTop: 14 }}>
                 <button

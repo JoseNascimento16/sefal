@@ -489,9 +489,9 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                                 </p>
                                 <p className="pw-fraco" style={{ margin: 0 }}>
                                     {demanda?.sgci
-                                        ? `Permissionário do cadastro SGCI · ${demanda.sgci.equipamento}`
+                                        ? `Ambulante · permissionário SEMOP · ${demanda.sgci.equipamento}`
                                         : vinculo
-                                          ? 'Vinculado a um ponto conhecido'
+                                          ? 'Ambulante sem permissão registrada · ponto conhecido'
                                           : 'A maioria das abordagens fica assim mesmo'}
                                 </p>
                             </div>

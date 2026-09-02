@@ -227,7 +227,7 @@ export function TelaNotificacao({ id }: { id: string | null }) {
 
                     <div className="pw-card">
                         <label className="pw-campo">
-                            <span>Nome do permissionário, responsável ou ocupante</span>
+                            <span>Nome do ambulante, responsável ou ocupante</span>
                             <input
                                 className="pw-entrada"
                                 value={nome}

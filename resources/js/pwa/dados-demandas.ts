@@ -80,7 +80,12 @@ export const ORIGENS: Record<
 export type Situacao = 'Aguardando triagem' | 'Encaminhada' | 'Devolvida' | 'Arquivada';
 
 /**
- * O cadastro do permissionário, quando existe.
+ * A ficha da PERMISSÃO da SEMOP no SGCI — existe só para quem tem uma.
+ *
+ * Quem o sistema fiscaliza é o **ambulante**; ser **permissionário** é um
+ * atributo dele. Esta ficha é a prova desse atributo: quando ela vem, o
+ * ambulante é permissionário; quando não vem, ele trabalha sem permissão — que
+ * é o caso da maioria, e não um cadastro faltando.
  *
  * ⚠️ Não há integração: o SGCI é o cadastro de comércio informal do município e
  * o aplicativo, hoje, não fala com ele. O que as telas mostram é uma FICHA
@@ -123,7 +128,10 @@ export type Demanda = {
     anonima: boolean;
     /** Quem abriu, quando a origem carrega essa informação. */
     solicitante: string | null;
-    /** Preenchida quando o alvo é permissionário cadastrado. */
+    /**
+     * Preenchida quando o ambulante É PERMISSIONÁRIO (tem permissão no SGCI).
+     * Nula quando ele não tem permissão — resposta, não lacuna.
+     */
     sgci: FichaSgci | null;
 };
 
@@ -313,7 +321,7 @@ const UNIVERSO: Semente[] = [
         origem: 'esalvador',
         assunto: 'Equipamento cedido a terceiro',
         detalhe:
-            'Requerente informa que o permissionário do ponto não trabalha mais no local e cedeu o equipamento a outra pessoa.',
+            'Requerente informa que o ambulante do ponto não trabalha mais no local e cedeu o equipamento a outra pessoa.',
         endereco: 'Avenida Cardeal da Silva, 622',
         bairro: 'Federação',
         regiao: 'fora-da-area',
@@ -396,7 +404,7 @@ const UNIVERSO: Semente[] = [
         origem: 'esalvador',
         assunto: 'Equipamento cedido a terceiro',
         detalhe:
-            'Requerente informa que o permissionário do ponto não trabalha mais no local e cedeu o equipamento a outra pessoa. Verificar quem está operando.',
+            'Requerente informa que o ambulante do ponto não trabalha mais no local e cedeu o equipamento a outra pessoa. Verificar quem está operando.',
         endereco: 'Av. Prof. Pinto de Aguiar, em frente ao Parque de Pituaçu',
         bairro: 'Pituaçu',
         regiao: 'pituacu',
