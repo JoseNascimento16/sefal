@@ -26,13 +26,88 @@
 
 export type { EquipeResumo } from '@/dados-prototipo/administrativo';
 
-/** Uma linha do trâmite: o rastro de cada ato, com autor e hora. */
+/** Um par rótulo/valor — o formato de qualquer ficha de leitura deste módulo. */
+export interface CampoLido {
+    rotulo: string;
+    valor: string;
+}
+
+/**
+ * O que o fiscal registrou EM CAMPO num passo do trâmite.
+ *
+ * `gps` vem sempre acompanhado da `precisao_m` porque um ponto ruim é pior que
+ * um ponto ausente disfarçado de bom — a lei do domínio que vale no aplicativo
+ * vale na leitura aqui.
+ */
+export interface RegistroDeCampo {
+    /** O que a equipe encontrou, em uma linha ("Ponto irregular", "Nada encontrado…"). */
+    encontrado: string | null;
+    relato: string;
+    fotos: string[];
+    gps: string | null;
+    precisao_m: number | null;
+    /** Quem estava no ponto, quando havia alguém. */
+    ambulante: string | null;
+    equipamento: string | null;
+}
+
+/**
+ * O DOCUMENTO lavrado em campo, para leitura.
+ *
+ * A forma é a do papel — número, campos na ordem do impresso, listas de caixas
+ * assinaladas, assinaturas com o estado de cada uma —, a mesma que o aplicativo
+ * do fiscal usa para montar a via impressa. A Retaguarda **só lê**: ela não
+ * emite documento de campo, e por isso não há aqui nada de formulário.
+ *
+ * ⚠️ `emitido_em` e `vence_em` chegam em ISO e são formatados pela TELA. Data
+ * dentro de `campos` chegaria como texto livre, indistinguível de um nome de
+ * rua, e ninguém poderia escrevê-la em dd/mm/aaaa.
+ */
+export interface DocumentoDeCampo {
+    /** `np` = Notificação Preliminar; `aa` = Auto de Apreensão. */
+    tipo: 'np' | 'aa';
+    numero: string;
+    /** O título em caixa alta, como está impresso no alto da folha. */
+    titulo: string;
+    emitido_em: string;
+    /** Quando o prazo de regularização vence — o Auto de Apreensão não tem. */
+    vence_em: string | null;
+    prazo_rotulo: string | null;
+    /** Quem lavrou, com matrícula: é ela que identifica o agente numa defesa. */
+    agente: string;
+    campos: CampoLido[];
+    listas: { titulo: string; itens: string[] }[];
+    assinaturas: {
+        rotulo: string;
+        estado: 'assinada' | 'recusada' | 'pendente';
+        nome: string | null;
+    }[];
+    rodape: string;
+}
+
+/**
+ * Uma linha do trâmite: o rastro de cada ato, com autor, hora e **o que aquele
+ * ato produziu**.
+ *
+ * Os três últimos campos são o que faz o trâmite ser navegável em vez de uma
+ * lista de frases: `campos` traz a decisão tomada (para onde foi, por quê),
+ * `campo` traz o registro de campo e `documento` traz o papel lavrado. Vêm
+ * sempre declarados pelo servidor — nulos quando aquele passo não os produziu —,
+ * e não opcionais, para a tela não precisar de leitura defensiva em cada acesso.
+ */
 export interface TramiteDenuncia {
     /** ISO com hora (`aaaa-mm-dd hh:mm`) — quem escreve dd/mm/aaaa é a tela. */
     em: string;
     quem: string;
     o_que: string;
     detalhe: string;
+    /** A situação em que a denúncia entrou com este passo. */
+    situacao: string;
+    /** COMO a vistoria terminou, quando foi este passo que a terminou. */
+    desfecho: string | null;
+    campos: CampoLido[];
+    campo: RegistroDeCampo | null;
+    documento: DocumentoDeCampo | null;
 }
 
 /** A área que o bairro sugere — com as outras que também o cobrem. */
@@ -114,6 +189,11 @@ export interface Denuncia {
     motivo: string | null;
     justificativa: string | null;
     destino: string | null;
+    /**
+     * COMO a vistoria terminou — o desfecho do último passo do trâmite que
+     * produziu um. Nulo enquanto a denúncia não foi a campo.
+     */
+    desfecho: string | null;
 
     /** A área que o BAIRRO sugere — calculada na leitura, nunca gravada. */
     area_sugerida: AreaSugerida | null;
@@ -146,6 +226,12 @@ export const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada à área'];
  * cada uma chamando o seu dono. Direcionada, Em operação e Em campo são o
  * caminho normal andando. Concluída é fim bom; Devolvida e Arquivada são fim de
  * linha sem erro nenhum: são decisão tomada, com justificativa registrada.
+ *
+ * As duas situações de pós-vistoria seguem a mesma régua: "Aguardando
+ * regularização" é AVISO porque há prazo correndo (a bola está com o notificado,
+ * e alguém precisa voltar ao ponto quando ele vencer), e "Retorno vencido" é
+ * PERIGO porque o prazo venceu, a situação continua e a denúncia está parada
+ * esperando a próxima medida do gestor.
  */
 export const TOM_DA_SITUACAO: Record<string, string> = {
     Recebida: 'selo-aviso',
@@ -153,6 +239,8 @@ export const TOM_DA_SITUACAO: Record<string, string> = {
     'Direcionada à equipe': 'selo-ok',
     'Em operação': 'selo-ok',
     'Em campo': 'selo-ok',
+    'Aguardando regularização': 'selo-aviso',
+    'Retorno vencido': 'selo-perigo',
     Concluída: 'selo-neutro',
     Devolvida: 'selo-neutro',
     Arquivada: 'selo-neutro',

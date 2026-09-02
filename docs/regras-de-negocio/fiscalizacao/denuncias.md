@@ -175,14 +175,31 @@ a tela mandou: senão bastaria omitir a área no corpo da requisição para a ex
 ### RN-09 — Os estados, e o trâmite de cada mudança
 
 ```
-Recebida ─► Encaminhada à área ─► Direcionada à equipe ─► Em campo ─► Concluída
-                              └─► Em operação ──────────┘
+Recebida ─► Encaminhada à área ─► Direcionada à equipe ─► Em campo ─┬─► Concluída
+                              └─► Em operação ──────────┘           │
+                                                                    ├─► Aguardando regularização
+                                                                    │      (Notificação lavrada,
+                                                                    │       prazo correndo)
+                                                                    │        │
+                                                                    │        ├─► Concluída
+                                                                    │        │    (retorno cumprido)
+                                                                    │        └─► Retorno vencido
+                                                                    │               (situação mantida →
+                                                                    │                próxima medida do gestor)
+                                                                    └─► Concluída
    └────────► Devolvida | Arquivada   (saídas da triagem, com justificativa)
 ```
 
-`Em campo` e `Concluída` são o que vem **depois**, quando o aplicativo do fiscal estiver ligado a
-estas telas; o protótipo mostra denúncias nesses estados para a vida inteira do registro ficar
-visível, e escreve o próximo passo no trâmite como **próximo passo**, não como fato.
+Do `Em campo` para a frente é a vida da denúncia **na mão da equipe** (RN-16). As duas situações de
+pós-vistoria existem porque cada uma cobra coisa diferente de gente diferente:
+
+| Situação | Quem tem a bola | O que ela cobra |
+|---|---|---|
+| **Aguardando regularização** | o **notificado** | o prazo da Notificação Preliminar corre; a equipe volta ao ponto quando ele vencer |
+| **Retorno vencido** | o **gestor da área** | o prazo venceu e a situação continua: alguém tem de decidir a próxima medida |
+
+Sem elas, uma notificação em prazo ficaria com a mesma cara de vistoria que ninguém fez, e um retorno
+frustrado ficaria escondido dentro de "Em campo".
 
 **Toda mudança acrescenta uma linha ao trâmite** — quem, quando, o quê e por quê. Sem o rastro,
 "arquivada" é uma palavra sem autor.
@@ -275,6 +292,92 @@ cena com os dois papéis.
 
 **No sistema real esta ação não existe:** denúncia recebida não se desfaz.
 
+### RN-16 — O que a fiscalização devolve: desfecho de lista, e o documento quando houve
+
+Depois do direcionamento a denúncia sai da mão da Retaguarda e vira **trabalho de campo**. O que
+volta é o **desfecho**, de lista fechada:
+
+| Desfecho | Documento | O que aconteceu |
+|---|---|---|
+| **Regularizado no local** | nenhum | o fiscal orientou, o ambulante atendeu na hora, a irregularidade cessou |
+| **Nada encontrado no local** | nenhum | a equipe esteve no endereço e não constatou nada |
+| **Notificação Preliminar emitida** | Notificação | prazo de regularização correndo |
+| **Regularizado após notificação** | a Notificação anterior | o retorno encontrou a situação resolvida |
+| **Retorno com a situação mantida** | a Notificação anterior | prazo vencido e ponto igual: escala para a próxima medida |
+| **Auto de Apreensão lavrado** | Auto de Apreensão | bens recolhidos e entregues ao SEGUB, sob guarda |
+
+> ## ⚖️ A fiscalização é EDUCATIVA antes de punitiva
+>
+> **A maioria dos casos termina sem documento.** O fiscal chega, manda desmontar, o ambulante
+> desmonta, e acabou. Os dois documentos existem para quando a orientação não resolve — e apreensão é
+> **guarda**, não destruição: os bens ficam no SEGUB por um prazo e só depois se decide o destino
+> (devolução mediante regularização, doação, leilão ou, em perecível, destruição).
+>
+> Isso não é observação de doc: é regra da **amostra do protótipo**, e tem teste. Uma demonstração em
+> que todo caso de campo termina em papel desenharia um sistema punitivo que não é o do cliente.
+
+O desfecho é de **lista**, e não texto livre, porque é o que o relatório soma: "quantas denúncias se
+resolveram sem documento" é a pergunta que mede se a fiscalização está sendo educativa.
+
+Ele mora no **passo do trâmite que o produziu**, e a denúncia herda o do último passo que tiver um.
+Gravado ao lado da situação, seria a mesma informação com dois donos — e um dia o trâmite diria
+"regularizado no local" enquanto o resumo continuaria dizendo "notificado".
+
+### RN-17 — O trâmite é NAVEGÁVEL: cada passo mostra o que produziu
+
+Enquanto a denúncia só era triada e direcionada, cada passo cabia numa linha — ele produzia uma
+**decisão**, e decisão é uma frase. Quando ela anda até a vistoria isso deixa de valer: o passo do
+fiscal produziu relato, situação encontrada, fotos, coordenada com precisão, e às vezes um documento
+com número, motivos assinalados, penalidades e prazo.
+
+Então o trâmite é uma **linha do tempo navegável**: os passos de um lado, o conteúdo do passo
+escolhido do outro.
+
+- **A linha do tempo continua sendo leitura de relance** — quem fez o quê e quando, na ordem —, com
+  **selo de relance** do que o passo produziu (o número do documento, quantas fotos). Sem isso a
+  pessoa teria de abrir os sete passos para descobrir onde está o papel.
+- **O passo escolhido é inconfundível**: fundo, borda e ponto maior — as três coisas, porque só cor
+  não sobrevive a monitor ruim nem a daltonismo.
+- **Abre no ÚLTIMO passo**, não no primeiro: quem abre uma denúncia quer saber em que pé ela está.
+  Abrir no recebimento por integração — o passo igual em toda denúncia — obrigaria a clicar até o fim
+  toda vez.
+- **Funciona por teclado.** São abas de verdade (`role="tab"` dentro de `role="tablist"` vertical),
+  com uma única parada de tabulação e as **setas** andando entre os passos (↑ ↓ ← →, Home, End). A
+  seleção segue o foco, porque o conteúdo já está na mão — nada é buscado ao trocar de passo.
+- **Passo sem conteúdo próprio diz isso** em vez de deixar o painel em branco: branco sem explicação
+  parece tela quebrada.
+- **O próximo passo continua sendo dito como próximo passo**, e ele muda com a situação: quem foi
+  direcionado espera *vistoria*; quem tem prazo correndo espera *retorno*; quem teve retorno vencido
+  espera a *próxima medida do gestor*. Ele fica **fora** da lista de abas — não é aba, porque não tem
+  conteúdo, e clicar nele não levaria a lugar nenhum.
+
+**Nenhuma rota nova nasceu disto.** O trâmite inteiro (relato, fotos, documento) viaja **dentro da
+denúncia**, no mesmo `props` que a listagem já entrega — então o recorte de área do gestor (RN-05b)
+governa o conteúdo do trâmite pelo mesmo caminho que governa a linha da grade, sem uma segunda
+guarda para alguém esquecer de escrever.
+
+### RN-18 — A Retaguarda LÊ o documento de campo; ela não o emite
+
+Notificação Preliminar e Auto de Apreensão aparecem aqui **na forma do papel** — órgão no alto,
+número no canto, título em caixa alta, campos na ordem do impresso, caixas assinaladas, penalidades
+previstas, prazo, e as assinaturas com o **estado de cada uma**: assinou, **recusou assinar** ou não
+colhida (recusar assinar é fato jurídico corriqueiro, e o documento registra a recusa em vez de
+esconder).
+
+E é **leitura**, sem um único campo de formulário. Quem lavra é o fiscal, em rua, no aplicativo, com
+número vindo do bloco reservado no aparelho. Oferecer aqui um botão de emitir criaria um segundo dono
+para o ato mais delicado do sistema. A tela **diz isso** em texto, embaixo do documento.
+
+A redação das caixas, das penalidades, dos prazos e da fundamentação legal é transcrição dos blocos
+de papel do cliente e vive em
+[`config/prototipo_documentos_campo.php`](../../../config/prototipo_documentos_campo.php) — dono
+único. O dado semeado da denúncia referencia **por chave** (`puxada`, `autuacao`, `48h`), nunca por
+texto: chave errada é acusada por teste, enquanto texto copiado divergiria em silêncio na primeira
+correção de vírgula do impresso.
+
+**Datas** (lavratura e vencimento) chegam à tela em campo próprio, não no meio dos campos de texto,
+justamente para poderem sair em **dd/mm/aaaa** — data ISO dentro de um texto livre chegaria
+indistinguível de um nome de rua.
 ---
 
 ## Como demonstrar (protótipo)
@@ -298,6 +401,24 @@ recorte. Mande um lote à equipe (tente uma equipe de fora da área para ver a j
 ser obrigatória) e outro para a **Operação Verão — Orla**. Entre como `gestor2` para provar o
 recorte: a lista é outra, e o que era do gestor1 não aparece.
 
+### Os estágios avançados: qual conta abre qual caso
+
+Vá à aba **Todas**, clique na linha e navegue pela linha do tempo do trâmite (clique ou setas do
+teclado). Cada caso abaixo mostra uma coisa diferente:
+
+| Denúncia | Canal | Quem vê | O que ela demonstra |
+|---|---|---|---|
+| **DEN-0029** · barraca com puxada | e-Salvador | `gestor1`, `administrativo1`, `admin` | **Notificação Preliminar com o prazo correndo** — chegou a campo por **operação**, e o documento tem motivos, penalidades, prazo de 5 dias e as três assinaturas colhidas |
+| **DEN-0030** · mesas e som em Itapuã | Fala Salvador | `gestor1`, `administrativo1`, `admin` | **retorno vencido**: notificação de 48 h com o notificado **recusando assinar**, e o retorno encontrando o ponto igual — a denúncia volta ao gestor |
+| **DEN-0013** · quiosque abandonado | e-Salvador | `gestor2`, `administrativo1`, `admin` | **Auto de Apreensão** — cinco tipos de bem recolhidos, guarda no SEGUB por 90 dias, destino "leilão", via **não entregue** (não havia ocupante) |
+| **DEN-0033** · carrinho na garagem | Fala Salvador | `gestor2`, `administrativo1`, `admin` | o **caminho comum**: orientou, o ambulante deslocou o carrinho, **nenhum documento** |
+| **DEN-0031** · ponto na orla de Amaralina | e-Salvador | `gestor3`, `administrativo1`, `admin` | **nada encontrado no local** — o ponto é de fim de semana e a equipe foi em dia útil; a recomendação de reprogramar fica registrada |
+| **DEN-0032** · mesas de bar no Cabula | Fala Salvador | `gestor3`, `administrativo1`, `admin` | a denúncia **de ponta a ponta**, em sete passos: integração › triagem › gestor › vistoria › notificação › retorno › conclusão, com o notificado **cumprindo** e nenhuma penalidade |
+| **DEN-0027** · banca na faixa de pedestre | Fala Salvador | **só** `administrativo1` e `admin` | é da **Área 4**, que não tem gestor com conta: a prova visível de que o recorte por área funciona |
+
+Use também a barra de busca: `regularizado no local` traz os casos resolvidos sem papel, e
+`retorno vencido` traz o que está parado esperando decisão do gestor.
+
 ---
 
 ## Pendências que isto abre
@@ -315,8 +436,21 @@ recorte: a lista é outra, e o que era do gestor1 não aparece.
   todas) e quem cobre a área cujo gestor está ausente.
 - **Numeração definitiva** do protocolo interno: no protótipo é `DEN-NNNN` calculado; no sistema sai
   de `App\Support\Protocolo::proximo()`, a fonte única de numeração.
-- **Ligação com a fiscalização de campo**: hoje `Em campo` e `Concluída` são estados semeados. Quando
-  o aplicativo do fiscal receber a denúncia dirigida, o desfecho volta para o trâmite.
+- **Ligação com a fiscalização de campo**: hoje os estágios avançados são **semeados** — o trâmite
+  passo a passo, o registro de campo e os documentos estão escritos em
+  `config/prototipo_denuncias.php`. Quando o aplicativo do fiscal receber a denúncia dirigida de
+  verdade, é ele que passa a acrescentar esses passos, e a leitura desta tela continua a mesma.
+- **A redação dos documentos de campo tem DUAS cópias hoje**, e isso é dívida conhecida:
+  [`config/prototipo_documentos_campo.php`](../../../config/prototipo_documentos_campo.php) (usada por
+  esta tela) e `resources/js/pwa/dados-documentos.ts`, no protótipo do aplicativo do fiscal (branch
+  `feature/pwa-prototipo`) — lá o fiscal preenche o documento sem servidor no meio. Quando os dois
+  protótipos se encontrarem, **uma delas tem de morrer**, e a que fica é a do servidor: a redação de
+  um formulário legal não pode divergir entre a Retaguarda e o aplicativo.
+- **Numeração dos blocos.** Os números de Notificação (`1949xx`) e de Auto de Apreensão (`1600xx`)
+  são os das faixas dos blocos de papel do cliente, escritos à mão no dado semeado. No sistema eles
+  saem do estoque reservado por aparelho, para o documento nascer numerado no meio da rua sem sinal.
+- **O que o gestor FAZ com um retorno vencido** ainda não é ação de tela: a situação existe e cobra a
+  decisão, mas o botão que autoriza a apreensão nasce junto do módulo de fiscalização, não aqui.
 - **Derivação bairro → área com bairro compartilhado** e os casos Itinerante (corredor) e Noturna
   (turno) — a mesma **PEND-022** da Caixa de Entrada.
 
@@ -326,5 +460,6 @@ recorte: a lista é outra, e o que era do gestor1 não aparece.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | **A vida da denúncia depois do direcionamento, e o trâmite navegável.** (1) Nascem duas situações de pós-vistoria — **Aguardando regularização** (prazo da notificação correndo) e **Retorno vencido** (prazo vencido com a situação mantida) — e o catálogo de **desfechos** de vistoria, que a denúncia herda do último passo do trâmite (RN-09 e RN-16). (2) A amostra ganha os **estágios avançados**: vistoria com relato, situação encontrada, fotos e coordenada; Notificação Preliminar com prazo correndo; retorno vencido escalando; Auto de Apreensão com bens no SEGUB; regularização no local sem documento; nada encontrado; e uma denúncia de ponta a ponta — distribuídas pelos dois canais e pelas áreas dos três gestores com conta, com o trâmite escrito passo a passo e quem agiu resolvido contra a estrutura de áreas e equipes. (3) O **trâmite passa a ser navegável**: linha do tempo com abas verticais de teclado, e o painel do passo mostrando a decisão tomada, o registro de campo e o **documento lavrado em leitura**, na forma do papel (RN-17 e RN-18). A redação dos impressos passa a viver em `config/prototipo_documentos_campo.php`, referenciada por chave. | Pedido do dono de 02/09/2026: os dados paravam no direcionamento, e ele precisa ver o que a equipe recebeu no aplicativo, o que encontrou em campo e o desfecho que voltou — inclusive os casos em que documento foi emitido. A amostra é deliberadamente **majoritariamente educativa** (a maioria termina sem papel), porque uma demonstração em que todo caso de campo termina autuado desenharia um sistema punitivo que não é o do cliente. |
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | **Retorno do dono, três mudanças.** (1) As duas telas passam a ser **filhas de um item de menu "Denúncias" que expande**, e não itens soltos — estrutura genérica de pasta no config, com as três formas da casca resolvidas (RN-11). (2) O **gestor é de uma área**: vínculo gestor↔área na estrutura, listagem recortada pela área dele, ação sobre denúncia de outra área recusada no servidor, selo da etapa nomeando a área e o triador passando a ver o **nome do gestor** que vai receber (RN-05b e RN-05). (3) Nasce o setor **`administrativo`**, dono da triagem e também da Caixa de Entrada — a triagem deixa de ser do setor `administrador` (RN-12). | Respostas do dono às perguntas estruturais que o protótipo abriu: "pra ele só interessa o que for direcionado para a área dele" e "não é o admin do sistema, mas o admin pode fazer também". O submenu veio do print do dono, que mostrava os dois canais no mesmo nível dos demais itens do menu. |
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | Nasce o módulo, como **protótipo**: duas telas de canal com a mesma mecânica, denúncias semeadas como se tivessem chegado por integração (com carimbo de recebimento e número de origem), fluxo de duas etapas com dois papéis — triagem encaminhando à área derivada do bairro e gestor direcionando à equipe ou a uma operação —, decisão em lote e individual, devolução/arquivamento com justificativa, trâmite por ato, busca inteligente e exportação. | Pedido do dono de 02/09/2026, a partir do cenário da reunião com o cliente: as ouvidorias da Prefeitura passarão a entregar denúncia ao SEFAL por API, e o setor precisa de onde triar, encaminhar à área e direcionar o trabalho — fluxo NOVO e paralelo ao da Caixa de Entrada, que continua sendo o que chega em papel. Entregue como protótipo para o dono aprovar a forma antes de virar tabela, migration e contrato de integração. |

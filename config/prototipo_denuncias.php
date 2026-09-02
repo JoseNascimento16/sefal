@@ -41,6 +41,40 @@
 | Datas fixas envelhecem: uma semana depois da demonstração a lista apareceria
 | inteira com prazo vencido, e o dono leria isso como comportamento do sistema.
 |
+| ── O TRÂMITE tem duas formas aqui, e cada denúncia usa UMA ────────────────────
+|
+| 1. **Derivado da situação** (o caso simples). A denúncia declara só a
+|    `situacao`, e `DenunciasFicticias::tramitesDePartida()` monta o histórico que
+|    aquela situação implica: recebimento → triagem → direcionamento. Serve para
+|    as denúncias que ainda não foram a campo, onde cada passo produziu uma
+|    DECISÃO e nada mais.
+|
+| 2. **Declarado passo a passo** (`'tramites' => [...]`, o caso avançado). A
+|    denúncia que já andou até a vistoria, o desfecho e o documento não cabe numa
+|    derivação: cada passo tem conteúdo próprio — o que o fiscal encontrou, as
+|    fotos, o documento lavrado com número, motivos e prazo. Esses passos são
+|    escritos um a um, com `ha_horas` RELATIVO ao recebimento (mesma razão das
+|    datas relativas: data fixa envelhece) e `quem` em forma de PAPEL
+|    (`fiscal`, `gestor`, `encarregado`…), resolvido contra
+|    `config/prototipo_estrutura.php` na hora de servir. Nome de pessoa escrito
+|    aqui daria dois donos ao mesmo cadastro, e um fiscal removido da equipe
+|    continuaria assinando vistoria.
+|
+| ⚠️ Quem declara `tramites` declara TAMBÉM a `situacao`, e as duas têm de
+| combinar: a `situacao` da denúncia é a do ÚLTIMO passo. Isso é conferido por
+| teste (`tests/Feature/DenunciasTramiteTest.php`) em vez de confiado à
+| revisão — as duas informações vizinhas num arquivo grande divergem no primeiro
+| ajuste, e a tela mostraria "Concluída" com o trâmite parando em campo.
+|
+| ── Fiscalização é EDUCATIVA antes de punitiva ────────────────────────────────
+|
+| A maioria dos casos termina SEM documento: o fiscal chega, orienta, o ambulante
+| desmonta e a irregularidade cessa ali. Os documentos (Notificação Preliminar e
+| Auto de Apreensão) aparecem nesta amostra porque o dono precisa VER a leitura
+| deles na Retaguarda — não porque o caminho normal seja autuar. Ao acrescentar
+| casos, mantenha essa proporção: uma amostra em que todo mundo é autuado
+| desenharia um sistema punitivo que não é o do cliente.
+|
 */
 
 return [
@@ -94,12 +128,22 @@ return [
     ],
 
     /*
-     * As situações, na ordem do fluxo. Duas etapas com dois donos:
+     * As situações, na ordem do fluxo. Duas etapas com dois donos, e depois delas
+     * a vida da denúncia EM CAMPO:
      *
      *   Recebida            → chegou por integração e espera a TRIAGEM (administrativo);
      *   Encaminhada à área  → triada; espera o DIRECIONAMENTO do gestor daquela área;
      *   Direcionada à equipe| Em operação → o gestor decidiu como o trabalho acontece;
-     *   Em campo / Concluída→ o que vem depois, quando o aplicativo do fiscal estiver ligado;
+     *   Em campo            → a equipe recebeu no aplicativo e foi ao local;
+     *   Aguardando regularização → foi lavrada Notificação Preliminar e o PRAZO dela
+     *                         está correndo: a bola está com o notificado, não com o
+     *                         SEFAL. Sem este estado, uma notificação em prazo ficaria
+     *                         indistinguível de vistoria que ninguém fez;
+     *   Retorno vencido     → o prazo da notificação venceu e o retorno encontrou o
+     *                         ponto na MESMA situação: a denúncia volta ao gestor para
+     *                         a próxima medida (apreensão). É o estado que cobra
+     *                         decisão de gente, e por isso ele é vermelho na tela;
+     *   Concluída           → a vistoria teve desfecho e a denúncia se encerrou;
      *   Devolvida / Arquivada → as duas saídas da triagem, sempre com justificativa.
      */
     'situacoes' => [
@@ -108,9 +152,30 @@ return [
         'Direcionada à equipe',
         'Em operação',
         'Em campo',
+        'Aguardando regularização',
+        'Retorno vencido',
         'Concluída',
         'Devolvida',
         'Arquivada',
+    ],
+
+    /*
+     * COMO a vistoria terminou. Lista fechada porque é o que o relatório soma —
+     * "quantas denúncias se resolveram sem documento" é a pergunta que mede se a
+     * fiscalização está sendo educativa, e ela não se responde com texto livre.
+     *
+     * O desfecho é declarado no PASSO do trâmite que o produziu, e a denúncia
+     * herda o do último passo que tiver um. Gravado também na denúncia, ele seria
+     * a mesma informação com dois donos: um dia o trâmite diria "regularizado no
+     * local" e o resumo continuaria dizendo "notificado".
+     */
+    'desfechos' => [
+        'Regularizado no local',
+        'Nada encontrado no local',
+        'Notificação Preliminar emitida',
+        'Regularizado após notificação',
+        'Retorno com a situação mantida',
+        'Auto de Apreensão lavrado',
     ],
 
     /*
@@ -505,9 +570,111 @@ return [
             'bairro' => 'Rio Vermelho',
             'endereco_impreciso' => false,
             'anexos' => ['foto-quiosque-abandonado.jpg'],
+            /*
+             * ── CASO AVANÇADO: AUTO DE APREENSÃO ──────────────────────────────
+             *
+             * Equipamento abandonado é o caso em que não há a quem orientar: não
+             * existe ocupante para desmontar a estrutura, então a medida
+             * educativa não tem endereço e o caminho é recolher e guardar. É por
+             * isso que este é o único Auto de Apreensão da amostra — e note que
+             * apreensão é GUARDA (os bens vão ao SEGUB por um prazo), não
+             * destruição.
+             */
             'situacao' => 'Concluída',
             'area' => 'Área 1',
             'equipe' => 'C2',
+            'tramites' => [
+                ['ha_horas' => 0, 'quem' => 'integracao'],
+                [
+                    'ha_horas' => 5,
+                    'quem' => 'administrativo',
+                    'o_que' => 'Triada e encaminhada à área',
+                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do gestor.',
+                    'situacao' => 'Encaminhada à área',
+                    'campos' => [
+                        ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Rio Vermelho'],
+                        ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
+                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Estrutura fechada há meses; verificar se há permissionário vinculado.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 9,
+                    'quem' => 'gestor',
+                    'o_que' => 'Direcionada à equipe',
+                    'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
+                    'situacao' => 'Direcionada à equipe',
+                    'campos' => [
+                        ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
+                        ['rotulo' => 'Por que não entrou em operação', 'valor' => 'Ponto isolado, sem trabalho planejado na praça no período.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 33,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Vistoria em campo',
+                    'detalhe' => 'A equipe foi ao local e encontrou a estrutura fechada e abandonada.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Ponto irregular, sem ocupante no local',
+                        'relato' => 'Quiosque de alvenaria leve fechado com tapume, sem qualquer atividade. '
+                            .'Acúmulo de lixo e entulho no entorno, com foco de água parada. Nenhum '
+                            .'responsável apareceu durante a vistoria, e os comerciantes vizinhos '
+                            .'informaram que o ponto está fechado há mais de seis meses. Não há '
+                            .'permissão afixada no equipamento.',
+                        'fotos' => [
+                            'vistoria-quiosque-frente.jpg',
+                            'vistoria-quiosque-entulho.jpg',
+                            'vistoria-quiosque-lateral.jpg',
+                        ],
+                        'gps' => '-13.0106, -38.4917',
+                        'precisao_m' => 7,
+                    ],
+                ],
+                [
+                    'ha_horas' => 34,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Auto de Apreensão lavrado',
+                    'detalhe' => 'Sem ocupante a quem notificar, a estrutura foi recolhida e encaminhada à guarda de bens.',
+                    'situacao' => 'Em campo',
+                    'documento' => [
+                        'tipo' => 'aa',
+                        'numero' => '160051',
+                        'notificado' => 'Não identificado — equipamento abandonado',
+                        'cpf' => null,
+                        'equipamento' => 'Quiosque',
+                        'atividade' => 'Comércio Informal',
+                        'local' => 'Praça Nossa Senhora da Luz, s/n — canto da praça, perto do coreto — Rio Vermelho',
+                        'decretos' => ['Decreto Nº 26.849/2015'],
+                        'prazo_guarda' => '90',
+                        'destinacao' => 'leilao',
+                        'itens' => [
+                            ['quantidade' => 1, 'unidade' => 'un', 'descricao' => 'Estrutura de quiosque desmontável, em chapa metálica'],
+                            ['quantidade' => 1, 'unidade' => 'un', 'descricao' => 'Freezer horizontal, fora de funcionamento'],
+                            ['quantidade' => 2, 'unidade' => 'un', 'descricao' => 'Mesa plástica'],
+                            ['quantidade' => 4, 'unidade' => 'un', 'descricao' => 'Cadeira plástica'],
+                            ['quantidade' => 1, 'unidade' => 'un', 'descricao' => 'Guarda-sol, com estrutura danificada'],
+                        ],
+                        // Sem ocupante, ninguém assina o recebimento: o impresso
+                        // sai com a linha em branco, e a tela diz isso em vez de
+                        // esconder o campo — via não entregue é o que decide se o
+                        // prazo corre.
+                        'assinaturas' => [['rotulo' => 'Notificado', 'estado' => 'pendente']],
+                    ],
+                ],
+                [
+                    'ha_horas' => 38,
+                    'quem' => 'encarregado',
+                    'o_que' => 'Bens entregues ao SEGUB',
+                    'detalhe' => 'Volumes recolhidos e entregues à guarda de bens, com o auto de apreensão anexado.',
+                    'situacao' => 'Concluída',
+                    'desfecho' => 'Auto de Apreensão lavrado',
+                    'campos' => [
+                        ['rotulo' => 'Volumes entregues', 'valor' => '9'],
+                        ['rotulo' => 'Guia de recolhimento', 'valor' => 'SEGUB 2026/0417'],
+                        ['rotulo' => 'Recebido por', 'valor' => 'Plantão do SEGUB — Av. San Martins, s/n'],
+                    ],
+                ],
+            ],
         ],
 
         [
@@ -883,9 +1050,80 @@ return [
             'atendente' => 'Central 156 — atendente 4383',
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
+            /*
+             * ── CASO AVANÇADO: REGULARIZADO NO LOCAL, SEM DOCUMENTO ───────────
+             *
+             * O caminho COMUM da fiscalização, e o que o dono pediu para ver: o
+             * fiscal chega, manda deslocar a banca, o ambulante desloca, e a
+             * irregularidade cessa na presença dele. Nenhum papel é lavrado — e o
+             * trâmite tem de dizer isso com todas as letras, senão quem ler
+             * depois vai achar que a vistoria não terminou.
+             *
+             * Área 4 não tem conta de gestor na demonstração de propósito: é o
+             * caso que o administrativo e o administrador enxergam e nenhum dos
+             * três gestores com conta vê — o recorte por área em funcionamento.
+             */
             'situacao' => 'Concluída',
             'area' => 'Área 4',
             'equipe' => 'B2',
+            'tramites' => [
+                ['ha_horas' => 0, 'quem' => 'integracao'],
+                [
+                    'ha_horas' => 6,
+                    'quem' => 'administrativo',
+                    'o_que' => 'Triada e encaminhada à área',
+                    'detalhe' => 'Encaminhada à Área 4 para direcionamento do gestor.',
+                    'situacao' => 'Encaminhada à área',
+                    'campos' => [
+                        ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'São Caetano'],
+                        ['rotulo' => 'Área de destino', 'valor' => 'Área 4 — Liberdade'],
+                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Faixa de pedestre ocupada: risco a quem atravessa, priorizar.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 10,
+                    'quem' => 'gestor',
+                    'o_que' => 'Direcionada à equipe',
+                    'detalhe' => 'Direcionada à Equipe B2 para vistoria.',
+                    'situacao' => 'Direcionada à equipe',
+                    'campos' => [
+                        ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 30,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Vistoria em campo',
+                    'detalhe' => 'A equipe encontrou a banca sobre a faixa de pedestre, com o ocupante presente.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Ponto irregular, com o ocupante presente',
+                        'ambulante' => 'Josenilda Barros da Conceição — permissão 2014/0882, regular',
+                        'relato' => 'Banca de frutas montada sobre a faixa de pedestre da esquina, avançando '
+                            .'cerca de um metro sobre a travessia. A permissionária tem permissão '
+                            .'regular e ponto autorizado a oito metros dali, e havia deslocado a banca '
+                            .'por causa de uma obra na calçada. Orientada quanto ao Art. 24 e à '
+                            .'obrigação de manter a travessia livre.',
+                        'fotos' => ['vistoria-faixa-antes.jpg', 'vistoria-faixa-depois.jpg'],
+                        'gps' => '-12.9394, -38.4831',
+                        'precisao_m' => 11,
+                    ],
+                ],
+                [
+                    'ha_horas' => 31,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Regularizado no local, sem documento',
+                    'detalhe' => 'A banca foi recuada para o ponto autorizado na presença da equipe. '
+                        .'Nenhum documento foi lavrado.',
+                    'situacao' => 'Concluída',
+                    'desfecho' => 'Regularizado no local',
+                    'campos' => [
+                        ['rotulo' => 'Providência do ocupante', 'valor' => 'Recuou a banca para o ponto autorizado, liberando a travessia'],
+                        ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
+                        ['rotulo' => 'Orientação registrada', 'valor' => 'Comunicar a SEMOP antes de deslocar o ponto por obra na calçada'],
+                    ],
+                ],
+            ],
         ],
 
         [
@@ -912,6 +1150,594 @@ return [
             'situacao' => 'Em campo',
             'area' => 'Itinerante',
             'equipe' => 'I1',
+        ],
+
+        /*
+         * ── OS ESTÁGIOS AVANÇADOS DA FISCALIZAÇÃO ────────────────────────────
+         *
+         * Daqui para baixo estão as denúncias que já FORAM A CAMPO — pedido do
+         * dono (02/09/2026): ele precisa ver o que a equipe recebeu no
+         * aplicativo, o que encontrou, o desfecho que voltou e o documento,
+         * quando houve. Cada uma declara o trâmite passo a passo (ver o cabeçalho
+         * deste arquivo).
+         *
+         * A amostra é distribuída de propósito: os três gestores com conta de
+         * demonstração (`gestor1` = Área 5, `gestor2` = Área 1, `gestor3` =
+         * Área 3) têm caso avançado NOS DOIS canais. Sem isso, a demonstração
+         * abriria vazia para dois deles e pareceria sistema quebrado.
+         */
+
+        [
+            'id' => 29,
+            'canal' => 'e-salvador',
+            'protocolo_origem' => 'ESL-2026-114930',
+            'recebida_ha_horas' => 96,
+            'prazo_em_dias' => 4,
+            'anonima' => false,
+            'requerente' => 'Danielle Xavier Sampaio',
+            'documento' => '512.664.870-29',
+            'email' => 'danielle.sampaio@exemplo.com.br',
+            'telefone' => '(71) 98554-1192',
+            'assunto' => 'Barraca de praia com puxada de madeira e depósito',
+            'relato' => 'A barraca construiu uma puxada de madeira nos fundos, usada como depósito, e '
+                .'ampliou a área de mesas para além do que era antes. A passagem para a areia ficou '
+                .'estreita.',
+            'logradouro' => 'Avenida Otávio Mangabeira',
+            'numero' => '2140',
+            'referencia' => 'em frente ao acesso da praia, ao lado do quiosque azul',
+            'bairro' => 'Costa Azul',
+            'endereco_impreciso' => false,
+            'anexos' => ['foto-puxada-madeira.jpg', 'foto-passagem-estreita.jpg'],
+            /*
+             * ── CASO AVANÇADO: NOTIFICAÇÃO PRELIMINAR COM O PRAZO CORRENDO ────
+             *
+             * A bola está com o notificado: o prazo de 5 dias corre, e o SEFAL só
+             * volta ao ponto depois dele. É o caso que justifica a situação
+             * própria "Aguardando regularização" — sem ela, uma notificação em
+             * prazo ficaria com a mesma cara de vistoria que ninguém fez.
+             *
+             * Chegou a campo por OPERAÇÃO, e não por vistoria avulsa: a Operação
+             * Verão — Orla já cobre este trecho, e é assim que o gestor evita uma
+             * ida isolada. A leitura do trâmite mostra as duas saídas do gestor em
+             * funcionamento na mesma amostra.
+             */
+            'situacao' => 'Aguardando regularização',
+            'area' => 'Área 5',
+            'equipe' => 'C1',
+            'operacao' => 'Operação Verão — Orla',
+            'tramites' => [
+                ['ha_horas' => 0, 'quem' => 'integracao'],
+                [
+                    'ha_horas' => 7,
+                    'quem' => 'administrativo',
+                    'o_que' => 'Triada e encaminhada à área',
+                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do gestor.',
+                    'situacao' => 'Encaminhada à área',
+                    'campos' => [
+                        ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Costa Azul'],
+                        ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
+                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Cidadã anexou foto da puxada; trecho já coberto pela operação da orla.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 11,
+                    'quem' => 'gestor',
+                    'o_que' => 'Incluída em operação',
+                    'detalhe' => 'Anexada à Operação Verão — Orla, executada pela Equipe C1.',
+                    'situacao' => 'Em operação',
+                    'campos' => [
+                        ['rotulo' => 'Saída escolhida', 'valor' => 'Operação já planejada, em vez de ida isolada ao local'],
+                        ['rotulo' => 'Operação', 'valor' => 'Operação Verão — Orla · até o fim de março'],
+                        ['rotulo' => 'Foco da operação', 'valor' => 'Orla de Itapuã a Boca do Rio, com ênfase em barracas de praia.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 30,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Vistoria em campo',
+                    'detalhe' => 'A equipe vistoriou o ponto dentro da varredura da operação.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Ponto irregular, com o permissionário presente',
+                        'ambulante' => 'Jailson Pereira dos Santos — permissão 2018/041.887, regular',
+                        'equipamento' => 'Barraca de chapa, com puxada de madeira nos fundos',
+                        'relato' => 'Puxada de madeira de aproximadamente 2 m × 3 m nos fundos da barraca, '
+                            .'usada como depósito de bebidas e botijão, fora do padrão autorizado. '
+                            .'Área de mesas avançando sobre a passagem de acesso à areia, que ficou '
+                            .'com pouco mais de um metro. Permissionário presente, com permissão '
+                            .'regular e DAM do exercício quitado, apresentado no local.',
+                        'fotos' => [
+                            'vistoria-puxada-fundos.jpg',
+                            'vistoria-deposito-botijao.jpg',
+                            'vistoria-acesso-areia.jpg',
+                        ],
+                        'gps' => '-12.9821, -38.4306',
+                        'precisao_m' => 6,
+                    ],
+                ],
+                [
+                    'ha_horas' => 31,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Notificação Preliminar emitida',
+                    'detalhe' => 'Notificação lavrada e via entregue ao permissionário, com prazo de 5 dias '
+                        .'para retirar a puxada e recuar as mesas.',
+                    'situacao' => 'Aguardando regularização',
+                    'desfecho' => 'Notificação Preliminar emitida',
+                    'documento' => [
+                        'tipo' => 'np',
+                        'numero' => '194903',
+                        'notificado' => 'Jailson Pereira dos Santos',
+                        'endereco' => 'Avenida Otávio Mangabeira, 2140 — Costa Azul',
+                        'inscricao' => '2018/041.887',
+                        'atividade' => 'Barraca de Chapa',
+                        'local' => 'Faixa de areia da Avenida Otávio Mangabeira, altura do nº 2140 — Costa Azul',
+                        'equipamento' => 'Barraca 12',
+                        'motivos' => ['puxada', 'padrao', 'mesas'],
+                        'sancoes' => ['autuacao', 'apreensao'],
+                        'prazo' => '5d',
+                        'assinaturas' => [
+                            ['rotulo' => 'Notificado', 'estado' => 'assinada'],
+                            ['rotulo' => '1ª testemunha', 'estado' => 'assinada', 'nome' => 'Marivalda Souza Lima'],
+                            ['rotulo' => '2ª testemunha', 'estado' => 'assinada', 'nome' => 'Edson Ribeiro Costa'],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+
+        [
+            'id' => 30,
+            'canal' => 'fala-salvador',
+            'protocolo_origem' => '156-2026-889120',
+            'recebida_ha_horas' => 340,
+            'prazo_em_dias' => -4,
+            'anonima' => false,
+            'requerente' => 'Cleide Santana de Oliveira',
+            'documento' => null,
+            'email' => null,
+            'telefone' => '(71) 98330-7715',
+            'assunto' => 'Mesas e som em ponto de praia depois do horário',
+            'relato' => 'Moradora informa que o ponto mantém mesas na calçada e caixa de som ligada bem '
+                .'depois do horário autorizado, e que já reclamou com o vendedor sem resultado. '
+                .'Deu o endereço e o horário: das 18h até depois da meia-noite.',
+            'logradouro' => 'Rua Doutor Nestor Duarte',
+            'numero' => '96',
+            'referencia' => 'esquina com a orla, perto do posto salva-vidas',
+            'bairro' => 'Itapuã',
+            'endereco_impreciso' => false,
+            'atendente' => 'Central 156 — atendente 4429',
+            'categoria' => 'Perturbação do sossego',
+            'anexos' => [],
+            /*
+             * ── CASO AVANÇADO: RETORNO VENCIDO, SITUAÇÃO MANTIDA ──────────────
+             *
+             * O prazo da notificação venceu, a equipe voltou e o ponto continuava
+             * igual. A denúncia NÃO se conclui aqui: ela volta ao gestor para a
+             * próxima medida (apreensão), e é esse o significado da situação
+             * "Retorno vencido". Concluir neste ponto esconderia a única coisa que
+             * a tela precisa cobrar — que alguém decida o próximo passo.
+             */
+            'situacao' => 'Retorno vencido',
+            'area' => 'Área 5',
+            'equipe' => 'C1',
+            'tramites' => [
+                ['ha_horas' => 0, 'quem' => 'integracao'],
+                [
+                    'ha_horas' => 6,
+                    'quem' => 'administrativo',
+                    'o_que' => 'Triada e encaminhada à área',
+                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do gestor.',
+                    'situacao' => 'Encaminhada à área',
+                    'campos' => [
+                        ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Itapuã'],
+                        ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
+                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Reclamação reiterada; a moradora diz já ter falado com o vendedor.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 10,
+                    'quem' => 'gestor',
+                    'o_que' => 'Direcionada à equipe',
+                    'detalhe' => 'Direcionada à Equipe C1 para vistoria.',
+                    'situacao' => 'Direcionada à equipe',
+                    'campos' => [
+                        ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
+                        ['rotulo' => 'Orientação à equipe', 'valor' => 'Ir no fim da tarde: o horário reclamado começa às 18h.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 34,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Vistoria em campo',
+                    'detalhe' => 'A equipe encontrou as mesas na calçada e o som ligado, com o ocupante presente.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Ponto irregular, com o ocupante presente',
+                        'ambulante' => 'Roberto Cerqueira da Paixão — permissão 2011/007.412, regular',
+                        'equipamento' => 'Barraca de chapa, com mesas e cadeiras na calçada',
+                        'relato' => 'Seis mesas e vinte e quatro cadeiras dispostas na calçada, sem Alvará '
+                            .'para colocação de mesas e cadeiras em logradouro público. Caixa de som '
+                            .'de grande porte ligada no equipamento. Ocupante presente, orientado '
+                            .'quanto ao horário autorizado e à necessidade do alvará.',
+                        'fotos' => ['vistoria-mesas-calcada.jpg', 'vistoria-som-barraca.jpg'],
+                        'gps' => '-12.9506, -38.3608',
+                        'precisao_m' => 9,
+                    ],
+                ],
+                [
+                    'ha_horas' => 35,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Notificação Preliminar emitida',
+                    'detalhe' => 'Notificação lavrada com prazo de 48 horas para retirar as mesas e apresentar o alvará.',
+                    'situacao' => 'Aguardando regularização',
+                    'desfecho' => 'Notificação Preliminar emitida',
+                    'documento' => [
+                        'tipo' => 'np',
+                        'numero' => '194902',
+                        'notificado' => 'Roberto Cerqueira da Paixão',
+                        'endereco' => 'Rua Doutor Nestor Duarte, 96 — Itapuã',
+                        'inscricao' => '2011/007.412',
+                        'atividade' => 'Barraca de Chapa',
+                        'local' => 'Calçada da Rua Doutor Nestor Duarte, esquina com a orla — Itapuã',
+                        'equipamento' => 'Barraca 04',
+                        'motivos' => ['mesas', 'alvara-mesas', 'horario'],
+                        'sancoes' => ['autuacao', 'apreensao', 'multa'],
+                        'prazo' => '48h',
+                        // Recusar assinar é fato jurídico corriqueiro, e o
+                        // documento registra a recusa — não a esconde. É o caso
+                        // que explica por que a leitura mostra o estado de cada
+                        // assinatura em vez de só o nome.
+                        'assinaturas' => [
+                            ['rotulo' => 'Notificado', 'estado' => 'recusada'],
+                            ['rotulo' => '1ª testemunha', 'estado' => 'assinada', 'nome' => 'Ana Paula Trindade'],
+                            ['rotulo' => '2ª testemunha', 'estado' => 'pendente'],
+                        ],
+                    ],
+                ],
+                [
+                    'ha_horas' => 130,
+                    'quem' => 'fiscal2',
+                    'o_que' => 'Retorno de fiscalização — situação mantida',
+                    'detalhe' => 'Prazo vencido e ponto na mesma situação. A denúncia volta ao gestor da área '
+                        .'para a próxima medida.',
+                    'situacao' => 'Retorno vencido',
+                    'desfecho' => 'Retorno com a situação mantida',
+                    'campo' => [
+                        'encontrado' => 'Ponto na mesma situação, com o ocupante presente',
+                        'relato' => 'Retorno após o vencimento das 48 horas. As mesas continuam na calçada, '
+                            .'no mesmo número, e o alvará não foi apresentado. O ocupante informou '
+                            .'que "não vai tirar". Registrada a reincidência para instruir a medida '
+                            .'seguinte.',
+                        'fotos' => ['retorno-mesas-mantidas.jpg', 'retorno-panorama.jpg'],
+                        'gps' => '-12.9507, -38.3607',
+                        'precisao_m' => 8,
+                    ],
+                    'campos' => [
+                        ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194902'],
+                        ['rotulo' => 'Próxima medida sugerida pela equipe', 'valor' => 'Apreensão das mesas e cadeiras, com apoio da guarda'],
+                    ],
+                ],
+            ],
+        ],
+
+        [
+            'id' => 31,
+            'canal' => 'e-salvador',
+            'protocolo_origem' => 'ESL-2026-114865',
+            'recebida_ha_horas' => 220,
+            'prazo_em_dias' => -1,
+            'anonima' => false,
+            'requerente' => 'Ubirajara Lopes de Andrade',
+            'documento' => '380.114.652-07',
+            'email' => 'ubirajara.andrade@exemplo.com.br',
+            'telefone' => '(71) 99177-2280',
+            'assunto' => 'Venda de bebida em ponto improvisado na orla',
+            'relato' => 'Todos os fins de semana aparece um ponto improvisado com isopor e caixa de som na '
+                .'calçada da orla, vendendo bebida até de madrugada.',
+            'logradouro' => 'Rua João Gomes',
+            'numero' => '415',
+            'referencia' => 'calçada da orla, altura da praça',
+            'bairro' => 'Amaralina',
+            'endereco_impreciso' => false,
+            'anexos' => ['foto-ponto-improvisado.jpg'],
+            /*
+             * ── CASO AVANÇADO: NADA ENCONTRADO NO LOCAL ───────────────────────
+             *
+             * Denúncia procedente na origem e improcedente na vistoria: o ponto
+             * era de fim de semana, e a equipe foi num dia útil. Registrar "nada
+             * encontrado" com a data e a hora da ida é o que permite ao gestor
+             * mandar de novo no dia certo em vez de arquivar por engano — e é por
+             * isso que o desfecho é de lista, não texto livre.
+             */
+            'situacao' => 'Concluída',
+            'area' => 'Área 3',
+            'equipe' => 'A2',
+            'tramites' => [
+                ['ha_horas' => 0, 'quem' => 'integracao'],
+                [
+                    'ha_horas' => 5,
+                    'quem' => 'administrativo',
+                    'o_que' => 'Triada e encaminhada à área',
+                    'detalhe' => 'Encaminhada à Área 3 para direcionamento do gestor.',
+                    'situacao' => 'Encaminhada à área',
+                    'campos' => [
+                        ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Amaralina'],
+                        ['rotulo' => 'Área de destino', 'valor' => 'Área 3 — Brotas'],
+                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'O cidadão diz que o ponto só aparece em fim de semana.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 8,
+                    'quem' => 'gestor',
+                    'o_que' => 'Direcionada à equipe',
+                    'detalhe' => 'Direcionada à Equipe A2 para vistoria.',
+                    'situacao' => 'Direcionada à equipe',
+                    'campos' => [
+                        ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 28,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Vistoria em campo',
+                    'detalhe' => 'A equipe esteve no endereço e não encontrou ponto de venda algum.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Nada encontrado no local',
+                        'relato' => 'Calçada livre no endereço indicado, sem equipamento, isopor ou mercadoria. '
+                            .'Nenhum vestígio de ocupação recente. Comerciantes do entorno confirmaram '
+                            .'que o ponto aparece apenas em sábados e domingos, à noite.',
+                        'fotos' => ['vistoria-calcada-livre.jpg'],
+                        'gps' => '-13.0086, -38.4581',
+                        'precisao_m' => 12,
+                    ],
+                ],
+                [
+                    'ha_horas' => 29,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Concluída — nada encontrado',
+                    'detalhe' => 'Vistoria encerrada sem constatação. A equipe registrou que o ponto é de fim '
+                        .'de semana, para nova ida no dia e horário indicados.',
+                    'situacao' => 'Concluída',
+                    'desfecho' => 'Nada encontrado no local',
+                    'campos' => [
+                        ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — não houve constatação'],
+                        ['rotulo' => 'Recomendação da equipe', 'valor' => 'Reprogramar para sábado à noite, com a equipe Noturna'],
+                    ],
+                ],
+            ],
+        ],
+
+        [
+            'id' => 32,
+            'canal' => 'fala-salvador',
+            'protocolo_origem' => '156-2026-888820',
+            'recebida_ha_horas' => 400,
+            'prazo_em_dias' => -9,
+            'anonima' => true,
+            'requerente' => null,
+            'documento' => null,
+            'email' => null,
+            'telefone' => null,
+            'assunto' => 'Mesas de bar ocupando a calçada inteira',
+            'relato' => 'Denúncia anônima de que o bar espalha mesas por toda a calçada em frente, e quem '
+                .'passa com carrinho de bebê precisa descer para a rua. Informou a rua e o número.',
+            'logradouro' => 'Rua Silveira Martins',
+            'numero' => '1740',
+            'referencia' => 'em frente à parada de ônibus',
+            'bairro' => 'Cabula',
+            'endereco_impreciso' => false,
+            'atendente' => 'Central 156 — atendente 4415',
+            'categoria' => 'Ocupação irregular de logradouro',
+            'anexos' => [],
+            /*
+             * ── CASO AVANÇADO: A DENÚNCIA DE PONTA A PONTA ───────────────────
+             *
+             * O ciclo inteiro numa linha só: integração › triagem › gestor ›
+             * vistoria › notificação › retorno › conclusão. É a que o dono usa
+             * para percorrer a vida completa do registro, e a que prova que o
+             * caminho educativo FUNCIONA — o notificado cumpriu, e nenhuma
+             * apreensão foi necessária.
+             */
+            'situacao' => 'Concluída',
+            'area' => 'Área 3',
+            'equipe' => 'A2',
+            'tramites' => [
+                ['ha_horas' => 0, 'quem' => 'integracao'],
+                [
+                    'ha_horas' => 7,
+                    'quem' => 'administrativo',
+                    'o_que' => 'Triada e encaminhada à área',
+                    'detalhe' => 'Encaminhada à Área 3 para direcionamento do gestor.',
+                    'situacao' => 'Encaminhada à área',
+                    'campos' => [
+                        ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Cabula'],
+                        ['rotulo' => 'Área de destino', 'valor' => 'Área 3 — Brotas'],
+                        ['rotulo' => 'Observação da triagem', 'valor' => 'Anônima, mas com rua e número: dá para localizar o ponto.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 12,
+                    'quem' => 'gestor',
+                    'o_que' => 'Direcionada à equipe',
+                    'detalhe' => 'Direcionada à Equipe A2 para vistoria.',
+                    'situacao' => 'Direcionada à equipe',
+                    'campos' => [
+                        ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 32,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Vistoria em campo',
+                    'detalhe' => 'A equipe encontrou a calçada ocupada por mesas, com o responsável presente.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Ponto irregular, com o responsável presente',
+                        'ambulante' => 'Genivaldo Alves Rodrigues — responsável pelo estabelecimento',
+                        'equipamento' => 'Mesas e cadeiras em logradouro público',
+                        'relato' => 'Nove mesas e trinta e seis cadeiras ocupando a calçada de ponta a ponta, '
+                            .'sem faixa livre para pedestre. O responsável não apresentou Alvará para '
+                            .'colocação de mesas e cadeiras em logradouro público e informou que '
+                            .'"sempre foi assim". Orientado quanto à faixa mínima de passagem.',
+                        'fotos' => ['vistoria-calcada-mesas.jpg', 'vistoria-passagem-bloqueada.jpg'],
+                        'gps' => '-12.9648, -38.4402',
+                        'precisao_m' => 10,
+                    ],
+                ],
+                [
+                    'ha_horas' => 33,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Notificação Preliminar emitida',
+                    'detalhe' => 'Notificação lavrada com prazo de 72 horas para retirar as mesas e apresentar o alvará.',
+                    'situacao' => 'Aguardando regularização',
+                    'desfecho' => 'Notificação Preliminar emitida',
+                    'documento' => [
+                        'tipo' => 'np',
+                        'numero' => '194901',
+                        'notificado' => 'Genivaldo Alves Rodrigues',
+                        'endereco' => 'Rua Silveira Martins, 1740 — Cabula',
+                        'inscricao' => null,
+                        'atividade' => 'Comércio Informal',
+                        'local' => 'Calçada da Rua Silveira Martins, altura do nº 1740 — Cabula',
+                        'equipamento' => null,
+                        'motivos' => ['mesas', 'alvara-mesas'],
+                        'sancoes' => ['autuacao', 'apreensao'],
+                        'prazo' => '72h',
+                        'assinaturas' => [
+                            ['rotulo' => 'Notificado', 'estado' => 'assinada'],
+                            ['rotulo' => '1ª testemunha', 'estado' => 'assinada', 'nome' => 'Jorge Luiz Menezes'],
+                            ['rotulo' => '2ª testemunha', 'estado' => 'assinada', 'nome' => 'Sandra Regina Alves'],
+                        ],
+                    ],
+                ],
+                [
+                    'ha_horas' => 130,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Retorno de fiscalização — regularizado',
+                    'detalhe' => 'A equipe voltou ao ponto e encontrou a calçada com a faixa de passagem livre.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Situação regularizada',
+                        'relato' => 'Retorno após o prazo da notificação. As mesas foram reduzidas a quatro, '
+                            .'recuadas para junto da fachada, com faixa livre de aproximadamente 1,60 m '
+                            .'para pedestre. O responsável apresentou o protocolo do pedido de Alvará '
+                            .'para mesas e cadeiras, aberto no dia seguinte à notificação.',
+                        'fotos' => ['retorno-faixa-livre.jpg', 'retorno-protocolo-alvara.jpg'],
+                        'gps' => '-12.9649, -38.4401',
+                        'precisao_m' => 9,
+                    ],
+                ],
+                [
+                    'ha_horas' => 131,
+                    'quem' => 'encarregado',
+                    'o_que' => 'Concluída — regularizada após notificação',
+                    'detalhe' => 'Notificação cumprida no prazo de retorno. Nenhuma penalidade aplicada.',
+                    'situacao' => 'Concluída',
+                    'desfecho' => 'Regularizado após notificação',
+                    'campos' => [
+                        ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194901'],
+                        ['rotulo' => 'Penalidade aplicada', 'valor' => 'Nenhuma — a notificação foi cumprida'],
+                        ['rotulo' => 'Pendência do notificado', 'valor' => 'Alvará de mesas e cadeiras em análise, protocolo apresentado'],
+                    ],
+                ],
+            ],
+        ],
+
+        [
+            'id' => 33,
+            'canal' => 'fala-salvador',
+            'protocolo_origem' => '156-2026-889090',
+            'recebida_ha_horas' => 150,
+            'prazo_em_dias' => 3,
+            'anonima' => false,
+            'requerente' => 'Hildete Moura Vasconcelos',
+            'documento' => null,
+            'email' => null,
+            'telefone' => '(71) 3336-9021',
+            'assunto' => 'Carrinho de lanche fechando a entrada da garagem',
+            'relato' => 'Moradora informa que o carrinho estaciona em frente ao portão da garagem no fim da '
+                .'tarde e ninguém consegue entrar nem sair com o carro. Deu o endereço e disse que '
+                .'já conversou com o vendedor.',
+            'logradouro' => 'Rua Territorial',
+            'numero' => '54',
+            'referencia' => 'em frente ao portão da garagem do prédio',
+            'bairro' => 'Barris',
+            'endereco_impreciso' => false,
+            'atendente' => 'Central 156 — atendente 4404',
+            'categoria' => 'Ocupação irregular de logradouro',
+            'anexos' => [],
+            /*
+             * ── CASO AVANÇADO: O CAMINHO COMUM, RESOLVIDO NA CONVERSA ────────
+             *
+             * A fiscalização é educativa antes de punitiva, e este é o caso que
+             * mostra isso sem documento nenhum: o fiscal pede para deslocar, o
+             * ambulante desloca, e acabou. Uma amostra em que todos os casos de
+             * campo terminassem em papel desenharia um sistema punitivo que não é
+             * o do cliente.
+             */
+            'situacao' => 'Concluída',
+            'area' => 'Área 1',
+            'equipe' => 'C2',
+            'tramites' => [
+                ['ha_horas' => 0, 'quem' => 'integracao'],
+                [
+                    'ha_horas' => 4,
+                    'quem' => 'administrativo',
+                    'o_que' => 'Triada e encaminhada à área',
+                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do gestor.',
+                    'situacao' => 'Encaminhada à área',
+                    'campos' => [
+                        ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Barris'],
+                        ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
+                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Acesso de garagem bloqueado; a moradora já falou com o vendedor.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 8,
+                    'quem' => 'gestor',
+                    'o_que' => 'Direcionada à equipe',
+                    'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
+                    'situacao' => 'Direcionada à equipe',
+                    'campos' => [
+                        ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
+                        ['rotulo' => 'Orientação à equipe', 'valor' => 'Ir depois das 17h, quando o carrinho monta.'],
+                    ],
+                ],
+                [
+                    'ha_horas' => 26,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Vistoria em campo',
+                    'detalhe' => 'A equipe encontrou o carrinho em frente ao portão, com o ambulante presente.',
+                    'situacao' => 'Em campo',
+                    'campo' => [
+                        'encontrado' => 'Ponto irregular, com o ambulante presente',
+                        'ambulante' => 'Ademir Batista dos Reis — sem permissão apresentada',
+                        'equipamento' => 'Carrinho de mão, com chapa e botijão',
+                        'relato' => 'Carrinho posicionado exatamente sobre o rebaixo do portão da garagem, '
+                            .'impedindo a entrada de veículos. Ambulante presente, não apresentou '
+                            .'permissão e informou que costuma montar ali por causa da tomada. '
+                            .'Orientado quanto ao rebaixo de garagem e à necessidade de cadastro.',
+                        'fotos' => ['vistoria-carrinho-portao.jpg', 'vistoria-portao-liberado.jpg'],
+                        'gps' => '-12.9862, -38.5136',
+                        'precisao_m' => 13,
+                    ],
+                ],
+                [
+                    'ha_horas' => 27,
+                    'quem' => 'fiscal',
+                    'o_que' => 'Regularizado no local, sem documento',
+                    'detalhe' => 'O carrinho foi deslocado para o outro lado da via na presença da equipe. '
+                        .'Nenhum documento foi lavrado.',
+                    'situacao' => 'Concluída',
+                    'desfecho' => 'Regularizado no local',
+                    'campos' => [
+                        ['rotulo' => 'Providência do ambulante', 'valor' => 'Deslocou o carrinho para fora do rebaixo, liberando a garagem'],
+                        ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
+                        ['rotulo' => 'Encaminhamento', 'valor' => 'Orientado a procurar a SEMOP para cadastro; endereço e horário anotados para nova ronda'],
+                    ],
+                ],
+            ],
         ],
 
     ],

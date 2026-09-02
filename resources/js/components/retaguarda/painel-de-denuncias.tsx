@@ -22,6 +22,7 @@ import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { TramiteDeDenuncia } from '@/components/retaguarda/tramite-de-denuncia';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import {
     Paginacao,
@@ -91,6 +92,8 @@ interface Props {
     canal: Canal;
     denuncias: Denuncia[];
     situacoes: string[];
+    /** Os desfechos que uma vistoria pode ter — catálogo do servidor. */
+    desfechos: string[];
     motivos: string[];
     destinos: string[];
     equipes: EquipeResumo[];
@@ -116,6 +119,7 @@ type Decisao = 'encaminhar' | 'devolver' | 'direcionar' | 'operacao' | null;
 /** O que a busca reconhece além das palavras soltas. */
 type Faceta =
     | { tipo: 'situacao'; valor: string }
+    | { tipo: 'desfecho'; valor: string }
     | { tipo: 'area'; valor: string }
     | { tipo: 'equipe'; valor: string }
     | { tipo: 'em-trabalho' }
@@ -131,8 +135,19 @@ type Faceta =
  *
  * Está declarado uma vez porque os dois leem a MESMA lista: com uma cópia em
  * cada lugar, um dia o número contaria um conjunto e o filtro mostraria outro.
+ *
+ * As duas situações de pós-vistoria entram aqui: notificação com prazo correndo
+ * e retorno vencido são trabalho EM ABERTO — a denúncia não se encerrou, e
+ * deixá-las fora faria o número "em trabalho" esconder justamente os casos em
+ * que alguém tem de voltar ao ponto.
  */
-const EM_TRABALHO = ['Direcionada à equipe', 'Em operação', 'Em campo'];
+const EM_TRABALHO = [
+    'Direcionada à equipe',
+    'Em operação',
+    'Em campo',
+    'Aguardando regularização',
+    'Retorno vencido',
+];
 
 /** Uma expressão de busca a partir de um valor do domínio, sem acento e inteira. */
 function expressaoDe(valor: string): RegExp {
@@ -151,6 +166,51 @@ function enderecoDe(d: Denuncia): string {
     return [d.logradouro, d.numero, d.referencia]
         .filter((parte) => parte !== null && String(parte).trim() !== '')
         .join(', ');
+}
+
+/**
+ * O que vem DEPOIS na vida da denúncia — dito como próximo passo, nunca como
+ * fato registrado.
+ *
+ * Existe uma resposta por situação em que a bola está com alguém, e `null` para
+ * quem já se encerrou: escrever "próximo passo" numa denúncia concluída ou
+ * arquivada prometeria um ato que não vai acontecer. E o próximo passo do que
+ * está com prazo correndo é o RETORNO, não a vistoria — quem lê precisa saber
+ * que alguém tem de voltar ao ponto.
+ */
+function proximoPassoDe(
+    d: Denuncia,
+): { o_que: string; quem: string; detalhe: string } | null {
+    const equipe = `Equipe ${d.equipe ?? VAZIO}`;
+
+    if (['Direcionada à equipe', 'Em operação'].includes(d.situacao)) {
+        return {
+            o_que: 'Vistoria em campo',
+            quem: equipe,
+            detalhe:
+                'A equipe recebe a denúncia no aplicativo, vistoria o ponto e registra o desfecho.',
+        };
+    }
+
+    if (d.situacao === 'Aguardando regularização') {
+        return {
+            o_que: 'Retorno de fiscalização',
+            quem: equipe,
+            detalhe:
+                'Vencido o prazo da notificação, a equipe volta ao ponto para conferir se a situação foi regularizada.',
+        };
+    }
+
+    if (d.situacao === 'Retorno vencido') {
+        return {
+            o_que: 'Próxima medida',
+            quem: d.area === null ? 'Gestão da área' : `Gestão da ${d.area}`,
+            detalhe:
+                'O prazo venceu com a situação mantida: cabe ao gestor da área decidir a medida seguinte.',
+        };
+    }
+
+    return null;
 }
 
 /** Para onde a denúncia está indo hoje: a operação, a equipe, ou nada ainda. */
@@ -247,6 +307,7 @@ export function PainelDeDenuncias({
     canal,
     denuncias,
     situacoes,
+    desfechos,
     motivos,
     destinos,
     equipes,
@@ -344,6 +405,16 @@ export function PainelDeDenuncias({
             lista.push({ expressao: expressaoDe(situacao), valor: { tipo: 'situacao', valor: situacao } });
         }
 
+        /*
+         * O DESFECHO da vistoria é faceta como a situação: "concluídas sem
+         * documento" é a pergunta que mede se a fiscalização está sendo
+         * educativa, e ela precisa ser respondível pela mesma barra de busca — a
+         * tela não tem outro filtro.
+         */
+        for (const desfecho of desfechos) {
+            lista.push({ expressao: expressaoDe(desfecho), valor: { tipo: 'desfecho', valor: desfecho } });
+        }
+
         // "encaminhada" sozinha (sem "à área") é como as pessoas falam.
         lista.push({
             expressao: /\bencaminhad\w*\b/,
@@ -366,7 +437,7 @@ export function PainelDeDenuncias({
         }
 
         return lista;
-    }, [situacoes, equipes, areas]);
+    }, [situacoes, desfechos, equipes, areas]);
 
     // ── A fonte de cada aba: cada uma é uma ETAPA do fluxo ──────────────────
 
@@ -393,6 +464,10 @@ export function PainelDeDenuncias({
         return fonte.filter((d) => {
             for (const faceta of achadas) {
                 if (faceta.tipo === 'situacao' && d.situacao !== faceta.valor) {
+                    return false;
+                }
+
+                if (faceta.tipo === 'desfecho' && d.desfecho !== faceta.valor) {
                     return false;
                 }
 
@@ -454,6 +529,7 @@ export function PainelDeDenuncias({
                 d.equipe,
                 d.operacao,
                 d.situacao,
+                d.desfecho,
                 d.motivo,
             ]);
         });
@@ -668,6 +744,9 @@ export function PainelDeDenuncias({
         area: d.area ?? d.area_sugerida?.area ?? VAZIO,
         destino: destinoAtual(d),
         situacao: d.situacao,
+        // O desfecho é o que o documento exportado precisa dizer: "Concluída"
+        // sozinha não conta se houve orientação, notificação ou apreensão.
+        desfecho: d.desfecho ?? VAZIO,
         prazo: dataBR(d.prazo),
     }));
 
@@ -919,6 +998,11 @@ export function PainelDeDenuncias({
                                 'prazo vencido',
                                 'recebidas hoje',
                                 'Área 5',
+                                // O desfecho como exemplo clicável: é a pergunta
+                                // que mede se a fiscalização está sendo educativa,
+                                // e sem o exemplo ninguém descobre que a barra
+                                // entende isso.
+                                'regularizado no local',
                                 canal.tem_anexo ? 'com anexo' : 'ocupação',
                             ]}
                         />
@@ -1021,6 +1105,7 @@ export function PainelDeDenuncias({
                                         { chave: 'area', titulo: 'Área' },
                                         { chave: 'destino', titulo: 'Destino' },
                                         { chave: 'situacao', titulo: 'Situação' },
+                                        { chave: 'desfecho', titulo: 'Desfecho' },
                                         { chave: 'prazo', titulo: 'Prazo', alinhar: 'center' },
                                     ]}
                                     linhas={linhasExportacao}
@@ -1412,6 +1497,16 @@ export function PainelDeDenuncias({
                                 </dd>
                             </div>
 
+                            {/* COMO a vistoria terminou. Só aparece depois de a
+                                denúncia ir a campo: em branco na metade das
+                                linhas, o campo faria a ficha parecer defeituosa. */}
+                            {aberta.desfecho !== null && (
+                                <div>
+                                    <dt>Desfecho da vistoria</dt>
+                                    <dd>{aberta.desfecho}</dd>
+                                </div>
+                            )}
+
                             <div style={{ gridColumn: '1 / -1' }}>
                                 <dt>Endereço da ocorrência</dt>
                                 <dd>
@@ -1477,39 +1572,19 @@ export function PainelDeDenuncias({
                             Trâmite
                         </h3>
                         <p className="card-sub">
-                            Quem fez o quê, e quando. A primeira linha é assinada
-                            pela integração, não por pessoa: é o que prova que a
-                            denúncia veio de fora.
+                            Quem fez o quê, quando —{' '}
+                            <strong>e o que cada passo produziu</strong>. Escolha um
+                            passo na linha do tempo (o clique ou as setas do teclado)
+                            para ver a decisão tomada, o que a equipe registrou em
+                            campo e o documento lavrado, quando houve. A primeira
+                            linha é assinada pela integração, não por pessoa: é o que
+                            prova que a denúncia veio de fora.
                         </p>
 
-                        <ol className="rt-tramite">
-                            {aberta.tramites.map((t, i) => (
-                                <li key={`${t.em}-${t.o_que}-${i}`}>
-                                    <strong>{t.o_que}</strong>
-                                    <span className="rt-tramite-quando">
-                                        {dataHoraBR(t.em)} · {t.quem}
-                                    </span>
-                                    <span>{t.detalhe}</span>
-                                </li>
-                            ))}
-
-                            {/* O que vem DEPOIS. Dito como próximo passo e não como
-                                fato: o protótipo não simula a vistoria. */}
-                            {['Direcionada à equipe', 'Em operação'].includes(aberta.situacao) && (
-                                <li className="rt-tramite-futuro">
-                                    <strong>Em campo</strong>
-                                    <span className="rt-tramite-quando">
-                                        próximo passo · Equipe {aberta.equipe ?? '—'}
-                                    </span>
-                                    <span>
-                                        A equipe recebe a denúncia no aplicativo,
-                                        vistoria o ponto e registra o desfecho — que
-                                        aparecerá aqui quando o módulo de fiscalização
-                                        estiver ligado a estas telas.
-                                    </span>
-                                </li>
-                            )}
-                        </ol>
+                        <TramiteDeDenuncia
+                            tramites={aberta.tramites}
+                            proximoPasso={proximoPassoDe(aberta)}
+                        />
 
                         {/* A decisão de UM registro usa os MESMOS caminhos do lote:
                             o que muda é o tamanho da lista de alvos. */}
