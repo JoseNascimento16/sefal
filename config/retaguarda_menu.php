@@ -93,6 +93,59 @@ return [
         ],
 
         /*
+         * Denúncias — o que as ouvidorias da Prefeitura entregam por INTEGRAÇÃO.
+         *
+         * Vem ANTES de Fiscalização porque é o começo da cadeia: a denúncia chega
+         * de fora, é triada pelo administrativo, encaminhada à área e direcionada
+         * pelo gestor — e só então vira trabalho de rua. O menu desenha a ordem
+         * do trabalho.
+         *
+         * Seção PRÓPRIA, e não itens dentro de Fiscalização, porque estas telas
+         * não são trabalho de campo nem cadastro: são o ciclo ADMINISTRATIVO que
+         * antecede o campo, com dois papéis decidindo em sequência. E são seção
+         * separada da Caixa de Entrada de propósito — lá o administrativo DIGITA
+         * o papel que chegou ao balcão; aqui ninguém digita nada, a denúncia
+         * chega sozinha pela integração.
+         *
+         * ── As duas declaram o MESMO slug, e isso é deliberado ───────────────
+         *
+         * Elas moram sob o mesmo primeiro trecho do caminho
+         * (`/retaguarda/denuncias/…`), que é de onde as guardas deduzem a tela: a
+         * permissão é UMA, para o módulo, e aparece no Modo Gerente com o nome da
+         * seção. Separar a permissão do e-Salvador da do Fala Salvador seria uma
+         * decisão que ninguém precisa tomar — quem cuida de denúncia cuida das
+         * duas origens.
+         *
+         * Concessão inicial: administrador e gestor, que são justamente os dois
+         * papéis do fluxo (o administrativo tria; o gestor direciona). O FISCAL
+         * não entra — deixá-lo aqui permitiria escolher o próprio trabalho e
+         * arquivar o que não quisesse atender; a denúncia chega a ele pelo
+         * aplicativo, já dirigida.
+         */
+        [
+            'rotulo' => 'Denúncias',
+            'vazio' => 'As denúncias recebidas das ouvidorias aparecem aqui quando você tiver acesso a elas.',
+            'itens' => [
+                [
+                    'rotulo' => 'e-Salvador',
+                    'rota' => 'retaguarda.denuncias.e-salvador.index',
+                    'icone' => 'denuncias',
+                    'slug' => 'denuncias',
+                    'curto' => 'E-SALV',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+                [
+                    'rotulo' => 'Fala Salvador',
+                    'rota' => 'retaguarda.denuncias.fala-salvador.index',
+                    'icone' => 'denuncias',
+                    'slug' => 'denuncias',
+                    'curto' => 'FALA',
+                    'setores' => ['administrador', 'gestor'],
+                ],
+            ],
+        ],
+
+        /*
          * Fiscalização — o trabalho em si.
          *
          * O fiscal entra aqui, e é o único lugar do menu em que ele entra: o
@@ -169,7 +222,7 @@ return [
                  * cliente, 02/09/2026).
                  *
                  * Vem ANTES de "Fiscalizações" porque é o começo da cadeia: a
-                 * demanda de fora (e-Salvador, Fala Salvador 156, pedido de nova
+                 * demanda de fora (e-Salvador, Fala Salvador, pedido de nova
                  * licença, ofício) entra por aqui, é triada e só então vira
                  * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
                  *

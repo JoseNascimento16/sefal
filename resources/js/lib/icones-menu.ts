@@ -11,6 +11,7 @@ import {
     ListChecks,
     Map,
     MapPinned,
+    Megaphone,
     Siren,
     ScrollText,
     SlidersHorizontal,
@@ -36,6 +37,9 @@ const ICONES: Record<string, LucideIcon> = {
     // A caixa de entrada é a bandeja onde o papel de fora cai: e-Salvador, 156,
     // pedido de licença e ofício chegam ali antes de virar trabalho de rua.
     caixa: Inbox,
+    // Denúncia é o cidadão FALANDO de fora para dentro: o megafone. A caixa é a
+    // bandeja onde o papel cai; a denúncia chega por integração, sem papel.
+    denuncias: Megaphone,
     // Operação é ação planejada de rua — a sirene, não o mapa.
     operacoes: Siren,
     // O mapa ao vivo tem o alfinete: ele mostra ONDE cada coisa está agora.
