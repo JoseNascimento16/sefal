@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import * as L from 'leaflet';
 import { ArrowRight, Radio, Send, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CamadaDoMapa } from '@/components/retaguarda/camada-do-mapa';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
 import type {
     Equipe,
@@ -253,6 +254,24 @@ export default function MapaAoVivo({
         mapaRef.current?.flyTo([lat, lng], zoom, { duration: 0.9 });
     }
 
+    /* A legenda vai como propriedade da camada porque ela mora no PÉ, ao lado do
+       comando de recolher — e sai de cena junto com os painéis: legenda sem
+       painel é decoração sobre a cidade. */
+    const legenda = (
+        <div className="rt-mapa-legenda" aria-hidden>
+            {SITUACOES.filter((s) => s.chave !== 'todas').map((s) => (
+                <span key={s.chave}>
+                    <i className="rt-chip-dot" style={{ color: s.cor }} />
+                    {s.rotulo}
+                </span>
+            ))}
+            <span>
+                <i className="rt-chip-dot" style={{ color: COR_DO_PINO.fiscal }} />
+                Fiscal em campo
+            </span>
+        </div>
+    );
+
     return (
         <>
             <Head title="Mapa ao Vivo" />
@@ -263,8 +282,10 @@ export default function MapaAoVivo({
                 <div ref={caixa} style={{ position: 'absolute', inset: 0 }} />
             </div>
 
-            {/* A CAMADA de leitura: flutua sobre a cidade, sem bloquear o mapa. */}
-            <div className="rt-mapa-camada">
+            {/* A CAMADA de leitura: flutua sobre a cidade, sem bloquear o mapa —
+                e recolhe sob comando, para a cidade ficar inteira ao alcance do
+                dedo em tela pequena. */}
+            <CamadaDoMapa legenda={legenda}>
                 <div className="rt-mapa-topo">
                     <div>
                         <p className="sobrancelha">Fiscalização</p>
@@ -547,22 +568,7 @@ export default function MapaAoVivo({
                     </div>
                 </div>
 
-                <div className="rt-mapa-legenda" aria-hidden>
-                    {SITUACOES.filter((s) => s.chave !== 'todas').map((s) => (
-                        <span key={s.chave}>
-                            <i className="rt-chip-dot" style={{ color: s.cor }} />
-                            {s.rotulo}
-                        </span>
-                    ))}
-                    <span>
-                        <i
-                            className="rt-chip-dot"
-                            style={{ color: COR_DO_PINO.fiscal }}
-                        />
-                        Fiscal em campo
-                    </span>
-                </div>
-            </div>
+            </CamadaDoMapa>
         </>
     );
 }
