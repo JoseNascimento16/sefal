@@ -192,6 +192,21 @@ function proximoPassoDe(
         };
     }
 
+    /*
+     * Vistoria ABERTA: a equipe já está no ponto e o que falta é o desfecho.
+     * Sem esta resposta a linha do tempo parava no passo da vistoria em
+     * andamento, e quem lê não via quem deve o próximo ato — a denúncia parecia
+     * estacionada quando na verdade está com a equipe, na rua, agora.
+     */
+    if (d.situacao === 'Em campo') {
+        return {
+            o_que: 'Desfecho da vistoria',
+            quem: equipe,
+            detalhe:
+                'A equipe está no ponto: encerra a vistoria registrando o desfecho — regularização no local, nada encontrado, ou o documento que o caso exigir.',
+        };
+    }
+
     if (d.situacao === 'Aguardando regularização') {
         return {
             o_que: 'Retorno de fiscalização',
