@@ -3,12 +3,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { irPara, useApp } from '../app';
 import { Interruptor, Selo, Topo, classes } from '../componentes';
 import {
+    DESFECHOS_EXPLICADOS,
+    DOCUMENTO_DO_DESFECHO,
+    LOCAL_APOS_O_DESFECHO,
     ORIGENS,
+    SITUACOES_EXPLICADAS,
+    TOM_DA_SITUACAO,
     acharDemanda,
-    demandasDaEquipe,
+    demandasAVistoriar,
+    desfechosOferecidos,
+    podeRegistrarRetorno,
+    prazoDoRetornoEmPalavras,
     prazoEmPalavras,
     tomDoPrazo,
     type Demanda,
+    type Desfecho,
 } from '../dados-demandas';
 import {
     AMBULANTES,
@@ -72,9 +81,10 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const { registrar } = useApp();
 
     /* O mesmo endereço serve os dois caminhos, e o prefixo diz qual é: `amb-07`
-       vem de um pino do mapa, `dem-03` vem da fila da equipe. */
+       vem de um pino do mapa, `den-0029` vem da fila da equipe (o id da demanda
+       é derivado do protocolo `DEN-NNNN`, e é por isso que o prefixo é `den-`). */
     const doMapa = alvo?.startsWith('amb-') ? (AMBULANTES.find((a) => a.id === alvo) ?? null) : null;
-    const daFila = alvo?.startsWith('dem-') ? acharDemanda(alvo) : null;
+    const daFila = alvo?.startsWith('den-') ? acharDemanda(alvo) : null;
 
     const [demanda, setDemanda] = useState<Demanda | null>(daFila);
     const [escolhendoDemanda, setEscolhendoDemanda] = useState(false);
@@ -94,12 +104,25 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     );
     const [buscando, setBuscando] = useState(false);
     const [busca, setBusca] = useState('');
-    const [decisao, setDecisao] = useState<'regular' | 'irregular' | null>(null);
+    const [desfecho, setDesfecho] = useState<Desfecho | null>(null);
     const [retorno, setRetorno] = useState(false);
     const [prazo, setPrazo] = useState(PRAZOS_RETORNO[1]);
     const seletor = useRef<HTMLInputElement>(null);
 
     const dirigida = demanda !== null;
+
+    /**
+     * Duas telas na mesma: vistoria e RETORNO.
+     *
+     * Quando a denúncia está em `Aguardando regularização`, o que o fiscal vai
+     * fazer no ponto não é uma vistoria nova — é conferir se o notificado
+     * cumpriu o prazo. Muda o título, muda o que o passo 1 mostra (o documento e
+     * o prazo dele) e mudam os desfechos oferecidos. O resto — foto, coordenada,
+     * relato — é igual, e é justamente do que o retorno precisa.
+     */
+    const emRetorno = demanda !== null && podeRegistrarRetorno(demanda);
+    const opcoesDeDesfecho = desfechosOferecidos(demanda);
+    const documentoAcombinar = desfecho ? DOCUMENTO_DO_DESFECHO[desfecho] : null;
 
     /**
      * A coordenada é do APARELHO, mesmo na dirigida.
@@ -206,12 +229,12 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     };
 
     const concluir = () => {
-        if (!decisao) {
+        if (!desfecho) {
             return;
         }
 
         const id = registrar({
-            status: decisao,
+            desfecho,
             ocorrencias: marcadas,
             relato: relato.trim(),
             fotos: fotos.length,
@@ -232,8 +255,12 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     return (
         <div className="pw-tela">
             <Topo
-                titulo="Registrar fiscalização"
-                subtitulo={dirigida ? `Dirigida · ${demanda.protocolo}` : 'Só a decisão é obrigatória'}
+                titulo={emRetorno ? 'Registrar retorno' : 'Registrar fiscalização'}
+                subtitulo={
+                    dirigida
+                        ? `${emRetorno ? 'Retorno' : 'Dirigida'} · ${demanda.protocolo}`
+                        : 'Só o desfecho é obrigatório'
+                }
                 aoVoltar={() => irPara(dirigida ? 'demandas' : 'mapa')}
             />
 
@@ -243,7 +270,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                     <div className="pw-passo-cabeca">
                         <span className="pw-passo-numero">1</span>
                         <span className="pw-passo-titulo">Origem da fiscalização</span>
-                        {dirigida && <span className="pw-passo-opcional">Do processo</span>}
+                        {dirigida && <span className="pw-passo-opcional">Da denúncia</span>}
                     </div>
 
                     {dirigida ? (
@@ -271,7 +298,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                                         <Icone nome="caixa-entrada" tamanho={16} /> Dirigida
                                     </p>
                                     <p className="pw-fraco" style={{ margin: '4px 0 0' }}>
-                                        Vem de um processo encaminhado à equipe.
+                                        Vem de uma denúncia direcionada à equipe.
                                     </p>
                                 </button>
                             </div>
@@ -279,13 +306,17 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                             {escolhendoDemanda && (
                                 <div className="pw-card" style={{ marginTop: 12 }}>
                                     <p className="pw-forte" style={{ margin: '0 0 4px', fontSize: 14.5 }}>
-                                        Vincular a uma demanda da fila
+                                        Vincular a uma denúncia da fila
                                     </p>
                                     <p className="pw-fraco" style={{ margin: '0 0 10px', fontSize: 13 }}>
-                                        Escolhendo aqui, o endereço e o número do processo vêm prontos.
+                                        Escolhendo aqui, o endereço e o protocolo da denúncia vêm prontos.
+                                        {/* Só o que ainda pede vistoria: oferecer uma denúncia
+                                            concluída, ou uma em prazo de regularização, faria o
+                                            fiscal registrar uma vistoria onde o ato devido é
+                                            outro (ou nenhum). */}
                                     </p>
                                     <ul className="pw-lista-limpa">
-                                        {demandasDaEquipe().map((d) => (
+                                        {demandasAVistoriar().map((d) => (
                                             <li key={d.id}>
                                                 <button
                                                     type="button"
@@ -555,33 +586,74 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                     </div>
                 </section>
 
-                {/* 6 · Decisão ------------------------------------------- */}
+                {/* 6 · Desfecho ------------------------------------------ */}
                 <section className="pw-passo">
                     <div className="pw-passo-cabeca">
                         <span className="pw-passo-numero">6</span>
-                        <span className="pw-passo-titulo">Como ficou o local</span>
+                        <span className="pw-passo-titulo">
+                            {emRetorno ? 'Como o retorno encontrou o ponto' : 'Como a vistoria terminou'}
+                        </span>
                     </div>
 
-                    <div className="pw-decisao">
-                        <button
-                            type="button"
-                            className={classes('pw-regular', decisao === 'regular' && 'pw-escolhido')}
-                            onClick={() => setDecisao('regular')}
-                        >
-                            <Icone nome="certo" tamanho={34} />
-                            TUDO REGULAR
-                            <span>Ponto liberado</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={classes('pw-irregular', decisao === 'irregular' && 'pw-escolhido')}
-                            onClick={() => setDecisao('irregular')}
-                        >
-                            <Icone nome="alerta" tamanho={34} />
-                            IRREGULAR
-                            <span>Ocorrência registrada</span>
-                        </button>
+                    {/* A lista é FECHADA e é a mesma que a Retaguarda lê: é o
+                        desfecho que fecha o passo do trâmite da denúncia do outro
+                        lado. Texto livre aqui faria o campo dizer uma coisa e a
+                        Retaguarda outra — e o relatório não somaria nada. */}
+                    <p className="pw-fraco" style={{ margin: '0 0 10px', fontSize: 13.5 }}>
+                        {emRetorno
+                            ? 'O retorno diz se o notificado cumpriu o prazo. É este desfecho que encerra a denúncia ou a devolve ao gestor da área.'
+                            : 'A maioria das abordagens termina no primeiro desfecho — orientou, o ambulante desmontou, acabou.'}
+                    </p>
+
+                    <div className="pw-desfechos">
+                        {opcoesDeDesfecho.map((opcao) => (
+                            <button
+                                key={opcao}
+                                type="button"
+                                className={classes(
+                                    'pw-desfecho',
+                                    LOCAL_APOS_O_DESFECHO[opcao] === 'regular'
+                                        ? 'pw-desfecho-livre'
+                                        : 'pw-desfecho-ocorrencia',
+                                    desfecho === opcao && 'pw-escolhido',
+                                )}
+                                onClick={() => setDesfecho(opcao)}
+                                aria-pressed={desfecho === opcao}
+                            >
+                                <span className="pw-desfecho-icone">
+                                    <Icone
+                                        nome={
+                                            DOCUMENTO_DO_DESFECHO[opcao] === 'aa'
+                                                ? 'pacote'
+                                                : DOCUMENTO_DO_DESFECHO[opcao] === 'np'
+                                                  ? 'documento'
+                                                  : LOCAL_APOS_O_DESFECHO[opcao] === 'regular'
+                                                    ? 'certo'
+                                                    : 'alerta'
+                                        }
+                                        tamanho={22}
+                                    />
+                                </span>
+                                <span style={{ minWidth: 0 }}>
+                                    <span className="pw-desfecho-nome">{opcao}</span>
+                                    <span className="pw-desfecho-explica">
+                                        {DESFECHOS_EXPLICADOS[opcao]}
+                                    </span>
+                                </span>
+                            </button>
+                        ))}
                     </div>
+
+                    {documentoAcombinar && (
+                        <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13 }}>
+                            <Icone nome="documento" tamanho={13} /> Este desfecho lavra{' '}
+                            {documentoAcombinar === 'np'
+                                ? 'a Notificação Preliminar'
+                                : 'o Auto de Apreensão'}
+                            . O documento é preenchido na tela seguinte, com número do bloco reservado
+                            no aparelho.
+                        </p>
+                    )}
                 </section>
 
                 {/* 7 · Retorno ------------------------------------------- */}
@@ -612,11 +684,15 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                 <button
                     type="button"
                     className="pw-btn pw-btn-acao"
-                    style={{ minHeight: 60, fontSize: 18, opacity: decisao ? 1 : 0.5 }}
+                    style={{ minHeight: 60, fontSize: 18, opacity: desfecho ? 1 : 0.5 }}
                     onClick={concluir}
-                    disabled={!decisao}
+                    disabled={!desfecho}
                 >
-                    {decisao ? 'Concluir registro' : 'Escolha regular ou irregular'}
+                    {desfecho
+                        ? emRetorno
+                            ? 'Concluir retorno'
+                            : 'Concluir registro'
+                        : 'Escolha o desfecho'}
                     <Icone nome="seta" tamanho={20} />
                 </button>
             </div>
@@ -624,7 +700,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     );
 }
 
-/** O crachá da demanda: fica no alto do registro e vai até o documento. */
+/** O crachá da denúncia: fica no alto do registro e vai até o documento. */
 function VinculoDaDemanda({
     demanda,
     aoSoltar,
@@ -634,6 +710,7 @@ function VinculoDaDemanda({
     aoSoltar: (() => void) | null;
 }) {
     const origem = ORIGENS[demanda.origem];
+    const documento = demanda.documento;
 
     return (
         <div className="pw-card pw-card-vinculo">
@@ -654,6 +731,27 @@ function VinculoDaDemanda({
             <p className="pw-fraco" style={{ margin: '4px 0 0', fontSize: 12.5 }}>
                 Referência {demanda.protocolo} · prazo {demanda.prazoBr}
             </p>
+
+            {/* A situação diz de quem é a bola. Sem ela o crachá da denúncia
+                ficaria igual em duas circunstâncias opostas: a que espera a
+                primeira vistoria e a que espera o retorno de um prazo. */}
+            <p style={{ margin: '10px 0 0' }}>
+                <Selo tom={TOM_DA_SITUACAO[demanda.situacao]}>{demanda.situacao}</Selo>
+            </p>
+            <p className="pw-fraco" style={{ margin: '6px 0 0', fontSize: 13 }}>
+                {SITUACOES_EXPLICADAS[demanda.situacao]}
+            </p>
+
+            {documento && (
+                <p className="pw-fraco" style={{ margin: '8px 0 0', fontSize: 13 }}>
+                    <Icone nome="documento" tamanho={13} /> {documento.rotulo}
+                    {documento.prazoRotulo ? ` · prazo de ${documento.prazoRotulo}` : ''}
+                    {documento.venceBr && documento.venceEmDias !== null
+                        ? ` · ${prazoDoRetornoEmPalavras(documento.venceEmDias)} (${documento.venceBr})`
+                        : ''}
+                </p>
+            )}
+
             <p style={{ margin: '10px 0 0', fontSize: 14, color: 'var(--pw-texto-corpo)' }}>
                 {demanda.detalhe}
             </p>
@@ -664,7 +762,7 @@ function VinculoDaDemanda({
                     className="pw-btn pw-btn-fantasma pw-btn-pequeno"
                     onClick={() => irPara(`demanda/${demanda.id}`)}
                 >
-                    Abrir a demanda
+                    Abrir a denúncia
                 </button>
                 {aoSoltar && (
                     <button

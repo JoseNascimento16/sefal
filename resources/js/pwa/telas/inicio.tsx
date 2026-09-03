@@ -3,7 +3,13 @@ import { useEffect, useRef } from 'react';
 
 import { irPara, useApp } from '../app';
 import { Selo, Topo, atalhoDoPerfil } from '../componentes';
-import { EQUIPE, demandasDaEquipe, demandasVencidas } from '../dados-demandas';
+import {
+    EQUIPE,
+    demandasAVistoriar,
+    demandasEmRegularizacao,
+    demandasVencidas,
+    type Desfecho,
+} from '../dados-demandas';
 import {
     AMBULANTES,
     CENTRO_SALVADOR,
@@ -46,12 +52,17 @@ export function TelaInicio() {
 
     /* As duas mais urgentes da fila da equipe. Aqui é CHAMADA, não fila: a fila
        inteira mora na aba Demandas, e repetir tudo aqui empurraria o mapa e as
-       operações para baixo da dobra. */
-    const daEquipe = demandasDaEquipe();
+       operações para baixo da dobra.
+
+       O número que abre a tela é o do que PEDE ATO — o que espera prazo de
+       regularização aparece em selo próprio. Somar os dois daria um número que
+       o fiscal não consegue trabalhar hoje. */
+    const aVistoriar = demandasAVistoriar();
+    const emRegularizacao = demandasEmRegularizacao();
     const vencidas = demandasVencidas();
-    const chamada = daEquipe.slice(0, 2);
-    const atendidas = new Set(
-        registros.map((r) => r.demandaId).filter((d): d is string => Boolean(d)),
+    const chamada = aVistoriar.slice(0, 2);
+    const registrado = new Map<string, Desfecho>(
+        registros.filter((r) => r.demandaId).map((r) => [r.demandaId as string, r.desfecho]),
     );
 
     return (
@@ -88,8 +99,8 @@ export function TelaInicio() {
 
                 <div className="pw-numeros" style={{ marginTop: 14 }}>
                     <Numero
-                        valor={daEquipe.length}
-                        rotulo={daEquipe.length === 1 ? 'demanda na fila' : 'demandas na fila'}
+                        valor={aVistoriar.length}
+                        rotulo={aVistoriar.length === 1 ? 'denúncia a vistoriar' : 'denúncias a vistoriar'}
                         icone="caixa-entrada"
                         tom="var(--pw-acao)"
                         aoTocar={() => irPara('demandas')}
@@ -141,7 +152,7 @@ export function TelaInicio() {
                 {chamada.length === 0 ? (
                     <div className="pw-card">
                         <p className="pw-fraco" style={{ margin: 0, fontSize: 14 }}>
-                            O administrativo ainda não encaminhou nenhuma demanda à {EQUIPE.nome}. Você
+                            O gestor da área ainda não direcionou nenhuma denúncia à {EQUIPE.nome}. Você
                             continua com o trabalho avulso: andar a rua, ver e registrar.
                         </p>
                     </div>
@@ -150,10 +161,23 @@ export function TelaInicio() {
                         <CartaoDemanda
                             key={demanda.id}
                             demanda={demanda}
-                            atendida={atendidas.has(demanda.id)}
+                            registrado={registrado.get(demanda.id) ?? null}
                             compacto
                         />
                     ))
+                )}
+
+                {emRegularizacao.length > 0 && (
+                    /* Prazo de notificação correndo não é fila de hoje, mas
+                       precisa estar à vista: é a volta que a equipe já deve. */
+                    <p style={{ margin: '10px 0 0' }}>
+                        <Selo tom="alerta">
+                            <Icone nome="documento" tamanho={13} />
+                            {emRegularizacao.length === 1
+                                ? '1 notificação com prazo correndo'
+                                : `${emRegularizacao.length} notificações com prazo correndo`}
+                        </Selo>
+                    </p>
                 )}
 
                 <button
@@ -163,9 +187,9 @@ export function TelaInicio() {
                     onClick={() => irPara('demandas')}
                 >
                     <Icone nome="caixa-entrada" tamanho={18} />
-                    {daEquipe.length === 1
-                        ? 'Ver a demanda da equipe'
-                        : `Ver as ${daEquipe.length} demandas da equipe`}
+                    {aVistoriar.length === 1
+                        ? 'Ver a denúncia da equipe'
+                        : `Ver as ${aVistoriar.length} denúncias a vistoriar`}
                 </button>
 
                 <p className="pw-titulo-secao">Sua rua agora</p>

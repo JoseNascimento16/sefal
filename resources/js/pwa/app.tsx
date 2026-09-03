@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { BarraInferior, type Aba } from './componentes';
-import { demandasVencidas } from './dados-demandas';
+import { LOCAL_APOS_O_DESFECHO, demandasVencidas, type Desfecho } from './dados-demandas';
 import { entrarComMatricula } from './sessao';
 import {
     HOJE_BR,
@@ -9,7 +9,6 @@ import {
     horaAgora,
     type OrigemRegistro,
     type Registro,
-    type Situacao,
     type ViaImpressa,
 } from './dados-prototipo';
 import { TelaApreensao } from './telas/apreensao';
@@ -48,7 +47,10 @@ import { TelaVia } from './telas/via';
    ============================================================================ */
 
 export type NovoRegistro = {
-    status: Situacao;
+    /* O que o fiscal escolheu no fim da vistoria (ou do retorno). A leitura
+       "regular / irregular" NÃO vem da tela: é derivada aqui, para a mesma
+       decisão não ter dois donos. */
+    desfecho: Desfecho;
     ocorrencias: string[];
     relato: string;
     fotos: number;
@@ -147,18 +149,22 @@ export function App() {
 
     const registrar = useCallback((novo: NovoRegistro): string => {
         const id = `reg-novo-${Date.now()}`;
+        /* O protocolo carrega a data de HOJE, calculada — escrita à mão, ela
+           envelheceria e o registro de hoje sairia com a data da semana passada. */
+        const [dia, mes, ano] = HOJE_BR.split('/');
 
         setRegistros((atuais) => [
             {
                 id,
-                protocolo: `FA20260826${String(atuais.length + 1).padStart(3, '0')}`,
+                protocolo: `FA${ano}${mes}${dia}${String(atuais.length + 1).padStart(3, '0')}`,
                 dataBr: HOJE_BR,
                 hora: horaAgora(),
                 regiao: novo.regiao,
                 endereco: novo.endereco,
                 lat: novo.lat,
                 lng: novo.lng,
-                status: novo.status,
+                desfecho: novo.desfecho,
+                status: LOCAL_APOS_O_DESFECHO[novo.desfecho],
                 ocorrencias: novo.ocorrencias,
                 relato: novo.relato,
                 fotos: novo.fotos,

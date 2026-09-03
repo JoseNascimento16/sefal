@@ -57,11 +57,14 @@ export function TelaRecibo({ id }: { id: string | null }) {
                         <Icone nome={regular ? 'certo' : 'alerta'} tamanho={38} />
                     </div>
 
+                    {/* O que se lê primeiro é o DESFECHO, não uma paráfrase dele:
+                        é a palavra que a Retaguarda vai somar e que fecha o passo
+                        do trâmite da denúncia. */}
                     <p
                         className="pw-forte"
-                        style={{ margin: 0, textAlign: 'center', fontSize: 20, letterSpacing: '-0.02em' }}
+                        style={{ margin: 0, textAlign: 'center', fontSize: 19, letterSpacing: '-0.02em', lineHeight: 1.25 }}
                     >
-                        {regular ? 'Local regular' : 'Ocorrência registrada'}
+                        {registro.desfecho}
                     </p>
                     <p className="pw-fraco" style={{ margin: '2px 0 0', textAlign: 'center' }}>
                         Protocolo {registro.protocolo}
@@ -79,11 +82,19 @@ export function TelaRecibo({ id }: { id: string | null }) {
                                         {ORIGENS[demanda.origem].curto}
                                     </span>
                                     <br />
-                                    <span className="pw-fraco">Referência {demanda.protocolo}</span>
+                                    <span className="pw-fraco">
+                                        Denúncia {demanda.protocolo} · {demanda.bairro}
+                                    </span>
                                 </>
                             ) : (
                                 'Avulsa — encontrada em ronda'
                             )}
+                        </dd>
+                        <dt>Como o local ficou</dt>
+                        <dd>
+                            <Selo tom={regular ? 'ok' : 'alerta'}>
+                                {regular ? 'Ponto liberado' : 'Ocorrência registrada'}
+                            </Selo>
                         </dd>
                         <dt>Quando</dt>
                         <dd>
