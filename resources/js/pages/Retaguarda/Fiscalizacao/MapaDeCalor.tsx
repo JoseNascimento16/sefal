@@ -3,6 +3,7 @@ import type * as L from 'leaflet';
 import { ArrowRight, Flame, Sparkles, Target } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import BotaoExportar from '@/components/retaguarda/exportar';
+import { CamadaDoMapa } from '@/components/retaguarda/camada-do-mapa';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
 import type {
     BairroDoCalor,
@@ -190,6 +191,24 @@ export default function MapaDeCalor({
         }
     }
 
+    /* A legenda mora no PÉ da camada, ao lado do comando de recolher — e sai de
+       cena com os painéis: régua de cor sem mancha para ler é só enfeite. */
+    const legenda = (
+        <div className="rt-mapa-legenda">
+            <span>Menos ocorrência</span>
+            <i
+                className="rt-mapa-regua"
+                style={{ background: GRADIENTE_CSS }}
+                aria-hidden
+            />
+            <span>Mais ocorrência</span>
+            <span style={{ opacity: 0.75 }}>
+                A mancha não leva número: o número está no ranking, a mancha diz onde
+                olhar.
+            </span>
+        </div>
+    );
+
     return (
         <>
             <Head title="Mapa de Calor" />
@@ -199,7 +218,9 @@ export default function MapaDeCalor({
                 <div ref={caixa} style={{ position: 'absolute', inset: 0 }} />
             </div>
 
-            <div className="rt-mapa-camada">
+            {/* A camada recolhe sob comando: em tela pequena os painéis cobrem a
+                mancha, e é a mancha que a tela existe para mostrar. */}
+            <CamadaDoMapa legenda={legenda} rotuloDoConteudo="a leitura">
                 <div className="rt-mapa-topo">
                     <div>
                         <p className="sobrancelha">Fiscalização</p>
@@ -412,20 +433,7 @@ export default function MapaDeCalor({
                     </div>
                 </div>
 
-                <div className="rt-mapa-legenda">
-                    <span>Menos ocorrência</span>
-                    <i
-                        className="rt-mapa-regua"
-                        style={{ background: GRADIENTE_CSS }}
-                        aria-hidden
-                    />
-                    <span>Mais ocorrência</span>
-                    <span style={{ opacity: 0.75 }}>
-                        A mancha não leva número: o número está no ranking, a mancha diz
-                        onde olhar.
-                    </span>
-                </div>
-            </div>
+            </CamadaDoMapa>
         </>
     );
 }

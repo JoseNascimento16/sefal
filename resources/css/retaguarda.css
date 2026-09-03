@@ -3393,6 +3393,68 @@ button.rt-chip-vidro:focus-visible {
     overflow-wrap: anywhere;
 }
 
+/* ── O pé da camada: o comando de recolher, e a legenda ao lado ──────────────
+   `margin-top: auto` prende a faixa no rodapé da camada — inclusive quando os
+   painéis são recolhidos e não há mais miolo empurrando nada para baixo. Sem
+   isto o botão subiria para o topo no estado recolhido, e o usuário teria de
+   procurar o controle que acabou de usar. */
+.rt-mapa-pe {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    /* `wrap-REVERSE`, e não `wrap`: em tela estreita a legenda não cabe ao lado
+       do botão e quebra linha — com o embrulho normal ela empurraria o botão
+       para cima, e o comando mudaria de lugar entre "com painéis" e "só o
+       mapa". Invertendo o eixo, a primeira linha (o botão) fica sempre no pé e
+       a legenda se acomoda ACIMA: o controle não sai do canto onde o usuário
+       acabou de usá-lo. */
+    flex-wrap: wrap-reverse;
+    margin-top: auto;
+    /* A faixa é moldura: quem recebe clique é o botão, não a fita inteira.
+       Sem isto sobraria uma tira morta no pé da cidade — o mesmo motivo pelo
+       qual a legenda dispensa o clique. */
+    pointer-events: none;
+}
+
+/* O comando de recolher. Pílula de vidro, como os chips de filtro: é controle
+   do mapa, não ação de formulário — por isso não usa a cor de ação primária. */
+.rt-mapa-alternar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 15px;
+    border: 1px solid var(--sm-mapa-linha);
+    border-radius: var(--sm-raio-full);
+    background: var(--sm-mapa-vidro);
+    box-shadow: var(--sm-mapa-sombra);
+    backdrop-filter: blur(12px);
+    color: var(--sm-mapa-texto);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--sm-transicao);
+    /* Volta a receber clique: quem o dispensa é a faixa acima. */
+    pointer-events: auto;
+}
+.rt-mapa-alternar:hover {
+    background: var(--sm-mapa-vidro-forte);
+    border-color: var(--sm-mapa-linha-forte, var(--sm-mapa-linha));
+}
+.rt-mapa-alternar:focus-visible {
+    outline: 2px solid var(--sm-mapa-acao);
+    outline-offset: 2px;
+}
+
+/* Camada recolhida: nada mais flutua sobre a cidade além do próprio botão.
+   O `pointer-events` da camada já é `none`; o que tirava o mapa do alcance do
+   dedo eram os painéis, e eles não estão mais montados. */
+.rt-mapa-camada.oculta {
+    /* Em tela pequena a camada reserva o topo para a barra do sistema e o pé
+       para a doca; recolhida, ela só precisa da reserva do pé. */
+    padding-top: 0;
+}
+
 /* ── A legenda ──────────────────────────────────────────────────────────────── */
 .rt-mapa-legenda {
     display: flex;
