@@ -228,6 +228,247 @@ test('lei: situacao de pos-vistoria obriga tramite declarado', function () {
     );
 });
 
+test('lei: a devolucao e o arquivamento declarados repetem o motivo de catalogo e a justificativa do resumo', function () {
+    /*
+     * O motivo e a justificativa de uma denúncia recusada vivem em DOIS lugares:
+     * no resumo dela (campos `motivo`/`justificativa`, que a ficha lê) e no passo
+     * do trâmite que os produziu (que a leitura do percurso mostra). É a mesma
+     * informação com dois donos — o que este projeto proíbe —, e a saída aqui é a
+     * mesma da situação × último passo: em vez de derivar um do outro (quem lê a
+     * config precisa ver os dois), o guarda é este teste. Sem ele, corrigir a
+     * justificativa no resumo deixaria o trâmite contando a versão antiga.
+     */
+    $catalogo = (array) config('prototipo_denuncias.motivos_de_devolucao', []);
+    $problemas = [];
+
+    foreach (denunciasComTramiteDeclarado() as $d) {
+        if (! in_array((string) $d['situacao'], ['Devolvida', 'Arquivada'], true)) {
+            continue;
+        }
+
+        $ultimo = end($d['tramites']);
+        $valores = array_map(
+            static fn (array $c): string => (string) $c['valor'],
+            array_values((array) ($ultimo['campos'] ?? [])),
+        );
+
+        if (! in_array((string) $d['motivo'], $catalogo, true)) {
+            $problemas[] = "DEN-{$d['id']}: motivo fora do catálogo — '{$d['motivo']}'";
+        }
+
+        if (! in_array((string) $d['motivo'], $valores, true)) {
+            $problemas[] = "DEN-{$d['id']}: o passo da triagem não repete o motivo do resumo";
+        }
+
+        if (! in_array((string) $d['justificativa'], $valores, true)) {
+            $problemas[] = "DEN-{$d['id']}: o passo da triagem não repete a justificativa do resumo";
+        }
+    }
+
+    expect($problemas)->toBe([], "Motivo e justificativa do resumo e do passo são o MESMO texto.\n");
+});
+
+test('lei: a denuncia em campo e vistoria em andamento — sem desfecho e sem documento', function () {
+    /*
+     * "Em campo" é o estado em que a equipe está na rua e o desfecho ainda não
+     * foi decidido. Uma denúncia nesse estado com desfecho preenchido diria à
+     * tela duas coisas contraditórias — o selo cobrando vistoria e a ficha
+     * mostrando como ela terminou —, e o mesmo vale para o passo: documento
+     * lavrado num passo de vistoria em andamento prometeria papel que não existe.
+     */
+    $problemas = [];
+
+    foreach (DenunciasFicticias::todas() as $d) {
+        if ((string) $d['situacao'] === 'Em campo' && $d['desfecho'] !== null) {
+            $problemas[] = "{$d['protocolo']}: em campo, mas já com desfecho '{$d['desfecho']}'";
+        }
+    }
+
+    $emAndamento = 0;
+
+    foreach (denunciasComTramiteDeclarado() as $d) {
+        if ((string) $d['situacao'] !== 'Em campo') {
+            continue;
+        }
+
+        $emAndamento++;
+        $ultimo = end($d['tramites']);
+
+        if (! is_array($ultimo['campo'] ?? null)) {
+            $problemas[] = "DEN-{$d['id']}: em campo, mas o último passo não traz registro de campo";
+        }
+
+        if (($ultimo['desfecho'] ?? null) !== null || ($ultimo['documento'] ?? null) !== null) {
+            $problemas[] = "DEN-{$d['id']}: a vistoria em andamento declarou desfecho ou documento";
+        }
+    }
+
+    expect($problemas)->toBe([], "Vistoria começada e ainda sem conclusão.\n")
+        // O estado precisa EXISTIR na amostra: é o que a demonstração usa para
+        // mostrar a equipe na rua, e ele não aparece em nenhum outro caso.
+        ->and($emAndamento)->toBeGreaterThan(0, 'a amostra precisa de vistoria em andamento para demonstrar');
+});
+
+test('lei: o numero do documento sai da faixa do bloco de papel e nao se repete', function () {
+    /*
+     * Os números vêm das faixas dos blocos que o cliente entregou — `1949xx` para
+     * a Notificação Preliminar e `1600xx` para o Auto de Apreensão. Número
+     * repetido é o defeito mais silencioso possível: dois documentos diferentes
+     * com a mesma identidade, e a leitura de um deles apontando para o outro.
+     */
+    $vistos = [];
+    $problemas = [];
+
+    foreach (denunciasComTramiteDeclarado() as $d) {
+        foreach ($d['tramites'] as $passo) {
+            $doc = $passo['documento'] ?? null;
+
+            if (! is_array($doc)) {
+                continue;
+            }
+
+            $numero = (string) ($doc['numero'] ?? '');
+            $faixa = (string) $doc['tipo'] === 'np' ? '/^1949\d{2}$/' : '/^1600\d{2}$/';
+
+            if (preg_match($faixa, $numero) !== 1) {
+                $problemas[] = "DEN-{$d['id']}: número '{$numero}' fora da faixa do bloco de {$doc['tipo']}";
+            }
+
+            if (isset($vistos[$numero])) {
+                $problemas[] = "DEN-{$d['id']}: número '{$numero}' repetido (já usado em DEN-{$vistos[$numero]})";
+            }
+
+            $vistos[$numero] = (int) $d['id'];
+        }
+    }
+
+    expect($problemas)->toBe([], "Cada documento tem o seu número, dentro da faixa do bloco.\n");
+});
+
+test('lei: o bairro da denuncia pertence a area que a recebeu', function () {
+    /*
+     * A área sai do BAIRRO (a derivação da estrutura sugere, e a triagem
+     * confirma), então uma denúncia semeada com a área de outro bairro faz a tela
+     * mostrar um encaminhamento que o sistema real não produziria — e o gestor
+     * daquela área receberia caso que não é dele. Bairro compartilhado continua
+     * valendo: a área pode ser a sugerida OU qualquer das alternativas.
+     */
+    $problemas = [];
+
+    foreach (DenunciasFicticias::todas() as $d) {
+        $area = $d['area'] ?? null;
+
+        if ($area === null) {
+            continue;
+        }
+
+        $sugestao = EstruturaFicticia::sugerirPorBairro((string) $d['bairro']);
+        $possiveis = $sugestao === null ? [] : [
+            (string) $sugestao['area'],
+            ...array_map(
+                static fn (array $a): string => (string) $a['area'],
+                array_values((array) $sugestao['alternativas']),
+            ),
+        ];
+
+        if (! in_array((string) $area, $possiveis, true)) {
+            $problemas[] = "{$d['protocolo']}: bairro '{$d['bairro']}' não pertence à {$area}";
+        }
+    }
+
+    expect($problemas)->toBe([], "A área da denúncia é uma das que cobrem o bairro dela.\n");
+});
+
+test('lei: a operacao anexada existe no catalogo, e a equipe da denuncia e a da operacao', function () {
+    /*
+     * Anexar a uma operação faz a equipe DELA ser a responsável — é o que
+     * `anexarAOperacao()` grava. Dado semeado com outra equipe mostraria dois
+     * responsáveis na mesma denúncia, e o nome de operação escrito à mão que não
+     * existe no catálogo simplesmente não casaria com nada.
+     */
+    $catalogo = [];
+
+    foreach ((array) config('prototipo_denuncias.operacoes', []) as $operacao) {
+        $catalogo[(string) $operacao['nome']] = (string) $operacao['equipe'];
+    }
+
+    $problemas = [];
+
+    foreach (DenunciasFicticias::todas() as $d) {
+        $operacao = $d['operacao'] ?? null;
+
+        if ($operacao === null) {
+            continue;
+        }
+
+        if (! array_key_exists((string) $operacao, $catalogo)) {
+            $problemas[] = "{$d['protocolo']}: operação '{$operacao}' não existe no catálogo";
+
+            continue;
+        }
+
+        if ((string) $d['equipe'] !== $catalogo[(string) $operacao]) {
+            $problemas[] = "{$d['protocolo']}: equipe '{$d['equipe']}' não é a da operação "
+                ."'{$operacao}' (Equipe {$catalogo[(string) $operacao]})";
+        }
+    }
+
+    expect($problemas)->toBe([], "A denúncia em operação é executada pela equipe da operação.\n");
+});
+
+test('lei: toda notificacao em prazo corre para o futuro, e todo retorno vencido acontece depois do vencimento', function () {
+    /*
+     * A versão GERAL do que o teste dos dois casos de demonstração garante para a
+     * DEN-0029 e a DEN-0030: vale para o caso que alguém acrescentar amanhã. As
+     * horas do dado são relativas justamente para o caso não envelhecer, e é aqui
+     * que se prova que a intenção de cada um continua valendo — uma notificação
+     * semeada como "prazo correndo" com o prazo já vencido conta a história
+     * errada, e ninguém percebe olhando o arquivo.
+     */
+    $hoje = now()->format('Y-m-d');
+    $problemas = [];
+
+    foreach (DenunciasFicticias::todas() as $d) {
+        $situacao = (string) $d['situacao'];
+
+        if (! in_array($situacao, ['Aguardando regularização', 'Retorno vencido'], true)) {
+            continue;
+        }
+
+        $comDocumento = collect($d['tramites'])
+            ->filter(static fn (array $p): bool => $p['documento'] !== null)
+            ->last();
+
+        if ($comDocumento === null) {
+            $problemas[] = "{$d['protocolo']}: {$situacao} sem notificação lavrada no trâmite";
+
+            continue;
+        }
+
+        $vence = (string) ($comDocumento['documento']['vence_em'] ?? '');
+
+        if ($vence === '') {
+            $problemas[] = "{$d['protocolo']}: a notificação não tem vencimento";
+
+            continue;
+        }
+
+        if ($situacao === 'Aguardando regularização' && $vence <= $hoje) {
+            $problemas[] = "{$d['protocolo']}: prazo correndo, mas o vencimento {$vence} já passou";
+        }
+
+        if ($situacao === 'Retorno vencido') {
+            $retorno = substr((string) collect($d['tramites'])->last()['em'], 0, 10);
+
+            if ($retorno <= $vence) {
+                $problemas[] = "{$d['protocolo']}: o retorno ({$retorno}) não é posterior ao vencimento ({$vence})";
+            }
+        }
+    }
+
+    expect($problemas)->toBe([], "Prazo correndo vence no futuro; retorno vencido acontece depois do vencimento.\n");
+});
+
 test('quem agiu em cada passo e gente da estrutura de areas e equipes', function () {
     /*
      * O passo declara o papel; o nome sai da estrutura. O que se prova aqui é o
