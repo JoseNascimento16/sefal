@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\AlvoSqlite;
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
@@ -48,10 +49,15 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            // `?:` (e não o default do env) porque DB_DATABASE serve ao Oracle e costuma
-            // vir vazio no .env — vazio aqui significa "usa o banco de desenvolvimento".
-            // A suíte define DB_DATABASE=:memory: no phpunit.xml e este valor é preservado.
-            'database' => env('DB_DATABASE') ?: database_path('fiscalizacao_dev.sqlite'),
+            // DB_DATABASE serve ao ORACLE (lá é o SID, `SEFAL`) e só vale aqui quando
+            // nomeia de fato um alvo SQLite — `:memory:`, que o phpunit.xml fixa, ou um
+            // arquivo .sqlite. Sem esse crivo, quem tem o .env do Oracle e cai no seletor
+            // `DB_DRIVER=sqlite` abre um banco vazio num arquivo chamado "SEFAL" na raiz
+            // e o app responde "no such table" tela por tela. Ver App\Support\AlvoSqlite.
+            'database' => AlvoSqlite::arquivo(
+                env('DB_DATABASE'),
+                database_path(AlvoSqlite::PADRAO),
+            ),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,
