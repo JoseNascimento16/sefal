@@ -109,6 +109,11 @@ function Cartao({ registro }: { registro: Registro }) {
                 {nomeRegiao(registro.regiao)} · {registro.ambulante ?? 'Não identificado'}
             </p>
 
+            {/* O DESFECHO é o que a Retaguarda soma — a leitura "regular /
+                irregular" do selo lá em cima é derivada dele, e sozinha não diz
+                se houve papel, orientação ou ponto vazio. */}
+            <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700 }}>{registro.desfecho}</p>
+
             {registro.origem === 'dirigida' && registro.referencia && (
                 <p style={{ margin: '0 0 10px' }}>
                     <span className="pw-selo pw-selo-origem">

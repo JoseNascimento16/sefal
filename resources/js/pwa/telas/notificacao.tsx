@@ -199,13 +199,13 @@ export function TelaNotificacao({ id }: { id: string | null }) {
                                 {registro.referencia}
                             </p>
                             <p className="pw-fraco" style={{ margin: '2px 0 0' }}>
-                                {demanda ? demanda.assunto : 'Processo encaminhado à equipe'}
+                                {demanda ? demanda.assunto : 'Denúncia direcionada à equipe'}
                             </p>
                         </>
                     ) : (
                         <p style={{ margin: 0, fontSize: 14.5 }}>
-                            Fiscalização avulsa — sem processo de referência. O campo sai em branco na via,
-                            como no bloco de papel.
+                            Fiscalização avulsa — sem denúncia de referência. O campo sai em branco na
+                            via, como no bloco de papel.
                         </p>
                     )}
                 </div>

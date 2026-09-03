@@ -391,6 +391,89 @@ select {
     animation: pw-pulso 0.45s ease;
 }
 
+/* O desfecho da vistoria: lista FECHADA, e são de quatro a seis opções com nome
+   longo ("Retorno com a situação mantida"). Por isso empilham, e não se dividem
+   em duas colunas: em retrato de celular a coluna partiria o nome em três
+   linhas, e é o nome que o fiscal lê para não tocar no desfecho errado. */
+.pw-desfechos {
+    display: grid;
+    gap: 10px;
+}
+
+.pw-desfecho {
+    display: flex;
+    min-height: 68px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--pw-borda);
+    border-left: 5px solid var(--pw-borda);
+    border-radius: var(--pw-raio);
+    background: var(--pw-superficie);
+    color: var(--pw-texto);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        transform 0.14s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.pw-desfecho-livre {
+    border-left-color: var(--pw-ok);
+}
+
+.pw-desfecho-ocorrencia {
+    border-left-color: var(--pw-irregular);
+}
+
+.pw-desfecho-icone {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: var(--pw-raio-full);
+    background: var(--pw-superficie-2);
+    color: var(--pw-primaria);
+}
+
+.pw-desfecho-livre .pw-desfecho-icone {
+    color: var(--pw-ok);
+}
+
+.pw-desfecho-ocorrencia .pw-desfecho-icone {
+    color: var(--pw-irregular);
+}
+
+.pw-desfecho-nome {
+    display: block;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.pw-desfecho-explica {
+    display: block;
+    margin-top: 2px;
+    color: var(--pw-texto-fraco);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.35;
+}
+
+.pw-desfecho:active {
+    transform: scale(0.99);
+}
+
+/* O escolhido não se distingue só pela cor: anel, borda e fundo — cor sozinha
+   não sobrevive a tela sob o sol nem a daltonismo. */
+.pw-desfecho.pw-escolhido {
+    border-color: var(--pw-acao);
+    background: var(--pw-acao-suave);
+    box-shadow: 0 0 0 2px var(--pw-acao);
+}
+
 /* ======================= CARTÕES ======================= */
 
 .pw-card {

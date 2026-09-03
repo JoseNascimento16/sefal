@@ -161,11 +161,18 @@ export type ItemApreendido = {
  * comportamento: cada aparelho carrega uma FAIXA reservada e consome dela,
  * mesmo sem sinal. É o que faz o documento nascer numerado no meio da rua.
  *
+ * ⚠️ A faixa começa DEPOIS dos números que o módulo de Denúncias da Retaguarda
+ * já mostra nos documentos semeados (Notificações 194901 a 194905 e Auto de
+ * Apreensão 160051). Começando neles, a primeira Notificação lavrada na
+ * demonstração nasceria com o número de um documento que já existe do outro
+ * lado — dois documentos diferentes com o mesmo número é exatamente o que a
+ * reserva por aparelho existe para impedir.
+ *
  * ⚠️ Aqui é encenação: o contador vive na memória da aba e a faixa é fictícia.
  */
 const FAIXAS = {
-    np: { inicio: 194901, fim: 195000, usados: 0 },
-    aa: { inicio: 160051, fim: 160100, usados: 0 },
+    np: { inicio: 194906, fim: 195000, usados: 0 },
+    aa: { inicio: 160052, fim: 160100, usados: 0 },
 };
 
 export type Faixa = keyof typeof FAIXAS;

@@ -18,6 +18,19 @@
    equipe — e a primeira pergunta do cliente seria justamente essa.
    ============================================================================ */
 
+/* O desfecho e a leitura que dele se deriva moram no módulo das denúncias, que é
+   o espelho do catálogo da Retaguarda. Repetir a lista aqui criaria a segunda
+   cópia que a lei da fonte única proíbe. */
+import { LOCAL_APOS_O_DESFECHO, type Desfecho } from './dados-demandas';
+
+/**
+ * Como o LOCAL ficou — a leitura curta que o mapa e a lista usam para colorir.
+ *
+ * ⚠️ Não confundir com a `Situacao` da denúncia (em `dados-demandas.ts`), que é
+ * o catálogo do trâmite. Esta aqui é do PONTO: liberado ou com ocorrência. Na
+ * fiscalização ela é DERIVADA do desfecho (ver `LOCAL_APOS_O_DESFECHO`), nunca
+ * escolhida ao lado dele — a mesma coisa decidida duas vezes divergiria.
+ */
 export type Situacao = 'regular' | 'irregular';
 
 export type Regiao = {
@@ -88,6 +101,14 @@ export type Registro = {
     endereco: string;
     lat: number;
     lng: number;
+    /**
+     * COMO a vistoria terminou — da lista fechada que a Retaguarda soma.
+     *
+     * É o dado que fecha o passo do trâmite do outro lado. Texto livre aqui
+     * faria o campo dizer uma coisa e a Retaguarda outra.
+     */
+    desfecho: Desfecho;
+    /** Leitura derivada do desfecho — ponto liberado ou com ocorrência. */
     status: Situacao;
     ocorrencias: string[];
     relato: string;
@@ -310,7 +331,8 @@ type SementeRegistro = [
     diasAtras: number,
     regiao: string,
     endereco: string,
-    status: Situacao,
+    /** Da lista fechada de desfechos — o `status` do ponto sai dele. */
+    desfecho: Desfecho,
     ocorrencias: string[],
     relato: string,
     fotos: number,
@@ -325,22 +347,28 @@ type SementeRegistro = [
     referencia: string | null,
 ];
 
-/* O turno do fiscal da Equipe C1 — os endereços são os mesmos pontos da Área 5,
-   e as três fiscalizações DIRIGIDAS apontam para as demandas que o
-   administrativo encaminhou à equipe (CXE-0011, CXE-0012 e CXE-0016). */
+/* O turno do fiscal da Equipe C1 — os endereços são os mesmos pontos da Área 5.
+   A maioria é trabalho AVULSO (o fiscal andando a rua); a fiscalização DIRIGIDA
+   é a da DEN-0029, e ela é a mesma dos dois lados: o mesmo endereço, o mesmo
+   relato de campo, o mesmo permissionário e a MESMA Notificação nº 194903 que a
+   Retaguarda mostra no passo do trâmite. É o que faz o retorno dessa denúncia
+   ter sentido no aplicativo — o prazo dela está correndo.
+
+   A proporção é educativa de propósito: sete casos terminaram sem documento
+   nenhum, cinco com papel. */
 const SEMENTES_REGISTRO: SementeRegistro[] = [
-    ['14:38', 0, 'jardim-armacao', 'Av. Otávio Mangabeira, acesso à Praia da Boca do Rio', 'irregular', ['desarmou', 'reincidente'], 'Barraca montada sobre a faixa de pedestres. Orientado, desarmou na hora e deixou o ponto sem resistência.', 3, 'Toinho do Gelo', 3, 'pendente', null, 'dem-0011', 'CXE-0011'],
-    ['13:52', 0, 'stiep', 'Rua Ewerton Visco, esquina com o canteiro', 'irregular', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', 1, 'erro', 'AA 160049', null, null],
-    ['12:07', 0, 'itapua', 'Praia de Itapuã, altura do Farol', 'regular', ['orientado'], 'Permissão apresentada e conferida. Passagem livre, sem obstrução.', 1, 'Tetê', null, 'enviado', null, 'dem-0012', 'CXE-0012'],
-    ['11:20', 0, 'patamares', 'Alameda Praia de Patamares, acesso à areia', 'regular', ['vazio'], 'Local vazio na chegada da equipe.', 1, null, null, 'enviado', null, null, null],
-    ['10:44', 0, 'costa-azul', 'Orla do Jardim de Alah, canteiro central', 'irregular', ['desarmou', 'calcada'], 'Ponto ocupando o canteiro. Desarmou e saiu após a orientação.', 2, 'Geni', 7, 'pendente', null, null, null],
-    ['09:58', 0, 'imbui', 'Rua Ilhéus, entorno da feira', 'irregular', ['bebida', 'sem-permissao'], 'Venda de bebida gelada sem permissão. Ambulante não identificado — saiu antes da conferência.', 4, null, 2, 'enviado', null, 'dem-0016', 'CXE-0016'],
-    ['16:35', -1, 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'irregular', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', 6, 'enviado', 'NP 194894', null, null],
-    ['15:12', -1, 'boca-do-rio', 'Praia da Boca do Rio, quiosque 12', 'regular', ['orientado'], 'Ponto dentro dos limites autorizados.', 2, 'Paty', null, 'enviado', null, null, null],
-    ['11:03', -1, 'stella-maris', 'Praia de Stella Maris, frente ao estacionamento', 'regular', ['orientado'], 'Conferido no roteiro da manhã. Sem ocorrência.', 1, 'Ciça', null, 'enviado', null, null, null],
-    ['09:41', -2, 'mussurunga', 'Av. Luís Viana Filho, ponto de ônibus', 'irregular', ['desarmou', 'calcada', 'reincidente'], 'Terceira ocorrência no mesmo ponto neste mês. Desarmou e saiu.', 6, 'Robinho', 5, 'enviado', 'NP 194892', null, null],
-    ['08:26', -2, 'pituacu', 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu', 'irregular', ['recusou'], 'Insistiu em permanecer alegando autorização verbal. Documento emitido no local.', 4, 'Demí', 0, 'enviado', 'AA 160047', null, null],
-    ['17:14', -4, 'piata', 'Av. Otávio Mangabeira, saída da passarela de Piatã', 'irregular', ['desarmou', 'sem-permissao'], 'Ponto sem permissão, obstruindo a saída da passarela.', 2, 'Nilton', -1, 'enviado', null, null, null],
+    ['14:38', 0, 'jardim-armacao', 'Av. Otávio Mangabeira, acesso à Praia da Boca do Rio', 'Regularizado no local', ['desarmou', 'reincidente'], 'Barraca montada sobre a faixa de pedestres. Orientado, desarmou na hora e deixou o ponto sem resistência.', 3, 'Toinho do Gelo', 3, 'pendente', null, null, null],
+    ['13:52', 0, 'stiep', 'Rua Ewerton Visco, esquina com o canteiro', 'Auto de Apreensão lavrado', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', 1, 'erro', 'AA 160049', null, null],
+    ['12:07', 0, 'itapua', 'Praia de Itapuã, altura do Farol', 'Regularizado no local', ['orientado'], 'Permissão apresentada e conferida. Passagem livre, sem obstrução.', 1, 'Tetê', null, 'enviado', null, null, null],
+    ['11:20', 0, 'patamares', 'Alameda Praia de Patamares, acesso à areia', 'Nada encontrado no local', ['vazio'], 'Local vazio na chegada da equipe.', 1, null, null, 'enviado', null, null, null],
+    ['10:44', 0, 'costa-azul', 'Orla do Jardim de Alah, canteiro central', 'Regularizado no local', ['desarmou', 'calcada'], 'Ponto ocupando o canteiro. Desarmou e saiu após a orientação.', 2, 'Geni', 7, 'pendente', null, null, null],
+    ['09:58', 0, 'imbui', 'Rua Ilhéus, entorno da feira', 'Regularizado no local', ['bebida', 'sem-permissao'], 'Venda de bebida gelada sem permissão. Ambulante não identificado — saiu antes da conferência.', 4, null, 2, 'enviado', null, null, null],
+    ['16:35', -1, 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'Notificação Preliminar emitida', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', 6, 'enviado', 'NP 194894', null, null],
+    ['15:12', -1, 'boca-do-rio', 'Praia da Boca do Rio, quiosque 12', 'Regularizado no local', ['orientado'], 'Ponto dentro dos limites autorizados.', 2, 'Paty', null, 'enviado', null, null, null],
+    ['11:03', -1, 'stella-maris', 'Praia de Stella Maris, frente ao estacionamento', 'Regularizado no local', ['orientado'], 'Conferido no roteiro da manhã. Sem ocorrência.', 1, 'Ciça', null, 'enviado', null, null, null],
+    ['09:41', -2, 'mussurunga', 'Av. Luís Viana Filho, ponto de ônibus', 'Notificação Preliminar emitida', ['desarmou', 'calcada', 'reincidente'], 'Terceira ocorrência no mesmo ponto neste mês. Desarmou e saiu.', 6, 'Robinho', 5, 'enviado', 'NP 194892', null, null],
+    ['08:26', -2, 'pituacu', 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu', 'Auto de Apreensão lavrado', ['recusou'], 'Insistiu em permanecer alegando autorização verbal. Documento emitido no local.', 4, 'Demí', 0, 'enviado', 'AA 160047', null, null],
+    ['16:40', -3, 'costa-azul', 'Avenida Otávio Mangabeira, 2140 — Costa Azul', 'Notificação Preliminar emitida', ['calcada', 'orientado'], 'Puxada de madeira de aproximadamente 2 m × 3 m nos fundos da barraca, usada como depósito de bebidas e botijão, fora do padrão autorizado. Área de mesas avançando sobre a passagem de acesso à areia, que ficou com pouco mais de um metro. Permissionário presente, com permissão regular e DAM do exercício quitado, apresentado no local.', 3, 'Jailson Pereira dos Santos', 2, 'enviado', 'NP 194903', 'den-0029', 'DEN-0029'],
 ];
 
 /** "NP 194894" → 'np'. O número guarda a sigla, então o tipo se deduz dele. */
@@ -372,7 +400,8 @@ export const REGISTROS: Registro[] = SEMENTES_REGISTRO.map((s, i) => {
         endereco: s[3],
         lat: centro.lat + desvio,
         lng: centro.lng - desvio,
-        status: s[4],
+        desfecho: s[4],
+        status: LOCAL_APOS_O_DESFECHO[s[4]],
         ocorrencias: s[5],
         relato: s[6],
         fotos: s[7],

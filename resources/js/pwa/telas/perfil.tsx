@@ -54,9 +54,9 @@ export function TelaPerfil() {
 
                 {/* A ÁREA da equipe, por extenso.
                     Não é enfeite de perfil: é a régua do que chega para este
-                    fiscal. A demanda cai na equipe da área onde fica o endereço,
-                    então quem duvida de uma demanda na fila confere aqui se o
-                    bairro é dele. */}
+                    fiscal. A denúncia é encaminhada à área do bairro do endereço
+                    e direcionada por ela à equipe, então quem duvida de uma
+                    denúncia na fila confere aqui se o bairro é dele. */}
                 <p className="pw-titulo-secao">Minha equipe e minha área</p>
 
                 <div className="pw-card">
@@ -96,7 +96,7 @@ export function TelaPerfil() {
                     )}
 
                     <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 12.5 }}>
-                        {EQUIPE.recorteExplicacao} As demandas do e-Salvador, do Fala Salvador 156, de
+                        {EQUIPE.recorteExplicacao} As demandas do e-Salvador, do Fala Salvador, de
                         licença nova e de ofício caem na equipe da área onde fica o endereço.
                     </p>
                 </div>
