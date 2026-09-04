@@ -966,17 +966,64 @@ textarea.pw-entrada {
 }
 
 /* Gaveta de detalhe do ponto tocado no mapa. */
+/* A ficha do ponto escolhido — cartão FLUTUANTE sobre a cidade.
+
+   ⚠️ `fixed`, e não `absolute`: ancorada no container do mapa (que é
+   `position: relative` e cresce com o conteúdo da tela), ela caía no FIM do
+   container — láááá no rodapé da página. O mapa aproximava no ponto e a ficha
+   abria fora da dobra: o fiscal tinha de rolar a tela inteira para ler o que
+   acabou de tocar. Preso à JANELA, o cartão aparece onde o dedo está, com a
+   página onde estiver.
+
+   Fica ACIMA da barra inferior (por isso o `bottom` conta a altura dela e a
+   área segura do aparelho) e ABAIXO do topo, com rolagem por dentro quando a
+   ficha é longa — em aparelho baixo, no modo paisagem, ela não pode empurrar
+   nada para fora da tela.
+
+   É diálogo NÃO-modal de propósito: o mapa continua vivo atrás, porque o valor
+   da tela é ver o ponto e a vizinhança ao mesmo tempo. Escurecer o fundo
+   esconderia justamente o que o fiscal foi olhar. */
 .pw-gaveta {
-    position: absolute;
-    z-index: 800;
+    position: fixed;
+    /* Sobre o mapa e sobre o painel lateral do tablet (850); a barra inferior
+       (1000) segue por cima, e não se sobrepõem — o cartão para antes dela. */
+    z-index: 900;
     left: 0;
     right: 0;
-    bottom: 0;
+    /* A folga de 11px NÃO é estética: a barra inferior mede 69px (68 de altura
+       mínima + 1 da borda de cima), então descontar só a variável deixava o
+       cartão 1px por baixo dela. O resto da folga é para ele ler como cartão
+       flutuando, e não como painel encostado no pé da tela. */
+    bottom: calc(var(--pw-nav-altura) + var(--pw-seguro-baixo) + 11px);
+    max-height: min(58vh, 520px);
+    overflow-y: auto;
+    /* A rolagem morre no cartão em vez de passar para o mapa atrás. */
+    overscroll-behavior: contain;
     padding: 8px 16px 20px;
-    border-radius: var(--pw-raio-lg) var(--pw-raio-lg) 0 0;
+    border-radius: var(--pw-raio-lg);
     background: var(--pw-superficie);
     box-shadow: var(--pw-sombra-alta);
     animation: pw-sobe 0.24s ease;
+}
+
+/* Com a ficha aberta, o botão flutuante de fiscalizar SAI DE CENA: ele ficava
+   atrás do cartão, aparecendo pela metade — parece defeito, e é ação duplicada,
+   porque a própria ficha traz "Fiscalizar este ponto", que é a versão dirigida
+   ao ponto escolhido. Sai por opacidade e sem receber toque, para voltar sem
+   sobressalto quando a ficha fecha. */
+.pw-mapa-area:has(.pw-gaveta) .pw-fab {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+/* Solto das bordas, para ler como cartão que flutua e não como faixa colada no
+   pé da tela — e para a cidade aparecer em volta dele. */
+@media (min-width: 380px) {
+    .pw-gaveta {
+        left: 12px;
+        right: 12px;
+    }
 }
 
 .pw-gaveta-alca {
@@ -2115,8 +2162,11 @@ textarea.pw-entrada {
         right: 360px;
     }
 
+    /* No tablet o painel lateral ocupa a direita: o cartão para antes dele e
+       ganha largura de cartão, em vez de esticar de ponta a ponta. */
     .pw-mapa-com-painel .pw-gaveta {
         right: 336px;
+        max-width: 520px;
     }
 
     .pw-painel-lateral {
