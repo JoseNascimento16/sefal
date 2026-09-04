@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Prototipo\DenunciasFicticias;
 use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -329,6 +330,12 @@ class DenunciasController extends Controller
             // servidor pela mesma razão dos outros catálogos: escrito na tela,
             // um dia reconheceria um desfecho que já não existe.
             'desfechos' => array_values((array) config('prototipo_denuncias.desfechos', [])),
+            // O catálogo de recomendações na redação EXPLÍCITA. O passo do
+            // trâmite traz a CHAVE (é ela que o aplicativo do fiscal grava), e
+            // quem decide lê a frase inteira: a pílula curta é do celular, onde
+            // não cabe frase; aqui "Sugerir retorno da equipe" não diz QUANDO
+            // voltar, e "Voltar ao ponto no vencimento do prazo" diz.
+            'recomendacoesDoFiscal' => RecomendacoesDoFiscal::explicitos(),
             'motivos' => array_values((array) config('prototipo_denuncias.motivos_de_devolucao', [])),
             'destinos' => array_values((array) config('prototipo_denuncias.destinos_de_retorno', [])),
             'equipes' => EstruturaFicticia::equipes(),

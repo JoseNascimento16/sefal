@@ -115,8 +115,13 @@ export interface TramiteDenuncia {
      */
     consideracoes: string | null;
     /**
-     * As RECOMENDAÇÕES que ele assinalou — os atalhos do catálogo do servidor
-     * (`recomendacoes_do_fiscal`). Vazio quando ele não recomendou nada.
+     * As RECOMENDAÇÕES que ele assinalou — as **CHAVES** dos atalhos do catálogo
+     * do servidor (`recomendacoes_do_fiscal`: `retorno`, `sgci`, `operacao`…),
+     * nunca a frase. Vazio quando ele não recomendou nada.
+     *
+     * A chave é o contrato com o aplicativo do fiscal (é o que ele grava) e é o
+     * que o relatório soma; a frase que a tela mostra sai da chave pelo catálogo
+     * `recomendacoesDoFiscal`, na redação explícita (ver `@/lib/recomendacoes`).
      *
      * É por elas que o Chefe de Setor entende o que o fiscal está PEDINDO, e é
      * por isso que a leitura as mostra em destaque, e não no meio da ficha.

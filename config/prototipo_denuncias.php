@@ -63,14 +63,16 @@
 | ── O passo que FECHA a vistoria traz a leitura do fiscal ───────────────────
 |
 | Além do `desfecho`, o passo que encerra a ida a campo declara `consideracoes`
-| (texto livre do fiscal) e `recomendacoes` (os atalhos que ele assinalou, do
-| catálogo `recomendacoes_do_fiscal`). É por essas duas coisas que o Chefe de
-| Setor e o Coordenador entendem o que o fiscal está PEDINDO e sabem para onde
-| dirigir o caso — o desfecho diz como a vistoria terminou, e não o que fazer
-| agora.
+| (texto livre do fiscal) e `recomendacoes` — as CHAVES dos atalhos que ele
+| assinalou, do catálogo `recomendacoes_do_fiscal` (chave, e não a frase: é a
+| chave que o aplicativo grava e que o relatório soma). É por essas duas coisas
+| que o Chefe de Setor e o Coordenador entendem o que o fiscal está PEDINDO e
+| sabem para onde dirigir o caso — o desfecho diz como a vistoria terminou, e
+| não o que fazer agora.
 |
-| Os dois nomes são o CONTRATO com o aplicativo do fiscal, que é quem grava: a
-| mesma informação com dois nomes é o começo da divergência.
+| Os dois nomes de campo, e a CHAVE de cada atalho, são o CONTRATO com o
+| aplicativo do fiscal, que é quem grava: a mesma informação com dois nomes — ou
+| com duas formas, chave num lado e frase no outro — é o começo da divergência.
 |
 | ⚠️ Quem declara `tramites` declara TAMBÉM a `situacao`, e as duas têm de
 | combinar: a `situacao` da denúncia é a do ÚLTIMO passo. Isso é conferido por
@@ -206,20 +208,86 @@ return [
      * — a recomendação sozinha não explica por quê, e o texto sozinho não é
      * somável nem varrível com o olho numa fila de trinta linhas.
      *
-     * ⚠️ Esta lista é a MESMA que o aplicativo do fiscal oferece. Ela é o contrato
-     * entre os dois lados: atalho novo entra aqui e lá no mesmo passo, senão a
-     * Retaguarda recebe uma recomendação que ela não sabe ler.
+     * ⚠️ A CHAVE é o contrato — não o texto. O aplicativo do fiscal grava a chave
+     * (`seab`, `retorno`, `operacao`…), e é ela que atravessa para cá. Foi essa a
+     * decisão do dono ao unificar os dois catálogos, que nasceram divergentes em
+     * sessões paralelas: um lado gravava chave, o outro esperava a frase inteira.
+     * Gravar texto seria pior que redundante — a primeira correção de redação num
+     * dos lados deixaria a Retaguarda com recomendação que ela não sabe ler, e o
+     * relatório não somaria mais ("quantos registros pediram operação na área?").
+     *
+     * ⚠️ DUAS REDAÇÕES POR CHAVE, e cada uma tem o seu lugar (decisão do dono):
+     *
+     *   `curto`     — o rótulo da pílula no CELULAR, onde o fiscal toca de pé na
+     *                 calçada e não há largura para uma frase.
+     *   `explicito` — o que a RETAGUARDA mostra a quem decide: aqui a frase é
+     *                 lida com atenção, e "Sugerir retorno da equipe" não diz
+     *                 QUANDO voltar, enquanto "Voltar ao ponto no vencimento do
+     *                 prazo" diz.
+     *
+     * As duas moram juntas porque são a mesma informação em dois tamanhos: em
+     * arquivos separados, uma renomeação ajustaria só uma delas.
+     *
+     * ⚠️ O `curto` não é lido por nenhuma tela da Retaguarda hoje — ele está aqui
+     * porque este catálogo é o LADO QUE FICA: quando o aplicativo falar com o
+     * servidor, é daqui que a lista de atalhos dele vai sair. Enquanto isso, o
+     * espelho do aplicativo vive em `resources/js/pwa/dados-demandas.ts`
+     * (`RECOMENDACOES`), na branch `feature/pwa-prototipo` — e as duas branches
+     * não se veem, então NENHUM teste consegue comparar as duas listas. Atalho
+     * novo, chave renomeada ou redação mexida entra nos dois lados no mesmo
+     * passo, à mão. É a dívida registrada como PEND-016.
      */
     'recomendacoes_do_fiscal' => [
-        'Voltar ao ponto no vencimento do prazo',
-        'Reprogramar a vistoria para o dia e o horário do ponto',
-        'Incluir o ponto na próxima operação da área',
-        'Manter o ponto na passagem semanal da equipe',
-        'Encaminhar ao Chefe de Setor para a próxima medida',
-        'Conferir o cadastro do ambulante na Retaguarda',
-        'Encaminhar ao SEGUB para a retirada dos bens',
-        'Encaminhar a outro órgão — fora da competência da SEFAL',
-        'Nada mais a fazer no ponto',
+        'retorno' => [
+            'curto' => 'Sugerir retorno da equipe',
+            'explicito' => 'Voltar ao ponto no vencimento do prazo',
+        ],
+        'reprogramar' => [
+            'curto' => 'Reprogramar a vistoria',
+            'explicito' => 'Reprogramar a vistoria para o dia e o horário do ponto',
+        ],
+        'operacao' => [
+            'curto' => 'Sugerir operação na área',
+            'explicito' => 'Incluir o ponto na próxima operação da área',
+        ],
+        'passagem' => [
+            'curto' => 'Manter na passagem semanal',
+            'explicito' => 'Manter o ponto na passagem semanal da equipe',
+        ],
+        'chefia' => [
+            'curto' => 'Encaminhar ao Chefe de Setor',
+            'explicito' => 'Encaminhar ao Chefe de Setor para a próxima medida',
+        ],
+        'sgci' => [
+            'curto' => 'Conferir cadastro no SGCI',
+            'explicito' => 'Conferir o cadastro do ambulante no SGCI',
+        ],
+        'segub' => [
+            'curto' => 'Bens recolhidos ao SEGUB',
+            'explicito' => 'Encaminhar ao SEGUB para a retirada dos bens',
+        ],
+        /*
+         * O SEAB é o único atalho que veio ESCRITO pelo dono, e as duas redações
+         * são iguais de propósito: ninguém aqui sabe o que a sigla expande, e
+         * inventar o nome do órgão na redação longa seria escrever no sistema uma
+         * informação que não temos.
+         */
+        'seab' => [
+            'curto' => 'Encaminhar ao SEAB',
+            'explicito' => 'Encaminhar ao SEAB',
+        ],
+        'outro-orgao' => [
+            'curto' => 'Encaminhar a outro órgão',
+            'explicito' => 'Encaminhar a outro órgão — fora da competência da SEFAL',
+        ],
+        'guarda' => [
+            'curto' => 'Pedir apoio da guarda municipal',
+            'explicito' => 'Pedir apoio da guarda municipal na próxima ida ao ponto',
+        ],
+        'nada' => [
+            'curto' => 'Sem providência adicional',
+            'explicito' => 'Nada mais a fazer no ponto',
+        ],
     ],
 
     /*
@@ -813,8 +881,8 @@ return [
                         .'entregue a ninguém. A estrutura estava fechada há meses e deteriorada, sem '
                         .'sinal de atividade recente — os bens foram recolhidos e entregues à guarda.',
                     'recomendacoes' => [
-                        'Conferir o cadastro do ambulante na Retaguarda',
-                        'Nada mais a fazer no ponto',
+                        'sgci',
+                        'nada',
                     ],
                     'campos' => [
                         ['rotulo' => 'Volumes entregues', 'valor' => '9'],
@@ -1376,7 +1444,7 @@ return [
                         .'banca por causa de uma obra na calçada. Recuou na hora, sem resistência. O '
                         .'risco era a travessia, e ela ficou livre.',
                     'recomendacoes' => [
-                        'Manter o ponto na passagem semanal da equipe',
+                        'passagem',
                     ],
                     'campos' => [
                         ['rotulo' => 'Providência do ocupante', 'valor' => 'Recuou a banca para o ponto autorizado, liberando a travessia'],
@@ -1585,7 +1653,7 @@ return [
                         .'que a puxada está ali há anos e não a retirou na hora, então a notificação só '
                         .'vale se alguém voltar no vencimento — sem retorno, ela fica no papel.',
                     'recomendacoes' => [
-                        'Voltar ao ponto no vencimento do prazo',
+                        'retorno',
                     ],
                     'documento' => [
                         'tipo' => 'np',
@@ -1699,7 +1767,7 @@ return [
                         .'ficou registrada com as duas testemunhas. Ponto de grande movimento à noite: o '
                         .'retorno em 48 horas é o que instrui a medida seguinte.',
                     'recomendacoes' => [
-                        'Voltar ao ponto no vencimento do prazo',
+                        'retorno',
                     ],
                     'documento' => [
                         'tipo' => 'np',
@@ -1737,8 +1805,8 @@ return [
                         .'orientação já foi tentada duas vezes, e a medida que a equipe sugere é a '
                         .'apreensão das mesas e cadeiras, com apoio da guarda.',
                     'recomendacoes' => [
-                        'Encaminhar ao Chefe de Setor para a próxima medida',
-                        'Incluir o ponto na próxima operação da área',
+                        'chefia',
+                        'operacao',
                     ],
                     'campo' => [
                         'encontrado' => 'Ponto na mesma situação, com o ocupante presente',
@@ -1842,7 +1910,7 @@ return [
                         .'resolvido, só não foi encontrado. Sábado à noite, com a equipe Noturna, é a '
                         .'hora de achar.',
                     'recomendacoes' => [
-                        'Reprogramar a vistoria para o dia e o horário do ponto',
+                        'reprogramar',
                     ],
                     'campos' => [
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — não houve constatação'],
@@ -1939,7 +2007,7 @@ return [
                         .'alvará de mesas e cadeiras, que está em análise; o prazo de 72 horas serve para '
                         .'ele retirar as mesas enquanto isso.',
                     'recomendacoes' => [
-                        'Voltar ao ponto no vencimento do prazo',
+                        'retorno',
                     ],
                     'documento' => [
                         'tipo' => 'np',
@@ -1988,7 +2056,7 @@ return [
                         .'apresentado. Nada a autuar. Fica pendente o resultado da análise do alvará, que '
                         .'é de outro setor e não depende da fiscalização.',
                     'recomendacoes' => [
-                        'Nada mais a fazer no ponto',
+                        'nada',
                     ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194901'],
@@ -2090,8 +2158,8 @@ return [
                         .'carrinho na hora e liberou o rebaixo da garagem. Endereço e horário anotados '
                         .'para nova ronda; foi orientado a procurar a SEMOP.',
                     'recomendacoes' => [
-                        'Conferir o cadastro do ambulante na Retaguarda',
-                        'Manter o ponto na passagem semanal da equipe',
+                        'sgci',
+                        'passagem',
                     ],
                     'campos' => [
                         ['rotulo' => 'Providência do ambulante', 'valor' => 'Deslocou o carrinho para fora do rebaixo, liberando a garagem'],
@@ -2220,7 +2288,7 @@ return [
                         .'venda de bebida em frente ao terminal marítimo, com muito movimento. Via '
                         .'entregue e assinada.',
                     'recomendacoes' => [
-                        'Voltar ao ponto no vencimento do prazo',
+                        'retorno',
                     ],
                     'documento' => [
                         'tipo' => 'np',
@@ -2294,7 +2362,7 @@ return [
                     'consideracoes' => 'Os três motivos notificados foram atendidos e a chefia conferiu o registro do '
                         .'retorno antes do encerramento. Nada a autuar.',
                     'recomendacoes' => [
-                        'Nada mais a fazer no ponto',
+                        'nada',
                     ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194904'],
@@ -2411,7 +2479,7 @@ return [
                         .'da saída. A pendência é de cadastro e de pagamento, não de ocupação, então o '
                         .'prazo é de 10 dias para ele comparecer ao setor. Uma testemunha não foi colhida.',
                     'recomendacoes' => [
-                        'Voltar ao ponto no vencimento do prazo',
+                        'retorno',
                     ],
                     'documento' => [
                         'tipo' => 'np',
@@ -2536,8 +2604,8 @@ return [
                         .'mercadoria na hora, liberando a calçada por inteiro. Orientado a procurar a '
                         .'SEMOP; o trecho fica na passagem semanal da equipe.',
                     'recomendacoes' => [
-                        'Conferir o cadastro do ambulante na Retaguarda',
-                        'Manter o ponto na passagem semanal da equipe',
+                        'sgci',
+                        'passagem',
                     ],
                     'campos' => [
                         ['rotulo' => 'Providência do ambulante', 'valor' => 'Recolheu a lona e a mercadoria, liberando a calçada por inteiro'],
@@ -2637,7 +2705,7 @@ return [
                         .'remontou no ponto autorizado na presença da equipe, liberando os bancos. '
                         .'Orientada a comunicar a SEMOP antes de deslocar o ponto, mesmo por chuva.',
                     'recomendacoes' => [
-                        'Manter o ponto na passagem semanal da equipe',
+                        'passagem',
                     ],
                     'campos' => [
                         ['rotulo' => 'Providência da ocupante', 'valor' => 'Desmontou a barraca do abrigo e a remontou no ponto autorizado, liberando os bancos'],
@@ -2746,8 +2814,8 @@ return [
                         .'deixou de montar. Não é caso de nova ida: a esquina fica na ronda noturna da '
                         .'orla por um mês, e só volta a ser vistoriada se houver nova denúncia.',
                     'recomendacoes' => [
-                        'Manter o ponto na passagem semanal da equipe',
-                        'Nada mais a fazer no ponto',
+                        'passagem',
+                        'nada',
                     ],
                     'campos' => [
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — não houve constatação'],

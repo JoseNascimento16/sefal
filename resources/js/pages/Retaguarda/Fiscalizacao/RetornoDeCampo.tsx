@@ -28,6 +28,8 @@ import { casaTermos, parseConsulta } from '@/lib/busca';
 import { dataHoraBR, VAZIO } from '@/lib/datas';
 import { linhaClicavel } from '@/lib/linha-clicavel';
 import { contar, plural } from '@/lib/plural';
+import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
+import { textoDaRecomendacao, textosDasRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
 import { ciencia, index, novaVistoria, reiniciar } from '@/routes/retaguarda/retorno-de-campo';
 
@@ -95,6 +97,11 @@ interface Registro {
     /** `np` = Notificação Preliminar; `aa` = Auto de Apreensão. */
     documento: { tipo: 'np' | 'aa'; numero: string } | null;
     consideracoes: string | null;
+    /**
+     * As **CHAVES** dos atalhos que o fiscal assinalou (`retorno`, `sgci`…),
+     * nunca a frase: é a chave que o aplicativo dele grava, e é por ela que o
+     * relatório soma. A frase sai do catálogo `recomendacoesDoFiscal`.
+     */
     recomendacoes: string[];
     /** A situação em que a denúncia de origem ficou — nulo na fiscalização avulsa. */
     situacao_da_origem: string | null;
@@ -132,6 +139,7 @@ function nomeDoDocumento(d: NonNullable<Registro['documento']>): string {
 export default function RetornoDeCampo({
     registros,
     estados,
+    recomendacoesDoFiscal,
     chefias,
     decide,
     areasDoChefe,
@@ -140,6 +148,14 @@ export default function RetornoDeCampo({
 }: {
     registros: Registro[];
     estados: string[];
+    /**
+     * Chave da recomendação → a frase EXPLÍCITA que a chefia lê — catálogo do
+     * servidor. A pílula curta é do celular do fiscal; aqui quem decide precisa
+     * da frase inteira. Chave que o catálogo não conhece aparece CRUA (ver
+     * `@/lib/recomendacoes`): recomendação que evapora em silêncio faria a
+     * chefia decidir sem saber que o fiscal pediu algo.
+     */
+    recomendacoesDoFiscal: CatalogoDeRecomendacoes;
     chefias: Record<string, { nome: string; matricula: string | null }>;
     /** Esta pessoa DECIDE aqui, ou apenas acompanha? Quem responde é o servidor. */
     decide: boolean;
@@ -219,11 +235,15 @@ export default function RetornoDeCampo({
                 r.area,
                 r.desfecho,
                 r.consideracoes,
-                r.recomendacoes.join(' '),
+                // Contra a FRASE, e não contra a chave: quem procura por
+                // "operação" tem de achar o registro em que o fiscal pediu
+                // operação — a chave `operacao` casaria por acidente, e
+                // `passagem` não casaria com "passagem semanal".
+                textosDasRecomendacoes(r.recomendacoes, recomendacoesDoFiscal).join(' '),
                 r.estado,
             ]);
         });
-    }, [daAba, busca]);
+    }, [daAba, busca, recomendacoesDoFiscal]);
 
     const ord = useOrdenacao(filtrados, {
         campo: 'concluida_em',
@@ -311,7 +331,12 @@ export default function RetornoDeCampo({
         ponto: [r.endereco, r.bairro].filter(Boolean).join(' — '),
         desfecho: r.desfecho,
         documento: r.documento === null ? 'nenhum' : nomeDoDocumento(r.documento),
-        recomendacoes: r.recomendacoes.length === 0 ? VAZIO : r.recomendacoes.join('; '),
+        // O arquivo vai EXPLÍCITO: quem o abre é quem decide, não o aparelho —
+        // uma célula com `sgci` não é resposta para ninguém.
+        recomendacoes:
+            r.recomendacoes.length === 0
+                ? VAZIO
+                : textosDasRecomendacoes(r.recomendacoes, recomendacoesDoFiscal).join('; '),
         consideracoes: r.consideracoes ?? VAZIO,
         origem: r.referencia,
         estado: r.estado,
@@ -769,7 +794,11 @@ export default function RetornoDeCampo({
                                                         className="selo selo-info"
                                                         style={{ marginRight: 6, marginBottom: 4 }}
                                                     >
-                                                        <Lightbulb size={11} aria-hidden /> {rec}
+                                                        <Lightbulb size={11} aria-hidden />{' '}
+                                                        {textoDaRecomendacao(
+                                                            rec,
+                                                            recomendacoesDoFiscal,
+                                                        )}
                                                     </span>
                                                 ))
                                             )}
@@ -855,7 +884,10 @@ export default function RetornoDeCampo({
                                                                             marginBottom: 4,
                                                                         }}
                                                                     >
-                                                                        {rec}
+                                                                        {textoDaRecomendacao(
+                                                                            rec,
+                                                                            recomendacoesDoFiscal,
+                                                                        )}
                                                                     </span>
                                                                 ))}
                                                             </div>

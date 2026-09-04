@@ -613,9 +613,11 @@ class DenunciasFicticias
                 'desfecho' => isset($passo['desfecho']) ? (string) $passo['desfecho'] : null,
                 // O que o fiscal escreveu e o que ele recomendou ao fechar a
                 // vistoria. Os dois nomes são o CONTRATO com o aplicativo dele
-                // (`consideracoes` texto livre, `recomendacoes` lista de
-                // atalhos): a mesma informação com dois nomes é o começo da
-                // divergência.
+                // (`consideracoes` texto livre, `recomendacoes` as CHAVES dos
+                // atalhos): a mesma informação com dois nomes — ou com duas
+                // formas, chave num lado e frase no outro — é o começo da
+                // divergência. A frase que a tela mostra sai da chave, na
+                // redação `explicito` do catálogo.
                 'consideracoes' => isset($passo['consideracoes']) && trim((string) $passo['consideracoes']) !== ''
                     ? trim((string) $passo['consideracoes'])
                     : null,

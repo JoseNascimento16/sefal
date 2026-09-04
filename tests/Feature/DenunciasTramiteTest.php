@@ -4,6 +4,7 @@ use App\Models\Setor;
 use App\Models\User;
 use App\Support\Prototipo\DenunciasFicticias;
 use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 
@@ -158,18 +159,23 @@ test('lei: o passo que fecha a vistoria traz a leitura do fiscal, e as recomenda
      * vistorias pediram nova ida") e porque é o contrato com o aplicativo do
      * fiscal: atalho escrito à mão aqui seria uma recomendação que a Retaguarda
      * não sabe ler.
+     *
+     * ⚠️ O que se semeia é a CHAVE (`retorno`, `sgci`…), e não a frase — é a
+     * chave que o aplicativo grava. Semear a frase voltaria a dar dois donos à
+     * redação: a primeira correção de texto num dos lados deixaria a outra ponta
+     * com recomendação órfã.
      */
-    $catalogo = (array) config('prototipo_denuncias.recomendacoes_do_fiscal', []);
+    $chaves = RecomendacoesDoFiscal::chaves();
     $problemas = [];
 
-    expect($catalogo)->not->toBe([], 'o catálogo de recomendações não pode estar vazio');
+    expect($chaves)->not->toBe([], 'o catálogo de recomendações não pode estar vazio');
 
     foreach (denunciasComTramiteDeclarado() as $d) {
         foreach ($d['tramites'] as $passo) {
             $recomendacoes = array_values((array) ($passo['recomendacoes'] ?? []));
 
             foreach ($recomendacoes as $recomendacao) {
-                if (! in_array((string) $recomendacao, $catalogo, true)) {
+                if (! in_array((string) $recomendacao, $chaves, true)) {
                     $problemas[] = "DEN-{$d['id']}: recomendação fora do catálogo '{$recomendacao}'";
                 }
             }
@@ -188,6 +194,61 @@ test('lei: o passo que fecha a vistoria traz a leitura do fiscal, e as recomenda
     }
 
     expect($problemas)->toBe([], "Todo desfecho vem com a leitura do fiscal, e a recomendação sai de catálogo.\n");
+});
+
+test('lei: toda chave do catalogo de recomendacoes declara as DUAS redacoes, e nenhuma vazia', function () {
+    /*
+     * O catálogo tem duas redações por chave, e cada uma tem um lado: a `curto`
+     * é a pílula do CELULAR (o fiscal toca de pé na calçada, e lá não cabe
+     * frase); a `explicito` é o que a RETAGUARDA mostra a quem decide, onde a
+     * frase é lida com atenção — "Sugerir retorno da equipe" não diz QUANDO
+     * voltar, e "Voltar ao ponto no vencimento do prazo" diz. Decisão do dono ao
+     * unificar os dois catálogos, que nasceram divergentes.
+     *
+     * Chave com redação FALTANDO ou VAZIA não estoura em lugar nenhum: a tela
+     * cai no fallback e mostra a chave crua (`sgci` na pílula, `passagem` na
+     * célula da exportação). Ninguém lê isso como defeito de catálogo — lê como
+     * "o sistema está mostrando código" —, e é por isso que o guarda é este
+     * teste e não a leitura defensiva do front.
+     *
+     * ⚠️ Este teste NÃO alcança o catálogo do aplicativo do fiscal
+     * (`resources/js/pwa/dados-demandas.ts`, na branch `feature/pwa-prototipo`):
+     * as duas branches não se veem, e nenhum teste consegue comparar as duas
+     * listas. O que ele garante é que ESTE lado está inteiro. A conferência entre
+     * os dois lados é à mão, e a dívida está registrada como PEND-016.
+     */
+    $catalogo = (array) config('prototipo_denuncias.recomendacoes_do_fiscal', []);
+    $problemas = [];
+
+    expect($catalogo)->not->toBe([], 'o catálogo de recomendações não pode estar vazio');
+
+    foreach ($catalogo as $chave => $redacoes) {
+        if (! is_string($chave) || trim($chave) === '') {
+            $problemas[] = "chave inválida: o catálogo é um mapa chave => redações, e '".
+                var_export($chave, true)."' não é chave de atalho";
+
+            continue;
+        }
+
+        if (! is_array($redacoes)) {
+            $problemas[] = "'{$chave}': declara texto solto em vez das duas redações "
+                .'(a lista de frases foi o formato ANTIGO deste catálogo)';
+
+            continue;
+        }
+
+        foreach (['curto', 'explicito'] as $redacao) {
+            if (trim((string) ($redacoes[$redacao] ?? '')) === '') {
+                $problemas[] = "'{$chave}': redação '{$redacao}' ausente ou vazia";
+            }
+        }
+    }
+
+    expect($problemas)->toBe(
+        [],
+        'Toda chave declara `curto` (a pílula do celular) e `explicito` (o que a Retaguarda lê).
+',
+    );
 });
 
 test('as consideracoes e as recomendacoes chegam a tela dentro do passo do tramite', function () {
@@ -213,7 +274,10 @@ test('as consideracoes e as recomendacoes chegam a tela dentro do passo do trami
 
     expect($retorno['desfecho'])->toBe('Retorno com a situação mantida')
         ->and($retorno['consideracoes'])->toContain('não vai tirar')
-        ->and($retorno['recomendacoes'])->toContain('Encaminhar ao Chefe de Setor para a próxima medida')
+        // A CHAVE atravessa o servidor, e não a frase: é ela que o aplicativo do
+        // fiscal grava, e é ela que a tela traduz na leitura.
+        ->and($retorno['recomendacoes'])->toContain('chefia')
+        ->and($retorno['recomendacoes'])->not->toContain('Encaminhar ao Chefe de Setor para a próxima medida')
         // O passo de recebimento não produziu leitura de fiscal nenhuma, e diz isso
         // com valor neutro em vez de chave ausente.
         ->and($passos->first()['consideracoes'])->toBeNull()

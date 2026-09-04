@@ -42,10 +42,12 @@
 | vistoria. `fiscal` diz QUAL da equipe (1, 2, 3…).
 |
 | `consideracoes` e `recomendacoes` são o CONTRATO com o aplicativo do fiscal —
-| os mesmos nomes que o passo do trâmite usa. As recomendações saem do catálogo
-| `prototipo_denuncias.recomendacoes_do_fiscal`, que é a lista fechada que o
-| aplicativo oferece; escritas à mão aqui, seriam recomendação que a Retaguarda
-| não sabe ler.
+| os mesmos nomes que o passo do trâmite usa. As recomendações são as CHAVES do
+| catálogo `prototipo_denuncias.recomendacoes_do_fiscal` (`retorno`, `sgci`,
+| `passagem`…), que é a lista fechada que o aplicativo oferece — e chave, não a
+| frase, porque é ela que o aplicativo grava e é por ela que o relatório soma. A
+| frase que a tela mostra sai da mesma chave, na redação `explicito`; escrita à
+| mão aqui, seria recomendação que a Retaguarda não sabe ler nem contar.
 |
 | ⚠️ A proporção EDUCATIVA vale aqui também: a maioria termina sem documento. Ao
 | acrescentar casos, mantenha isso — uma amostra em que todo mundo é autuado
@@ -87,7 +89,7 @@ return [
                 .'recuaram na presença da equipe, sem resistência, e os permissionários têm ponto '
                 .'autorizado no trecho. O avanço acontece todo fim de semana de sol.',
             'recomendacoes' => [
-                'Manter o ponto na passagem semanal da equipe',
+                'passagem',
             ],
         ],
 
@@ -109,7 +111,7 @@ return [
             'consideracoes' => 'O carrinho de milho que a equipe vinha encontrando ali não estava no '
                 .'ponto. Comerciantes vizinhos informaram que ele passou a montar depois das 19h.',
             'recomendacoes' => [
-                'Reprogramar a vistoria para o dia e o horário do ponto',
+                'reprogramar',
             ],
         ],
 
@@ -137,8 +139,8 @@ return [
                 .'cadastro e recusou-se a desmontar; notificado com prazo de 48 horas. A via foi '
                 .'assinada por ele e por uma testemunha.',
             'recomendacoes' => [
-                'Voltar ao ponto no vencimento do prazo',
-                'Conferir o cadastro do ambulante na Retaguarda',
+                'retorno',
+                'sgci',
             ],
         ],
 
@@ -161,7 +163,7 @@ return [
                 .'recuou o equipamento e liberou a rampa na hora. Ele pediu orientação sobre a '
                 .'renovação da permissão, que vence no mês que vem.',
             'recomendacoes' => [
-                'Conferir o cadastro do ambulante na Retaguarda',
+                'sgci',
             ],
         ],
 
@@ -184,7 +186,7 @@ return [
                 .'na faixa nem na parada. O ponto que motivou o pedido foi desmontado, segundo os '
                 .'permissionários vizinhos, na semana passada.',
             'recomendacoes' => [
-                'Nada mais a fazer no ponto',
+                'nada',
             ],
         ],
 
@@ -213,7 +215,7 @@ return [
                 .'Foram recolhidas na presença da equipe. O permissionário alegou desconhecer o '
                 .'limite do ponto e recebeu a orientação por escrito.',
             'recomendacoes' => [
-                'Manter o ponto na passagem semanal da equipe',
+                'passagem',
             ],
         ],
 
