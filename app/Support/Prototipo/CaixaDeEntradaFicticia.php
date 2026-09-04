@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Session;
 
 /**
- * PROTÓTIPO — a Caixa de Entrada do Administrativo.
+ * PROTÓTIPO — a Caixa de Entrada do Coordenador.
  *
  * ⚠️ Nada aqui toca o banco. As demandas de partida vêm de
  * `config/prototipo_caixa_entrada.php` e o que a pessoa registra, encaminha ou
@@ -59,7 +59,7 @@ class CaixaDeEntradaFicticia
      * Registra uma demanda nova e já a coloca no destino escolhido.
      *
      * `$destino` é `encaminhar`, `devolver` ou `arquivar` — as três saídas que o
-     * administrativo tem ao terminar de digitar o papel.
+     * coordenador tem ao terminar de digitar o papel.
      *
      * @param  array<string, mixed>  $dados
      * @return array<string, mixed> A demanda como ela ficou
@@ -212,7 +212,7 @@ class CaixaDeEntradaFicticia
 
             $tramites = [[
                 'em' => $recebida,
-                'quem' => 'Setor Administrativo',
+                'quem' => 'Coordenação',
                 'o_que' => 'Recebida',
                 'detalhe' => 'Documento de origem ('.$bruta['origem'].') digitado no sistema.',
             ]];
@@ -220,7 +220,7 @@ class CaixaDeEntradaFicticia
             if (($bruta['situacao'] ?? '') === 'Encaminhada') {
                 $tramites[] = [
                     'em' => self::somarDias($recebida, 1),
-                    'quem' => 'Setor Administrativo',
+                    'quem' => 'Coordenação',
                     'o_que' => 'Triada e encaminhada',
                     'detalhe' => 'Encaminhada à Equipe '.$bruta['equipe'].'.',
                 ];
@@ -229,7 +229,7 @@ class CaixaDeEntradaFicticia
             if (in_array($bruta['situacao'] ?? '', ['Devolvida', 'Arquivada'], true)) {
                 $tramites[] = [
                     'em' => self::somarDias($recebida, 1),
-                    'quem' => 'Setor Administrativo',
+                    'quem' => 'Coordenação',
                     'o_que' => $bruta['situacao'] === 'Arquivada' ? 'Arquivada' : 'Devolvida ao remetente',
                     'detalhe' => $bruta['motivo'].' — '.$bruta['justificativa'],
                 ];
@@ -293,7 +293,7 @@ class CaixaDeEntradaFicticia
             // Nullsafe: a tela é autenticada, mas um trâmite montado fora da
             // requisição (comando, teste) não tem quem assinar — e um erro de
             // acesso a propriedade de nulo aqui derrubaria a gravação inteira.
-            'quem' => (string) (Auth::user()?->name ?? 'Setor Administrativo'),
+            'quem' => (string) (Auth::user()?->name ?? 'Coordenação'),
             'o_que' => $oQue,
             'detalhe' => $detalhe,
         ];

@@ -178,15 +178,15 @@ test('quem so consulta a tela ainda consegue emitir o documento', function () {
     config(['retaguarda.permissao_enforce' => 'block']);
 
     PermissaoSetor::updateOrCreate(
-        ['setor' => 'gestor', 'slug' => 'relatorios'],
+        ['setor' => 'chefe-de-setor', 'slug' => 'relatorios'],
         ['visivel' => true, 'habilitado' => false, 'apenas_leitura' => true, 'incluir' => false, 'excluir' => false],
     );
 
-    $gestor = usuarioComSetor('gestor');
+    $chefe = usuarioComSetor('chefe-de-setor');
 
-    $this->actingAs($gestor)->get(route('retaguarda.relatorios.index'))->assertOk();
+    $this->actingAs($chefe)->get(route('retaguarda.relatorios.index'))->assertOk();
 
-    $this->actingAs($gestor)->post(route('retaguarda.relatorios.gerar'), [
+    $this->actingAs($chefe)->post(route('retaguarda.relatorios.gerar'), [
         'chave' => 'usuarios-do-sistema',
         'formato' => 'pdf',
         'filtros' => [],

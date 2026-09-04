@@ -17,28 +17,31 @@
 | encarregado e o bloco de bairros de cada uma (151 bairros distintos).
 |
 | INVENTADO: a lista de fiscais de cada equipe (nome e matrícula), o turno da
-| equipe Noturna e o GESTOR de cada área. O documento nomeia só o encarregado; o
-| time de campo o cliente ainda vai informar (PEND-022 trata da derivação bairro
-| → equipe).
+| equipe Noturna e o CHEFE DE SETOR de cada área. O documento nomeia só o
+| encarregado; o time de campo o cliente ainda vai informar (PEND-022 trata da
+| derivação bairro → equipe).
 |
-| ── `gestor` é o vínculo GESTOR ↔ ÁREA, e não o encarregado ─────────────────
+| ── `chefe_de_setor` é o vínculo CHEFE DE SETOR ↔ ÁREA, e não o encarregado ──
 |
 | São duas pessoas diferentes, e confundi-las é fácil: o `encarregado` chefia a
-| equipe EM CAMPO (vem do documento do cliente); o `gestor` é quem responde pela
-| área DENTRO DO SISTEMA — recebe a denúncia encaminhada e decide se ela vai a uma
-| equipe ou entra numa operação (decisão do dono, 02/09/2026: "pra ele só
+| equipe EM CAMPO (vem do documento do cliente); o `chefe_de_setor` é quem
+| responde pela área DENTRO DO SISTEMA — recebe a denúncia encaminhada, decide se
+| ela vai a uma equipe ou entra numa operação, e recebe de volta o que a equipe
+| concluiu em campo (decisão do dono, 02/09/2026: "pra ele só
 | interessa o que for direcionado para a área dele").
 |
 | O vínculo mora AQUI, junto da área, e a ligação com a conta é pela `matricula`.
 | É o jeito honesto e barato para o protótipo: uma fonte só, a mesma que a tela de
 | Áreas e Equipes já mostra. ⚠️ NÃO é a modelagem definitiva — em produção o
 | vínculo é entre USUÁRIO e área (uma pessoa pode responder por mais de uma, e
-| gestor entra e sai), e isso é tabela, não arquivo de configuração. Registrado
-| como pendência no doc de regra.
+| chefe de setor entra e sai), e isso é tabela, não arquivo de configuração.
+| Registrado como pendência no doc de regra.
 |
-| Só três dos oito gestores têm conta de demonstração (`gestor1`, `gestor2`,
-| `gestor3`): o nome dos outros cinco existe para o triador sempre ver PARA QUEM
-| está encaminhando, mesmo nas áreas em que ninguém entra no sistema ainda.
+| Só três dos oito chefes de setor têm conta de demonstração (`gestor1`,
+| `gestor2`, `gestor3` — a MATRÍCULA ficou como nasceu, porque matrícula
+| identifica gente e não cargo): o nome dos outros cinco existe para quem tria
+| sempre ver PARA QUEM está encaminhando, mesmo nas áreas em que ninguém entra no
+| sistema ainda.
 |
 | ── Os dois casos que NÃO são "área com bloco de bairros" ────────────────────
 |
@@ -52,7 +55,7 @@
 | ── Bairro em mais de uma área NÃO é erro ───────────────────────────────────
 |
 | MUSSURUNGA, PATAMARES e JARDIM DAS MARGARIDAS aparecem em duas áreas. O
-| vínculo bairro↔equipe não é 1:1: o sistema SUGERE a equipe e o administrativo
+| vínculo bairro↔equipe não é 1:1: o sistema SUGERE a equipe e o coordenador
 | CONFIRMA. A tela mostra isso como aviso informativo, nunca como pendência a
 | corrigir.
 |
@@ -85,9 +88,9 @@ return [
             'equipe' => 'C2',
             'encarregado' => 'José Roberto',
             // Quem responde pela ÁREA dentro do sistema — não é o encarregado de
-            // campo. `matricula` liga o gestor à conta; null = área sem conta de
-            // demonstração (ver o cabeçalho).
-            'gestor' => ['nome' => 'Marta Nogueira Prado', 'matricula' => 'gestor2'],
+            // campo. `matricula` liga o Chefe de Setor à conta; null = área sem
+            // conta de demonstração (ver o cabeçalho).
+            'chefe_de_setor' => ['nome' => 'Marta Nogueira Prado', 'matricula' => 'gestor2'],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -111,7 +114,7 @@ return [
             'regiao' => 'Itapagipe',
             'equipe' => 'A1',
             'encarregado' => 'Marco Gonçalves',
-            'gestor' => ['nome' => 'Djalma Sousa Vieira', 'matricula' => null],
+            'chefe_de_setor' => ['nome' => 'Djalma Sousa Vieira', 'matricula' => null],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -135,7 +138,7 @@ return [
             'regiao' => 'Brotas',
             'equipe' => 'A2',
             'encarregado' => 'Nonato Silva',
-            'gestor' => ['nome' => 'Verônica Lins Barreto', 'matricula' => 'gestor3'],
+            'chefe_de_setor' => ['nome' => 'Verônica Lins Barreto', 'matricula' => 'gestor3'],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -161,7 +164,7 @@ return [
             'regiao' => 'Liberdade',
             'equipe' => 'B2',
             'encarregado' => 'Andréa Rocha',
-            'gestor' => ['nome' => 'Ivanildo Costa Pinheiro', 'matricula' => null],
+            'chefe_de_setor' => ['nome' => 'Ivanildo Costa Pinheiro', 'matricula' => null],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -184,7 +187,7 @@ return [
             'regiao' => 'Boca do Rio',
             'equipe' => 'C1',
             'encarregado' => 'César Amaral',
-            'gestor' => ['nome' => 'Lourdes Figueiredo Sales', 'matricula' => 'gestor1'],
+            'chefe_de_setor' => ['nome' => 'Lourdes Figueiredo Sales', 'matricula' => 'gestor1'],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -207,7 +210,7 @@ return [
             'regiao' => 'Pau da Lima',
             'equipe' => 'B1',
             'encarregado' => 'José Antonio',
-            'gestor' => ['nome' => 'Otacílio Ramos Cunha', 'matricula' => null],
+            'chefe_de_setor' => ['nome' => 'Otacílio Ramos Cunha', 'matricula' => null],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -238,7 +241,7 @@ return [
             'regiao' => 'Avenida Sete',
             'equipe' => 'I1',
             'encarregado' => 'Roberto Moraes',
-            'gestor' => ['nome' => 'Bruna Cavalcanti Reis', 'matricula' => null],
+            'chefe_de_setor' => ['nome' => 'Bruna Cavalcanti Reis', 'matricula' => null],
             // Corredor, não bairro: a equipe percorre eixos de grande circulação.
             'recorte' => 'corredores',
             'turno' => 'Diurno',
@@ -258,7 +261,7 @@ return [
             'regiao' => 'Toda Salvador',
             'equipe' => 'N1',
             'encarregado' => 'Alcione Brandão',
-            'gestor' => ['nome' => 'Aristides Moreno Fagundes', 'matricula' => null],
+            'chefe_de_setor' => ['nome' => 'Aristides Moreno Fagundes', 'matricula' => null],
             // Recorte por TURNO: a cobertura é a cidade inteira.
             'recorte' => 'cidade',
             'turno' => 'Noturno',

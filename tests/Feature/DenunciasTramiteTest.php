@@ -25,7 +25,7 @@ use Database\Seeders\SetoresSeeder;
 |    campo, ou como documento sem nenhuma caixa assinalada. A varredura é uma, e
 |    cobre também o caso que alguém acrescentar amanhã.
 |
-| 2. **O recorte do gestor alcança o CONTEÚDO, não só a linha.** O trâmite
+| 2. **O recorte do chefe de setor alcança o CONTEÚDO, não só a linha.** O trâmite
 |    avançado carrega o relato do fiscal, as fotos e o documento lavrado dentro
 |    da própria denúncia. Se o recorte por área falhasse, não vazaria um número
 |    numa grade: vazaria o nome do notificado, o CPF e o número da notificação de
@@ -50,19 +50,19 @@ function denunciasComTramiteDeclarado(): array
     ));
 }
 
-/** Um gestor de verdade: a matrícula é o que o liga à área na estrutura. */
-function gestorDeArea(string $matricula): User
+/** Um chefe de setor de verdade: a matrícula é o que o liga à área na estrutura. */
+function chefeDeArea(string $matricula): User
 {
     $u = User::factory()->create(['login' => $matricula, 'admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     return $u->fresh();
 }
 
-function administrativoDoFluxo(): User
+function coordenadorDoFluxo(): User
 {
     $u = User::factory()->create(['admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'administrativo')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'coordenador')->firstOrFail());
 
     return $u->fresh();
 }
@@ -206,7 +206,7 @@ test('lei: situacao de pos-vistoria obriga tramite declarado', function () {
      * O trâmite DERIVADO só sabe montar recebimento, triagem e direcionamento —
      * é o que a situação implica, e nada mais. Uma denúncia marcada como
      * "Concluída" sem trâmite declarado chegaria à tela com a linha do tempo
-     * parando no gestor: o registro diria que a vistoria terminou e o percurso
+     * parando no chefe de setor: o registro diria que a vistoria terminou e o percurso
      * não mostraria vistoria nenhuma.
      */
     $posVistoria = ['Aguardando regularização', 'Retorno vencido', 'Concluída'];
@@ -349,7 +349,7 @@ test('lei: o bairro da denuncia pertence a area que a recebeu', function () {
     /*
      * A área sai do BAIRRO (a derivação da estrutura sugere, e a triagem
      * confirma), então uma denúncia semeada com a área de outro bairro faz a tela
-     * mostrar um encaminhamento que o sistema real não produziria — e o gestor
+     * mostrar um encaminhamento que o sistema real não produziria — e o chefe de setor
      * daquela área receberia caso que não é dele. Bairro compartilhado continua
      * valendo: a área pode ser a sugerida OU qualquer das alternativas.
      */
@@ -562,18 +562,18 @@ test('a amostra continua majoritariamente educativa: mais casos de campo sem doc
         ->and($comDocumento)->toBeLessThanOrEqual($semDocumento + 1);
 });
 
-test('cada gestor com conta de demonstracao tem caso avancado nos dois canais', function () {
+test('cada chefe de setor com conta de demonstracao tem caso avancado nos dois canais', function () {
     /*
-     * Sem isto a demonstração abre VAZIA para dois dos três gestores, e quem está
+     * Sem isto a demonstração abre VAZIA para dois dos três chefes de setor, e quem está
      * mostrando o sistema conclui que a tela está quebrada. É requisito da
      * demonstração, e por isso é teste — não recado no doc.
      */
     $emCampo = ['Em campo', 'Aguardando regularização', 'Retorno vencido', 'Concluída'];
 
     foreach (['gestor1', 'gestor2', 'gestor3'] as $matricula) {
-        $areas = EstruturaFicticia::areasDoGestor($matricula);
+        $areas = EstruturaFicticia::areasDoChefe($matricula);
 
-        expect($areas)->not->toBe([], "{$matricula} não é gestor de área nenhuma");
+        expect($areas)->not->toBe([], "{$matricula} não é chefe de setor de área nenhuma");
 
         foreach (['e-salvador', 'fala-salvador'] as $canal) {
             $avancadas = array_filter(
@@ -590,8 +590,8 @@ test('cada gestor com conta de demonstracao tem caso avancado nos dois canais', 
     }
 });
 
-test('o gestor recebe o tramite avancado da area dele, com o documento lavrado', function () {
-    $servidas = denunciasServidas(gestorDeArea('gestor1'), 'e-salvador');
+test('o chefe de setor recebe o tramite avancado da area dele, com o documento lavrado', function () {
+    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'e-salvador');
 
     $notificada = collect($servidas)->firstWhere('id', 29);
 
@@ -609,7 +609,7 @@ test('o gestor recebe o tramite avancado da area dele, com o documento lavrado',
         ->and($documento['agente'])->toContain('matrícula F-2504');
 });
 
-test('o gestor de outra area nao recebe nem a linha nem o conteudo do tramite alheio', function () {
+test('o chefe de setor de outra area nao recebe nem a linha nem o conteudo do tramite alheio', function () {
     /*
      * O vazamento que importa aqui não é o de uma linha de grade: é o do RELATO,
      * das fotos e do documento — nome do notificado, inscrição, número da
@@ -617,31 +617,31 @@ test('o gestor de outra area nao recebe nem a linha nem o conteudo do tramite al
      * não aparece não basta: o teste procura o número do documento no corpo
      * inteiro da resposta.
      */
-    $gestor2 = gestorDeArea('gestor2');
+    $chefe2 = chefeDeArea('gestor2');
 
-    $servidas = denunciasServidas($gestor2, 'e-salvador');
+    $servidas = denunciasServidas($chefe2, 'e-salvador');
     $ids = array_column($servidas, 'id');
 
     // 29 é da Área 5 (gestor1); 13 é da Área 1, dele.
     expect($ids)->not->toContain(29)
         ->and($ids)->toContain(13);
 
-    $this->actingAs($gestor2)
+    $this->actingAs($chefe2)
         ->get('/retaguarda/denuncias/e-salvador')
         ->assertDontSee('194903')
         ->assertDontSee('Jailson Pereira dos Santos');
 });
 
 test('quem tria ve o universo, com os casos avancados de todas as areas', function () {
-    $ids = array_column(denunciasServidas(administrativoDoFluxo(), 'fala-salvador'), 'id');
+    $ids = array_column(denunciasServidas(coordenadorDoFluxo(), 'fala-salvador'), 'id');
 
-    // 27 é da Área 4, que não tem gestor com conta: só o administrativo e o
+    // 27 é da Área 4, que não tem chefe de setor com conta: só o coordenador e o
     // administrador a enxergam, e é isso que faz dela a prova do recorte.
     expect($ids)->toContain(27, 30, 32, 33);
 });
 
 test('o catalogo de desfechos chega a tela, para a busca reconhecer a faceta', function () {
-    $props = $this->actingAs(administrativoDoFluxo())
+    $props = $this->actingAs(coordenadorDoFluxo())
         ->get('/retaguarda/denuncias/e-salvador')
         ->viewData('page')['props'];
 

@@ -27,7 +27,7 @@ import { index as rotaOperacoes } from '@/routes/retaguarda/operacoes';
 import { index as rotaAmbulantes } from '@/routes/retaguarda/ambulantes';
 
 /**
- * Mapa ao Vivo — a cidade agora, para o GESTOR.
+ * Mapa ao Vivo — a cidade agora, para o CHEFE DE SETOR.
  *
  * Não é a tela do fiscal. O aplicativo mostra a calçada em que ele está; esta
  * mostra a CIDADE, em escala de operação. A pergunta que ela responde é uma só:
@@ -47,13 +47,13 @@ import { index as rotaAmbulantes } from '@/routes/retaguarda/ambulantes';
  * Só dois tipos de ponto PULSAM: o retorno vencido (alguém prometeu voltar e não
  * voltou) e o que acabou de entrar. Pulso em tudo não destaca nada — e o retorno
  * vencido carrega o "há N dias" colado no pino, porque é a informação que faz o
- * gestor agir e ela não pode depender de um clique.
+ * chefia agir e ela não pode depender de um clique.
  *
  * ── Os números saem da lista desenhada ──────────────────────────────────────
  *
  * "A cidade agora", o foco do dia e os últimos registros são agregações dos
  * MESMOS pontos que o mapa está desenhando (RN-06), e por isso mudam junto com o
- * filtro do gestor: filtrar a Equipe C1 e ver o número da cidade inteira seria
+ * filtro da chefia: filtrar a Equipe C1 e ver o número da cidade inteira seria
  * responder outra pergunta. O recorte vai dito em palavras embaixo dos números,
  * para ninguém ler "7 retornos vencidos" achando que é a cidade toda.
  *
@@ -62,7 +62,7 @@ import { index as rotaAmbulantes } from '@/routes/retaguarda/ambulantes';
  * tempo real — a tela diz o instante que está mostrando.
  */
 
-/** Os filtros de situação que o gestor tem — a busca do mapa é o próprio mapa. */
+/** Os filtros de situação que a chefia tem — a busca do mapa é o próprio mapa. */
 const SITUACOES = [
     { chave: 'todas', rotulo: 'Tudo', cor: COR_DO_PINO.fiscal },
     { chave: 'retorno', rotulo: 'Retorno vencido', cor: COR_DO_PINO.retorno },
@@ -114,7 +114,7 @@ export default function MapaAoVivo({
 
     const horas = PERIODOS.find((p) => p.chave === periodo)?.horas ?? 24;
 
-    /* ── O recorte do gestor ────────────────────────────────────────────────
+    /* ── O recorte da chefia ────────────────────────────────────────────────
        Três filtros, e os três valem ao mesmo tempo: a equipe (ou o turno, quando
        a equipe é a Noturna), a situação e o período. O resultado é o que o mapa
        desenha E o que os painéis contam — uma lista só, para os dois não poderem
@@ -176,7 +176,7 @@ export default function MapaAoVivo({
             camadaRef.current = null;
         };
         // O centro é o da cidade e não muda; recriar o mapa a cada render
-        // perderia o zoom que o gestor acabou de dar.
+        // perderia o zoom que a pessoa acabou de dar.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -229,7 +229,7 @@ export default function MapaAoVivo({
 
         // Os fiscais aparecem SEMPRE: "quem está na rua agora" não é uma situação
         // de ponto, e esconder a equipe atrás de um filtro de situação faria o
-        // gestor mandar reforço para onde já tem gente.
+        // a chefia mandar reforço para onde já tem gente.
         for (const fiscal of fiscaisNoRecorte) {
             L.marker([fiscal.lat, fiscal.lng], {
                 icon: pinoDaCidade('fiscal'),
@@ -246,7 +246,7 @@ export default function MapaAoVivo({
     /**
      * Aproxima a cidade num ponto — é o que o clique no painel faz.
      *
-     * O padrão é 15, e não 17: em 17 a rua enche a tela e o gestor perde a
+     * O padrão é 15, e não 17: em 17 a rua enche a tela e quem olha perde a
      * vizinhança, que é justamente o que ele foi ver. Aproximar é enquadrar o
      * bairro, não o poste.
      */
@@ -475,7 +475,7 @@ export default function MapaAoVivo({
                         {/* O cartão do ponto escolhido mora no TOPO desta coluna, e
                             não flutuando junto ao pino como no mockup: solto, ele
                             cobria o painel de quem está na rua justamente quando o
-                            gestor acabara de clicar num ponto para comparar as duas
+                            pessoa acabara de clicar num ponto para comparar as duas
                             coisas. Lugar fixo também dá previsibilidade — a resposta
                             do clique aparece sempre no mesmo canto. */}
                         {selecionado !== null && (

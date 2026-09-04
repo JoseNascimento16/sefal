@@ -2,7 +2,7 @@
 
 **Onde fica:** Menu → Sistema → **Logs** (`/retaguarda/logs`) e Menu → Sistema → **Monitoramento**
 (`/retaguarda/monitoramento`).
-**Quem usa:** Logs, só o administrador; Monitoramento, administrador e gestor.
+**Quem usa:** Logs, só o administrador; Monitoramento, administrador e Chefe de Setor.
 
 São **duas telas com o mesmo propósito e tempos diferentes**:
 

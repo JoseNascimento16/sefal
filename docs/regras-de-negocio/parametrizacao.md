@@ -3,7 +3,7 @@
 **Onde fica:** Menu → Parametrização → *(Tipos de Infração · Atividades do Ambulante · Unidades de
 Medida · Tipos de Operação · Origens de Operação · Motivos de Recusa)*
 (`/retaguarda/parametrizacao/…`).
-**Quem usa:** administrador e gestor. O fiscal **consome** estas listas em rua, pelo aplicativo — não
+**Quem usa:** administrador e Chefe de Setor. O fiscal **consome** estas listas em rua, pelo aplicativo — não
 as edita.
 
 São seis telas do mesmo feitio, mais um conjunto de **parâmetros numéricos** que o sistema lê por
@@ -18,7 +18,7 @@ fiscal abre o formulário e não tem o que escolher.
 | Unidades de Medida | Como se conta a mercadoria em apreensão/vistoria | Sigla (obrigatória) |
 | Tipos de Operação | O feitio do trabalho em campo | — |
 | Origens de Operação | De onde veio a ordem de fiscalizar | — |
-| Motivos de Recusa | Por que o gestor devolveu um cadastro feito em campo | — |
+| Motivos de Recusa | Por que o Chefe de Setor devolveu um cadastro feito em campo | — |
 
 ---
 
@@ -76,7 +76,7 @@ Gerente como **"Parametrização"**. Separar a permissão de "motivos de recusa"
 operação" seria uma decisão que ninguém precisa tomar, e seis linhas a mais na matriz para todo mundo
 ler.
 
-Concedida na semente a **administrador** e **gestor**; daí em diante quem manda é a matriz.
+Concedida na semente a **administrador** e **Chefe de Setor**; daí em diante quem manda é a matriz.
 
 ### RN-05 — As listas nascem preenchidas
 
@@ -85,7 +85,7 @@ atividades, 5 unidades, 4 tipos de operação, 5 origens, 4 motivos de recusa). 
 demonstração: é o mínimo para a operação começar.
 
 A semeadura é **idempotente e não destrutiva** — rodar de novo cria só o que falta e nunca desfaz o
-que o gestor ajustou (inativação, descrição reescrita, sigla corrigida).
+que o Chefe de Setor ajustou (inativação, descrição reescrita, sigla corrigida).
 
 ### RN-06 — Busca inteligente e exportação, como em qualquer listagem
 

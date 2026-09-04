@@ -2,7 +2,7 @@
 
 **Onde fica:** Retaguarda → menu **Fiscalização → Mapa de Calor**
 (`/retaguarda/mapa-de-calor`).
-**Quem usa:** administrador e gestor. **O fiscal não entra** — concentração
+**Quem usa:** administrador e Chefe de Setor. **O fiscal não entra** — concentração
 histórica serve para **planejar**, e planejar é ato de gestão.
 
 > ⚠️ **É PROTÓTIPO.** Não há tabela, model nem migration. A incidência é

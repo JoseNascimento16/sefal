@@ -53,7 +53,7 @@ class InicioController extends Controller
             'descricao' => 'Seus dados, sua senha e a aparência do sistema.',
             'rota' => 'profile.edit',
             // Fora do controle de acesso por decisão de projeto: trancar alguém
-            // fora da própria conta não é decisão de gestor.
+            // fora da própria conta não é decisão de chefia.
             'slug' => null,
         ],
         [

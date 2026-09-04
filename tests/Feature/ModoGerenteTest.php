@@ -75,17 +75,17 @@ test('quem nao tem a tela concedida nao pode, mesmo com setor', function () {
 });
 
 test('permissao concedida a um setor vale para quem pertence a ele', function () {
-    $gestor = usuarioDoSetor('gestor');
+    $chefe = usuarioDoSetor('chefe-de-setor');
 
     PermissaoSetor::create([
-        'setor' => 'gestor',
+        'setor' => 'chefe-de-setor',
         'slug' => 'modo-gerente',
         'visivel' => true,
         'habilitado' => true,
     ]);
 
-    expect(app(PermissaoService::class)->pode($gestor, 'modo-gerente', 'visivel'))->toBeTrue()
-        ->and(app(PermissaoService::class)->pode($gestor, 'modo-gerente', 'incluir'))->toBeFalse();
+    expect(app(PermissaoService::class)->pode($chefe, 'modo-gerente', 'visivel'))->toBeTrue()
+        ->and(app(PermissaoService::class)->pode($chefe, 'modo-gerente', 'incluir'))->toBeFalse();
 });
 
 test('quem tem dois setores soma o que cada um concede', function () {
@@ -93,10 +93,10 @@ test('quem tem dois setores soma o que cada um concede', function () {
     // concede. Fosse interseção, acumular setores TIRARIA acesso.
     $u = User::factory()->create(['admin' => false]);
     $u->setores()->attach(Setor::where('slug', 'fiscal')->firstOrFail());
-    $u->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     PermissaoSetor::create(['setor' => 'fiscal', 'slug' => 'modo-gerente', 'visivel' => true]);
-    PermissaoSetor::create(['setor' => 'gestor', 'slug' => 'modo-gerente', 'excluir' => true]);
+    PermissaoSetor::create(['setor' => 'chefe-de-setor', 'slug' => 'modo-gerente', 'excluir' => true]);
 
     $servico = app(PermissaoService::class);
 
@@ -132,8 +132,8 @@ test('a tela inicial nunca e barrada — nao ha loop de redirecionamento', funct
     $this->actingAs(usuarioDoSetor('fiscal'))->get('/retaguarda/inicio')->assertOk();
 });
 
-test('a propria conta nunca depende de permissao de gestor', function () {
-    // Trocar a própria senha não é decisão de matriz: um gestor distraído
+test('a propria conta nunca depende de permissao de chefe de setor', function () {
+    // Trocar a própria senha não é decisão de matriz: um chefe de setor distraído
     // trancaria alguém fora da própria conta.
     config(['retaguarda.permissao_enforce' => 'block']);
 
@@ -151,9 +151,9 @@ test('a propria conta nunca depende de permissao de gestor', function () {
 test('mutacao sem permissao volta para a tela anterior com o motivo, e nao grava', function () {
     config(['retaguarda.permissao_enforce' => 'block']);
 
-    $gestor = usuarioDoSetor('gestor');
+    $chefe = usuarioDoSetor('chefe-de-setor');
 
-    $this->actingAs($gestor)
+    $this->actingAs($chefe)
         ->from('/retaguarda/inicio')
         ->post(route('retaguarda.modo-gerente.salvar'), [
             'slug' => 'modo-gerente',
@@ -275,7 +275,7 @@ test('a tela que distribui acesso e barrada mesmo com o rollout em observacao', 
             ->assertRedirect('/retaguarda/inicio')
             ->assertSessionHas('flash.erro');
 
-        $this->actingAs(usuarioDoSetor('gestor'))
+        $this->actingAs(usuarioDoSetor('chefe-de-setor'))
             ->from('/retaguarda/inicio')
             ->post(route('retaguarda.modo-gerente.salvar'), [
                 'slug' => 'modo-gerente',
@@ -303,18 +303,18 @@ test('quem recebe a concessao abre o painel de verdade', function () {
      */
     config(['retaguarda.permissao_enforce' => 'block']);
 
-    $gestor = usuarioDoSetor('gestor');
+    $chefe = usuarioDoSetor('chefe-de-setor');
 
     PermissaoSetor::create([
-        'setor' => 'gestor',
+        'setor' => 'chefe-de-setor',
         'slug' => 'modo-gerente',
         'visivel' => true,
         'habilitado' => true,
     ]);
 
-    $this->actingAs($gestor)->getJson('/retaguarda/modo-gerente')->assertOk();
+    $this->actingAs($chefe)->getJson('/retaguarda/modo-gerente')->assertOk();
 
-    $this->actingAs($gestor)
+    $this->actingAs($chefe)
         ->post(route('retaguarda.modo-gerente.salvar'), [
             'slug' => 'modo-gerente',
             'matriz' => [['setor' => 'fiscal', 'visivel' => true, 'habilitado' => true]],
@@ -410,7 +410,7 @@ test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', fu
             'slug' => 'modo-gerente',
             'matriz' => [
                 // Apenas leitura manda: incluir/excluir caem, mesmo pedidos.
-                ['setor' => 'gestor', 'visivel' => true, 'habilitado' => true, 'apenas_leitura' => true, 'incluir' => true, 'excluir' => true],
+                ['setor' => 'chefe-de-setor', 'visivel' => true, 'habilitado' => true, 'apenas_leitura' => true, 'incluir' => true, 'excluir' => true],
                 // Sem "visível" nada mais vale: é o pré-requisito das demais.
                 ['setor' => 'fiscal', 'visivel' => false, 'habilitado' => true, 'incluir' => true],
             ],
@@ -418,11 +418,11 @@ test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', fu
         ->assertRedirect('/retaguarda/inicio')
         ->assertSessionHas('flash.sucesso');
 
-    $gestor = PermissaoSetor::where('setor', 'gestor')->where('slug', 'modo-gerente')->firstOrFail();
-    expect($gestor->visivel)->toBeTrue()
-        ->and($gestor->apenas_leitura)->toBeTrue()
-        ->and($gestor->incluir)->toBeFalse()
-        ->and($gestor->excluir)->toBeFalse();
+    $chefe = PermissaoSetor::where('setor', 'chefe-de-setor')->where('slug', 'modo-gerente')->firstOrFail();
+    expect($chefe->visivel)->toBeTrue()
+        ->and($chefe->apenas_leitura)->toBeTrue()
+        ->and($chefe->incluir)->toBeFalse()
+        ->and($chefe->excluir)->toBeFalse();
 
     $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'modo-gerente')->firstOrFail();
     expect($fiscal->visivel)->toBeFalse()
@@ -443,9 +443,9 @@ test('o rastro diz o QUE mudou, por setor — concessao e revogacao', function (
      */
     $admin = User::factory()->create(['admin' => true]);
 
-    // Estado de partida: gestor já operava, fiscal não tinha nada.
+    // Estado de partida: chefe de setor já operava, fiscal não tinha nada.
     PermissaoSetor::create([
-        'setor' => 'gestor',
+        'setor' => 'chefe-de-setor',
         'slug' => 'modo-gerente',
         'visivel' => true,
         'habilitado' => true,
@@ -457,7 +457,7 @@ test('o rastro diz o QUE mudou, por setor — concessao e revogacao', function (
             // Concessão nova.
             ['setor' => 'fiscal', 'visivel' => true, 'habilitado' => true],
             // Revogação: perde o operar, mantém o ver.
-            ['setor' => 'gestor', 'visivel' => true, 'habilitado' => false],
+            ['setor' => 'chefe-de-setor', 'visivel' => true, 'habilitado' => false],
         ],
     ]);
 
@@ -465,7 +465,7 @@ test('o rastro diz o QUE mudou, por setor — concessao e revogacao', function (
 
     expect($descricao)->toContain('Modo Gerente')
         ->and($descricao)->toContain('fiscal: +visivel, +habilitado')
-        ->and($descricao)->toContain('gestor: -habilitado');
+        ->and($descricao)->toContain('chefe-de-setor: -habilitado');
 });
 
 test('setor que nao mudou fica FORA do rastro', function () {
@@ -473,7 +473,7 @@ test('setor que nao mudou fica FORA do rastro', function () {
     $admin = User::factory()->create(['admin' => true]);
 
     PermissaoSetor::create([
-        'setor' => 'gestor',
+        'setor' => 'chefe-de-setor',
         'slug' => 'modo-gerente',
         'visivel' => true,
         'habilitado' => true,
@@ -482,7 +482,7 @@ test('setor que nao mudou fica FORA do rastro', function () {
     $this->actingAs($admin)->post(route('retaguarda.modo-gerente.salvar'), [
         'slug' => 'modo-gerente',
         'matriz' => [
-            ['setor' => 'gestor', 'visivel' => true, 'habilitado' => true],
+            ['setor' => 'chefe-de-setor', 'visivel' => true, 'habilitado' => true],
             ['setor' => 'fiscal', 'visivel' => true],
         ],
     ]);
@@ -490,7 +490,7 @@ test('setor que nao mudou fica FORA do rastro', function () {
     $descricao = PermissaoLog::latest('id')->firstOrFail()->descricao;
 
     expect($descricao)->toContain('fiscal: +visivel')
-        ->and($descricao)->not->toContain('gestor');
+        ->and($descricao)->not->toContain('chefe-de-setor');
 });
 
 test('gravar sem mexer em nada diz isso, em vez de fingir alteracao', function () {
@@ -515,7 +515,7 @@ test('so consulta e operar nao convivem — a linha contraditoria e normalizada'
     $this->actingAs($admin)->post(route('retaguarda.modo-gerente.salvar'), [
         'slug' => 'modo-gerente',
         'matriz' => [[
-            'setor' => 'gestor',
+            'setor' => 'chefe-de-setor',
             'visivel' => true,
             'habilitado' => true,
             'apenas_leitura' => true,
@@ -524,7 +524,7 @@ test('so consulta e operar nao convivem — a linha contraditoria e normalizada'
         ]],
     ]);
 
-    $linha = PermissaoSetor::where('setor', 'gestor')->where('slug', 'modo-gerente')->firstOrFail();
+    $linha = PermissaoSetor::where('setor', 'chefe-de-setor')->where('slug', 'modo-gerente')->firstOrFail();
 
     expect($linha->visivel)->toBeTrue()
         ->and($linha->apenas_leitura)->toBeTrue()
@@ -533,11 +533,11 @@ test('so consulta e operar nao convivem — a linha contraditoria e normalizada'
         ->and($linha->excluir)->toBeFalse();
 
     // E o efeito prático: quem só consulta não opera.
-    $gestor = usuarioDoSetor('gestor');
+    $chefe = usuarioDoSetor('chefe-de-setor');
     $servico = app(PermissaoService::class);
 
-    expect($servico->pode($gestor, 'modo-gerente', 'visivel'))->toBeTrue()
-        ->and($servico->pode($gestor, 'modo-gerente', 'habilitado'))->toBeFalse();
+    expect($servico->pode($chefe, 'modo-gerente', 'visivel'))->toBeTrue()
+        ->and($servico->pode($chefe, 'modo-gerente', 'habilitado'))->toBeFalse();
 });
 
 test('a matriz recusa setor de fora do catalogo e tela fora do catalogo', function () {
@@ -554,7 +554,7 @@ test('a matriz recusa setor de fora do catalogo e tela fora do catalogo', functi
     $this->actingAs($admin)
         ->post(route('retaguarda.modo-gerente.salvar'), [
             'slug' => 'tela-que-nao-existe',
-            'matriz' => [['setor' => 'gestor', 'visivel' => true]],
+            'matriz' => [['setor' => 'chefe-de-setor', 'visivel' => true]],
         ])
         ->assertSessionHasErrors('slug');
 });
@@ -605,17 +605,17 @@ test('item de menu que o usuario nao pode ver nao aparece no menu', function () 
     // Menu e guarda de acesso leem a MESMA regra: se cada um tivesse a sua, um
     // dia o menu ofereceria uma tela que a guarda barra. A tela do Modo Gerente
     // não espera o rollout, então some do menu em qualquer modo.
-    $gestor = usuarioDoSetor('gestor');
+    $chefe = usuarioDoSetor('chefe-de-setor');
 
-    $this->actingAs($gestor)->get('/retaguarda/inicio')
+    $this->actingAs($chefe)->get('/retaguarda/inicio')
         ->assertInertia(function ($p) {
             $rotulos = collect($p->toArray()['props']['menu'])->pluck('itens')->flatten(1)->pluck('rotulo');
             expect($rotulos)->not->toContain('Modo Gerente');
         });
 
-    PermissaoSetor::create(['setor' => 'gestor', 'slug' => 'modo-gerente', 'visivel' => true, 'habilitado' => true]);
+    PermissaoSetor::create(['setor' => 'chefe-de-setor', 'slug' => 'modo-gerente', 'visivel' => true, 'habilitado' => true]);
 
-    $this->actingAs($gestor)->get('/retaguarda/inicio')
+    $this->actingAs($chefe)->get('/retaguarda/inicio')
         ->assertInertia(function ($p) {
             $rotulos = collect($p->toArray()['props']['menu'])->pluck('itens')->flatten(1)->pluck('rotulo');
             expect($rotulos)->toContain('Modo Gerente');
@@ -658,7 +658,7 @@ test('a semente pode AJUSTAR o pacote de um setor — e o fiscal apenas CONSULTA
      * O fiscal enxerga o cadastro de ambulante (chegar na calçada sem saber
      * quem está cadastrado é trabalhar às cegas) e não grava nada por lá: ele
      * cadastra em RUA, pelo aplicativo, e o que nasce em rua entra em quarentena
-     * até o gestor conferir.
+     * até o chefe de setor conferir.
      *
      * ⚠️ O ajuste é `apenas_leitura`, e não "incluir e excluir desligados". A
      * diferença decide se a quarentena existe: com `habilitado` ligado o fiscal
@@ -676,16 +676,16 @@ test('a semente pode AJUSTAR o pacote de um setor — e o fiscal apenas CONSULTA
         ->and($fiscal->incluir)->toBeFalse()
         ->and($fiscal->excluir)->toBeFalse();
 
-    // O gestor continua com o pacote inteiro: validar e corrigir cadastro de
+    // O chefe de setor continua com o pacote inteiro: validar e corrigir cadastro de
     // campo é o trabalho dele.
-    $gestor = PermissaoSetor::where('setor', 'gestor')->where('slug', 'ambulantes')->firstOrFail();
+    $chefe = PermissaoSetor::where('setor', 'chefe-de-setor')->where('slug', 'ambulantes')->firstOrFail();
 
-    expect($gestor->incluir)->toBeTrue()
-        ->and($gestor->excluir)->toBeTrue();
+    expect($chefe->incluir)->toBeTrue()
+        ->and($chefe->excluir)->toBeTrue();
 });
 
 test('a forma curta e a forma longa da semente convivem', function () {
-    // Teste-LEI do formato. A config aceita `'gestor'` (pacote inteiro) e
+    // Teste-LEI do formato. A config aceita `'chefe-de-setor'` (pacote inteiro) e
     // `'fiscal' => [...]` (pacote com ajuste) na MESMA lista; se a leitura
     // quebrasse com a mistura, a tela nasceria sem concessão nenhuma — e tela
     // controlável sem concessão é tela que ninguém abre.
@@ -696,7 +696,7 @@ test('a forma curta e a forma longa da semente convivem', function () {
             'rota' => 'retaguarda.inicio',
             'icone' => 'fiscalizacoes',
             'slug' => 'vistorias',
-            'setores' => ['gestor', 'fiscal' => ['excluir' => false]],
+            'setores' => ['chefe-de-setor', 'fiscal' => ['excluir' => false]],
         ]],
     ]]);
 
@@ -704,8 +704,8 @@ test('a forma curta e a forma longa da semente convivem', function () {
 
     $semeadas = PermissaoSetor::where('slug', 'vistorias')->get()->keyBy('setor');
 
-    expect($semeadas->keys()->sort()->values()->all())->toBe(['fiscal', 'gestor'])
-        ->and($semeadas['gestor']->excluir)->toBeTrue()
+    expect($semeadas->keys()->sort()->values()->all())->toBe(['chefe-de-setor', 'fiscal'])
+        ->and($semeadas['chefe-de-setor']->excluir)->toBeTrue()
         ->and($semeadas['fiscal']->excluir)->toBeFalse()
         // O ajuste é PONTUAL: o que não foi declarado continua vindo do pacote.
         ->and($semeadas['fiscal']->visivel)->toBeTrue()
@@ -730,7 +730,7 @@ test('a semente nunca grava linha que se contradiz — "so consulta" derruba o r
             'rota' => 'retaguarda.inicio',
             'icone' => 'fiscalizacoes',
             'slug' => 'vistorias',
-            'setores' => ['gestor', 'fiscal' => ['apenas_leitura' => true]],
+            'setores' => ['chefe-de-setor', 'fiscal' => ['apenas_leitura' => true]],
         ]],
     ]]);
 
@@ -745,7 +745,7 @@ test('a semente nunca grava linha que se contradiz — "so consulta" derruba o r
         ->and($fiscal->excluir)->toBeFalse();
 });
 
-test('a correcao da concessao do fiscal respeita o que o gestor decidiu na tela', function () {
+test('a correcao da concessao do fiscal respeita o que o chefe de setor decidiu na tela', function () {
     /*
      * A concessão nasceu larga demais (o fiscal alterava cadastro), e o seeder é
      * `firstOrCreate` — não reescreve linha existente, de propósito, para não
@@ -782,7 +782,7 @@ test('a correcao da concessao do fiscal respeita o que o gestor decidiu na tela'
     expect($corrigida->habilitado)->toBeFalse()
         ->and($corrigida->apenas_leitura)->toBeTrue();
 
-    // (b) A linha que alguém ajustou à mão — o gestor concedeu a inclusão. Não
+    // (b) A linha que alguém ajustou à mão — o chefe de setor concedeu a inclusão. Não
     // casa com a impressão digital, então a migration não a toca.
     PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')->update([
         'visivel' => true,
@@ -806,16 +806,16 @@ test('o rename da tela leva o slug da matriz junto — ninguem perde acesso no c
      * O slug não é rótulo: é a chave pela qual a guarda decide quem abre a tela.
      * Renomear a rota para `ambulantes` sem mexer na matriz deixaria as linhas
      * gravadas apontando para uma tela que não existe mais — e o efeito é o pior
-     * possível: quem tinha acesso o perde EM SILÊNCIO, e o gestor teria de
+     * possível: quem tinha acesso o perde EM SILÊNCIO, e o chefe de setor teria de
      * reconceder à mão, setor por setor.
      *
      * A semente não resolve: ela é `firstOrCreate`, então criaria linhas novas
-     * com as decisões de fábrica e jogaria fora o que o gestor ajustou na tela.
+     * com as decisões de fábrica e jogaria fora o que o chefe de setor ajustou na tela.
      * É a decisão dele que esta migration preserva, não só o acesso.
      */
     $migration = require database_path('migrations/2026_09_02_090100_renomeia_slug_da_tela_para_ambulantes.php');
 
-    // A base como estava antes do rename, com um ajuste feito à mão pelo gestor.
+    // A base como estava antes do rename, com um ajuste feito à mão pelo chefe de setor.
     PermissaoSetor::where('slug', 'ambulantes')->update(['slug' => 'permissionarios']);
     PermissaoSetor::where('setor', 'fiscal')->where('slug', 'permissionarios')
         ->update(['incluir' => true]);
@@ -827,7 +827,7 @@ test('o rename da tela leva o slug da matriz junto — ninguem perde acesso no c
     $fiscal = PermissaoSetor::where('setor', 'fiscal')->where('slug', 'ambulantes')->firstOrFail();
 
     expect($fiscal->visivel)->toBeTrue()
-        // O ajuste do gestor veio junto — é o que separa renomear de semear de novo.
+        // O ajuste do chefe de setor veio junto — é o que separa renomear de semear de novo.
         ->and($fiscal->incluir)->toBeTrue();
 });
 

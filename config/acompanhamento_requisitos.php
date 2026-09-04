@@ -75,16 +75,16 @@ $origemPrototipo = 'Sem requisito escrito — origem: reunião com o cliente 202
 $origemDenuncias = 'Sem requisito escrito — origem: pedido do dono 2026-09-02, a partir do cenário '
     .'da reunião com o cliente (docs/cenario-2026-09-02-reuniao-cliente.md). Entregue como PROTÓTIPO.';
 
-$fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o setor ADMINISTRATIVO '
+$fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o COORDENADOR '
     .'analisa a denúncia recebida e a encaminha à ÁREA do bairro, com a área sugerida pela estrutura '
     .'Área › Equipe e editável na própria linha (bairro pertencente a duas áreas tem duas respostas '
-    .'certas), vendo o NOME DO GESTOR que vai receber, ou a retira do fluxo devolvendo ao canal / '
+    .'certas), vendo o NOME DO CHEFE DE SETOR que vai receber, ou a retira do fluxo devolvendo ao canal / '
     .'arquivando, com motivo de lista MAIS justificativa por escrito — denúncia improcedente ou '
-    .'duplicada não deve chegar ao gestor; (2) DIRECIONAMENTO — o gestor DA ÁREA escolhe entre mandar à '
+    .'duplicada não deve chegar ao Chefe de Setor; (2) DIRECIONAMENTO — o CHEFE DE SETOR DA ÁREA escolhe entre mandar à '
     .'EQUIPE (a da área, ou outra, e aí a justificativa passa a ser obrigatória) ou incluir numa '
     .'OPERAÇÃO já planejada, podendo abrir uma nova dali. As duas etapas operam em LOTE e uma a uma, e '
-    .'a etapa de quem entrou vem do SETOR (administrativo tria, gestor direciona, quem administra o '
-    .'sistema exerce as duas), com selo visível na tela dizendo a etapa E a área. O GESTOR É DE UMA '
+    .'a etapa de quem entrou vem do SETOR (coordenador tria, chefe de setor direciona, quem administra o '
+    .'sistema exerce as duas), com selo visível na tela dizendo a etapa E a área. O CHEFE DE SETOR É DE UMA '
     .'ÁREA: a listagem dele traz só o que foi encaminhado à área que ele responde, e a ação sobre '
     .'denúncia de outra área é recusada no servidor com o motivo escrito — esconder sem barrar deixaria '
     .'a fronteira valendo só para quem não sabe montar a requisição. Estados: Recebida › Encaminhada à '
@@ -94,7 +94,7 @@ $fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o set
     .'fiscalização é educativa antes de punitiva), nada encontrado no local, Notificação Preliminar '
     .'emitida (e aí a situação passa a ser "Aguardando regularização", com o prazo do documento '
     .'correndo), regularizado após notificação, retorno com a situação mantida (situação "Retorno '
-    .'vencido": o prazo venceu, o ponto continua igual e cabe ao gestor decidir a próxima medida) e '
+    .'vencido": o prazo venceu, o ponto continua igual e cabe ao Chefe de Setor decidir a próxima medida) e '
     .'Auto de Apreensão lavrado, com os bens sob guarda no SEGUB. O TRÂMITE é NAVEGÁVEL: linha do '
     .'tempo em abas verticais (clique ou setas do teclado, uma parada de tabulação só), abrindo no '
     .'último passo, e o painel do passo mostra o que ele produziu — a decisão tomada e por quê, o que '
@@ -105,16 +105,16 @@ $fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o set
     .'Notificação e Auto de Apreensão é o fiscal, em rua, pelo aplicativo. Cada mudança acrescenta '
     .'linha ao trâmite (quem, quando, por quê). A permissão '
     .'é UMA para o módulo (as duas telas dividem o caminho /retaguarda/denuncias e aparecem no menu '
-    .'como uma PASTA que expande), concedida a administrativo, administrador e gestor — o fiscal não '
+    .'como uma PASTA que expande), concedida a coordenador, administrador e chefe de setor — o fiscal não '
     .'entra, senão escolheria o próprio trabalho. ⚠️ É PROTÓTIPO: a integração NÃO existe, não há tabela '
-    .'nem gravação — as denúncias de partida vêm de config/prototipo_denuncias.php, o vínculo gestor↔área '
+    .'nem gravação — as denúncias de partida vêm de config/prototipo_denuncias.php, o vínculo chefia↔área '
     .'vem de config/prototipo_estrutura.php, a redação dos impressos vem de '
     .'config/prototipo_documentos_campo.php e as decisões vivem na sessão de quem navega. Os estágios '
     .'avançados (vistoria, desfecho, documento) são SEMEADOS: quando o aplicativo do fiscal receber a '
     .'denúncia dirigida de verdade, é ele que acrescenta esses passos, e a leitura da tela continua a '
     .'mesma. Pendências que '
     .'isto abre: contrato das APIs do e-Salvador e do 156, prazo real de cada canal, canal de devolução, '
-    .'a MODELAGEM DEFINITIVA do vínculo gestor↔área (em produção é tabela usuário↔área, não arquivo de '
+    .'a MODELAGEM DEFINITIVA do vínculo chefia↔área (em produção é tabela usuário↔área, não arquivo de '
     .'configuração), a numeração definitiva do protocolo, a numeração dos blocos de documento (hoje as '
     .'faixas do papel do cliente, escritas à mão; no sistema saem do estoque reservado por aparelho), a '
     .'ação de tela que autoriza a próxima medida num retorno vencido (nasce junto do módulo de '
@@ -166,7 +166,7 @@ return [
             'hus' => [],
             'nota' => $origemSpec.' Área da própria conta: dados pessoais, troca de senha (com '
                 .'confirmação da senha atual) e aparência. Fica fora do controle de acesso por decisão '
-                .'de projeto — trancar alguém fora da própria conta não é decisão de gestor.',
+                .'de projeto — trancar alguém fora da própria conta não é decisão de chefia.',
         ],
 
         [
@@ -338,7 +338,7 @@ return [
                 .'não acontecer. Quando informado, o documento é validado (CPF ou CNPJ, inclusive o '
                 .'alfanumérico) e não se repete. O cadastro nascido em campo fica marcado como '
                 .'"Cadastrado em campo" até alguém conferir — a tela de validação dessa fila é de '
-                .'entrega futura, e por ora o gestor troca a situação à mão. Nome e apelido aceitam nome '
+                .'entrega futura, e por ora o Chefe de Setor troca a situação à mão. Nome e apelido aceitam nome '
                 .'de gente, não marcação nem símbolo. O fiscal CONSULTA o cadastro pela Retaguarda: '
                 .'incluir e excluir por lá são da gestão. A entidade é o AMBULANTE, e ser '
                 .'PERMISSIONÁRIO é atributo dela (tem permissão da SEMOP, sim ou não): quem é marcado '
@@ -350,7 +350,7 @@ return [
 
         [
             'modulo' => 'Fiscalização',
-            'tela' => 'Caixa de Entrada do Administrativo',
+            'tela' => 'Caixa de Entrada do Coordenador',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.caixa-de-entrada.index',
             'breadcrumb' => 'Fiscalização › Caixa de Entrada',
@@ -359,13 +359,13 @@ return [
             'nota' => $origemPrototipo.' Porta por onde a demanda de FORA entra: e-Salvador, Fala '
                 .'Salvador 156, pedido de nova licença e ofício chegam em papel e são digitados aqui. '
                 .'Denúncia pode ser ANÔNIMA. O bairro sugere a equipe responsável (a estrutura Área › '
-                .'Equipe), e quem confirma é o administrativo — bairro pertencente a duas áreas tem duas '
+                .'Equipe), e quem confirma é o coordenador — bairro pertencente a duas áreas tem duas '
                 .'respostas certas. Duas saídas: registrar e encaminhar (vira trabalho dirigido da '
                 .'equipe) ou registrar e devolver/arquivar, com motivo de lista MAIS justificativa por '
                 .'escrito, porque é ato administrativo. Cada decisão acrescenta uma linha ao trâmite da '
-                .'demanda (quem, quando, o quê). A tela é do setor ADMINISTRATIVO (concessão '
+                .'demanda (quem, quando, o quê). A tela é do COORDENADOR (concessão '
                 .'acrescentada em 02/09/2026, quando o setor nasceu): registrar o que chega em papel é '
-                .'função dele; o gestor acompanha e o administrador cobre. ⚠️ É PROTÓTIPO: não há '
+                .'função dele; o Chefe de Setor acompanha e o administrador cobre. ⚠️ É PROTÓTIPO: não há '
                 .'tabela nem gravação — as '
                 .'demandas de partida vêm de config/prototipo_caixa_entrada.php e as decisões vivem na '
                 .'sessão de quem navega. Pendências que isto abre: prazo de cada canal, canal de retorno '
@@ -421,7 +421,7 @@ return [
                 .'(Avenida Sete, Comércio, Joana Angélica) e a Noturna cobre a CIDADE INTEIRA, com '
                 .'recorte por TURNO. Bairro em mais de uma área é caso NORMAL (Mussurunga, Patamares e '
                 .'Jardim das Margaridas), mostrado como aviso informativo: o vínculo bairro↔equipe não é '
-                .'1:1, a Caixa de Entrada sugere e o administrativo confirma. ⚠️ É PROTÓTIPO: a lista de '
+                .'1:1, a Caixa de Entrada sugere e o coordenador confirma. ⚠️ É PROTÓTIPO: a lista de '
                 .'fiscais de cada equipe é fictícia (o documento nomeia só o encarregado), não há tabela '
                 .'nem gravação, e o que a pessoa mexe vive na sessão dela.',
         ],
@@ -434,12 +434,12 @@ return [
             'breadcrumb' => 'Fiscalização › Mapa ao Vivo',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemPrototipo.' Deixou de ser stub em 02/09/2026. A cidade agora, para o GESTOR — '
+            'nota' => $origemPrototipo.' Deixou de ser stub em 02/09/2026. A cidade agora, para o CHEFE DE SETOR — '
                 .'não é a tela do fiscal: a pergunta que ela responde é "para onde eu mando gente hoje?". '
                 .'Primeira tela no padrão IMERSIVO (RN-07 do desenho da Retaguarda): o mapa é o fundo, '
                 .'sangrando de borda a borda, e a leitura flutua sobre a cidade em painéis de vidro; o menu '
                 .'permanece. Mostra os pontos conhecidos por situação, o que entrou no período, quem está na '
-                .'rua e os RETORNOS VENCIDOS, que pulsam com o "há N dias" colado no pino. Filtros do gestor '
+                .'rua e os RETORNOS VENCIDOS, que pulsam com o "há N dias" colado no pino. Filtros da chefia '
                 .'por equipe, situação e período — e filtrar pela equipe Noturna seleciona por TURNO, não por '
                 .'bairro, porque é esse o recorte dela. Os painéis são agregações da mesma lista que o mapa '
                 .'desenha (RN-06) e o recorte vai dito em palavras, para ninguém ler o número da equipe como '
@@ -547,7 +547,7 @@ return [
             'breadcrumb' => 'Parametrização › Motivos de Recusa',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemSpec.' O que o gestor responde ao devolver um cadastro feito em campo. '
+            'nota' => $origemSpec.' O que o Chefe de Setor responde ao devolver um cadastro feito em campo. '
                 .'O fiscal lê esse texto no aparelho, então ele precisa dizer o que corrigir.',
         ],
 

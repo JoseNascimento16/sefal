@@ -55,7 +55,7 @@ test('as telas de Parametrizacao saem do MENU sem nada ser desligado', function 
      * apagando — e aí a volta atrás é refazer, não descomentar uma linha.
      *
      * As três coisas que continuam vivas: a rota responde pelo endereço, a tela
-     * renderiza, e a permissão segue no catálogo do Modo Gerente (senão o gestor
+     * renderiza, e a permissão segue no catálogo do Modo Gerente (senão o chefe de setor
      * perderia a linha da matriz e, com ela, a concessão já feita).
      */
     $admin = User::factory()->create(['admin' => true]);
@@ -131,11 +131,11 @@ test('o fiscal entra no que e do trabalho dele, e nao no que e de gestao', funct
             ->assertSessionHas('flash.erro');
     }
 
-    // E o gestor entra nas quatro: o caminho é dele.
-    $gestor = usuarioDaFase('gestor');
+    // E o chefe de setor entra nas quatro: o caminho é dele.
+    $chefe = usuarioDaFase('chefe-de-setor');
 
     foreach (TelasEmPreparacaoController::slugs() as $slug) {
-        $this->actingAs($gestor)->get("/retaguarda/{$slug}")->assertOk();
+        $this->actingAs($chefe)->get("/retaguarda/{$slug}")->assertOk();
     }
 });
 

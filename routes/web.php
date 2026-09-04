@@ -193,7 +193,7 @@ Route::middleware(['auth'])->group(function () {
      *
      * Duas telas, uma por canal (e-Salvador e Fala Salvador), e as mutações do
      * fluxo de duas etapas: a triagem encaminha à ÁREA ou devolve/arquiva; o
-     * gestor da área direciona à EQUIPE ou anexa a uma OPERAÇÃO.
+     * Chefe de Setor da área direciona à EQUIPE ou anexa a uma OPERAÇÃO.
      *
      * As duas telas dividem o primeiro trecho do caminho (`denuncias`), e é
      * dele que as guardas deduzem a permissão: a concessão é UMA, para o

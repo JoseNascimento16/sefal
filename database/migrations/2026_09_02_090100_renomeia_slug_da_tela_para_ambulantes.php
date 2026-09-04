@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\DB;
  * então no instante em que a rota mudou de nome, toda linha gravada como
  * `permissionarios` deixou de casar com tela nenhuma — e o efeito prático é o
  * pior possível: quem tinha a tela concedida perderia o acesso em silêncio, e o
- * gestor teria de reconceder à mão setor por setor.
+ * administrador teria de reconceder à mão setor por setor.
  *
  * A semente (`PermissoesSetorSeeder`) não resolve: ela é `firstOrCreate`, e é
- * assim de propósito — para não desfazer o que o gestor decidiu na tela do Modo
+ * assim de propósito — para não desfazer o que se decidiu na tela do Modo
  * Gerente. Ela criaria linhas NOVAS com o slug novo e as decisões de fábrica,
  * deixando as antigas como lixo e jogando fora qualquer ajuste feito à mão.
  * Renomear a linha existente preserva as duas coisas: o acesso e a decisão.

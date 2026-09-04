@@ -74,7 +74,7 @@ return [
     |
     | Cada entrada de `setores` aceita duas formas:
     |
-    |   'gestor'                          → o pacote da tela: vê, opera, inclui e exclui;
+    |   'chefe-de-setor'                  → o pacote da tela: vê, opera, inclui e exclui;
     |   'fiscal' => ['excluir' => false]  → o mesmo pacote, com o ajuste declarado.
     |
     | A forma longa existe para o caso em que "este setor usa esta tela" NÃO quer
@@ -86,7 +86,7 @@ return [
     | Item SEM `slug` fica fora do controle de acesso, e isso é deliberado em dois
     | casos — a tela inicial (barrá-la fecharia um loop de redirecionamento, já
     | que é para lá que a própria negativa manda o usuário) e a área da própria
-    | conta (senha e dados pessoais não são decisão de gestor). Fora desses, item
+    | conta (senha e dados pessoais não são decisão de chefia). Fora desses, item
     | restrito a setor SEM slug escaparia da matriz e daria dois donos à mesma
     | decisão: `ModoGerenteTest` reprova.
     |
@@ -110,14 +110,14 @@ return [
          * Denúncias — o que as ouvidorias da Prefeitura entregam por INTEGRAÇÃO.
          *
          * Vem ANTES de Fiscalização porque é o começo da cadeia: a denúncia chega
-         * de fora, é triada pelo administrativo, encaminhada à área e direcionada
-         * pelo gestor — e só então vira trabalho de rua. O menu desenha a ordem
+         * de fora, é triada pelo coordenador, encaminhada à área e direcionada
+         * pelo Chefe de Setor — e só então vira trabalho de rua. O menu desenha a ordem
          * do trabalho.
          *
          * Seção PRÓPRIA, e não itens dentro de Fiscalização, porque estas telas
          * não são trabalho de campo nem cadastro: são o ciclo ADMINISTRATIVO que
          * antecede o campo, com dois papéis decidindo em sequência. E são seção
-         * separada da Caixa de Entrada de propósito — lá o administrativo DIGITA
+         * separada da Caixa de Entrada de propósito — lá o coordenador DIGITA
          * o papel que chegou ao balcão; aqui ninguém digita nada, a denúncia
          * chega sozinha pela integração.
          *
@@ -130,8 +130,9 @@ return [
          * decisão que ninguém precisa tomar — quem cuida de denúncia cuida das
          * duas origens.
          *
-         * Concessão inicial: administrador e gestor, que são justamente os dois
-         * papéis do fluxo (o administrativo tria; o gestor direciona). O FISCAL
+         * Concessão inicial: administrador, coordenador e Chefe de Setor, que são
+         * justamente os papéis do fluxo (o coordenador tria; o Chefe de Setor
+         * direciona). O FISCAL
          * não entra — deixá-lo aqui permitiria escolher o próprio trabalho e
          * arquivar o que não quisesse atender; a denúncia chega a ele pelo
          * aplicativo, já dirigida.
@@ -162,7 +163,7 @@ return [
                             'icone' => 'denuncias',
                             'slug' => 'denuncias',
                             'curto' => 'E-SALV',
-                            'setores' => ['administrador', 'administrativo', 'gestor'],
+                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
                         ],
                         [
                             'rotulo' => 'Fala Salvador',
@@ -170,7 +171,7 @@ return [
                             'icone' => 'denuncias',
                             'slug' => 'denuncias',
                             'curto' => 'FALA',
-                            'setores' => ['administrador', 'administrativo', 'gestor'],
+                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
                         ],
                     ],
                 ],
@@ -186,7 +187,7 @@ return [
          *
          * Mas ele entra para CONSULTAR, e só. Quem grava cadastro pela
          * Retaguarda é a gestão: o fiscal cadastra em RUA, pelo aplicativo, e o
-         * que nasce em rua entra em quarentena até o gestor conferir — criar
+         * que nasce em rua entra em quarentena até o Chefe de Setor conferir — criar
          * direto de mesa passaria ao largo dessa conferência, e apagar cadastro
          * fiscalizado deixaria o histórico sem alvo. Daí o ajuste na semente
          * (ver `CatalogoFuncionalidades::acoesSemente`).
@@ -199,7 +200,7 @@ return [
          * "Só consulta" derruba operar, incluir e excluir de uma vez, que é o
          * que a frase acima sempre quis dizer.
          *
-         * Isto é a CONCESSÃO INICIAL. Alargar ou apertar depois é ato do gestor
+         * Isto é a CONCESSÃO INICIAL. Alargar ou apertar depois é ato de quem administra
          * no Modo Gerente, e está registrado no doc de regra da tela.
          */
         [
@@ -218,7 +219,7 @@ return [
                     'contador' => 'ambulantes',
                     'setores' => [
                         'administrador',
-                        'gestor',
+                        'chefe-de-setor',
                         'fiscal' => ['apenas_leitura' => true],
                     ],
                 ],
@@ -247,7 +248,7 @@ return [
                     'slug' => 'operacoes',
                     'curto' => 'OPERAÇÃO',
                     // Planejar operação é ato de gestão: o fiscal executa em rua.
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 /*
                  * Caixa de Entrada do Administrativo — PROTÓTIPO (reunião com o
@@ -258,12 +259,12 @@ return [
                  * licença, ofício) entra por aqui, é triada e só então vira
                  * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
                  *
-                 * Concessão inicial: administrativo, administrador e gestor. O
-                 * ADMINISTRATIVO é o dono do trabalho — registrar o que chega em
-                 * papel é a função dele (decisão do dono, 02/09/2026); o gestor
-                 * acompanha o que foi encaminhado. O FISCAL não entra — triar o que
+                 * Concessão inicial: coordenador, administrador e Chefe de Setor. O
+                 * COORDENADOR é o dono do trabalho — registrar o que chega em
+                 * papel é a função dele (decisão do dono, 02/09/2026); o Chefe de
+                 * Setor acompanha o que foi encaminhado. O FISCAL não entra — triar o que
                  * chega, encaminhar e devolver com justificativa é ato
-                 * administrativo, e a demanda encaminhada chega a ele pelo
+                 * de coordenação, e a demanda encaminhada chega a ele pelo
                  * aplicativo, já dirigida. Dar-lhe a caixa permitiria escolher o
                  * próprio trabalho e arquivar o que não quisesse atender.
                  */
@@ -273,7 +274,7 @@ return [
                     'icone' => 'caixa',
                     'slug' => 'caixa-de-entrada',
                     'curto' => 'ENTRADA',
-                    'setores' => ['administrador', 'administrativo', 'gestor'],
+                    'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Fiscalizações',
@@ -283,7 +284,7 @@ return [
                     'curto' => 'REGISTROS',
                     'setores' => [
                         'administrador',
-                        'gestor',
+                        'chefe-de-setor',
                         // O fiscal CONSULTA o que ele mesmo registrou em campo.
                         'fiscal' => ['apenas_leitura' => true],
                     ],
@@ -296,7 +297,7 @@ return [
                     'curto' => 'MAPA',
                     'setores' => [
                         'administrador',
-                        'gestor',
+                        'chefe-de-setor',
                         // Saber onde a cidade está agora é do trabalho de rua.
                         'fiscal' => ['apenas_leitura' => true],
                     ],
@@ -309,7 +310,7 @@ return [
                     'curto' => 'CALOR',
                     // Concentração histórica serve para PLANEJAR: é leitura de
                     // gestão, não de quem está na calçada agora.
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
             ],
         ],
@@ -337,14 +338,14 @@ return [
                     'icone' => 'areas',
                     'slug' => 'areas-e-equipes',
                     'curto' => 'ÁREAS',
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
             ],
         ],
 
         /*
          * Parametrização — as listas que o resto do sistema oferece para
-         * escolher, e que o gestor mantém.
+         * escolher, e que a gestão mantém.
          *
          * As seis telas declaram o MESMO `slug`, e isso é deliberado: elas moram
          * sob o mesmo primeiro trecho do caminho (`/retaguarda/parametrizacao/…`),
@@ -353,7 +354,7 @@ return [
          * permissão de "motivos de recusa" da de "tipos de operação" seria uma
          * decisão que ninguém precisa tomar e seis linhas a mais na matriz.
          *
-         * Gestor e administrador: manter estas listas é ato de gestão da
+         * Chefe de Setor e administrador: manter estas listas é ato de gestão da
          * operação. O fiscal as CONSOME em rua, pelo aplicativo — não as edita.
          *
          * ⚠️ AS SEIS ESTÃO `oculto` (decisão do dono, 27/08/2026): saíram do MENU e
@@ -372,7 +373,7 @@ return [
                     'curto' => 'INFRAÇÕES',
                     'slug' => 'parametrizacao',
                     'oculto' => true,
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Atividades do Ambulante',
@@ -381,7 +382,7 @@ return [
                     'curto' => 'ATIVIDADES',
                     'slug' => 'parametrizacao',
                     'oculto' => true,
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Unidades de Medida',
@@ -390,7 +391,7 @@ return [
                     'curto' => 'UNIDADES',
                     'slug' => 'parametrizacao',
                     'oculto' => true,
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Tipos de Operação',
@@ -399,7 +400,7 @@ return [
                     'curto' => 'OPERAÇÕES',
                     'slug' => 'parametrizacao',
                     'oculto' => true,
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Origens de Operação',
@@ -408,7 +409,7 @@ return [
                     'curto' => 'ORIGENS',
                     'slug' => 'parametrizacao',
                     'oculto' => true,
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Motivos de Recusa',
@@ -417,7 +418,7 @@ return [
                     'curto' => 'RECUSAS',
                     'slug' => 'parametrizacao',
                     'oculto' => true,
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
             ],
         ],
@@ -437,9 +438,9 @@ return [
                     'rota' => 'retaguarda.relatorios.index',
                     'icone' => 'relatorios',
                     'slug' => 'relatorios',
-                    // Gestão da operação: o gestor emite; o fiscal, que trabalha
+                    // Gestão da operação: o Chefe de Setor emite; o fiscal, que trabalha
                     // em rua pelo aplicativo, não tem o que fazer aqui.
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Monitoramento',
@@ -450,7 +451,7 @@ return [
                     // Diagnóstico do ambiente: quem responde por "o sistema está
                     // de pé?" é quem administra e quem gerencia a operação. O
                     // fiscal trabalha em rua, pelo aplicativo.
-                    'setores' => ['administrador', 'gestor'],
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Logs',

@@ -79,13 +79,13 @@ class InicioRetaguardaTest extends TestCase
         $this->seed();
 
         $semAcesso = User::factory()->create(['admin' => false]);
-        $semAcesso->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
-        PermissaoSetor::where('setor', 'gestor')->where('slug', 'ambulantes')->delete();
+        $semAcesso->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+        PermissaoSetor::where('setor', 'chefe-de-setor')->where('slug', 'ambulantes')->delete();
 
         $this->assertArrayNotHasKey('ambulantes', $this->atalhosDe($semAcesso->fresh()));
 
         PermissaoSetor::updateOrCreate(
-            ['setor' => 'gestor', 'slug' => 'ambulantes'],
+            ['setor' => 'chefe-de-setor', 'slug' => 'ambulantes'],
             ['visivel' => true, 'habilitado' => true],
         );
 

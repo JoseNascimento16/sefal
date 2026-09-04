@@ -38,7 +38,7 @@ function payloadExportacao(array $extra = []): array
         ],
         'linhas' => [
             ['nome' => 'Ana Fiscal', 'situacao' => 'Ativo'],
-            ['nome' => 'Bruno Gestor', 'situacao' => 'Inativo'],
+            ['nome' => 'Bruno Guedes', 'situacao' => 'Inativo'],
         ],
     ], $extra);
 }
@@ -256,7 +256,7 @@ test('o pdf preserva seta, separador de breadcrumb e travessao', function () {
             ['chave' => 'fluxo', 'titulo' => 'Fluxo'],
         ],
         'linhas' => [
-            ['periodo' => '10/02/2026 → 15/02/2026', 'fluxo' => 'campo → validação do gestor'],
+            ['periodo' => '10/02/2026 → 15/02/2026', 'fluxo' => 'campo → validação do chefe de setor'],
             ['periodo' => '—', 'fluxo' => 'regular → em dia'],
         ],
     ]));

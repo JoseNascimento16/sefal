@@ -16,7 +16,7 @@ namespace App\Support\Prototipo;
  *     escritos aqui: saem de {@see EstruturaFicticia}, a mesma fonte que a tela de
  *     Áreas e Equipes mostra e que a Caixa de Entrada usa para sugerir o destino de
  *     uma demanda. Duas listas de bairro→equipe discordariam no primeiro ajuste, e
- *     o mapa passaria a mandar o gestor cobrar a equipe errada.
+ *     o mapa passaria a mandar a chefia cobrar a equipe errada.
  *
  * ── Por que os números NÃO vêm daqui ────────────────────────────────────────
  *
@@ -212,7 +212,7 @@ class MapasFicticios
      *
      * A tela recebe a LISTA e faz as contas — os painéis de vidro ("a cidade
      * agora", o foco do dia, os últimos registros) são agregações do que está
-     * desenhado, e mudam junto com o filtro do gestor.
+     * desenhado, e mudam junto com o filtro da chefia.
      *
      * @return array<string, mixed>
      */
@@ -354,7 +354,7 @@ class MapasFicticios
      * O bairro compartilhado (Mussurunga, Patamares, e o Comércio, que é bairro da
      * Área 1 e corredor da Itinerante) não é erro: o vínculo bairro↔equipe não é
      * 1:1. O mapa mostra a equipe sugerida e diz quem mais cobre — a mesma
-     * conversa que a Caixa de Entrada tem com o administrativo.
+     * conversa que a Caixa de Entrada tem com o coordenador.
      *
      * @return list<array<string, mixed>>
      */
@@ -486,7 +486,7 @@ class MapasFicticios
     }
 
     /**
-     * As equipes, como o filtro do gestor precisa delas.
+     * As equipes, como o filtro da chefia precisa delas.
      *
      * O `recorte` viaja porque ele MUDA o significado do filtro: equipe de bairros
      * seleciona por geografia; a Noturna, cujo recorte é o TURNO, seleciona o que

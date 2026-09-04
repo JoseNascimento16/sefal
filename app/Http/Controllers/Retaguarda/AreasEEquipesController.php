@@ -29,9 +29,9 @@ use Inertia\Response;
  * ── Bairro em duas áreas não é erro ─────────────────────────────────────────
  *
  * MUSSURUNGA, PATAMARES e JARDIM DAS MARGARIDAS pertencem a duas áreas. O vínculo
- * bairro↔equipe não é 1:1: a Caixa de Entrada SUGERE e o administrativo CONFIRMA.
- * A tela mostra isso como aviso informativo — marcar como pendência mandaria o
- * gestor "corrigir" um dado que está certo.
+ * bairro↔equipe não é 1:1: a Caixa de Entrada SUGERE e o coordenador CONFIRMA.
+ * A tela mostra isso como aviso informativo — marcar como pendência mandaria a
+ * chefia "corrigir" um dado que está certo.
  *
  * ⚠️ PROTÓTIPO: nada é gravado em banco. A estrutura de partida é a transcrição
  * do documento do cliente em `config/prototipo_estrutura.php`, e o que a pessoa

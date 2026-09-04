@@ -20,7 +20,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 | existe de verdade:
 |
 |   • o FISCAL apenas consulta. Ele cadastra em RUA, pelo aplicativo, e o que
-|     nasce em rua espera a conferência do gestor. Se ele pudesse alterar pela
+|     nasce em rua espera a conferência do chefe de setor. Se ele pudesse alterar pela
 |     Retaguarda, tiraria da fila o registro que ele mesmo acabou de criar — a
 |     situação é campo do mesmo formulário, então "pode alterar" e "pode
 |     validar" são a mesma coisa aqui;
@@ -78,7 +78,7 @@ function camposDoCadastro(int $atividadeId, array $extras = []): array
     ];
 }
 
-/** Um cadastro esperando a conferência do gestor. */
+/** Um cadastro esperando a conferência do chefe de setor. */
 function cadastroEmQuarentena(int $atividadeId): Ambulante
 {
     return Ambulante::factory()->create([
@@ -91,7 +91,7 @@ test('o fiscal NAO tira da quarentena o cadastro que ele mesmo fez em rua', func
     /*
      * O cenário que dá sentido a este teste: o fiscal cadastra alguém de pé na
      * calçada, com o que a pessoa disse e sem documento conferido. O registro
-     * nasce em quarentena JUSTAMENTE para o gestor conferir depois.
+     * nasce em quarentena JUSTAMENTE para o chefe de setor conferir depois.
      *
      * Com a alteração liberada, ele trocava a situação para "Regular" e a
      * conferência simplesmente não acontecia — sem nada no sistema registrando
@@ -133,11 +133,11 @@ test('o fiscal ABRE a tela — barrar a consulta seria mandá-lo para a rua às 
         ->assertOk();
 });
 
-test('o gestor continua fazendo tudo — a restricao e do fiscal, nao da tela', function () {
-    $gestor = contaDoSetor('gestor');
+test('o chefe de setor continua fazendo tudo — a restricao e do fiscal, nao da tela', function () {
+    $chefe = contaDoSetor('chefe-de-setor');
     $p = cadastroEmQuarentena($this->atividade->id);
 
-    $this->actingAs($gestor)->put(
+    $this->actingAs($chefe)->put(
         enderecoDoAmbulante($p->id),
         camposDoCadastro($this->atividade->id, [
             'nome' => $p->nome,
@@ -147,7 +147,7 @@ test('o gestor continua fazendo tudo — a restricao e do fiscal, nao da tela', 
 
     expect($p->fresh()->situacao)->toBe(Ambulante::SITUACAO_REGULAR);
 
-    $this->actingAs($gestor)
+    $this->actingAs($chefe)
         ->post(enderecoDoAmbulante(), camposDoCadastro($this->atividade->id))
         ->assertSessionHasNoErrors();
 
@@ -171,7 +171,7 @@ test('a tela recebe do servidor o que a pessoa pode fazer nela', function () {
             ->where('acoes.incluir', false)
             ->where('acoes.excluir', false));
 
-    $this->actingAs(contaDoSetor('gestor'))->get(enderecoDoAmbulante())
+    $this->actingAs(contaDoSetor('chefe-de-setor'))->get(enderecoDoAmbulante())
         ->assertInertia(fn (Assert $page) => $page
             ->where('acoes.habilitado', true)
             ->where('acoes.incluir', true)
@@ -306,7 +306,7 @@ test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mor
      *
      * O estrago é mudo: nada quebra no deploy, nada aparece em log; as fotos
      * simplesmente somem no `up` da imagem seguinte, e só se descobre quando um
-     * gestor abre um cadastro antigo. Por isso a amarração é asserção, e não
+     * chefe de setor abre um cadastro antigo. Por isso a amarração é asserção, e não
      * comentário: quem trocar o disco de novo é avisado aqui.
      */
     $raiz = rtrim(str_replace('\\', '/', base_path()), '/');

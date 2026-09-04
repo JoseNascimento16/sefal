@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Schema;
 |   • a coluna nova nasce dizendo "não tem permissão" — a resposta honesta para
 |     quem ninguém conferiu;
 |   • quem JÁ TINHA número de permissão é reconhecido como permissionário. Sem
-|     isso, o rename marcaria como sem-permissão justamente quem o gestor
+|     isso, o rename marcaria como sem-permissão justamente quem o chefe de setor
 |     cadastrou lendo o documento da permissão na tela.
 |
 */

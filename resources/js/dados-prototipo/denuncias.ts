@@ -4,7 +4,7 @@
 |------------------------------------------------------------------------------
 |
 | ⚠️ Arquivo SEPARADO do `administrativo.ts` de propósito: aquele descreve o que
-| o administrativo DIGITA (Caixa de Entrada) e a estrutura de áreas; este
+| o coordenador DIGITA (Caixa de Entrada) e a estrutura de áreas; este
 | descreve o que chega por INTEGRAÇÃO das ouvidorias, que é outro fluxo, com
 | outros estados e outros dois papéis. Misturar os dois faria um arquivo em que
 | metade dos campos nunca se aplica — e é justamente essa distinção que o módulo
@@ -200,7 +200,7 @@ export interface Denuncia {
     tramites: TramiteDenuncia[];
 }
 
-/** Uma operação a que o gestor pode anexar denúncia. */
+/** Uma operação a que o Chefe de Setor pode anexar denúncia. */
 export interface Operacao {
     id: number;
     nome: string;
@@ -213,10 +213,10 @@ export interface Operacao {
 /** As duas etapas do fluxo, cada uma com o seu dono. */
 export type Etapa = 'triagem' | 'direcionamento';
 
-/** As situações em que a denúncia espera a TRIAGEM do administrativo. */
+/** As situações em que a denúncia espera a TRIAGEM do coordenador. */
 export const AGUARDANDO_TRIAGEM = ['Recebida'];
 
-/** As situações em que ela espera o DIRECIONAMENTO do gestor da área. */
+/** As situações em que ela espera o DIRECIONAMENTO do Chefe de Setor da área. */
 export const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada à área'];
 
 /**
@@ -231,7 +231,7 @@ export const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada à área'];
  * regularização" é AVISO porque há prazo correndo (a bola está com o notificado,
  * e alguém precisa voltar ao ponto quando ele vencer), e "Retorno vencido" é
  * PERIGO porque o prazo venceu, a situação continua e a denúncia está parada
- * esperando a próxima medida do gestor.
+ * esperando a próxima medida do Chefe de Setor.
  */
 export const TOM_DA_SITUACAO: Record<string, string> = {
     Recebida: 'selo-aviso',

@@ -110,14 +110,15 @@ export interface Fiscal {
 }
 
 /**
- * O gestor da área — quem responde por ela DENTRO do sistema.
+ * O Chefe de Setor da área — quem responde por ela DENTRO do sistema.
  *
- * Não confundir com o `encarregado`, que chefia a equipe em campo: é o gestor que
- * recebe a denúncia encaminhada à área e decide se ela vai a uma equipe ou entra
- * numa operação. `matricula` nula = a estrutura sabe o nome, mas essa pessoa ainda
- * não tem acesso ao sistema.
+ * Não confundir com o `encarregado`, que chefia a equipe em campo: é o Chefe de
+ * Setor que recebe a denúncia encaminhada à área, decide se ela vai a uma equipe
+ * ou entra numa operação, e recebe de volta o que a equipe concluiu em campo.
+ * `matricula` nula = a estrutura sabe o nome, mas essa pessoa ainda não tem acesso
+ * ao sistema.
  */
-export interface GestorDeArea {
+export interface ChefeDeSetor {
     nome: string;
     matricula: string | null;
 }
@@ -128,8 +129,8 @@ export interface Area {
     regiao: string;
     equipe: string;
     encarregado: string;
-    /** `null` na área que a estrutura ainda não registrou gestor nenhum. */
-    gestor: GestorDeArea | null;
+    /** `null` na área em que a estrutura ainda não registrou chefia nenhuma. */
+    chefe_de_setor: ChefeDeSetor | null;
     recorte: Recorte;
     turno: string;
     fiscais: Fiscal[];

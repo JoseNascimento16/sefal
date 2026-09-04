@@ -13,18 +13,18 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Caixa de Entrada do Administrativo — PROTÓTIPO.
+ * Caixa de Entrada do Coordenador — PROTÓTIPO.
  *
  * É a porta por onde a demanda de fora entra no sistema. Hoje ela chega em
  * PAPEL: o e-Salvador e o Fala Salvador (Disque 156) entregam documento impresso
- * ao administrativo, que digita, decide e encaminha. O cadastro manual é
+ * ao coordenador, que digita, decide e encaminha. O cadastro manual é
  * requisito, não gambiarra — quando a API chegar, ele continua existindo.
  *
  * ── As duas decisões que a tela existe para tomar ───────────────────────────
  *
  *   1. **Registrar e encaminhar** — a demanda vira trabalho DIRIGIDO da equipe
  *      responsável, derivada do BAIRRO. A derivação SUGERE; quem confirma é o
- *      administrativo, porque um bairro pode pertencer a duas áreas e aí as duas
+ *      coordenador, porque um bairro pode pertencer a duas áreas e aí as duas
  *      respostas estão certas.
  *   2. **Registrar e devolver/arquivar** — com MOTIVO e JUSTIFICATIVA
  *      obrigatórios. É ato administrativo: quem, quando, por quê. A validação

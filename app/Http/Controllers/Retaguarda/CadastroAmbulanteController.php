@@ -48,7 +48,7 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
  *
  * ⚠️ A **validação do cadastro em quarentena** (aprovar / mesclar duplicado /
  * recusar com motivo) é da Fase 5 e NÃO mora aqui: hoje a situação
- * `Cadastrado em campo` é apenas um valor que a tela mostra e o gestor pode
+ * `Cadastrado em campo` é apenas um valor que a tela mostra e o Chefe de Setor pode
  * trocar à mão.
  *
  * A guarda de acesso deduz a tela do primeiro trecho do caminho
@@ -368,7 +368,7 @@ class CadastroAmbulanteController extends Controller
 
         /*
          * Não é permissionário ⇒ número e validade da permissão SAEM. É o caso do
-         * gestor que desmarca a opção num cadastro que já a tinha: guardar a
+         * Chefe de Setor que desmarca a opção num cadastro que já a tinha: guardar a
          * permissão de quem o cadastro diz não ter deixaria a base afirmando duas
          * coisas contrárias — e a busca por "permissão vencida" acusaria alguém
          * por um papel que o próprio sistema diz que não existe.

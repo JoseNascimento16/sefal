@@ -451,10 +451,10 @@ test('quem nao tem a tela concedida e mandado de volta dizendo o porque', functi
 test('concedida na matriz, a tela abre para quem nao e administrador', function () {
     config(['retaguarda.permissao_enforce' => 'block']);
 
-    $gestor = User::factory()->create(['admin' => false]);
-    $gestor->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $chefe = User::factory()->create(['admin' => false]);
+    $chefe->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
-    $this->actingAs($gestor->fresh())->get(caminhoDoAmbulante())->assertOk();
+    $this->actingAs($chefe->fresh())->get(caminhoDoAmbulante())->assertOk();
 });
 
 test('exige autenticacao', function () {
@@ -532,11 +532,11 @@ test('gravacao que falha NAO apaga a foto antiga — o registro vivo nunca apont
 test('a inclusao pela Retaguarda nao oferece a quarentena, e o servidor recusa', function () {
     /*
      * "Cadastrado em campo" é estado de ORIGEM: quer dizer "isto nasceu na rua,
-     * sem conferência". Um cadastro feito de mesa, com o gestor lendo documento
+     * sem conferência". Um cadastro feito de mesa, com o chefe de setor lendo documento
      * na tela, não nasce assim — deixar a opção aberta na inclusão sujaria a fila
      * de conferência com registros que ninguém precisa conferir.
      *
-     * No UPDATE ela continua disponível: é como o gestor devolve para a fila um
+     * No UPDATE ela continua disponível: é como o chefe de setor devolve para a fila um
      * cadastro que ele percebeu duvidoso.
      */
     $this->actingAs($this->admin)->post(
@@ -554,7 +554,7 @@ test('a inclusao pela Retaguarda nao oferece a quarentena, e o servidor recusa',
 
     $p = Ambulante::firstOrFail();
 
-    // E o gestor pode devolvê-lo à fila depois.
+    // E o chefe de setor pode devolvê-lo à fila depois.
     $this->actingAs($this->admin)->put(
         caminhoDoAmbulante($p->id),
         cadastroMinimo($this->atividade->id, [
@@ -646,7 +646,7 @@ test('a validade da permissao continua OPCIONAL — data inventada faria a busca
 
 test('desmarcar permissionario LIMPA o numero e a validade', function () {
     /*
-     * O caso do gestor que corrige um cadastro: a pessoa não é permissionária
+     * O caso do chefe de setor que corrige um cadastro: a pessoa não é permissionária
      * (ou nunca foi). Guardar a permissão de quem o cadastro diz não ter deixaria
      * a base afirmando duas coisas contrárias — e a busca por "permissão vencida"
      * acusaria alguém por um papel que o próprio sistema diz que não existe.

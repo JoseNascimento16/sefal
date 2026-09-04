@@ -47,10 +47,10 @@ import {
 } from '@/routes/retaguarda/caixa-de-entrada';
 
 /**
- * Caixa de Entrada do Administrativo — PROTÓTIPO.
+ * Caixa de Entrada do Coordenador — PROTÓTIPO.
  *
  * É o começo da cadeia. A demanda chega de FORA e em PAPEL — e-Salvador, Fala
- * Salvador 156, pedido de nova licença, ofício —, o administrativo digita, e daí
+ * Salvador 156, pedido de nova licença, ofício —, o coordenador digita, e daí
  * saem só dois caminhos:
  *
  *   • **encaminhar** à equipe responsável, derivada do BAIRRO. A tela SUGERE e a
@@ -375,7 +375,7 @@ export default function CaixaDeEntrada({
                     <p>
                         O que chega de <strong>fora</strong> e em papel —
                         e-Salvador, Fala Salvador, pedido de nova licença e
-                        ofício. Aqui o administrativo registra, decide e{' '}
+                        ofício. Aqui o coordenador registra, decide e{' '}
                         <strong>encaminha à equipe da área do bairro</strong> ou
                         devolve com justificativa.
                     </p>
@@ -964,7 +964,7 @@ export default function CaixaDeEntrada({
                             Destino da demanda
                         </h3>
                         <p className="card-sub">
-                            As duas saídas do administrativo. Devolver ou arquivar
+                            As duas saídas do coordenador. Devolver ou arquivar
                             é ato administrativo: exige o motivo por escrito.
                         </p>
 

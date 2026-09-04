@@ -8,7 +8,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Mapa ao Vivo — PROTÓTIPO da cidade agora, para o GESTOR.
+ * Mapa ao Vivo — PROTÓTIPO da cidade agora, para o CHEFE DE SETOR.
  *
  * Não é a tela do fiscal. O aplicativo mostra a calçada em que ele está; esta
  * tela mostra a CIDADE, em escala de operação: onde a demanda se acumula, qual

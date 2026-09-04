@@ -6,8 +6,8 @@ namespace App\Services\Monitoramento;
  * O resultado de UMA verificação.
  *
  * O `detalhe` é escrito em linguagem de NEGÓCIO, e sempre com a CONSEQUÊNCIA
- * junto: quem lê é o gestor tentando entender o que parou, não quem escreveu o
- * código. "Nenhum administrador ativo — ninguém consegue distribuir acesso"
+ * junto: quem lê é quem administra, tentando entender o que parou — não quem
+ * escreveu o código. "Nenhum administrador ativo — ninguém consegue distribuir acesso"
  * explica; "0 registros em users where admin = 1" não explica nada.
  *
  * Verde também informa: o detalhe do `ok` diz o que foi conferido ("2 contas de

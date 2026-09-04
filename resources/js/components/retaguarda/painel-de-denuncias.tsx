@@ -67,11 +67,11 @@ import {
  *
  * ── A tela é o fluxo, e o fluxo tem duas etapas com dois donos ───────────────
  *
- *   Triagem (administrativo)      → aba "A triar": encaminha à ÁREA derivada do
+ *   Triagem (Coordenador)         → aba "A triar": encaminha à ÁREA derivada do
  *                                   bairro (sugestão editável, porque bairro
  *                                   compartilhado tem duas respostas certas) ou
  *                                   devolve/arquiva com justificativa.
- *   Direcionamento (gestor)       → aba "A direcionar": manda à EQUIPE ou anexa
+ *   Direcionamento (Chefe de Setor) → aba "A direcionar": manda à EQUIPE ou anexa
  *                                   a uma OPERAÇÃO.
  *
  * As abas aparecem conforme a ETAPA de quem entrou, e o selo em cima diz qual é
@@ -98,13 +98,13 @@ interface Props {
     destinos: string[];
     equipes: EquipeResumo[];
     areas: string[];
-    /** Quem responde por cada área — o triador precisa ver para QUEM encaminha. */
-    gestores: Record<string, { nome: string; matricula: string | null }>;
+    /** Quem responde por cada área — quem tria precisa ver para QUEM encaminha. */
+    chefias: Record<string, { nome: string; matricula: string | null }>;
     operacoes: Operacao[];
     /** As etapas do fluxo que esta pessoa exerce — quem responde é o servidor. */
     etapas: Etapa[];
-    /** As áreas que esta pessoa responde como gestora (vazio para quem não é). */
-    areasDoGestor: string[];
+    /** As áreas que esta pessoa responde como Chefe de Setor (vazio para quem não é). */
+    areasDoChefe: string[];
     /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
     recorteDeArea: boolean;
     /** A sessão já decidiu algo sobre a demonstração? */
@@ -219,9 +219,9 @@ function proximoPassoDe(
     if (d.situacao === 'Retorno vencido') {
         return {
             o_que: 'Próxima medida',
-            quem: d.area === null ? 'Gestão da área' : `Gestão da ${d.area}`,
+            quem: d.area === null ? 'Chefia da área' : `Chefia da ${d.area}`,
             detalhe:
-                'O prazo venceu com a situação mantida: cabe ao gestor da área decidir a medida seguinte.',
+                'O prazo venceu com a situação mantida: cabe ao Chefe de Setor da área decidir a medida seguinte.',
         };
     }
 
@@ -327,10 +327,10 @@ export function PainelDeDenuncias({
     destinos,
     equipes,
     areas,
-    gestores,
+    chefias,
     operacoes,
     etapas,
-    areasDoGestor,
+    areasDoChefe,
     recorteDeArea,
     alterada,
 }: Props) {
@@ -346,9 +346,9 @@ export function PainelDeDenuncias({
         return equipe === undefined ? area : `${area} — ${equipe.regiao}`;
     };
 
-    /** O gestor de uma área, ou null quando a estrutura não registra nenhum. */
-    const gestorDa = (area: string): string | null => {
-        const nome = gestores[area]?.nome ?? '';
+    /** O Chefe de Setor de uma área, ou null quando a estrutura não registra nenhum. */
+    const chefeDa = (area: string): string | null => {
+        const nome = chefias[area]?.nome ?? '';
 
         return nome.trim() === '' ? null : nome;
     };
@@ -600,7 +600,7 @@ export function PainelDeDenuncias({
      * Quem exerce a etapa vai para a aba dela. Quem NÃO a exerce vê o número —
      * ele é informação legítima sobre a fila do colega — mas não tem aba para
      * onde ir: aí o clique cai em "Todas" com a situação escrita na busca. Sem
-     * isto o gestor clicava em "a triar" e chegava numa lista sem aba
+     * isto o Chefe de Setor clicava em "a triar" e chegava numa lista sem aba
      * selecionada e sem ação nenhuma: um estado que a tela não sabe explicar.
      */
     function irParaEtapa(etapa: Aba, exerce: boolean, situacao: string) {
@@ -784,10 +784,10 @@ export function PainelDeDenuncias({
                             mesmo artigo, e um fixo erraria em um dos dois. */}
                         Denúncias que {canal.artigo}{' '}
                         <strong>{canal.sistema}</strong> entrega ao SEFAL por
-                        integração. O administrativo{' '}
+                        integração. O Coordenador{' '}
                         <strong>tria e encaminha à área</strong> do bairro; o{' '}
-                        <strong>gestor da área direciona</strong> à equipe ou
-                        inclui numa operação.
+                        <strong>Chefe de Setor da área direciona</strong> à equipe
+                        ou inclui numa operação.
                     </p>
 
                     {/* Qual é a SUA etapa — o selo que o dono usa para mostrar
@@ -803,20 +803,20 @@ export function PainelDeDenuncias({
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
                                 <span className="rt-chip-dot" />
                                 {/* A ÁREA vai no selo: "sua etapa é direcionamento"
-                                    sem dizer de onde deixaria o gestor sem saber
+                                    sem dizer de onde deixaria a chefia sem saber
                                     por que a lista dele é curta. */}
                                 Sua etapa: direcionamento
-                                {areasDoGestor.length > 0
-                                    ? ` · ${areasDoGestor.map(nomeDaArea).join(' e ')}`
+                                {areasDoChefe.length > 0
+                                    ? ` · ${areasDoChefe.map(nomeDaArea).join(' e ')}`
                                     : ''}{' '}
                                 — você escolhe equipe ou operação
                             </li>
                         )}
 
-                        {/* Gestor sem área vinculada: ele exerce a etapa e não tem
+                        {/* Chefe de Setor sem área vinculada: ele exerce a etapa e não tem
                             de onde. Dito na cara, e não em lista vazia sem
                             explicação — a lista vazia parece sistema quebrado. */}
-                        {direciona && areasDoGestor.length === 0 && (
+                        {direciona && areasDoChefe.length === 0 && (
                             <li className="rt-chip" style={{ color: 'var(--sm-perigo)' }}>
                                 <span className="rt-chip-dot" />
                                 Sua conta não está vinculada a nenhuma área — procure quem
@@ -826,7 +826,7 @@ export function PainelDeDenuncias({
                         {!tria && !direciona && (
                             <li className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                Você acompanha o fluxo; as decisões são do administrativo e do gestor
+                                Você acompanha o fluxo; as decisões são do Coordenador e do Chefe de Setor
                             </li>
                         )}
                     </ul>
@@ -852,7 +852,7 @@ export function PainelDeDenuncias({
                         <span>{recorteDeArea ? 'na sua área' : 'recebidas'}</span>
                     </button>
 
-                    {/* O número "a triar" só existe para quem TRIA. Para o gestor
+                    {/* O número "a triar" só existe para quem TRIA. Para o Chefe de Setor
                         ele apareceria em zero — a denúncia recebida ainda não tem
                         área, então ela não está na lista dele —, e zero ali leria
                         como "não há nada a triar", que é falso. */}
@@ -874,7 +874,7 @@ export function PainelDeDenuncias({
                     <button
                         type="button"
                         className="rt-numero info"
-                        title="Ver as que aguardam o gestor da área"
+                        title="Ver as que aguardam o Chefe de Setor da área"
                         onClick={() => irParaEtapa('direcionamento', direciona, 'encaminhada')}
                     >
                         <strong>{numeros.direcionar}</strong>
@@ -921,7 +921,7 @@ export function PainelDeDenuncias({
                 </div>
             </div>
 
-            {/* A lista do gestor NÃO é o universo, e a tela diz isso. Sem o aviso,
+            {/* A lista do Chefe de Setor NÃO é o universo, e a tela diz isso. Sem o aviso,
                 ele contaria as denúncias, acharia o número baixo e concluiria que o
                 canal está parado. */}
             {recorteDeArea && (
@@ -930,11 +930,11 @@ export function PainelDeDenuncias({
                     <div>
                         <strong>
                             Você está vendo só o que foi encaminhado a{' '}
-                            {areasDoGestor.map(nomeDaArea).join(' e ')}.
+                            {areasDoChefe.map(nomeDaArea).join(' e ')}.
                         </strong>
                         <div>
                             As denúncias das outras áreas e as que ainda esperam a
-                            triagem do administrativo não aparecem aqui — e a ação
+                            triagem do Coordenador não aparecem aqui — e a ação
                             sobre denúncia de outra área é recusada pelo sistema, não
                             só escondida.
                         </div>
@@ -1216,7 +1216,7 @@ export function PainelDeDenuncias({
                                                     ? aba === 'triagem'
                                                         ? 'Nada a triar: toda denúncia recebida deste canal já foi encaminhada ou retornada.'
                                                         : aba === 'direcionamento'
-                                                          ? 'Nada a direcionar: nenhuma denúncia deste canal está esperando o gestor da área.'
+                                                          ? 'Nada a direcionar: nenhuma denúncia deste canal está esperando o Chefe de Setor da área.'
                                                           : 'Nenhuma denúncia recebida deste canal.'
                                                     : 'Nenhuma denúncia casa com a busca. Limpe o campo para ver a lista inteira.'}
                                             </td>
@@ -1314,16 +1314,16 @@ export function PainelDeDenuncias({
                                                                 }
                                                             >
                                                                 <option value="">Escolha a área…</option>
-                                                                {/* O nome do GESTOR vai na opção:
+                                                                {/* O nome do CHEFE DE SETOR vai na opção:
                                                                     encaminhar é entregar trabalho a
                                                                     alguém, e "Área 5" não diz a quem.
                                                                     Vai aqui, e não numa linha extra,
                                                                     para não dobrar a altura da grade. */}
                                                                 {areas.map((a) => (
                                                                     <option key={a} value={a}>
-                                                                        {gestorDa(a) === null
+                                                                        {chefeDa(a) === null
                                                                             ? a
-                                                                            : `${a} — ${gestorDa(a)}`}
+                                                                            : `${a} — ${chefeDa(a)}`}
                                                                     </option>
                                                                 ))}
                                                             </select>
@@ -1495,9 +1495,9 @@ export function PainelDeDenuncias({
                                             : `${aberta.area_sugerida.area} (sugerida pelo bairro)`)}
                                     {/* Quem responde pela área — a informação que
                                         falta para "encaminhada" ter destinatário. */}
-                                    {aberta.area !== null && gestorDa(aberta.area) !== null && (
+                                    {aberta.area !== null && chefeDa(aberta.area) !== null && (
                                         <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                            Gestor: {gestorDa(aberta.area)}
+                                            Chefe de Setor: {chefeDa(aberta.area)}
                                         </div>
                                     )}
                                 </dd>
@@ -1701,7 +1701,7 @@ export function PainelDeDenuncias({
                 >
                     <p className="sobreposicao-texto" style={{ marginBottom: 12 }}>
                         Cada denúncia vai para a área do bairro dela, e passa a
-                        esperar o <strong>gestor daquela área</strong>, que escolhe
+                        esperar o <strong>Chefe de Setor daquela área</strong>, que escolhe
                         equipe ou operação. Confira o resumo:
                     </p>
 
@@ -1709,31 +1709,31 @@ export function PainelDeDenuncias({
                         {resumoPorArea.map(([area, quantas]) => (
                             <li key={area} className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                {/* Área E gestor: é a última tela antes de o
+                                {/* Área E chefia: é a última tela antes de o
                                     trabalho sair da mão de quem tria, e é aqui que
                                     ele confere para quem está entregando. */}
                                 {area}
-                                {gestorDa(area) === null ? '' : ` · ${gestorDa(area)}`}:{' '}
+                                {chefeDa(area) === null ? '' : ` · ${chefeDa(area)}`}:{' '}
                                 {contar(quantas, 'denúncia', 'denúncias')}
                             </li>
                         ))}
                     </ul>
 
-                    {/* Área sem gestor registrado na estrutura: a denúncia é
+                    {/* Área sem Chefe de Setor registrado na estrutura: a denúncia é
                         encaminhada e fica sem quem a receba. Aviso, não bloqueio —
-                        o cadastro do gestor é de fora desta tela. */}
-                    {resumoPorArea.some(([area]) => gestorDa(area) === null) && (
+                        o cadastro da chefia é de fora desta tela. */}
+                    {resumoPorArea.some(([area]) => chefeDa(area) === null) && (
                         <p className="form-erro" style={{ marginBottom: 12 }}>
-                            <TriangleAlert size={15} aria-hidden /> Há área sem gestor
+                            <TriangleAlert size={15} aria-hidden /> Há área sem Chefe de Setor
                             registrado na estrutura: a denúncia chega lá e ninguém é
-                            avisado. Vale registrar o gestor em Estrutura › Áreas e
+                            avisado. Vale registrar o Chefe de Setor em Estrutura › Áreas e
                             Equipes.
                         </p>
                     )}
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="encaminhar-observacao">
-                            Orientação ao gestor
+                            Orientação ao Chefe de Setor
                         </label>
                         <input
                             id="encaminhar-observacao"
@@ -1772,7 +1772,7 @@ export function PainelDeDenuncias({
                     onConfirmar={devolver}
                 >
                     <p className="sobreposicao-texto" style={{ marginBottom: 12 }}>
-                        A denúncia <strong>não chega ao gestor</strong>: fica
+                        A denúncia <strong>não chega ao Chefe de Setor</strong>: fica
                         registrada como recusada, com o motivo e a justificativa no
                         trâmite. É ato administrativo — quem, quando, por quê.
                     </p>

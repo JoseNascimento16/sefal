@@ -50,7 +50,7 @@ class RelatorioAmbulantes implements Relatorio
 
     public function descricao(): string
     {
-        return 'Cadastros por período, atividade, situação e permissão da SEMOP, com o quanto ainda espera a validação do gestor. Responde "quem está na base, quem tem permissão e o que falta conferir".';
+        return 'Cadastros por período, atividade, situação e permissão da SEMOP, com o quanto ainda espera a validação do Chefe de Setor. Responde "quem está na base, quem tem permissão e o que falta conferir".';
     }
 
     public function filtros(): array

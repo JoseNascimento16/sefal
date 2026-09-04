@@ -74,7 +74,7 @@ class Ambulante extends Model
     public const SITUACAO_IRREGULAR = 'Irregular';
 
     /**
-     * QUARENTENA. O cadastro nasceu em rua, pelo aplicativo, e espera o Gestor
+     * QUARENTENA. O cadastro nasceu em rua, pelo aplicativo, e espera o Chefe de Setor
      * validar (aprovar, mesclar um duplicado ou corrigir). Nunca entra direto
      * como regular: quem preencheu estava de pé na calçada, com o que a pessoa
      * disse — não com documento conferido.
@@ -102,13 +102,13 @@ class Ambulante extends Model
      *
      * A quarentena fica de fora, e isso é regra de negócio, não conveniência de
      * tela: `Cadastrado em campo` significa "isto nasceu na rua, sem
-     * conferência". Um cadastro feito de mesa, com o gestor lendo o documento na
+     * conferência". Um cadastro feito de mesa, com o Chefe de Setor lendo o documento na
      * tela, não nasce assim — permiti-lo sujaria a fila de conferência com
      * registros que ninguém precisa conferir, e a fila é a razão de a quarentena
      * existir.
      *
      * Na ALTERAÇÃO as três valem: devolver um cadastro duvidoso para a fila é
-     * exatamente o que o gestor precisa poder fazer.
+     * exatamente o que o Chefe de Setor precisa poder fazer.
      *
      * @var list<string>
      */
@@ -172,7 +172,7 @@ class Ambulante extends Model
     }
 
     /**
-     * Os que ainda esperam a validação do Gestor.
+     * Os que ainda esperam a validação do Chefe de Setor.
      *
      * @param  Builder<static>  $query
      */
