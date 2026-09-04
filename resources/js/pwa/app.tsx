@@ -38,7 +38,7 @@ import { TelaVia } from './telas/via';
 
    A barra de baixo tem SEIS destinos porque o trabalho do fiscal passou a ter
    duas entradas, não uma: além do que ele acha andando a rua (o mapa), há a
-   fila do que o administrativo encaminhou à equipe (as demandas). Esconder a
+   fila do que o Coordenador encaminhou à equipe (as demandas). Esconder a
    fila atrás de outra tela seria esconder metade do serviço.
 
    O estado também é deliberadamente simples — o que o fiscal registra fica na
@@ -72,6 +72,8 @@ type Contexto = {
     alternarTema: () => void;
     registrar: (novo: NovoRegistro) => string;
     anexarDocumento: (id: string, via: ViaImpressa, nome: string | null) => void;
+    /** Fecha o registro e o manda à caixa de entrada do Chefe de Setor da área. */
+    despachar: (id: string, consideracoes: string, recomendacoes: string[]) => void;
     esvaziarFila: () => void;
     sair: () => void;
 };
@@ -92,6 +94,25 @@ export const useApp = (): Contexto => {
 
 export const irPara = (destino: string): void => {
     window.location.hash = destino;
+};
+
+/**
+ * Volta para a tela ANTERIOR — de verdade, não para um destino fixo.
+ *
+ * A conclusão do registro é alcançada por caminhos diferentes (o despacho que
+ * acabou de acontecer, a lista de registros, a ficha de um ponto no mapa), e um
+ * botão que sempre levava ao mapa mandava o fiscal para longe de onde ele
+ * estava. O mapa fica como rede de segurança de quem abriu o aplicativo direto
+ * num endereço colado, sem histórico para onde voltar.
+ */
+export const voltar = (): void => {
+    if (window.history.length > 1) {
+        window.history.back();
+
+        return;
+    }
+
+    irPara('mapa');
 };
 
 const lerHash = (): string => window.location.hash.replace(/^#\/?/, '') || 'entrada';
@@ -177,12 +198,38 @@ export function App() {
                 origem: novo.origem,
                 demandaId: novo.demandaId,
                 referencia: novo.referencia,
+                /* O registro nasce ABERTO: quem escreve as considerações finais é
+                   a tela de conclusão, no passo seguinte ao despacho. */
+                consideracoes: '',
+                recomendacoes: [],
+                despachadoBr: null,
             },
             ...atuais,
         ]);
 
         return id;
     }, []);
+
+    /**
+     * O despacho: guarda as considerações finais e fecha o registro.
+     *
+     * Não há servidor, então o envio continua sendo encenado — mas o DADO é
+     * verdadeiro: o registro passa a ter o que o fiscal recomendou e a data do
+     * despacho, que é o que a fila de envio leva à caixa de entrada do Chefe de
+     * Setor da área da equipe.
+     */
+    const despachar = useCallback(
+        (id: string, consideracoes: string, recomendacoes: string[]) => {
+            setRegistros((atuais) =>
+                atuais.map((r) =>
+                    r.id === id
+                        ? { ...r, consideracoes, recomendacoes, despachadoBr: HOJE_BR }
+                        : r,
+                ),
+            );
+        },
+        [],
+    );
 
     const anexarDocumento = useCallback((id: string, via: ViaImpressa, nome: string | null) => {
         setRegistros((atuais) =>
@@ -200,8 +247,13 @@ export function App() {
         );
     }, []);
 
+    /* Sobe só o que foi DESPACHADO: registro aberto (sem considerações, ainda sem
+       conclusão) não tem para onde ir — a caixa do Chefe de Setor recebe registro
+       concluído, e mandar o meio-registro criaria trabalho que ninguém pediu. */
     const esvaziarFila = useCallback(() => {
-        setRegistros((atuais) => atuais.map((r) => ({ ...r, envio: 'enviado' as const })));
+        setRegistros((atuais) =>
+            atuais.map((r) => (r.despachadoBr ? { ...r, envio: 'enviado' as const } : r)),
+        );
     }, []);
 
     const sair = useCallback(() => {
@@ -209,8 +261,12 @@ export function App() {
         irPara('entrada');
     }, []);
 
+    /* "Pendente" é o que espera SINAL, não o que espera o fiscal: registro ainda
+       aberto contado aqui faria o selo do rodapé prometer um envio que nem foi
+       pedido. O que falta concluir aparece na própria tela de envio, em bloco
+       separado. */
     const pendentes = useMemo(
-        () => registros.filter((r) => r.envio !== 'enviado').length,
+        () => registros.filter((r) => r.envio !== 'enviado' && r.despachadoBr !== null).length,
         [registros],
     );
 
@@ -235,10 +291,11 @@ export function App() {
                 }),
             registrar,
             anexarDocumento,
+            despachar,
             esvaziarFila,
             sair,
         }),
-        [registros, pendentes, tema, registrar, anexarDocumento, esvaziarFila, sair],
+        [registros, pendentes, tema, registrar, anexarDocumento, despachar, esvaziarFila, sair],
     );
 
     /* Quem ainda não entrou só vê a porta — inclusive quem chegar por um endereço

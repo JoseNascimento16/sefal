@@ -46,7 +46,7 @@ import { Icone } from '../icones';
 
    O QUE MUDOU COM O CENÁRIO NOVO: o registro passou a ter ORIGEM. Ele pode
    nascer AVULSO (o fiscal viu andando, como sempre) ou DIRIGIDO — encaminhado à
-   equipe pelo administrativo, com número de processo e prazo. No dirigido, o
+   equipe pelo Coordenador, com número de processo e prazo. No dirigido, o
    passo 1 deixa de ser "onde você está" e passa a ser "o que foi encaminhado":
    o endereço vem do processo, e o vínculo fica à vista da abertura até o
    documento, porque é ele que vai para o campo REFERÊNCIA do papel.
@@ -107,6 +107,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const [desfecho, setDesfecho] = useState<Desfecho | null>(null);
     const [retorno, setRetorno] = useState(false);
     const [prazo, setPrazo] = useState(PRAZOS_RETORNO[1]);
+    const [despachando, setDespachando] = useState(false);
     const seletor = useRef<HTMLInputElement>(null);
 
     const dirigida = demanda !== null;
@@ -228,10 +229,20 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
         }
     };
 
-    const concluir = () => {
-        if (!desfecho) {
+    /**
+     * O despacho: grava o registro e leva à tela de conclusão.
+     *
+     * A guarda de duplo clique não é enfeite: quem toca de pé, com luva ou com a
+     * tela sob sol, toca duas vezes achando que não pegou — e o segundo toque
+     * gravaria uma SEGUNDA fiscalização do mesmo ponto, que o Chefe de Setor
+     * receberia como se fossem duas idas ao local.
+     */
+    const despacharRegistro = () => {
+        if (!desfecho || despachando) {
             return;
         }
+
+        setDespachando(true);
 
         const id = registrar({
             desfecho,
@@ -601,7 +612,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                         Retaguarda outra — e o relatório não somaria nada. */}
                     <p className="pw-fraco" style={{ margin: '0 0 10px', fontSize: 13.5 }}>
                         {emRetorno
-                            ? 'O retorno diz se o notificado cumpriu o prazo. É este desfecho que encerra a denúncia ou a devolve ao gestor da área.'
+                            ? 'O retorno diz se o notificado cumpriu o prazo. É este desfecho que encerra a denúncia ou a devolve ao Chefe de Setor.'
                             : 'A maioria das abordagens termina no primeiro desfecho — orientou, o ambulante desmontou, acabou.'}
                     </p>
 
@@ -650,8 +661,8 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                             {documentoAcombinar === 'np'
                                 ? 'a Notificação Preliminar'
                                 : 'o Auto de Apreensão'}
-                            . O documento é preenchido na tela seguinte, com número do bloco reservado
-                            no aparelho.
+                            . O documento é preenchido depois do despacho, com número do bloco
+                            reservado no aparelho — e o registro só conclui com ele lavrado.
                         </p>
                     )}
                 </section>
@@ -681,19 +692,29 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                     )}
                 </section>
 
+                {/* DESPACHAR, e não "concluir": o registro não morre aqui — ele
+                    segue para a caixa de entrada do Chefe de Setor da área, e a
+                    tela seguinte é onde o fiscal escreve o que recomenda. Chamar
+                    este botão de "concluir" prometia um fim que não é o dele. */}
                 <button
                     type="button"
                     className="pw-btn pw-btn-acao"
                     style={{ minHeight: 60, fontSize: 18, opacity: desfecho ? 1 : 0.5 }}
-                    onClick={concluir}
-                    disabled={!desfecho}
+                    onClick={despacharRegistro}
+                    disabled={!desfecho || despachando}
                 >
                     {desfecho
-                        ? emRetorno
-                            ? 'Concluir retorno'
-                            : 'Concluir registro'
+                        ? despachando
+                            ? 'Despachando…'
+                            : emRetorno
+                              ? 'Despachar retorno'
+                              : 'Despachar registro'
                         : 'Escolha o desfecho'}
-                    <Icone nome="seta" tamanho={20} />
+                    <Icone
+                        nome={despachando ? 'atualizar' : 'seta'}
+                        tamanho={20}
+                        className={despachando ? 'pw-girando' : undefined}
+                    />
                 </button>
             </div>
         </div>

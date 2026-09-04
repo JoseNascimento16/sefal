@@ -1346,6 +1346,19 @@ textarea.pw-entrada {
     margin-top: 10px;
 }
 
+/* Item da fila que é BOTÃO — o registro ainda aberto leva de volta à conclusão.
+   Não reusa `.pw-card-toque` de propósito: ele zera o `display: flex` do item, e
+   a marca redonda da esquerda cairia em cima do texto. */
+.pw-fila-item-toque {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pw-fila-item-toque:active {
+    transform: scale(0.99);
+}
+
 .pw-fila-marca {
     display: grid;
     place-items: center;
@@ -1603,6 +1616,15 @@ textarea.pw-entrada {
     color: var(--pw-texto-corpo);
     font-size: 13.5px;
     line-height: 1.5;
+}
+
+/* Aviso de IMPEDIMENTO — laranja, e não o azul de informação.
+   O azul dizia "leia quando puder"; este texto é o MOTIVO de um botão não
+   funcionar, e quem está de pé precisa achá-lo antes de tocar de novo. */
+.pw-aviso-alerta {
+    border-left: 5px solid var(--pw-alerta);
+    background: var(--pw-alerta-suave);
+    color: var(--pw-texto);
 }
 
 .pw-lista-limpa {

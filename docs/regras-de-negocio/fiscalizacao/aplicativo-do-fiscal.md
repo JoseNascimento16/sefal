@@ -20,7 +20,14 @@ abre as da Retaguarda.
 
 O trabalho do fiscal tem **duas entradas**, e o aplicativo mostra as duas: o que ele descobre andando
 a rua (**avulso**, pelo mapa) e o que chega **dirigido** — a denúncia que a ouvidoria entregou ao
-SEFAL, que o administrativo triou e que o gestor da área direcionou à equipe dele.
+SEFAL, que o **Coordenador** triou e que o **Chefe de Setor** da área direcionou à equipe dele.
+
+> ### 🗣️ VOCABULÁRIO DO DOMÍNIO (decisão do dono, 04/09/2026)
+>
+> Quem antes se chamava **gestor** é o **Chefe de Setor**; o **administrativo** da triagem é o
+> **Coordenador**. A troca vale em tudo que o usuário lê, nos dois lados (aqui e na Retaguarda). É
+> troca de **papel**, não de pessoa: matrícula identifica gente, então os logins (`gestor1`,
+> `administrativo1`) continuam os mesmos.
 
 ---
 
@@ -66,7 +73,7 @@ próprio.
 Cada situação vem com a frase que explica o que ela cobra e de quem (`SITUACOES_EXPLICADAS`).
 `Aguardando regularização` e `Retorno vencido` parecem a mesma coisa e são opostas: na primeira o
 prazo corre e a bola está com o **notificado**; na segunda o prazo venceu com a situação mantida e a
-denúncia voltou ao **gestor da área** para a próxima medida — a equipe não tem ato pendente.
+denúncia voltou ao **Chefe de Setor** da área para a próxima medida — a equipe não tem ato pendente.
 
 ### RN-05 — O desfecho sai de uma lista FECHADA, a mesma da Retaguarda
 
@@ -95,8 +102,8 @@ vencimento em `dd/mm/aaaa`) e oferece **Registrar retorno**. A tela é a mesma d
 coordenada, relato —, com o título, o crachá e os desfechos trocados: é disso que o retorno precisa.
 
 - **Regularizado após notificação** → o prazo foi cumprido e a denúncia se encerra.
-- **Retorno com a situação mantida** → prazo vencido e ponto igual: a denúncia sobe ao gestor da área
-  (é o `Retorno vencido` do outro lado).
+- **Retorno com a situação mantida** → prazo vencido e ponto igual: a denúncia sobe ao Chefe de Setor
+  da área (é o `Retorno vencido` do outro lado).
 
 Sem esse caminho, o fiscal lavrava a notificação e não tinha por onde fechar o ciclo — o prazo corria
 para ninguém.
@@ -161,6 +168,67 @@ não resolve, e apreensão é **guarda**, não destruição. Isso é regra da am
 demonstração em que todo caso de campo termina em papel desenharia um sistema punitivo que não é o do
 cliente — e há teste que reprova a amostra que perder essa proporção.
 
+### RN-12 — O registro é DESPACHADO ao Chefe de Setor, e leva as considerações finais
+
+O registro não termina no aparelho: **todo registro concluído vai para a caixa de entrada do Chefe de
+Setor da área da equipe**. O botão que fecha a vistoria chama-se, por isso, **Despachar registro**
+(ou **Despachar retorno**) — chamá-lo de "concluir" prometia um fim que não é o dele —, e a tela
+seguinte é a **Conclusão do registro**, que declara o destino com área ("Caixa de entrada do Chefe de
+Setor · Área 5 — Boca do Rio") e fecha com o botão **Concluir registro**.
+
+Nessa tela o fiscal acrescenta as **considerações finais**, de duas formas que **convivem**:
+
+- **atalhos de recomendação** — lista fechada, um toque cada: `Encaminhar ao SEAB`,
+  `Sugerir retorno da equipe`, `Sugerir operação na área`, `Pedir apoio da guarda municipal`,
+  `Conferir cadastro no SGCI`, `Bens recolhidos ao SEGUB`, `Sem providência adicional`
+  (`RECOMENDACOES`, em [`dados-demandas.ts`](../../../resources/js/pwa/dados-demandas.ts));
+- **texto livre**, para o porquê que o atalho não conta.
+
+As duas são **opcionais** — a maioria das abordagens se explica pelo desfecho —, mas são **a parte
+importante da entrega**: é por elas que o Chefe de Setor e o Coordenador entendem a recomendação de
+quem esteve no ponto e sabem para onde direcionar. Por isso elas **viajam com o registro**, e a tela
+de detalhe do registro no aplicativo as mostra em leitura depois do despacho.
+
+**Contrato com o outro lado** (o de-para é mecânico, e sem servidor no meio nada acusa renomeação):
+`consideracoes` = texto livre; `recomendacoes` = as **chaves** dos atalhos escolhidos, como já ocorre
+com `ocorrencias` e com os `motivos` do impresso. Chave e não texto porque recomendação o outro lado
+precisa **somar** ("quantos registros pediram operação na área?"), e texto livre não se soma. Do lado
+da Retaguarda, elas entram no **histórico do trâmite** da denúncia.
+
+Consequências na tela de **Envio**: a fila diz para onde vai ("Na fila para o Chefe de Setor · Área
+5") e o registro **ainda aberto** — despachado, mas sem a conclusão confirmada — **não** entra na
+fila: fica em bloco próprio ("Falta concluir"), com o caminho de volta. A caixa do Chefe de Setor
+recebe registro concluído; meio-registro seria trabalho que ninguém pediu.
+
+### RN-13 — Sem documento, só conclui o desfecho que não lavra documento
+
+**Concluir sem documento lavrado é possível apenas quando o desfecho é `Regularizado no local` ou
+`Nada encontrado no local`.** Com `Notificação Preliminar emitida` ou `Auto de Apreensão lavrado`, a
+conclusão é **impedida**: a Retaguarda ficaria com um passo que anuncia um documento que não existe, e
+o notificado sem a via que faz o prazo correr.
+
+A régua é o **`DOCUMENTO_DO_DESFECHO`**, através de `impedimentoParaConcluir` — uma função só. Não há
+segunda lista de "desfechos que concluem": duas listas para a mesma decisão divergem no primeiro
+ajuste. Como consequência natural, o **retorno** segue concluindo sem papel (os dois desfechos dele
+não lavram nada).
+
+**O impedimento nunca é silencioso** (lei do projeto): a tela mostra, *antes* de o dedo chegar ao
+botão, o motivo em linguagem clara ("O desfecho 'Notificação Preliminar emitida' lavra a Notificação
+Preliminar, e ela ainda não foi lavrada neste registro") e o que fazer ("Lavre a Notificação
+Preliminar para concluir — ou volte e troque o desfecho, se nada foi lavrado no local"), com o botão
+que **abre o formulário do documento que falta**. O botão "Concluir registro" fica barrado enquanto
+isso, e não há `alert` em lugar nenhum.
+
+Quem escolhe um desses desfechos já é avisado no **passo 6 do registro**: "o registro só conclui com
+ele lavrado".
+
+### RN-14 — "Voltar" volta para a tela anterior
+
+O botão da conclusão é **Voltar** (era "Voltar ao mapa") e usa o **histórico**: quem chegou da lista
+de registros volta à lista; quem chegou do despacho volta ao registro. O mapa continua sendo o destino
+de segurança de quem abriu o aplicativo direto num endereço colado, sem histórico para onde voltar.
+Levar sempre ao mapa mandava o fiscal para longe de onde ele estava.
+
 ---
 
 ## Como demonstrar (protótipo)
@@ -181,7 +249,7 @@ Entrada em `/app`. Não há senha a conferir: a **matrícula** decide a identida
 |---|---|---|---|
 | **C1 · Área 5** | **DEN-0011** | Em operação | a vistoriar, chegando por **operação** (Operação Verão — Orla) |
 | **C1 · Área 5** | **DEN-0029** | Aguardando regularização | **prazo correndo** (NP 194903, 05 dias) → oferece **Registrar retorno** |
-| **C1 · Área 5** | **DEN-0030** | Retorno vencido | retorno frustrado (NP 194902, notificado **recusou assinar**) → subiu ao gestor |
+| **C1 · Área 5** | **DEN-0030** | Retorno vencido | retorno frustrado (NP 194902, notificado **recusou assinar**) → subiu ao Chefe de Setor |
 | **C2 · Área 1** | **DEN-0010** | Direcionada à equipe | vistoria dirigida avulsa, prazo vencendo |
 | **C2 · Área 1** | **DEN-0012** | Em campo | **vistoria aberta**: relato, fotos e coordenada, sem desfecho → "Continuar" |
 | **C2 · Área 1** | **DEN-0013** | Concluída | **Auto de Apreensão** (160051), bens no SEGUB |
@@ -192,12 +260,19 @@ Entrada em `/app`. Não há senha a conferir: a **matrícula** decide a identida
 Também estão na amostra, e são de outras equipes: DEN-0027 e DEN-0037 (B2), DEN-0028 e DEN-0036 (I1),
 DEN-0031 e DEN-0032 (A2), DEN-0034 (A1), DEN-0035 (B1, com a segunda notificação em prazo).
 
+**Roteiro do despacho:** no mapa, toque em **Fiscalizar**, escolha "Regularizado no local" e
+**Despachar registro**. Na **Conclusão do registro**, veja o destino (Chefe de Setor · Área 5), marque
+um ou dois atalhos de recomendação, escreva uma linha e toque em **Concluir registro** — o registro
+aparece em **Meus registros** e, reaberto, mostra as considerações em leitura. Repita escolhendo
+"Notificação Preliminar emitida": a conclusão fica **barrada**, com o motivo à vista e o botão que
+abre a Notificação; lavre-a e o botão libera.
+
 **Roteiro curto:** entre como `fiscal`; a tela inicial abre com a chamada da fila. Em **Minhas
 demandas**, abra **DEN-0011** e registre um desfecho (repare que a lista é fechada, e que
 "Notificação Preliminar emitida" avisa que o documento vem em seguida). Volte e abra **DEN-0029**: o
 documento com prazo está à vista, e o botão é **Registrar retorno** — escolha "Regularizado após
 notificação" ou "Retorno com a situação mantida". Abra **DEN-0030** para ver o caso que já subiu ao
-gestor (sem ato para a equipe). Depois entre como `F-2000`: a fila é outra, e o que era da C1 não
+Chefe de Setor (sem ato para a equipe). Depois entre como `F-2000`: a fila é outra, e o que era da C1 não
 aparece — o rodapé da lista diz quantas denúncias estão com equipes diferentes.
 
 ---
@@ -224,6 +299,18 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
   iguais. A que fica, quando os protótipos se encontrarem, é a do servidor.
 - **Numeração dos blocos** é fictícia (faixa na memória da aba). No sistema ela sai de estoque
   reservado por aparelho, com reconciliação quando a resposta se perde.
+- **Quem é o Chefe de Setor, com nome?** A tela do despacho nomeia o destino pela **área** ("Chefe de
+  Setor · Área 5 — Boca do Rio") porque a estrutura que o aplicativo conhece
+  ([`dados-equipes.ts`](../../../resources/js/pwa/dados-equipes.ts)) traz o **encarregado da equipe**,
+  não o Chefe de Setor da área — e inventar um nome ali seria pior do que não mostrar nenhum. Falta a
+  parametrização dizer quem ocupa o papel em cada área.
+- **As considerações no histórico do trâmite** dependem do outro lado: aqui elas existem no registro,
+  com os nomes de campo combinados (RN-12); quem as escreve no passo do trâmite da denúncia é o módulo
+  de Denúncias da Retaguarda.
+- **A lista de atalhos de recomendação é proposta**, exceto "Encaminhar ao SEAB", que veio do dono.
+  Os outros seis saíram do vocabulário que o protótipo já usa (SEGUB, SGCI, guarda municipal, operação
+  na área, retorno da equipe) e precisam de confirmação — inclusive se falta algum destino que o
+  fiscal recomenda com frequência.
 
 ---
 
@@ -232,3 +319,4 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 03/09/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, registro) | **O aplicativo passa a falar a língua do módulo de Denúncias.** (1) A fila deixa de espelhar a Caixa de Entrada (`CXE-NNNN`, situações `Aguardando triagem`/`Encaminhada`) e passa a espelhar `config/prototipo_denuncias.php`: protocolo `DEN-NNNN`, os dois canais das ouvidorias e o catálogo fechado de 10 situações. (2) A régua do que chega ao campo passa a ser explícita — o fiscal não vê denúncia em triagem — e a fila é dividida pelo ato devido (a vistoriar, aguardando regularização, encerradas). (3) O registro passa a terminar num **desfecho** da lista fechada de seis, com a leitura "regular/irregular" derivada dele, e nasce o **retorno** para a denúncia com prazo de notificação correndo. (4) A amostra traz as denúncias que a Retaguarda semeou para as equipes, com o mesmo protocolo, requerente, endereço, prazo, registro de campo e documento — inclusive a NP 194903 da DEN-0029, que também está no turno do aparelho. (5) A faixa de números reservados no aparelho passa a começar depois dos documentos já semeados do outro lado. | Decisão do dono (03/09/2026): alinhar o protótipo do aplicativo ao vocabulário novo para os dois lados contarem a MESMA história na demonstração, **sem** implementar sincronização — "só vale a pena avançar para as outras etapas quando tivermos requisitos e fluxos mais concretos". |
+| 04/09/2026 | José Nascimento | Aplicativo do Fiscal (registro, conclusão, envio) | **O registro passa a ser DESPACHADO, com considerações finais, e não conclui sem o documento que o desfecho manda lavrar.** (1) Vocabulário novo do domínio: *gestor* → **Chefe de Setor** e *administrativo* → **Coordenador** em tudo que o fiscal lê (matrículas não mudam). (2) O botão que fecha a vistoria virou **Despachar registro**; a tela seguinte virou **Conclusão do registro**, com o destino declarado (caixa de entrada do Chefe de Setor da área da equipe) e o botão **Concluir registro** no lugar do antigo "+ Novo registro". (3) Nasceram as **considerações finais**: atalhos de recomendação (lista fechada) e texto livre, que convivem, viajam com o registro nos campos `consideracoes`/`recomendacoes` e aparecem em leitura quando o registro é reaberto. (4) **RN-13**: concluir sem documento só com "Regularizado no local" ou "Nada encontrado no local"; nos outros dois o impedimento é explícito, com motivo, o que fazer e o formulário a um toque. (5) **Voltar** passou a voltar para a tela anterior. (6) A fila de envio passou a dizer o destino, e registro ainda aberto saiu da fila para o bloco "Falta concluir". | Decisão do dono (04/09/2026): o registro de campo é uma entrega a alguém — o Chefe de Setor —, e é pela recomendação do fiscal que esse alguém decide o encaminhamento; o impedimento evita denúncia com desfecho que promete papel inexistente. |

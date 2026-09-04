@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { irPara, useApp } from '../app';
 import { Selo, Topo, atalhoDoPerfil } from '../componentes';
+import { EQUIPE } from '../dados-demandas';
 import { FISCAL, nomeRegiao } from '../dados-prototipo';
 import { Icone } from '../icones';
 
@@ -12,6 +13,15 @@ import { Icone } from '../icones';
    O registro é gravado no aparelho e sobe quando dá — e o fiscal PRECISA ver
    isso, senão ele fica refazendo registro achando que perdeu. Esta tela existe
    para dar essa certeza: o que já subiu, o que está na fila e o que falhou.
+
+   ⚠️ A fila diz PARA ONDE o registro vai: a caixa de entrada do Chefe de Setor
+   da área da equipe. "Enviado" sem destino declarado deixa o fiscal sem saber
+   quem vai ler o que ele despachou — e é justamente a pergunta que ele faz.
+
+   Registro AINDA ABERTO (despachado, mas sem a conclusão confirmada) não entra
+   na fila: fica em bloco próprio, com o caminho de volta para concluir. A caixa
+   do Chefe de Setor recebe registro concluído; meio-registro seria trabalho que
+   ninguém pediu.
    ============================================================================ */
 
 export function TelaSincronizacao() {
@@ -41,8 +51,9 @@ export function TelaSincronizacao() {
         return () => window.clearInterval(relogio);
     }, [enviando, esvaziarFila]);
 
-    const fila = registros.filter((r) => r.envio !== 'enviado');
-    const enviados = registros.length - fila.length;
+    const fila = registros.filter((r) => r.envio !== 'enviado' && r.despachadoBr !== null);
+    const abertos = registros.filter((r) => r.despachadoBr === null);
+    const enviados = registros.filter((r) => r.envio === 'enviado').length;
 
     return (
         <div className="pw-tela">
@@ -64,7 +75,9 @@ export function TelaSincronizacao() {
                                       : `${pendentes} registros na fila`}
                             </p>
                             <p className="pw-fraco" style={{ margin: 0 }}>
-                                {enviados === 1 ? '1 já no servidor' : `${enviados} já no servidor`}
+                                {enviados === 1
+                                    ? '1 já na caixa do Chefe de Setor'
+                                    : `${enviados} já na caixa do Chefe de Setor`}
                             </p>
                         </div>
                         <Selo tom={pendentes === 0 ? 'ok' : 'alerta'}>
@@ -98,7 +111,9 @@ export function TelaSincronizacao() {
                     </button>
                 </div>
 
-                <p className="pw-titulo-secao">Na fila</p>
+                <p className="pw-titulo-secao">
+                    Na fila para o Chefe de Setor · {EQUIPE.area}
+                </p>
 
                 {fila.length === 0 ? (
                     <div className="pw-fila-item">
@@ -112,7 +127,10 @@ export function TelaSincronizacao() {
                             <span className="pw-forte" style={{ display: 'block' }}>
                                 Nenhum registro esperando
                             </span>
-                            <span className="pw-fraco">Tudo o que você registrou já chegou à Retaguarda.</span>
+                            <span className="pw-fraco">
+                                Tudo o que você despachou já chegou à caixa de entrada do Chefe de
+                                Setor · {EQUIPE.area} — {EQUIPE.areaNome}.
+                            </span>
                         </span>
                     </div>
                 ) : (
@@ -149,13 +167,54 @@ export function TelaSincronizacao() {
                     ))
                 )}
 
+                {/* O que espera VOCÊ, e não o sinal. Sem este bloco, o registro
+                    deixado sem conclusão só reapareceria em "Meus registros" — e o
+                    fiscal acharia que ele já subiu. */}
+                {abertos.length > 0 && (
+                    <>
+                        <p className="pw-titulo-secao">Falta concluir</p>
+
+                        {abertos.map((r) => (
+                            <button
+                                key={r.id}
+                                type="button"
+                                className="pw-fila-item pw-fila-item-toque"
+                                style={{ width: '100%', textAlign: 'left' }}
+                                onClick={() => irPara(`recibo/${r.id}`)}
+                            >
+                                <span
+                                    className="pw-fila-marca"
+                                    style={{
+                                        background: 'var(--pw-alerta-suave)',
+                                        color: 'var(--pw-alerta)',
+                                    }}
+                                >
+                                    <Icone nome="alerta" tamanho={20} />
+                                </span>
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                    <span className="pw-forte" style={{ display: 'block' }}>
+                                        {r.hora} · {nomeRegiao(r.regiao)}
+                                    </span>
+                                    <span className="pw-fraco">
+                                        Registro aberto — conclua para despachar ao Chefe de Setor.
+                                    </span>
+                                </span>
+                                <Icone nome="seta" tamanho={18} />
+                            </button>
+                        ))}
+                    </>
+                )}
+
                 <p className="pw-titulo-secao">Como funciona sem sinal</p>
 
                 <div className="pw-card">
                     <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14.5, lineHeight: 1.7 }}>
                         <li>Você registra: fica gravado no aparelho, com foto e coordenada.</li>
                         <li>Sem rede, o registro espera aqui — nada se perde e você segue trabalhando.</li>
-                        <li>Voltou o sinal, ele sobe sozinho e o selo vira “Enviado”.</li>
+                        <li>
+                            Voltou o sinal, ele sobe sozinho para a caixa de entrada do Chefe de
+                            Setor da sua área e o selo vira “Enviado”.
+                        </li>
                         <li>Se o envio falhar, o aplicativo tenta de novo e avisa nesta tela.</li>
                     </ol>
                 </div>

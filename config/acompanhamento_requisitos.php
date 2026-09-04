@@ -606,14 +606,19 @@ return [
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => 'Sem requisito escrito — origem: cenário da reunião com o cliente de 02/09/2026 '
-                .'e decisão do dono de 03/09/2026; regras em docs/regras-de-negocio/fiscalizacao/'
+                .'e decisões do dono de 03 e 04/09/2026; regras em docs/regras-de-negocio/fiscalizacao/'
                 .'aplicativo-do-fiscal.md. PROTÓTIPO, sem servidor: os dados vivem em '
                 .'resources/js/pwa/ e o que o fiscal registra fica na memória da aba. A fila do '
                 .'aplicativo é a da EQUIPE de quem entrou e fala o mesmo vocabulário do módulo de '
                 .'Denúncias — mesmas situações, mesmo protocolo DEN-NNNN e a mesma lista fechada de '
                 .'seis desfechos, que é o que fecha o passo do trâmite na Retaguarda. Denúncia em '
                 .'triagem não chega ao fiscal; denúncia com Notificação em prazo oferece o registro '
-                .'do RETORNO. Falta a sincronização de verdade (endpoint, banco offline, fila de '
+                .'do RETORNO. O registro é DESPACHADO à caixa de entrada do Chefe de Setor da área '
+                .'da equipe, com as CONSIDERAÇÕES FINAIS do fiscal (texto livre e atalhos de '
+                .'recomendação), e não conclui sem o documento quando o desfecho lavra documento — o '
+                .'impedimento diz o motivo e abre o formulário que falta. Vocabulário novo do '
+                .'domínio: Chefe de Setor (antes "gestor") e Coordenador (antes "administrativo"). '
+                .'Falta a sincronização de verdade (endpoint, banco offline, fila de '
                 .'envio): enquanto isso, os dados são segunda cópia dos do servidor.',
         ],
 

@@ -20,7 +20,7 @@
 
    ── Por que a EQUIPE é a identidade que importa ─────────────────────────────
 
-   A demanda do administrativo não chega para o fiscal: chega para a EQUIPE da
+   A demanda do Coordenador não chega para o fiscal: chega para a EQUIPE da
    área onde fica o endereço. Logo, quem define a fila do aplicativo é a equipe
    do fiscal que entrou — e é por isso que a matrícula digitada na porta decide
    o que a tela mostra.
@@ -204,7 +204,7 @@ export const AREAS_SEFAL: AreaSefal[] = [
             'São Rafael', 'Sete de Abril', 'Sussuarana', 'Tancredo Neves', 'Trobogy',
             'Vale dos Lagos', 'Vila Canária',
             // Os três COMPARTILHADOS com a Área 5: o vínculo bairro↔equipe não é
-            // 1:1, o sistema sugere e o administrativo confirma.
+            // 1:1, o sistema sugere e o Coordenador confirma.
             'Jardim das Margaridas', 'Mussurunga', 'Patamares',
         ],
         contorno: [
