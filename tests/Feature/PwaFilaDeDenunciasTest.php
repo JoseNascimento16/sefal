@@ -54,6 +54,34 @@ class PwaFilaDeDenunciasTest extends TestCase
     ];
 
     /**
+     * As CHAVES da recomendação, na ordem em que o catálogo unificado as declara.
+     *
+     * Escritas à mão de propósito, como as outras réguas deste arquivo: elas são
+     * a cópia do catálogo da Retaguarda (`config/prototipo_denuncias.php` →
+     * `recomendacoes_do_fiscal`), que vive na branch do módulo administrativo e
+     * NÃO existe neste diretório. Ler a lista do próprio arquivo que se quer
+     * conferir provaria apenas que ele é igual a si mesmo.
+     *
+     * ⚠️ As duas branches não se veem, então nenhum teste consegue comparar as
+     * duas listas de verdade. Se um dia divergirem, é esta constante que precisa
+     * ser lida JUNTO com o outro lado — nunca ajustada em silêncio para o teste
+     * voltar a passar.
+     */
+    private const RECOMENDACOES_DA_RETAGUARDA = [
+        'retorno',
+        'reprogramar',
+        'operacao',
+        'passagem',
+        'chefia',
+        'sgci',
+        'segub',
+        'seab',
+        'outro-orgao',
+        'guarda',
+        'nada',
+    ];
+
+    /**
      * Os ids das denúncias semeadas na Retaguarda que já chegaram a uma equipe,
      * mais as três que a amostra guarda para provar o recorte (6, 14 e 26).
      *
@@ -440,6 +468,88 @@ class PwaFilaDeDenunciasTest extends TestCase
             '/export const RECOMENDACOES/u',
             $this->fonteDoAplicativo('dados-demandas.ts'),
             'os atalhos de recomendação saíram do catálogo espelhado',
+        );
+    }
+
+    public function test_nenhum_registro_semeado_recomenda_chave_fora_do_catalogo()
+    {
+        /*
+         * A recomendação viaja como CHAVE, e é a chave que a Retaguarda soma
+         * ("quantos registros pediram operação na área?") e traduz na leitura
+         * dela. Chave semeada fora do catálogo não estoura em lugar nenhum: a
+         * pílula do aparelho cai no fallback e mostra o código, e do outro lado a
+         * chefia lê `passagemm` onde deveria estar a recomendação do fiscal.
+         *
+         * São duas provas, e a segunda é a que pega o erro do dia a dia: o
+         * catálogo deste arquivo é chave a chave o mesmo do outro lado, e nenhuma
+         * semente usa chave que ele não declare. A primeira é o que torna a
+         * segunda confiável — sem ela, renomear a chave nos DOIS lugares daqui
+         * passaria batido e deixaria a Retaguarda sozinha com o nome antigo.
+         */
+        $catalogo = $this->fonteDoAplicativo('dados-demandas.ts');
+
+        $achou = preg_match(
+            '/export const RECOMENDACOES[^=]*=\s*\[(?<corpo>.*?)\n\];/su',
+            $catalogo,
+            $bloco,
+        );
+
+        $this->assertSame(1, $achou, 'o aplicativo não declara mais o catálogo RECOMENDACOES');
+
+        preg_match_all("/id:\s*'([^']+)'/u", $bloco['corpo'], $achados);
+        $chaves = $achados[1];
+
+        $this->assertSame(
+            self::RECOMENDACOES_DA_RETAGUARDA,
+            $chaves,
+            'o catálogo de recomendações do aplicativo divergiu do da Retaguarda '
+            .'(config/prototipo_denuncias.php → recomendacoes_do_fiscal). As duas listas vivem em '
+            .'branches diferentes e nenhum teste as compara: chave nova ou renomeada entra nos DOIS '
+            .'lados, à mão, no mesmo passo.',
+        );
+
+        /*
+         * As sementes do turno: cada linha é um array, e a recomendação é o
+         * ÚLTIMO campo dele — daí o `]],` no fim da linha. Linha sem recomendação
+         * termina em `null],` e não casa, o que é o certo: não há chave para
+         * conferir.
+         */
+        preg_match_all(
+            "/^\s+\[.*\[((?:'[^']*',?\s*)+)\]\],\s*$/mu",
+            $this->fonteDoAplicativo('dados-prototipo.ts'),
+            $linhas,
+            PREG_SET_ORDER,
+        );
+
+        /*
+         * Sem este piso o teste passaria pelo motivo errado: mudar o formato da
+         * semente faria a expressão não casar NADA, e "nenhuma chave inválida"
+         * ficaria verde sem ter olhado uma única linha.
+         */
+        $this->assertGreaterThanOrEqual(
+            3,
+            count($linhas),
+            'a amostra do turno precisa de registro despachado COM recomendação — se o formato da '
+            .'semente mudou, esta varredura deixou de olhar as linhas e passaria vazia',
+        );
+
+        $foraDoCatalogo = [];
+
+        foreach ($linhas as $linha) {
+            preg_match_all("/'([^']*)'/u", $linha[1], $chavesDaLinha);
+
+            foreach ($chavesDaLinha[1] as $chave) {
+                if (! in_array($chave, $chaves, true)) {
+                    $foraDoCatalogo[] = $chave;
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            array_values(array_unique($foraDoCatalogo)),
+            'registro semeado recomenda chave que o catálogo não declara — a pílula mostraria o '
+            .'código, e a Retaguarda mostraria a chave crua no lugar da recomendação',
         );
     }
 

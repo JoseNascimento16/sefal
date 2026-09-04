@@ -66,6 +66,26 @@
    — porque recomendação o outro lado precisa SOMAR ("quantos registros pediram
    operação na área?"), e texto livre não se soma.
 
+   ⚠️ A CHAVE É O CONTRATO, e o catálogo tem PAR EXPLÍCITO do outro lado. O
+   catálogo daqui (`RECOMENDACOES`, mais abaixo neste arquivo) guarda a redação
+   CURTA — a pílula que caiba no celular. A MESMA chave tem, na Retaguarda, a
+   redação longa que quem decide lê, em
+   `config/prototipo_denuncias.php` → `recomendacoes_do_fiscal`, na forma
+   `chave => ['curto' => …, 'explicito' => …]`. Foi assim que os dois catálogos
+   foram unificados (decisão do dono, 04/09/2026): eles tinham nascido
+   incompatíveis — aqui chave e rótulo curto, lá frases inteiras com outra
+   redação —, então o aplicativo mandava `["seab"]` e o outro lado esperava uma
+   frase.
+
+   Consequência prática, e é a razão desta nota existir: **chave renomeada ou
+   atalho novo só de um lado quebra o de-para em SILÊNCIO**. Nada estoura; a
+   Retaguarda apenas mostra a chave crua onde deveria estar a recomendação. E
+   **nenhum teste consegue conferir isso**, porque os dois arquivos estão em
+   BRANCHES diferentes (`feature/pwa-prototipo` aqui,
+   `feature/prototipo-administrativo` lá) e nenhuma vê os arquivos da outra: cada
+   lado só prova o que ele próprio declara. Mexeu na chave? Mexa nos dois, à mão,
+   no mesmo passo.
+
    Quando o aplicativo falar com o servidor, este arquivo morre e a fila passa a
    vir de onde a Retaguarda lê. A redação dos impressos (motivos, penalidades,
    prazos) tem a mesma dívida em `dados-documentos.ts` ↔
@@ -283,22 +303,64 @@ export const impedimentoParaConcluir = (
  *
  * Convive com o texto livre: o atalho diz o QUE fazer, o texto diz o porquê.
  *
- * ⚠️ A lista é do dono. "Encaminhar ao SEAB" veio dele; os outros seis são
- * proposta a confirmar, e nenhum inventa órgão que o protótipo não conheça — o
- * SEGUB é a guarda dos bens apreendidos e o SGCI é o cadastro de comércio
- * informal, os dois já citados nos impressos.
+ * ⚠️ A lista é do dono. "Encaminhar ao SEAB" veio dele; os demais são proposta a
+ * confirmar, e nenhum inventa órgão que o protótipo não conheça — o SEGUB é a
+ * guarda dos bens apreendidos e o SGCI é o cadastro de comércio informal, os
+ * dois já citados nos impressos.
+ *
+ * ⚠️ ESTA LISTA ESTÁ UNIFICADA COM A DA RETAGUARDA — e a CHAVE é o contrato.
+ * A lista nasceu duas vezes, em frentes paralelas: aqui com chave e rótulo
+ * curto, e na Retaguarda como frases inteiras, com outra redação e sem o SEAB.
+ * O aplicativo mandava `["seab"]` e o outro lado esperava uma frase, então a
+ * recomendação chegaria lá como coisa que ele não sabe ler nem SOMAR ("quantos
+ * registros pediram operação na área?").
+ *
+ * Unificado (decisão do dono, 04/09/2026: "unifique usando a redação curta no
+ * app e a explícita no retaguarda"), cada chave tem DUAS redações, e cada uma
+ * mora do lado que a usa:
+ *
+ *   `rotulo` (aqui)  a pílula do CELULAR — de pé na calçada não cabe frase;
+ *   `explicito` (lá) o que a Retaguarda mostra a quem DECIDE, em
+ *                    `config/prototipo_denuncias.php` →
+ *                    `recomendacoes_do_fiscal`, chave por chave.
+ *
+ * O que viaja entre os dois é a CHAVE, nunca o texto: assim a redação de um lado
+ * não mexe no dado do outro, e é a chave que o relatório soma. **Renomear uma
+ * chave aqui, ou acrescentar atalho só aqui, quebra o de-para em SILÊNCIO** —
+ * nada estoura, e o Chefe de Setor lê a chave crua no lugar da recomendação (é
+ * de propósito: a Retaguarda mostra a chave em vez de sumir com ela, porque
+ * recomendação que evapora é pior que recomendação feia).
+ *
+ * ⚠️ E NENHUM TESTE ALCANÇA OS DOIS LADOS: este arquivo e o `config` da
+ * Retaguarda vivem em BRANCHES diferentes (`feature/pwa-prototipo` e
+ * `feature/prototipo-administrativo`), que não se veem. Cada lado só consegue
+ * provar o que ele próprio declara — aqui, que nenhum registro semeado usa chave
+ * fora desta lista (`tests/Feature/PwaFilaDeDenunciasTest.php`). A conferência
+ * entre as duas listas é À MÃO, e o guarda é esta nota. Quando o aplicativo
+ * falar com o servidor, o catálogo passa a vir de lá e esta cópia morre.
  */
 export const RECOMENDACOES: { id: string; rotulo: string; emoji: string }[] = [
-    { id: 'seab', rotulo: 'Encaminhar ao SEAB', emoji: '📨' },
     { id: 'retorno', rotulo: 'Sugerir retorno da equipe', emoji: '🔁' },
+    { id: 'reprogramar', rotulo: 'Reprogramar a vistoria', emoji: '📅' },
     { id: 'operacao', rotulo: 'Sugerir operação na área', emoji: '🚩' },
-    { id: 'guarda', rotulo: 'Pedir apoio da guarda municipal', emoji: '🚓' },
+    { id: 'passagem', rotulo: 'Manter na passagem semanal', emoji: '🔄' },
+    { id: 'chefia', rotulo: 'Encaminhar ao Chefe de Setor', emoji: '⬆️' },
     { id: 'sgci', rotulo: 'Conferir cadastro no SGCI', emoji: '🗂️' },
     { id: 'segub', rotulo: 'Bens recolhidos ao SEGUB', emoji: '📦' },
+    { id: 'seab', rotulo: 'Encaminhar ao SEAB', emoji: '📨' },
+    { id: 'outro-orgao', rotulo: 'Encaminhar a outro órgão', emoji: '🏛️' },
+    { id: 'guarda', rotulo: 'Pedir apoio da guarda municipal', emoji: '🚓' },
     { id: 'nada', rotulo: 'Sem providência adicional', emoji: '✅' },
 ];
 
-/** A chave vira texto para quem lê o registro — e "—" quando a chave sumiu. */
+/**
+ * A chave vira texto para quem lê o registro no APARELHO — sempre a redação
+ * curta, que é a que cabe na pílula. A explícita é do outro lado.
+ *
+ * Chave desconhecida devolve a PRÓPRIA chave, e não "—": recomendação que
+ * desaparece deixaria o fiscal reabrindo um registro que ele despachou com dois
+ * atalhos e vendo um só.
+ */
 export const rotuloDaRecomendacao = (id: string): string =>
     RECOMENDACOES.find((r) => r.id === id)?.rotulo ?? id;
 

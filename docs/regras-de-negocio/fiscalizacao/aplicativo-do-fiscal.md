@@ -178,9 +178,11 @@ Setor · Área 5 — Boca do Rio") e fecha com o botão **Concluir registro**.
 
 Nessa tela o fiscal acrescenta as **considerações finais**, de duas formas que **convivem**:
 
-- **atalhos de recomendação** — lista fechada, um toque cada: `Encaminhar ao SEAB`,
-  `Sugerir retorno da equipe`, `Sugerir operação na área`, `Pedir apoio da guarda municipal`,
-  `Conferir cadastro no SGCI`, `Bens recolhidos ao SEGUB`, `Sem providência adicional`
+- **atalhos de recomendação** — lista fechada, um toque cada, com a redação **curta** (é a que cabe
+  numa pílula de celular): `Sugerir retorno da equipe`, `Reprogramar a vistoria`,
+  `Sugerir operação na área`, `Manter na passagem semanal`, `Encaminhar ao Chefe de Setor`,
+  `Conferir cadastro no SGCI`, `Bens recolhidos ao SEGUB`, `Encaminhar ao SEAB`,
+  `Encaminhar a outro órgão`, `Pedir apoio da guarda municipal`, `Sem providência adicional`
   (`RECOMENDACOES`, em [`dados-demandas.ts`](../../../resources/js/pwa/dados-demandas.ts));
 - **texto livre**, para o porquê que o atalho não conta.
 
@@ -194,6 +196,31 @@ de detalhe do registro no aplicativo as mostra em leitura depois do despacho.
 com `ocorrencias` e com os `motivos` do impresso. Chave e não texto porque recomendação o outro lado
 precisa **somar** ("quantos registros pediram operação na área?"), e texto livre não se soma. Do lado
 da Retaguarda, elas entram no **histórico do trâmite** da denúncia.
+
+**Uma chave, duas redações — e cada uma no lado que a usa.** O catálogo nasceu duas vezes, em frentes
+paralelas: aqui com chave e rótulo curto, e na Retaguarda como frases inteiras, com outra redação e
+sem o SEAB. Resultado: o aplicativo mandava `["seab"]` e o outro lado esperava uma frase. Unificado
+por decisão do dono (04/09/2026 — *"unifique usando a redação curta no app e a explícita no
+retaguarda"*):
+
+| Redação | Onde é lida | Exemplo (`retorno`) |
+|---|---|---|
+| curta (aqui) | A **pílula do aparelho** — de pé na calçada não cabe frase. | Sugerir retorno da equipe |
+| explícita (Retaguarda) | O que quem **decide** lê, no trâmite e na fila de Retorno de Campo. | Voltar ao ponto no vencimento do prazo |
+
+O aplicativo **nunca** mostra a redação explícita: ela não cabe, e a decisão do dono é essa. O que
+atravessa é sempre a **chave** — assim a redação de um lado não mexe no dado do outro, e é a chave que
+o relatório soma.
+
+⚠️ **Chave renomeada, ou atalho novo só de um lado, quebra o de-para em silêncio.** Nada estoura; a
+Retaguarda apenas mostra a chave crua onde deveria estar a recomendação (de propósito: recomendação
+que evapora é pior que recomendação feia). E **nenhum teste alcança os dois lados** — este catálogo e
+o `config/prototipo_denuncias.php` da Retaguarda vivem em **branches diferentes**
+(`feature/pwa-prototipo` e `feature/prototipo-administrativo`), que não se veem. Cada lado só prova o
+que ele próprio declara: aqui, que o catálogo bate com a régua escrita à mão e que nenhum registro
+semeado usa chave fora dele (`tests/Feature/PwaFilaDeDenunciasTest.php`). A conferência entre as duas
+listas é **à mão**, no mesmo passo. Quando o aplicativo falar com o servidor, o catálogo passa a vir
+de lá e esta cópia morre.
 
 Consequências na tela de **Envio**: a fila diz para onde vai ("Na fila para o Chefe de Setor · Área
 5") e o registro **ainda aberto** — despachado, mas sem a conclusão confirmada — **não** entra na
@@ -318,5 +345,6 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 04/09/2026 | José Nascimento | Aplicativo do Fiscal (despacho) | **O catálogo de recomendações passa a ser o mesmo da Retaguarda, unificado pela CHAVE.** A lista sai de 7 para 11 atalhos (entram `reprogramar`, `passagem`, `chefia` e `outro-orgao`), todos com a redação **curta** — a explícita, que quem decide lê, mora do lado da Retaguarda, na mesma chave. Nenhuma chave antiga saiu, então os registros já semeados continuam válidos. | O catálogo tinha nascido em duas versões incompatíveis: o aplicativo gravava chave e a Retaguarda esperava a frase inteira, com outra redação e sem o `seab` — que foi justamente o exemplo dado pelo dono. Assim a recomendação chegaria do outro lado como coisa que ele não sabe ler nem somar. Decisão do dono: redação curta no aplicativo, explícita na Retaguarda, chave como contrato. |
 | 03/09/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, registro) | **O aplicativo passa a falar a língua do módulo de Denúncias.** (1) A fila deixa de espelhar a Caixa de Entrada (`CXE-NNNN`, situações `Aguardando triagem`/`Encaminhada`) e passa a espelhar `config/prototipo_denuncias.php`: protocolo `DEN-NNNN`, os dois canais das ouvidorias e o catálogo fechado de 10 situações. (2) A régua do que chega ao campo passa a ser explícita — o fiscal não vê denúncia em triagem — e a fila é dividida pelo ato devido (a vistoriar, aguardando regularização, encerradas). (3) O registro passa a terminar num **desfecho** da lista fechada de seis, com a leitura "regular/irregular" derivada dele, e nasce o **retorno** para a denúncia com prazo de notificação correndo. (4) A amostra traz as denúncias que a Retaguarda semeou para as equipes, com o mesmo protocolo, requerente, endereço, prazo, registro de campo e documento — inclusive a NP 194903 da DEN-0029, que também está no turno do aparelho. (5) A faixa de números reservados no aparelho passa a começar depois dos documentos já semeados do outro lado. | Decisão do dono (03/09/2026): alinhar o protótipo do aplicativo ao vocabulário novo para os dois lados contarem a MESMA história na demonstração, **sem** implementar sincronização — "só vale a pena avançar para as outras etapas quando tivermos requisitos e fluxos mais concretos". |
 | 04/09/2026 | José Nascimento | Aplicativo do Fiscal (registro, conclusão, envio) | **O registro passa a ser DESPACHADO, com considerações finais, e não conclui sem o documento que o desfecho manda lavrar.** (1) Vocabulário novo do domínio: *gestor* → **Chefe de Setor** e *administrativo* → **Coordenador** em tudo que o fiscal lê (matrículas não mudam). (2) O botão que fecha a vistoria virou **Despachar registro**; a tela seguinte virou **Conclusão do registro**, com o destino declarado (caixa de entrada do Chefe de Setor da área da equipe) e o botão **Concluir registro** no lugar do antigo "+ Novo registro". (3) Nasceram as **considerações finais**: atalhos de recomendação (lista fechada) e texto livre, que convivem, viajam com o registro nos campos `consideracoes`/`recomendacoes` e aparecem em leitura quando o registro é reaberto. (4) **RN-13**: concluir sem documento só com "Regularizado no local" ou "Nada encontrado no local"; nos outros dois o impedimento é explícito, com motivo, o que fazer e o formulário a um toque. (5) **Voltar** passou a voltar para a tela anterior. (6) A fila de envio passou a dizer o destino, e registro ainda aberto saiu da fila para o bloco "Falta concluir". | Decisão do dono (04/09/2026): o registro de campo é uma entrega a alguém — o Chefe de Setor —, e é pela recomendação do fiscal que esse alguém decide o encaminhamento; o impedimento evita denúncia com desfecho que promete papel inexistente. |
