@@ -98,6 +98,41 @@ class PwaFilaDeDenunciasTest extends TestCase
     }
 
     /**
+     * Os pares de um mapa literal do TypeScript (`const X = { 'chave': valor }`).
+     *
+     * Serve para ler catálogo que casa texto com decisão — o
+     * `DOCUMENTO_DO_DESFECHO`, que diz qual desfecho lavra papel. O valor volta
+     * como TEXTO cru (`'np'`, `null`), porque é isso que a regra pergunta.
+     *
+     * @return array<string, string>
+     */
+    private function mapaDeTextos(string $fonte, string $nome): array
+    {
+        $achou = preg_match(
+            '/const '.preg_quote($nome, '/').'(?![A-Z_])[^=]*=\s*\{(?<corpo>.*?)\n\};/su',
+            $fonte,
+            $bloco,
+        );
+
+        $this->assertSame(1, $achou, "o aplicativo não declara mais o mapa {$nome}");
+
+        preg_match_all(
+            "/'((?:[^'\\\\]|\\\\.)*)':\s*([^,\n]+)/u",
+            $bloco['corpo'],
+            $achados,
+            PREG_SET_ORDER,
+        );
+
+        $mapa = [];
+
+        foreach ($achados as $par) {
+            $mapa[str_replace("\\'", "'", $par[1])] = trim($par[2]);
+        }
+
+        return $mapa;
+    }
+
+    /**
      * Os textos de uma lista literal do TypeScript (`const X = [ … ]`).
      *
      * @return list<string>
@@ -298,6 +333,114 @@ class PwaFilaDeDenunciasTest extends TestCase
                 "a amostra de {$arquivo} passou a ter mais papel do que orientação",
             );
         }
+    }
+
+    public function test_so_conclui_sem_documento_o_desfecho_que_nao_lavra_documento()
+    {
+        /*
+         * REGRA DE NEGÓCIO (dono, 04/09/2026): o registro só se conclui SEM
+         * documento lavrado quando o desfecho foi "Regularizado no local" ou
+         * "Nada encontrado no local". Com "Notificação Preliminar emitida" ou
+         * "Auto de Apreensão lavrado", concluir sem o papel deixaria a
+         * Retaguarda com um desfecho que anuncia documento e nenhum documento
+         * atrás dele — e o notificado sem a via que faz o prazo correr.
+         *
+         * A régua é o `DOCUMENTO_DO_DESFECHO`, e de propósito: uma segunda lista
+         * de "desfechos que podem concluir" divergiria dele no primeiro ajuste.
+         */
+        $fonte = $this->fonteDoAplicativo('dados-demandas.ts');
+
+        $mapa = $this->mapaDeTextos($fonte, 'DOCUMENTO_DO_DESFECHO');
+        $semPapel = array_keys(array_filter($mapa, static fn (string $v): bool => $v === 'null'));
+        $vistoria = $this->listaDeTextos($fonte, 'DESFECHOS_DE_VISTORIA');
+
+        $this->assertSame(
+            ['Regularizado no local', 'Nada encontrado no local'],
+            array_values(array_intersect($vistoria, $semPapel)),
+            'mudou quais desfechos de vistoria concluem sem documento lavrado',
+        );
+
+        // A régua mora numa função só, derivada do mapa — não numa cópia da lista.
+        $this->assertMatchesRegularExpression(
+            '/export const impedimentoParaConcluir\s*=/',
+            $fonte,
+            'a regra do impedimento de conclusão saiu do lugar onde a tela a lê',
+        );
+        $this->assertStringContainsString(
+            'DOCUMENTO_DO_DESFECHO[',
+            $fonte,
+            'o impedimento passou a ter lista própria em vez de derivar do documento do desfecho',
+        );
+    }
+
+    public function test_a_conclusao_impedida_diz_o_motivo_e_oferece_o_caminho()
+    {
+        /*
+         * Lei do projeto: impedimento NUNCA em silêncio. Barrar a conclusão sem
+         * dizer o porquê faria o fiscal tocar o botão de novo achando que o
+         * aparelho travou — e ele está de pé na calçada, com o notificado
+         * esperando. Então a tela de conclusão diz o motivo, diz o que fazer e
+         * põe o formulário do documento a um toque.
+         */
+        $tela = $this->fonteDoAplicativo('telas/recibo.tsx');
+        $fila = $this->fonteDoAplicativo('dados-demandas.ts');
+
+        $this->assertStringContainsString(
+            'impedimentoParaConcluir',
+            $tela,
+            'a tela de conclusão deixou de consultar o impedimento',
+        );
+        $this->assertMatchesRegularExpression(
+            '/disabled=\{[^}]*impedimento/u',
+            $tela,
+            'o botão de concluir deixou de ser barrado pelo impedimento',
+        );
+        // O rótulo do botão nomeia o documento que falta ("Lavrar a Notificação
+        // Preliminar"), e o toque abre o formulário dele — não uma tela de menu.
+        $this->assertMatchesRegularExpression(
+            '/Lavrar \{/u',
+            $tela,
+            'a tela impedida não oferece mais o caminho de lavrar o documento que falta',
+        );
+        $this->assertStringContainsString(
+            "'notificacao' : 'apreensao'",
+            $tela,
+            'o caminho do impedimento não abre mais o formulário do documento',
+        );
+        $this->assertStringContainsString(
+            'Lavre ',
+            $fila,
+            'o impedimento não diz mais o que fazer para concluir',
+        );
+
+        // Diálogo do navegador não é mensagem do sistema: some sem rastro, não é
+        // estilizável e não cabe na tela de quem trabalha de pé.
+        $this->assertStringNotContainsString('alert(', $tela);
+        $this->assertStringNotContainsString('confirm(', $tela);
+    }
+
+    public function test_o_registro_leva_as_consideracoes_finais_do_fiscal()
+    {
+        /*
+         * As considerações são a ENTREGA do despacho: é por elas que o Chefe de
+         * Setor e o Coordenador entendem a recomendação do fiscal e sabem
+         * direcionar o registro. Os dois nomes de campo são o contrato com o
+         * outro lado (`consideracoes`, texto livre; `recomendacoes`, as chaves
+         * dos atalhos escolhidos) — trocar um deles aqui quebra o de-para em
+         * silêncio, porque não há servidor conferindo nada.
+         */
+        $tipos = $this->fonteDoAplicativo('dados-prototipo.ts');
+
+        $this->assertMatchesRegularExpression('/\n\s+consideracoes: string;/u', $tipos);
+        $this->assertMatchesRegularExpression('/\n\s+recomendacoes: string\[\];/u', $tipos);
+
+        // A lista de atalhos é FECHADA e mora com o catálogo espelhado, para o
+        // outro lado poder somar recomendação — texto livre não se soma.
+        $this->assertMatchesRegularExpression(
+            '/export const RECOMENDACOES/u',
+            $this->fonteDoAplicativo('dados-demandas.ts'),
+            'os atalhos de recomendação saíram do catálogo espelhado',
+        );
     }
 
     public function test_o_registro_do_turno_nasce_de_um_desfecho_e_nao_de_regular_ou_irregular()

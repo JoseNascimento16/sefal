@@ -2,9 +2,14 @@
    PROTÓTIPO — trabalho DIRIGIDO: as denúncias que a área direcionou à equipe
    ----------------------------------------------------------------------------
    Metade do serviço do fiscal chega empacotada: a ouvidoria entrega a denúncia
-   ao SEFAL, o administrativo TRIA e a encaminha à ÁREA, e o GESTOR daquela área
-   decide COMO o trabalho acontece — direciona à equipe, ou anexa a uma operação
-   já planejada para a região. Só depois disso ela aparece aqui.
+   ao SEFAL, o COORDENADOR tria e a encaminha à ÁREA, e o CHEFE DE SETOR daquela
+   área decide COMO o trabalho acontece — direciona à equipe, ou anexa a uma
+   operação já planejada para a região. Só depois disso ela aparece aqui.
+
+   ⚠️ VOCABULÁRIO NOVO (decisão do dono, 04/09/2026): quem antes se chamava
+   "gestor" é o **Chefe de Setor**, e o "administrativo" da triagem é o
+   **Coordenador**. A troca é de PAPEL, não de pessoa: matrícula identifica
+   gente, então os logins (`gestor1`, `administrativo1`) continuam os mesmos.
 
    São dois donos e duas etapas, e o aplicativo não participa de nenhuma das
    duas: o fiscal NUNCA vê denúncia em triagem. O que chega a ele é o que foi
@@ -45,6 +50,22 @@
      campo                  o `campo` do último passo de vistoria/retorno
      documento              o `documento` do passo que o lavrou
 
+   ── O DESPACHO do fiscal: o contrato das considerações finais ───────────────
+
+   Todo registro concluído é DESPACHADO à caixa de entrada do **Chefe de Setor**
+   da área da equipe, e viaja com o que o fiscal escreveu no fim:
+
+     aplicativo                     Retaguarda (passo do trâmite)
+     ─────────────────────────────  ────────────────────────────────────────────
+     registro.consideracoes         `consideracoes` — texto livre, opcional
+     registro.recomendacoes         `recomendacoes` — CHAVES de `RECOMENDACOES`
+
+   Os dois nomes de campo são iguais dos dois lados de propósito: é o de-para
+   mecânico, e sem servidor no meio nada acusa uma renomeação. `recomendacoes`
+   guarda CHAVE e não texto — como `ocorrencias` e como os `motivos` do impresso
+   — porque recomendação o outro lado precisa SOMAR ("quantos registros pediram
+   operação na área?"), e texto livre não se soma.
+
    Quando o aplicativo falar com o servidor, este arquivo morre e a fila passa a
    vir de onde a Retaguarda lê. A redação dos impressos (motivos, penalidades,
    prazos) tem a mesma dívida em `dados-documentos.ts` ↔
@@ -58,7 +79,7 @@
    e uma semana depois a fila apareceria inteira vencida.
    ============================================================================ */
 
-import { PRAZOS_NP } from './dados-documentos';
+import { PRAZOS_NP, nomeDoDocumento } from './dados-documentos';
 import { EQUIPE } from './sessao';
 
 /**
@@ -164,14 +185,14 @@ export const DESFECHOS_DE_RETORNO: Desfecho[] = [
  * O fiscal escolhe de pé, olhando para a barraca. "Regularizado após
  * notificação" e "Retorno com a situação mantida" são o mesmo ato com resultados
  * opostos, e a diferença entre eles decide se a denúncia encerra ou sobe ao
- * gestor: nomear sem explicar convidaria ao toque errado.
+ * Chefe de Setor: nomear sem explicar convidaria ao toque errado.
  */
 export const DESFECHOS_EXPLICADOS: Record<Desfecho, string> = {
     'Regularizado no local': 'Orientou e a irregularidade cessou na hora. Sem documento.',
     'Nada encontrado no local': 'A equipe esteve no endereço e não constatou nada.',
     'Notificação Preliminar emitida': 'Aponta o que sanar e dá prazo. A Notificação é lavrada em seguida.',
     'Regularizado após notificação': 'O prazo foi cumprido: o ponto está resolvido. Encerra a denúncia.',
-    'Retorno com a situação mantida': 'Prazo vencido e ponto igual. Volta ao gestor da área para a próxima medida.',
+    'Retorno com a situação mantida': 'Prazo vencido e ponto igual. Volta ao Chefe de Setor para a próxima medida.',
     'Auto de Apreensão lavrado': 'Recolhe material e mercadoria, com guarda no SEGUB.',
 };
 
@@ -204,21 +225,99 @@ export const DOCUMENTO_DO_DESFECHO: Record<Desfecho, 'np' | 'aa' | null> = {
 };
 
 /**
+ * O que impede CONCLUIR o registro — `null` quando nada impede.
+ *
+ * Regra do dono (04/09/2026): concluir sem documento só quando o desfecho não
+ * lava papel nenhum. Desfecho que anuncia documento ("Notificação Preliminar
+ * emitida", "Auto de Apreensão lavrado") e nenhum documento atrás dele deixaria
+ * a Retaguarda com um passo que promete uma via que não existe — e o notificado
+ * sem o papel que faz o prazo correr.
+ *
+ * A régua é o `DOCUMENTO_DO_DESFECHO`, e não uma segunda lista de "desfechos que
+ * concluem": duas listas para a mesma decisão divergem no primeiro ajuste. E o
+ * retorno segue concluindo sem papel, porque os desfechos dele não lavram nada.
+ *
+ * Devolve a frase pronta porque a lei do projeto é que impedimento NUNCA seja
+ * silencioso: quem barra tem de dizer o motivo e o que fazer.
+ */
+export type Impedimento = {
+    motivo: string;
+    comoResolver: string;
+    /** O documento que falta — a tela usa para abrir o formulário certo. */
+    documento: 'np' | 'aa';
+    /** "a Notificação Preliminar" / "o Auto de Apreensão", pronto para a frase. */
+    nomeComArtigo: string;
+};
+
+export const impedimentoParaConcluir = (
+    desfecho: Desfecho,
+    documentoLavrado: boolean,
+): Impedimento | null => {
+    const exigido = DOCUMENTO_DO_DESFECHO[desfecho];
+
+    if (!exigido || documentoLavrado) {
+        return null;
+    }
+
+    /* O artigo vem junto do nome porque a frase é montada em três lugares e os
+       dois documentos têm gêneros diferentes: sem isto, a tela escrevia "lavra
+       Notificação Preliminar", que não é português de gente. */
+    const nome = `${exigido === 'np' ? 'a' : 'o'} ${nomeDoDocumento(exigido)}`;
+
+    return {
+        motivo: `O desfecho “${desfecho}” lavra ${nome}, e ${exigido === 'np' ? 'ela' : 'ele'} ainda não foi lavrad${exigido === 'np' ? 'a' : 'o'} neste registro.`,
+        comoResolver: `Lavre ${nome} para concluir — ou volte e troque o desfecho, se nada foi lavrado no local.`,
+        documento: exigido,
+        nomeComArtigo: nome,
+    };
+};
+
+/**
+ * As RECOMENDAÇÕES do fiscal no despacho — lista fechada, um toque cada.
+ *
+ * O que o Chefe de Setor e o Coordenador leem para saber o que fazer com o
+ * registro é a recomendação de quem esteve no ponto. De pé na calçada ninguém
+ * digita parecer, então o caminho curto é o atalho — e ele é FECHADO pelo mesmo
+ * motivo do desfecho: recomendação em texto livre não se soma, e "encaminhar ao
+ * SEAB" escrito de sete maneiras não vira fila de trabalho nenhuma.
+ *
+ * Convive com o texto livre: o atalho diz o QUE fazer, o texto diz o porquê.
+ *
+ * ⚠️ A lista é do dono. "Encaminhar ao SEAB" veio dele; os outros seis são
+ * proposta a confirmar, e nenhum inventa órgão que o protótipo não conheça — o
+ * SEGUB é a guarda dos bens apreendidos e o SGCI é o cadastro de comércio
+ * informal, os dois já citados nos impressos.
+ */
+export const RECOMENDACOES: { id: string; rotulo: string; emoji: string }[] = [
+    { id: 'seab', rotulo: 'Encaminhar ao SEAB', emoji: '📨' },
+    { id: 'retorno', rotulo: 'Sugerir retorno da equipe', emoji: '🔁' },
+    { id: 'operacao', rotulo: 'Sugerir operação na área', emoji: '🚩' },
+    { id: 'guarda', rotulo: 'Pedir apoio da guarda municipal', emoji: '🚓' },
+    { id: 'sgci', rotulo: 'Conferir cadastro no SGCI', emoji: '🗂️' },
+    { id: 'segub', rotulo: 'Bens recolhidos ao SEGUB', emoji: '📦' },
+    { id: 'nada', rotulo: 'Sem providência adicional', emoji: '✅' },
+];
+
+/** A chave vira texto para quem lê o registro — e "—" quando a chave sumiu. */
+export const rotuloDaRecomendacao = (id: string): string =>
+    RECOMENDACOES.find((r) => r.id === id)?.rotulo ?? id;
+
+/**
  * O que cada situação cobra, e de quem — a frase que o aplicativo escreve
  * embaixo do selo.
  *
  * Sem ela o selo seria só uma palavra colorida: "Aguardando regularização" e
  * "Retorno vencido" parecem a mesma coisa, e são opostas — numa a bola está com
- * o notificado, na outra com o gestor da área.
+ * o notificado, na outra com o Chefe de Setor.
  */
 export const SITUACOES_EXPLICADAS: Record<Situacao, string> = {
-    'Recebida': 'Esperando a triagem do administrativo. Não é trabalho de campo ainda.',
-    'Encaminhada à área': 'Na mesa do gestor da área, que decide equipe ou operação.',
+    'Recebida': 'Esperando a triagem do Coordenador. Não é trabalho de campo ainda.',
+    'Encaminhada à área': 'Na mesa do Chefe de Setor, que decide equipe ou operação.',
     'Direcionada à equipe': 'Vistoria dirigida à sua equipe. Ir ao local e registrar o desfecho.',
     'Em operação': 'Entra na varredura da operação, em vez de uma ida isolada ao local.',
     'Em campo': 'Vistoria aberta: relato e fotos registrados, desfecho ainda não decidido.',
     'Aguardando regularização': 'Prazo da Notificação correndo — a bola está com o notificado. A equipe volta ao vencer.',
-    'Retorno vencido': 'Prazo vencido com a situação mantida. Voltou ao gestor da área para a próxima medida.',
+    'Retorno vencido': 'Prazo vencido com a situação mantida. Voltou ao Chefe de Setor para a próxima medida.',
     'Concluída': 'A vistoria teve desfecho e a denúncia se encerrou.',
     'Devolvida': 'A triagem devolveu ao canal de origem. Não chega ao campo.',
     'Arquivada': 'A triagem arquivou. Não chega ao campo.',
@@ -338,7 +437,7 @@ export type Demanda = {
     situacao: Situacao;
     /** A área que a triagem escolheu — `null` enquanto ela não foi triada. */
     area: string | null;
-    /** A equipe que o gestor escolheu — `null` até o direcionamento. */
+    /** A equipe que o Chefe de Setor escolheu — `null` até o direcionamento. */
     equipe: string | null;
     /** A operação a que a denúncia foi anexada, quando foi por esse caminho. */
     operacao: string | null;
@@ -1121,7 +1220,7 @@ const UNIVERSO: Semente[] = [
 
     /* ---- Triada para fora, ou ainda na triagem: NÃO chega ao campo -------
        Ficam guardadas para a fila poder PROVAR o recorte: uma delas é da
-       própria Área 5 e ainda espera o gestor, e as outras duas a triagem
+       própria Área 5 e ainda espera o Chefe de Setor, e as outras duas a triagem
        recusou. Nenhuma aparece para o fiscal. ----------------------------- */
 
     {
@@ -1408,7 +1507,7 @@ export const demandasAVistoriar = (): Demanda[] =>
 export const demandasEmRegularizacao = (): Demanda[] =>
     demandasDaEquipe().filter((d) => d.situacao === 'Aguardando regularização');
 
-/** O que a equipe já fechou — e o que subiu ao gestor por retorno frustrado. */
+/** O que a equipe já fechou — e o que subiu ao Chefe de Setor por retorno frustrado. */
 export const demandasEncerradas = (): Demanda[] =>
     demandasDaEquipe().filter((d) => d.situacao === 'Concluída' || d.situacao === 'Retorno vencido');
 

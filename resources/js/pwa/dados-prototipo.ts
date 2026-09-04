@@ -13,7 +13,7 @@
 
    ⚠️ POR QUE A ÁREA 5 E NÃO O CENTRO: o aparelho da demonstração é o do fiscal
    da **Equipe C1 · Área 5**, que é quem recebe as demandas encaminhadas pelo
-   administrativo no roteiro combinado com o dono. Pontos conhecidos na Barra e
+   Coordenador no roteiro combinado com o dono. Pontos conhecidos na Barra e
    no Pelourinho, como havia antes, punham no mapa dele o serviço de outra
    equipe — e a primeira pergunta do cliente seria justamente essa.
    ============================================================================ */
@@ -68,7 +68,7 @@ export type Ambulante = {
  * De onde a fiscalização nasceu.
  *
  * `avulsa` é o fiscal andando a rua e vendo — o caminho que o protótipo já
- * encenava. `dirigida` é o trabalho que o administrativo encaminhou à equipe
+ * encenava. `dirigida` é o trabalho que o Coordenador encaminhou à equipe
  * com número de processo e prazo: aí a fiscalização nasce AMARRADA à demanda, e
  * o vínculo tem de ficar visível no registro, no recibo e no documento.
  */
@@ -126,6 +126,26 @@ export type Registro = {
     demandaId: string | null;
     /** O número do processo da demanda — vai para o campo REFERÊNCIA do papel. */
     referencia: string | null;
+    /**
+     * CONSIDERAÇÕES FINAIS do fiscal, escritas no despacho — texto livre.
+     *
+     * ⚠️ CONTRATO com o outro lado: o nome do campo é o mesmo dos dois lados
+     * (ver o de-para na cabeça de `dados-demandas.ts`). É por este texto e pelas
+     * `recomendacoes` que o Chefe de Setor entende o que o fiscal recomenda; sem
+     * servidor no meio, renomear um deles quebra o de-para em silêncio.
+     */
+    consideracoes: string;
+    /** As CHAVES das recomendações escolhidas (`RECOMENDACOES`), não os textos. */
+    recomendacoes: string[];
+    /**
+     * Quando o fiscal DESPACHOU o registro, em data BR — `null` enquanto a
+     * conclusão não foi confirmada.
+     *
+     * Registro despachado vai para a caixa de entrada do Chefe de Setor da área
+     * da equipe; é isso que a fila de envio leva. Enquanto for `null`, o registro
+     * está aberto: a tela de conclusão ainda aceita considerações.
+     */
+    despachadoBr: string | null;
 };
 
 /* Quem está com o aparelho na mão sai do módulo de sessão: é a matrícula
@@ -345,6 +365,13 @@ type SementeRegistro = [
     demandaId: string | null,
     /** Nº do processo da demanda, que o papel chama de REFERÊNCIA. */
     referencia: string | null,
+    /* As considerações finais do despacho. OPCIONAIS na semente porque são
+       opcionais em rua: a maioria das abordagens se explica pelo desfecho, e
+       forçar as doze linhas a trazerem texto desenharia um fiscal que redige
+       parecer em toda barraca. */
+    consideracoes?: string,
+    /** CHAVES de `RECOMENDACOES` — o atalho que o fiscal tocou no despacho. */
+    recomendacoes?: string[],
 ];
 
 /* O turno do fiscal da Equipe C1 — os endereços são os mesmos pontos da Área 5.
@@ -358,17 +385,17 @@ type SementeRegistro = [
    nenhum, cinco com papel. */
 const SEMENTES_REGISTRO: SementeRegistro[] = [
     ['14:38', 0, 'jardim-armacao', 'Av. Otávio Mangabeira, acesso à Praia da Boca do Rio', 'Regularizado no local', ['desarmou', 'reincidente'], 'Barraca montada sobre a faixa de pedestres. Orientado, desarmou na hora e deixou o ponto sem resistência.', 3, 'Toinho do Gelo', 3, 'pendente', null, null, null],
-    ['13:52', 0, 'stiep', 'Rua Ewerton Visco, esquina com o canteiro', 'Auto de Apreensão lavrado', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', 1, 'erro', 'AA 160049', null, null],
+    ['13:52', 0, 'stiep', 'Rua Ewerton Visco, esquina com o canteiro', 'Auto de Apreensão lavrado', ['recusou', 'apoio'], 'Recusou-se a sair na primeira abordagem. Com apoio da guarda municipal, retirou a mercadoria.', 5, 'Vardinho', 1, 'erro', 'AA 160049', null, null, 'Ponto reincidente e com resistência à abordagem. A mercadoria seguiu para a guarda dos bens; a equipe pede que a área entre com uma operação, porque sozinha a abordagem não fixa.', ['guarda', 'segub', 'operacao']],
     ['12:07', 0, 'itapua', 'Praia de Itapuã, altura do Farol', 'Regularizado no local', ['orientado'], 'Permissão apresentada e conferida. Passagem livre, sem obstrução.', 1, 'Tetê', null, 'enviado', null, null, null],
     ['11:20', 0, 'patamares', 'Alameda Praia de Patamares, acesso à areia', 'Nada encontrado no local', ['vazio'], 'Local vazio na chegada da equipe.', 1, null, null, 'enviado', null, null, null],
     ['10:44', 0, 'costa-azul', 'Orla do Jardim de Alah, canteiro central', 'Regularizado no local', ['desarmou', 'calcada'], 'Ponto ocupando o canteiro. Desarmou e saiu após a orientação.', 2, 'Geni', 7, 'pendente', null, null, null],
     ['09:58', 0, 'imbui', 'Rua Ilhéus, entorno da feira', 'Regularizado no local', ['bebida', 'sem-permissao'], 'Venda de bebida gelada sem permissão. Ambulante não identificado — saiu antes da conferência.', 4, null, 2, 'enviado', null, null, null],
-    ['16:35', -1, 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'Notificação Preliminar emitida', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', 6, 'enviado', 'NP 194894', null, null],
+    ['16:35', -1, 'itapua', 'Rua da Música, em frente ao Farol de Itapuã', 'Notificação Preliminar emitida', ['desarmou', 'alimento'], 'Espetinho montado sem estrutura mínima de higiene. Recolheu o material.', 3, 'Jaja', 6, 'enviado', 'NP 194894', null, null, 'Prazo curto porque é manipulação de alimento. Vale a equipe passar no vencimento.', ['retorno']],
     ['15:12', -1, 'boca-do-rio', 'Praia da Boca do Rio, quiosque 12', 'Regularizado no local', ['orientado'], 'Ponto dentro dos limites autorizados.', 2, 'Paty', null, 'enviado', null, null, null],
     ['11:03', -1, 'stella-maris', 'Praia de Stella Maris, frente ao estacionamento', 'Regularizado no local', ['orientado'], 'Conferido no roteiro da manhã. Sem ocorrência.', 1, 'Ciça', null, 'enviado', null, null, null],
     ['09:41', -2, 'mussurunga', 'Av. Luís Viana Filho, ponto de ônibus', 'Notificação Preliminar emitida', ['desarmou', 'calcada', 'reincidente'], 'Terceira ocorrência no mesmo ponto neste mês. Desarmou e saiu.', 6, 'Robinho', 5, 'enviado', 'NP 194892', null, null],
     ['08:26', -2, 'pituacu', 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu', 'Auto de Apreensão lavrado', ['recusou'], 'Insistiu em permanecer alegando autorização verbal. Documento emitido no local.', 4, 'Demí', 0, 'enviado', 'AA 160047', null, null],
-    ['16:40', -3, 'costa-azul', 'Avenida Otávio Mangabeira, 2140 — Costa Azul', 'Notificação Preliminar emitida', ['calcada', 'orientado'], 'Puxada de madeira de aproximadamente 2 m × 3 m nos fundos da barraca, usada como depósito de bebidas e botijão, fora do padrão autorizado. Área de mesas avançando sobre a passagem de acesso à areia, que ficou com pouco mais de um metro. Permissionário presente, com permissão regular e DAM do exercício quitado, apresentado no local.', 3, 'Jailson Pereira dos Santos', 2, 'enviado', 'NP 194903', 'den-0029', 'DEN-0029'],
+    ['16:40', -3, 'costa-azul', 'Avenida Otávio Mangabeira, 2140 — Costa Azul', 'Notificação Preliminar emitida', ['calcada', 'orientado'], 'Puxada de madeira de aproximadamente 2 m × 3 m nos fundos da barraca, usada como depósito de bebidas e botijão, fora do padrão autorizado. Área de mesas avançando sobre a passagem de acesso à areia, que ficou com pouco mais de um metro. Permissionário presente, com permissão regular e DAM do exercício quitado, apresentado no local.', 3, 'Jailson Pereira dos Santos', 2, 'enviado', 'NP 194903', 'den-0029', 'DEN-0029', 'Permissionário com permissão regular e DAM quitado: o que está fora do padrão é a estrutura, não o direito de trabalhar ali. A puxada precisa de análise de quem cuida do padrão da barraca, e a passagem de acesso à areia tem de voltar à largura mínima.', ['seab', 'retorno']],
 ];
 
 /** "NP 194894" → 'np'. O número guarda a sigla, então o tipo se deduz dele. */
@@ -414,6 +441,12 @@ export const REGISTROS: Registro[] = SEMENTES_REGISTRO.map((s, i) => {
         origem: s[12] ? 'dirigida' : 'avulsa',
         demandaId: s[12],
         referencia: s[13],
+        consideracoes: s[14] ?? '',
+        recomendacoes: s[15] ?? [],
+        /* O turno já aconteceu: tudo que está semeado foi despachado no dia em
+           que foi registrado. Deixá-los abertos faria a tela de conclusão
+           oferecer despacho para uma fiscalização de três dias atrás. */
+        despachadoBr: dataBr,
     };
 });
 

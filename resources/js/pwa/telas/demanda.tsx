@@ -25,7 +25,7 @@ import { Icone } from '../icones';
  *
  * O cartão da fila responde "vou ou não vou agora". Esta tela responde três
  * outras: o que o cidadão relatou, COMO a denúncia chegou até esta equipe (a
- * triagem escolheu a área, o gestor escolheu equipe ou operação) e, quando ela
+ * triagem escolheu a área, o Chefe de Setor escolheu equipe ou operação) e, quando ela
  * já andou, o que a equipe registrou no ponto e o documento que lavrou.
  *
  * O ato oferecido no fim muda com a situação: vistoriar, continuar a vistoria
@@ -214,10 +214,10 @@ function ComoChegou({ demanda }: { demanda: Demanda }) {
                         Encaminhada à {demanda.area ?? 'área não definida'}
                         <br />
                         <span className="pw-fraco">
-                            O administrativo tria o que a ouvidoria entrega e escolhe a área pelo bairro.
+                            O Coordenador tria o que a ouvidoria entrega e escolhe a área pelo bairro.
                         </span>
                     </dd>
-                    <dt>Gestor da área</dt>
+                    <dt>Chefe de Setor</dt>
                     <dd>
                         {demanda.operacao
                             ? `Anexada à ${demanda.operacao}`
@@ -381,7 +381,7 @@ function AtoDevido({ demanda, emRetorno }: { demanda: Demanda; emRetorno: boolea
             <div className="pw-card" style={{ marginTop: 20 }}>
                 <p style={{ margin: 0, fontSize: 14.5 }}>
                     {demanda.situacao === 'Retorno vencido'
-                        ? 'O prazo venceu com a situação mantida, e a denúncia voltou ao gestor da área para a próxima medida. A equipe não tem ato pendente aqui.'
+                        ? 'O prazo venceu com a situação mantida, e a denúncia voltou ao Chefe de Setor da área para a próxima medida. A equipe não tem ato pendente aqui.'
                         : 'Denúncia encerrada. Não há ato pendente para a equipe.'}
                 </p>
             </div>

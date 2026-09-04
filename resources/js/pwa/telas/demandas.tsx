@@ -25,8 +25,9 @@ import { Icone } from '../icones';
    MINHAS DEMANDAS — a fila do trabalho DIRIGIDO.
    ----------------------------------------------------------------------------
    Metade do serviço do fiscal não é descoberta andando a rua: chega dirigida.
-   A ouvidoria entrega a denúncia, o administrativo TRIA e a encaminha à área, e
-   o GESTOR daquela área decide como o trabalho acontece — equipe ou operação.
+   A ouvidoria entrega a denúncia, o Coordenador TRIA e a encaminha à área, e
+   o CHEFE DE SETOR daquela área decide como o trabalho acontece — equipe ou
+   operação.
    Só então ela aparece aqui.
 
    Quatro escolhas de tela que vêm direto disso:
@@ -114,7 +115,7 @@ export function TelaDemandas() {
                 </div>
 
                 <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13.5 }}>
-                    O gestor da área direciona a denúncia à equipe, ou a anexa a uma operação. Toda a
+                    O Chefe de Setor direciona a denúncia à equipe, ou a anexa a uma operação. Toda a
                     equipe vê esta fila — e só ela.
                     {deOutras > 0 && (
                         <>
@@ -172,7 +173,7 @@ export function TelaDemandas() {
                         <Vazio
                             icone="📭"
                             titulo="Nenhuma denúncia direcionada à sua equipe"
-                            texto={`O gestor da área ainda não direcionou nada à ${EQUIPE.nome} · ${EQUIPE.area}. As denúncias de outras equipes não aparecem aqui — cada equipe vê o trabalho da área dela.`}
+                            texto={`O Chefe de Setor ainda não direcionou nada à ${EQUIPE.nome} · ${EQUIPE.area}. As denúncias de outras equipes não aparecem aqui — cada equipe vê o trabalho da área dela.`}
                         />
                     </>
                 ) : (

@@ -128,9 +128,16 @@ export function Vazio({ icone, titulo, texto }: { icone: string; titulo: string;
     );
 }
 
-export function Aviso({ children }: { children: ReactNode }) {
+/**
+ * Recado de uma linha ou duas, acima do que ele explica.
+ *
+ * O tom `alerta` é para IMPEDIMENTO — o motivo de algo não funcionar. Ele existe
+ * porque o azul de informação fazia o texto parecer opcional, e motivo de bloqueio
+ * não é leitura opcional: é a resposta à pergunta "por que não deixa?".
+ */
+export function Aviso({ children, tom = 'info' }: { children: ReactNode; tom?: 'info' | 'alerta' }) {
     return (
-        <p className="pw-aviso">
+        <p className={classes('pw-aviso', tom === 'alerta' && 'pw-aviso-alerta')}>
             <Icone nome="erro" tamanho={18} />
             <span>{children}</span>
         </p>

@@ -32,7 +32,7 @@ import { CartaoDemanda } from './demandas';
    ----------------------------------------------------------------------------
    O fiscal abre o aplicativo antes de sair da base: ele quer saber o que tem
    pela frente, não operar nada ainda. Então esta tela RESPONDE, não pergunta —
-   de que equipe e área ele é, quantas demandas o administrativo encaminhou,
+   de que equipe e área ele é, quantas demandas o Coordenador encaminhou,
    quantos registros ele já fez hoje, quantos retornos venceram, o que está na
    fila para subir e quais operações a chefia marcou.
 
@@ -152,7 +152,7 @@ export function TelaInicio() {
                 {chamada.length === 0 ? (
                     <div className="pw-card">
                         <p className="pw-fraco" style={{ margin: 0, fontSize: 14 }}>
-                            O gestor da área ainda não direcionou nenhuma denúncia à {EQUIPE.nome}. Você
+                            O Chefe de Setor ainda não direcionou nenhuma denúncia à {EQUIPE.nome}. Você
                             continua com o trabalho avulso: andar a rua, ver e registrar.
                         </p>
                     </div>
