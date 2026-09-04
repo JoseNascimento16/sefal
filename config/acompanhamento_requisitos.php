@@ -240,6 +240,47 @@ return [
                 .'perde à espera dela — o aplicativo guarda o registro.',
         ],
 
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Retorno de Campo',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.retorno-de-campo.index',
+            'breadcrumb' => 'Fiscalização › Retorno de Campo',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: decisão do dono 04/09/2026 ("todo registro de '
+                .'fiscalização concluído volta para a caixa de entrada do Chefe de Setor, e as '
+                .'considerações finais do fiscal aparecem no histórico do trâmite"). Entregue como '
+                .'PROTÓTIPO. A FILA do Chefe de Setor: tudo que a equipe da área dele concluiu em rua '
+                .'volta para cá, com quando, equipe e fiscal, o ponto, o desfecho, o documento lavrado '
+                .'(quando houve) e — em coluna própria, porque é o que decide — a RECOMENDAÇÃO DO '
+                .'FISCAL, ao lado das considerações que ele escreveu. Duas decisões da chefia, em lote '
+                .'e uma a uma: dar CIÊNCIA (o retorno sai da fila; observação opcional, porque o ato '
+                .'de ler já é a informação) ou determinar NOVA VISTORIA (o ponto volta à equipe, com '
+                .'justificativa obrigatória de 15 caracteres no servidor — "voltar lá" não diz à '
+                .'equipe o que procurar). RECORTE POR ÁREA: o Chefe de Setor vê só o que as equipes da '
+                .'área dele concluíram; o Coordenador e o administrador veem o universo, porque quem '
+                .'tria precisa saber o que aconteceu com o que encaminhou. O recorte é feito no '
+                .'SERVIDOR, e há DUAS recusas explicadas ali: quem apenas acompanha (Coordenador) não '
+                .'decide, e decisão sobre registro de outra área é recusada nominalmente — esconder da '
+                .'lista não é fronteira, e o lote é o caminho fácil para alcançar o que não se vê. '
+                .'Busca inteligente com facetas do domínio (com/sem documento, de denúncia, avulsa, '
+                .'com recomendação), aba que troca a FONTE (a fila × o histórico da área) e exportação '
+                .'do recorte visível em PDF/XLSX/DOCX. NÃO é a Caixa de Entrada: lá o Coordenador '
+                .'digita o que chegou em PAPEL, no começo da cadeia; aqui a chefia lê o que voltou do '
+                .'CAMPO, no fim dela — e a tela diz isso em cima. Não há inclusão: registro de '
+                .'fiscalização nasce em rua, no aplicativo do fiscal. ⚠️ É PROTÓTIPO: não há tabela nem '
+                .'gravação. Os registros que vieram de DENÚNCIA são DERIVADOS do trâmite dela (a mesma '
+                .'vistoria descrita duas vezes divergiria), e as fiscalizações AVULSAS — operação, '
+                .'ronda, pedido de outro órgão — vêm de config/prototipo_registros_de_campo.php; as '
+                .'decisões vivem na sessão de quem navega. Pendências que isto abre: a fiscalização '
+                .'como TABELA (hoje ela só existe dentro do trâmite da denúncia e do arquivo de '
+                .'avulsas), a MODELAGEM DEFINITIVA do vínculo chefia↔área, o efeito real de "nova '
+                .'vistoria" no aplicativo do fiscal (hoje só muda o estado da fila) e o prazo de '
+                .'leitura que torna um retorno atrasado — a tela já conta os dias parados, mas ninguém '
+                .'definiu a partir de quantos ele cobra.',
+        ],
+
         /*
          * A CASCA — sem item de menu, e presente em toda tela autenticada. Entra
          * aqui pelo mesmo motivo da exportação: o mapa é de funcionalidade

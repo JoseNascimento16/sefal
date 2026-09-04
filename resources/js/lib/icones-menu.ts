@@ -17,6 +17,7 @@ import {
     SlidersHorizontal,
     Store,
     TriangleAlert,
+    Undo2,
     UserRound,
     Users,
 } from 'lucide-react';
@@ -42,6 +43,10 @@ const ICONES: Record<string, LucideIcon> = {
     denuncias: Megaphone,
     // Operação é ação planejada de rua — a sirene, não o mapa.
     operacoes: Siren,
+    // O retorno de campo é o trabalho VOLTANDO da rua para a chefia: a seta que
+    // desanda. Não é bandeja (a caixa é a de entrada, do outro lado da cadeia)
+    // nem prancheta (a prancheta é o registro, não a volta dele).
+    retorno: Undo2,
     // O mapa ao vivo tem o alfinete: ele mostra ONDE cada coisa está agora.
     mapa: MapPinned,
     // O de calor tem a chama: ele mostra onde a coisa se concentra.

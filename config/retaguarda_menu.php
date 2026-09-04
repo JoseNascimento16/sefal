@@ -289,6 +289,35 @@ return [
                         'fiscal' => ['apenas_leitura' => true],
                     ],
                 ],
+                /*
+                 * Retorno de Campo — a fila do CHEFE DE SETOR (PROTÓTIPO,
+                 * decisão do dono 04/09/2026).
+                 *
+                 * Vem DEPOIS de "Fiscalizações" porque é o fim da cadeia: a
+                 * demanda entra pela Caixa de Entrada ou pelas Denúncias, é
+                 * dirigida, vira trabalho de rua — e volta para cá, com o
+                 * desfecho e a recomendação do fiscal. O menu desenha a ordem do
+                 * trabalho.
+                 *
+                 * Não é a Caixa de Entrada: lá o Coordenador digita o que chegou
+                 * em PAPEL, no começo da cadeia; aqui a chefia lê o que voltou do
+                 * CAMPO. São as duas pontas do mesmo trabalho.
+                 *
+                 * Concessão inicial: Chefe de Setor (é a fila dele), Coordenador
+                 * (acompanha o que aconteceu com o que encaminhou, sem decidir —
+                 * a recusa mora no controller) e administrador. O FISCAL não
+                 * entra: quem escreveu o retorno foi ele, e dar-lhe a fila
+                 * permitiria dar ciência do próprio trabalho, o que apaga a
+                 * conferência que a fila existe para provocar.
+                 */
+                [
+                    'rotulo' => 'Retorno de Campo',
+                    'rota' => 'retaguarda.retorno-de-campo.index',
+                    'icone' => 'retorno',
+                    'slug' => 'retorno-de-campo',
+                    'curto' => 'RETORNO',
+                    'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                ],
                 [
                     'rotulo' => 'Mapa ao Vivo',
                     'rota' => 'retaguarda.mapa.index',
