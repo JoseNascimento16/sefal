@@ -47,6 +47,7 @@ import { casaTermos, parseConsulta, semAcento } from '@/lib/busca';
 import { dataBR, dataHoraBR, hojeISO, VAZIO } from '@/lib/datas';
 import { linhaClicavel } from '@/lib/linha-clicavel';
 import { contar } from '@/lib/plural';
+import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
 import {
     devolver as rotaDevolver,
@@ -94,6 +95,12 @@ interface Props {
     situacoes: string[];
     /** Os desfechos que uma vistoria pode ter — catálogo do servidor. */
     desfechos: string[];
+    /**
+     * Chave da recomendação do fiscal → a frase EXPLÍCITA que a Retaguarda
+     * mostra. O passo do trâmite traz a chave (é o que o aplicativo do fiscal
+     * grava); o catálogo que a traduz vem do servidor.
+     */
+    recomendacoesDoFiscal: CatalogoDeRecomendacoes;
     motivos: string[];
     destinos: string[];
     equipes: EquipeResumo[];
@@ -323,6 +330,7 @@ export function PainelDeDenuncias({
     denuncias,
     situacoes,
     desfechos,
+    recomendacoesDoFiscal,
     motivos,
     destinos,
     equipes,
@@ -1599,6 +1607,7 @@ export function PainelDeDenuncias({
                         <TramiteDeDenuncia
                             tramites={aberta.tramites}
                             proximoPasso={proximoPassoDe(aberta)}
+                            recomendacoesDoFiscal={recomendacoesDoFiscal}
                         />
 
                         {/* A decisão de UM registro usa os MESMOS caminhos do lote:

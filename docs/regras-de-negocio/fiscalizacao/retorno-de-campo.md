@@ -65,6 +65,20 @@ campos com o aplicativo do fiscal está em [Denúncias, RN-17b](denuncias.md).
 Registro **sem** recomendação diz isso ("o fiscal não recomendou nada") em vez de deixar a célula
 vazia — célula vazia parece dado que não carregou.
 
+**O registro guarda a CHAVE do atalho; esta tela mostra a redação EXPLÍCITA.** O aplicativo do fiscal
+grava `retorno`, `sgci`, `passagem`… (é a chave que o relatório soma), e o catálogo que a traduz vem do
+servidor. A redação curta é a da pílula no celular; aqui quem decide precisa da frase inteira —
+"Sugerir retorno da equipe" não diz **quando** voltar, e "Voltar ao ponto no vencimento do prazo" diz.
+Isso vale nos três lugares em que a recomendação aparece: a **coluna** da grade, o **destaque** do
+detalhe e a **exportação** (o arquivo é lido por quem decide, não pelo aparelho — uma célula com
+`sgci` não é resposta para ninguém). A **busca** também casa contra a frase, e não contra a chave: quem
+procura por *operação* tem de achar o registro em que o fiscal pediu operação.
+
+**Chave que o catálogo não conhece aparece CRUA** — nunca desaparece. Recomendação que evapora em
+silêncio é pior que recomendação feia: a chefia decidiria sem saber que o fiscal pediu alguma coisa, e
+a chave crua na tela é o sintoma visível de que os dois catálogos (aqui e o do aplicativo) andaram
+separados.
+
 ### RN-04 — Cada linha traz o essencial para decidir
 
 Quando (com **há N dias na fila**, contado no **servidor** — no navegador dependeria do relógio e do
@@ -190,7 +204,7 @@ não se desfaz.
 | **PEND-013** | A **fiscalização como tabela**. Hoje ela só existe dentro do trâmite da denúncia e no arquivo das avulsas. | Aprovação da forma pelo dono + o contrato do que o aplicativo do fiscal envia. |
 | **PEND-014** | O **efeito real de "nova vistoria"** no aplicativo do fiscal. Hoje ela só muda o estado da fila; no sistema real o ponto tem de reaparecer no aparelho da equipe. | O contrato da fila de trabalho do aplicativo. |
 | **PEND-015** | O **prazo de leitura** que torna um retorno atrasado. A tela já conta os dias parados, mas ninguém definiu a partir de quantos ele cobra. | Decisão da área de negócio. |
-| **PEND-016** | O **catálogo de recomendações** existe duas vezes enquanto os dois lados são protótipo (aqui e no aplicativo do fiscal). | Virar produção: a lista passa a ser lista de escolha do servidor, consumida pelo aplicativo. |
+| **PEND-016** | O **catálogo de recomendações** existe duas vezes enquanto os dois lados são protótipo (aqui e no aplicativo do fiscal). As duas cópias vivem em **branches diferentes** (`feature/prototipo-administrativo` e `feature/pwa-prototipo`), que não se veem — então **nenhum teste consegue compará-las**: chave nova, chave renomeada ou redação mexida entra nos dois lados no mesmo passo, à mão. Cada lado tem teste-lei do que ele **próprio** declara (aqui: toda chave com as duas redações; lá: nenhum registro semeado fora do catálogo). | Virar produção: a lista passa a ser lista de escolha do servidor, consumida pelo aplicativo — e aí o `curto` que este catálogo já guarda passa a ser o rótulo que o aparelho baixa. |
 | — | A **modelagem definitiva do vínculo chefia↔área** (em produção é tabela usuário↔área, não arquivo de configuração). | A mesma pendência já registrada em [Áreas e Equipes](../estrutura/areas-e-equipes.md). |
 
 ---
@@ -199,4 +213,5 @@ não se desfaz.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 04/09/2026 | José Nascimento | Retorno de Campo | A recomendação do fiscal passa a chegar como **chave** e a ser mostrada na **redação explícita** do catálogo do servidor (RN-03) — na coluna, no destaque do detalhe, na exportação e na busca. Chave desconhecida aparece **crua**, em vez de desaparecer. | O catálogo estava divergente entre a Retaguarda (que esperava a frase inteira) e o aplicativo do fiscal (que grava chave): o despacho chegaria aqui com recomendação que a tela não sabe ler. Decisão do dono: unificar por chave, com a redação curta no aplicativo e a explícita na Retaguarda. |
 | 04/09/2026 | José Nascimento | Retorno de Campo | Nasce a tela, como **protótipo**: a fila do Chefe de Setor com todo registro de fiscalização concluído da área dele, derivado do trâmite das denúncias mais as fiscalizações avulsas (RN-02); recomendação do fiscal em coluna própria (RN-03); três estados e as duas decisões da chefia, em lote, com justificativa obrigatória para mandar a equipe voltar (RN-05, RN-06); recorte por área feito no servidor, com as duas recusas explicadas (RN-07); busca inteligente, aba que troca a fonte e exportação do recorte visível (RN-09, RN-10). | Decisão do dono de 04/09/2026: "todo registro de fiscalização concluído cai/volta para a caixa de entrada do Chefe de Setor". Sem a tela, o trabalho da equipe terminava no aplicativo do fiscal e ninguém do outro lado era obrigado a ler — o desfecho existia no sistema e a decisão que ele pede ficava sem dono. Entregue como protótipo para o dono aprovar a forma antes de a fiscalização existir como tabela. |

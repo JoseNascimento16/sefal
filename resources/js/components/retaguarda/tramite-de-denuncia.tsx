@@ -22,6 +22,8 @@ import type {
 import { TOM_DA_SITUACAO } from '@/dados-prototipo/denuncias';
 import { dataBR, dataHoraBR, VAZIO } from '@/lib/datas';
 import { contar, plural } from '@/lib/plural';
+import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
+import { textoDaRecomendacao } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
 
 /**
@@ -91,13 +93,19 @@ function totalDeFotos(t: TramiteDenuncia): number {
  *
  * As duas partes vêm juntas de propósito: o atalho diz O QUE fazer (e é somável
  * pelo relatório), a consideração conta o caso. Uma sem a outra perde metade.
+ *
+ * O passo traz a CHAVE do atalho, e aqui ela vira a redação EXPLÍCITA do
+ * catálogo do servidor — que é a que serve a quem decide. Chave que o catálogo
+ * não conhece aparece CRUA, e não desaparece: ver `@/lib/recomendacoes`.
  */
 function ConsideracoesDoFiscal({
     consideracoes,
     recomendacoes,
+    catalogo,
 }: {
     consideracoes: string | null;
     recomendacoes: string[];
+    catalogo: CatalogoDeRecomendacoes;
 }) {
     if (consideracoes === null && recomendacoes.length === 0) {
         return null;
@@ -121,7 +129,7 @@ function ConsideracoesDoFiscal({
                                 className="selo selo-info"
                                 style={{ marginRight: 6, marginBottom: 4 }}
                             >
-                                {r}
+                                {textoDaRecomendacao(r, catalogo)}
                             </span>
                         ))}
                     </div>
@@ -351,9 +359,15 @@ export function TramiteDeDenuncia({
     tramites,
     /** O próximo passo, quando há um — dito como próximo passo, nunca como fato. */
     proximoPasso,
+    /**
+     * Chave da recomendação → a frase que a Retaguarda mostra (catálogo do
+     * servidor, na redação explícita). O passo grava chave; a leitura traduz.
+     */
+    recomendacoesDoFiscal,
 }: {
     tramites: TramiteDenuncia[];
     proximoPasso?: { o_que: string; quem: string; detalhe: string } | null;
+    recomendacoesDoFiscal: CatalogoDeRecomendacoes;
 }) {
     /*
      * Abre no ÚLTIMO passo, e não no primeiro: quem abre uma denúncia quer saber
@@ -536,6 +550,7 @@ export function TramiteDeDenuncia({
                 <ConsideracoesDoFiscal
                     consideracoes={atual.consideracoes}
                     recomendacoes={atual.recomendacoes}
+                    catalogo={recomendacoesDoFiscal}
                 />
 
                 {/* A DECISÃO tomada no passo: para onde foi, por quê, o que

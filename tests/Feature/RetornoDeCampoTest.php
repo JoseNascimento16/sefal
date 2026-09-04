@@ -4,6 +4,7 @@ use App\Models\Setor;
 use App\Models\User;
 use App\Support\Prototipo\DenunciasFicticias;
 use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Prototipo\RecomendacoesDoFiscal;
 use App\Support\Prototipo\RetornoDeCampoFicticio;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
@@ -131,13 +132,17 @@ test('lei: a recomendacao semeada na fiscalizacao avulsa sai do catalogo do apli
      * O catálogo é o contrato com o aplicativo do fiscal: atalho escrito à mão no
      * arquivo de dados seria uma recomendação que a Retaguarda não sabe ler — e
      * que o relatório não sabe somar.
+     *
+     * ⚠️ O que se semeia é a CHAVE (`retorno`, `sgci`…), porque é a chave que o
+     * aplicativo grava. A frase que a tela mostra sai da chave, na redação
+     * explícita.
      */
-    $catalogo = (array) config('prototipo_denuncias.recomendacoes_do_fiscal', []);
+    $chaves = RecomendacoesDoFiscal::chaves();
     $problemas = [];
 
     foreach ((array) config('prototipo_registros_de_campo.registros', []) as $r) {
         foreach ((array) ($r['recomendacoes'] ?? []) as $recomendacao) {
-            if (! in_array((string) $recomendacao, $catalogo, true)) {
+            if (! in_array((string) $recomendacao, $chaves, true)) {
                 $problemas[] = "FIS-{$r['id']}: recomendação fora do catálogo '{$recomendacao}'";
             }
         }
@@ -148,6 +153,90 @@ test('lei: a recomendacao semeada na fiscalizacao avulsa sai do catalogo do apli
     }
 
     expect($problemas)->toBe([], "Recomendação e desfecho saem de catálogo — não são texto livre.\n");
+});
+
+test('a fila leva a CHAVE da recomendacao e o catalogo que a traduz na redacao explicita', function () {
+    /*
+     * O registro carrega a CHAVE (`retorno`, `sgci`…) — é o que o aplicativo do
+     * fiscal grava, e é por ela que o relatório soma. Quem traduz é a leitura, e
+     * o catálogo da tradução vem do SERVIDOR, na redação EXPLÍCITA: a curta é a
+     * pílula do celular, e "Sugerir retorno da equipe" não diz à chefia QUANDO
+     * voltar ao ponto.
+     *
+     * Sem esta prova, a tela cairia no fallback e mostraria a chave crua a quem
+     * decide — o que é visível, mas não é o que o dono pediu.
+     */
+    $pagina = test()->actingAs(chefeDaFila('gestor1'))
+        ->get('/retaguarda/retorno-de-campo')
+        ->viewData('page')['props'];
+
+    $catalogo = $pagina['recomendacoesDoFiscal'];
+
+    expect($catalogo)->toBeArray()
+        ->and($catalogo['retorno'])->toBe('Voltar ao ponto no vencimento do prazo')
+        // O SEAB é o atalho que veio do dono: as duas redações são iguais porque
+        // ninguém aqui sabe o que a sigla expande.
+        ->and($catalogo['seab'])->toBe('Encaminhar ao SEAB');
+
+    $comRecomendacao = array_values(array_filter(
+        $pagina['registros'],
+        static fn (array $r): bool => $r['recomendacoes'] !== [],
+    ));
+
+    expect($comRecomendacao)->not->toBe([], 'a fila desta área precisa de registro com recomendação');
+
+    $orfas = [];
+
+    foreach ($comRecomendacao as $registro) {
+        foreach ($registro['recomendacoes'] as $chave) {
+            // É chave, e o catálogo a conhece: a tela tem como escrever a frase.
+            if (! array_key_exists((string) $chave, $catalogo)) {
+                $orfas[] = "{$registro['protocolo']}: '{$chave}'";
+            }
+        }
+    }
+
+    expect($orfas)->toBe([], 'A fila leva CHAVE, e o catálogo do servidor traduz todas elas.
+');
+});
+
+test('lei: a leitura traduz a chave pelo catalogo, e a chave desconhecida aparece CRUA', function () {
+    /*
+     * Teste de FONTE, e último recurso: o gate deste projeto não executa JS, e a
+     * tradução é do front. O que ele protege é a decisão do dono e o seu
+     * corolário — a Retaguarda mostra a redação explícita, e chave que o catálogo
+     * não conhece NÃO desaparece da tela.
+     *
+     * Recomendação que evapora em silêncio é pior que recomendação feia: a chefia
+     * decidiria sem saber que o fiscal pediu alguma coisa, e ninguém teria como
+     * perceber que os dois catálogos (aqui e o do aplicativo do fiscal, na branch
+     * `feature/pwa-prototipo`) andaram separados. Chave crua na tela é justamente
+     * o sintoma visível dessa divergência.
+     */
+    $helper = (string) file_get_contents(resource_path('js/lib/recomendacoes.ts'));
+
+    // O fallback devolve a PRÓPRIA chave — não string vazia, não `null`, e a
+    // recomendação não é filtrada fora da lista.
+    expect($helper)->toMatch('/\?\s*chave\s*:/')
+        ->and($helper)->not->toContain('.filter(');
+
+    // As três leituras da recomendação passam pelo helper, em vez de imprimir a
+    // chave: se uma delas voltar a renderizar o valor cru, TODA recomendação
+    // apareceria como código na tela de quem decide.
+    $semHelper = [];
+
+    foreach ([
+        'js/pages/Retaguarda/Fiscalizacao/RetornoDeCampo.tsx',
+        'js/components/retaguarda/tramite-de-denuncia.tsx',
+        'js/components/retaguarda/painel-de-denuncias.tsx',
+    ] as $arquivo) {
+        if (! str_contains((string) file_get_contents(resource_path($arquivo)), '@/lib/recomendacoes')) {
+            $semHelper[] = $arquivo;
+        }
+    }
+
+    expect($semHelper)->toBe([], 'Toda leitura da recomendação passa pelo catálogo, nunca pela chave crua.
+');
 });
 
 test('lei: a equipe da fiscalizacao avulsa existe na estrutura de areas', function () {

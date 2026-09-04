@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Retaguarda;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Prototipo\RecomendacoesDoFiscal;
 use App\Support\Prototipo\RetornoDeCampoFicticio;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,6 +94,14 @@ class RetornoDeCampoController extends Controller
             // discordariam — e a tela ofereceria um estado que o servidor recusa.
             'estados' => RetornoDeCampoFicticio::estados(),
             'desfechos' => array_values((array) config('prototipo_denuncias.desfechos', [])),
+            // O catálogo de recomendações na redação EXPLÍCITA — o registro traz
+            // a CHAVE (`retorno`, `sgci`…), que é o que o aplicativo do fiscal
+            // grava, e a chefia lê a frase inteira. A pílula curta é do celular;
+            // aqui a frase é lida com atenção por quem decide, e "Sugerir
+            // retorno da equipe" não diz QUANDO voltar. O mapa vem do servidor
+            // porque a tela também precisa da lista inteira: recomendação é
+            // faceta da busca, e a exportação leva a frase, não a chave.
+            'recomendacoesDoFiscal' => RecomendacoesDoFiscal::explicitos(),
             'origens' => array_values((array) config('prototipo_registros_de_campo.origens', [])),
             // Quem responde por cada área — é o que o Coordenador precisa ver ao
             // acompanhar: "é da Área 5" só diz metade; a outra metade é de quem.
