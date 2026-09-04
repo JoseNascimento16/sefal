@@ -103,6 +103,22 @@ function Conclusao({ registro }: { registro: Registro }) {
         irPara(demanda ? 'demandas' : 'registros');
     };
 
+    /* "Voltar" é a tela ANTERIOR, como o dono pediu — com UMA exceção: depois de
+       despachar, a tela anterior é o formulário de registro, que já foi enviado
+       e voltaria em branco. Sair de um registro despachado para um formulário
+       zerado parece que o trabalho se perdeu. Nesse caso o Voltar vai para onde
+       o registro está: a fila, se ele veio de uma denúncia; a lista do turno, se
+       o fiscal achou o ponto andando. */
+    const voltarDaConclusao = () => {
+        if (despachado) {
+            irPara(demanda ? 'demandas' : 'registros');
+
+            return;
+        }
+
+        voltar();
+    };
+
     return (
         <div className="pw-tela">
             <Topo
@@ -110,7 +126,7 @@ function Conclusao({ registro }: { registro: Registro }) {
                 subtitulo={
                     despachado ? `Despachado em ${registro.despachadoBr}` : 'Confira e despache'
                 }
-                aoVoltar={voltar}
+                aoVoltar={voltarDaConclusao}
             />
 
             <div className="pw-corpo">
@@ -355,7 +371,11 @@ function Conclusao({ registro }: { registro: Registro }) {
                             {concluindo ? 'Concluindo…' : 'Concluir registro'}
                         </button>
                     )}
-                    <button type="button" className="pw-btn pw-btn-contorno" onClick={voltar}>
+                    <button
+                        type="button"
+                        className="pw-btn pw-btn-contorno"
+                        onClick={voltarDaConclusao}
+                    >
                         Voltar
                     </button>
                 </div>
