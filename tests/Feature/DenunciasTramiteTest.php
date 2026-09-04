@@ -146,6 +146,114 @@ test('lei: todo passo declara um papel conhecido, uma situacao do catalogo e um 
     expect($problemas)->toBe([], "Papel, situação e desfecho saem de catálogo — não são texto livre.\n");
 });
 
+test('lei: o passo que fecha a vistoria traz a leitura do fiscal, e as recomendacoes saem do catalogo', function () {
+    /*
+     * O desfecho diz COMO a vistoria terminou; as considerações e as recomendações
+     * dizem o que o fiscal está PEDINDO — e é por elas que o Chefe de Setor e o
+     * Coordenador decidem o próximo ato. Passo de desfecho sem nenhuma das duas
+     * chega à fila do Chefe de Setor mudo: ele lê "nada encontrado no local" e não
+     * sabe se é caso de voltar em outro horário ou de encerrar.
+     *
+     * A recomendação sai de CATÁLOGO porque é o que o relatório soma ("quantas
+     * vistorias pediram nova ida") e porque é o contrato com o aplicativo do
+     * fiscal: atalho escrito à mão aqui seria uma recomendação que a Retaguarda
+     * não sabe ler.
+     */
+    $catalogo = (array) config('prototipo_denuncias.recomendacoes_do_fiscal', []);
+    $problemas = [];
+
+    expect($catalogo)->not->toBe([], 'o catálogo de recomendações não pode estar vazio');
+
+    foreach (denunciasComTramiteDeclarado() as $d) {
+        foreach ($d['tramites'] as $passo) {
+            $recomendacoes = array_values((array) ($passo['recomendacoes'] ?? []));
+
+            foreach ($recomendacoes as $recomendacao) {
+                if (! in_array((string) $recomendacao, $catalogo, true)) {
+                    $problemas[] = "DEN-{$d['id']}: recomendação fora do catálogo '{$recomendacao}'";
+                }
+            }
+
+            if (trim((string) ($passo['desfecho'] ?? '')) === '') {
+                continue;
+            }
+
+            $consideracoes = trim((string) ($passo['consideracoes'] ?? ''));
+
+            if ($consideracoes === '' && $recomendacoes === []) {
+                $problemas[] = "DEN-{$d['id']}: o passo '{$passo['o_que']}' declara desfecho e "
+                    .'não diz nada ao Chefe de Setor (sem considerações e sem recomendação)';
+            }
+        }
+    }
+
+    expect($problemas)->toBe([], "Todo desfecho vem com a leitura do fiscal, e a recomendação sai de catálogo.\n");
+});
+
+test('as consideracoes e as recomendacoes chegam a tela dentro do passo do tramite', function () {
+    /*
+     * O contrato com o aplicativo do fiscal são os NOMES `consideracoes` e
+     * `recomendacoes`, e o que se prova aqui é o efeito: eles atravessam o
+     * servidor e chegam ao passo, declarados em TODO passo (nulo e vazio nos que
+     * não os produziram) para a tela não precisar de leitura defensiva.
+     */
+    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'fala-salvador');
+    $vencida = collect($servidas)->firstWhere('id', 30);
+
+    expect($vencida)->not->toBeNull();
+
+    $passos = collect($vencida['tramites']);
+
+    // Todo passo declara as duas chaves — inclusive o de integração.
+    foreach ($passos as $passo) {
+        expect($passo)->toHaveKeys(['consideracoes', 'recomendacoes']);
+    }
+
+    $retorno = $passos->last();
+
+    expect($retorno['desfecho'])->toBe('Retorno com a situação mantida')
+        ->and($retorno['consideracoes'])->toContain('não vai tirar')
+        ->and($retorno['recomendacoes'])->toContain('Encaminhar ao Chefe de Setor para a próxima medida')
+        // O passo de recebimento não produziu leitura de fiscal nenhuma, e diz isso
+        // com valor neutro em vez de chave ausente.
+        ->and($passos->first()['consideracoes'])->toBeNull()
+        ->and($passos->first()['recomendacoes'])->toBe([]);
+});
+
+test('a linha de tramite criada por uma decisao nasce com TODAS as chaves do passo', function () {
+    /*
+     * Reproduz um defeito real: a linha acrescentada por uma decisão da tela era
+     * montada à mão, sem `campos`, `campo`, `documento`, `consideracoes` nem
+     * `recomendacoes`. A leitura do trâmite testa `t.documento !== null` — que é
+     * VERDADEIRO para chave ausente —, então abrir a denúncia recém-triada
+     * derrubava a tela, logo depois de a pessoa decidir algo e sem erro nenhum no
+     * servidor para investigar.
+     */
+    $coordenador = coordenadorDoFluxo();
+
+    $this->actingAs($coordenador)
+        ->post('/retaguarda/denuncias/encaminhar', [
+            'destinos' => [['id' => 1, 'area' => 'Área 1']],
+        ])
+        ->assertRedirect();
+
+    $ultimo = collect(DenunciasFicticias::denuncia(1)['tramites'])->last();
+
+    expect($ultimo['o_que'])->toBe('Triada e encaminhada à área')
+        ->and($ultimo)->toHaveKeys([
+            'em', 'quem', 'o_que', 'detalhe', 'situacao', 'desfecho',
+            'consideracoes', 'recomendacoes', 'campos', 'campo', 'documento',
+        ])
+        ->and($ultimo['documento'])->toBeNull()
+        ->and($ultimo['campo'])->toBeNull()
+        ->and($ultimo['campos'])->toBe([])
+        ->and($ultimo['recomendacoes'])->toBe([])
+        // E o passo novo carrega a situação em que a denúncia entrou: sem ela, o
+        // único passo do percurso sem selo seria justamente o que acabou de
+        // acontecer.
+        ->and($ultimo['situacao'])->toBe('Encaminhada à área');
+});
+
 test('lei: o documento semeado referencia caixas, sancoes e prazos que existem no impresso', function () {
     /*
      * O documento declara CHAVES (`puxada`, `autuacao`, `48h`) e a redação sai de

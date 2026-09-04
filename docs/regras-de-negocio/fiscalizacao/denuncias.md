@@ -363,6 +363,42 @@ denúncia**, no mesmo `props` que a listagem já entrega — então o recorte de
 governa o conteúdo do trâmite pelo mesmo caminho que governa a linha da grade, sem uma segunda
 guarda para alguém esquecer de escrever.
 
+### RN-17b — O passo que fecha a vistoria traz as CONSIDERAÇÕES e as RECOMENDAÇÕES do fiscal
+
+O desfecho (RN-16) diz **como** a vistoria terminou. Ele não diz **o que fazer agora** — e é isso que
+o Chefe de Setor e o Coordenador precisam para dirigir o caso. Quem sabe é quem esteve no ponto.
+
+Então o passo que encerra a ida a campo carrega, ao lado do desfecho, duas coisas que vêm do
+aplicativo do fiscal:
+
+| Campo | O que é |
+|---|---|
+| `consideracoes` | **Texto livre** do fiscal, escrito ao fechar a vistoria. Conta o caso: o que ele viu, o que o ocupante disse, por que o prazo é curto. Pode estar vazio. |
+| `recomendacoes` | Os **atalhos** que ele assinalou, de lista fechada (`recomendacoes_do_fiscal`). Dizem o que ele está pedindo: voltar no vencimento, reprogramar para o horário do ponto, encaminhar ao Chefe de Setor para a próxima medida, conferir o cadastro, nada mais a fazer. |
+
+- **As duas juntas, sempre.** O atalho é somável pelo relatório ("quantas vistorias pediram nova
+  ida") e se lê de relance numa fila de trinta linhas; o texto conta o caso. Uma sem a outra perde
+  metade: a recomendação sozinha não explica por quê, e o texto sozinho não é somável nem varrível
+  com o olho.
+- **Aparecem em DESTAQUE, logo abaixo do desfecho** — não como duas linhas no meio de "o que ficou
+  decidido neste passo". Enterradas na ficha, seriam lidas depois da decisão que deveriam orientar. E
+  o passo ganha **selo próprio na linha do tempo** ("2 recomendações"), que é o que faz alguém abrir
+  aquele passo em vez dos outros seis.
+- **Todo passo declara as duas chaves**, com valor neutro (`null` e `[]`) nos que não as produziram —
+  o mesmo motivo dos outros campos do passo: chave ausente em metade deles viraria leitura defensiva
+  espalhada pela tela.
+- **A recomendação sai de catálogo**, e o catálogo é o **contrato** com o aplicativo do fiscal:
+  atalho novo entra nos dois lados no mesmo passo, senão a Retaguarda recebe uma recomendação que
+  não sabe ler. Os nomes dos dois campos são parte do mesmo contrato — a mesma informação com dois
+  nomes é o começo da divergência.
+- **Fonte única:** o que virou `recomendacoes` **saiu** das linhas de ficha que diziam a mesma coisa
+  ("Recomendação da equipe", "Próxima medida sugerida pela equipe", "Encaminhamento"). Deixar as duas
+  formas faria a mesma recomendação ter dois donos, e um dia elas divergiriam.
+
+**Onde mais isso aparece:** a tela [Retorno de Campo](retorno-de-campo.md) é a **fila do Chefe de
+Setor** — todo registro de fiscalização concluído da área dele, com a recomendação em coluna própria.
+Ela **deriva** deste mesmo passo do trâmite: a vistoria é descrita num lugar só.
+
 ### RN-18 — A Retaguarda LÊ o documento de campo; ela não o emite
 
 Notificação Preliminar e Auto de Apreensão aparecem aqui **na forma do papel** — órgão no alto,

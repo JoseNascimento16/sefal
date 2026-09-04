@@ -60,6 +60,18 @@
 |    aqui daria dois donos ao mesmo cadastro, e um fiscal removido da equipe
 |    continuaria assinando vistoria.
 |
+| ── O passo que FECHA a vistoria traz a leitura do fiscal ───────────────────
+|
+| Além do `desfecho`, o passo que encerra a ida a campo declara `consideracoes`
+| (texto livre do fiscal) e `recomendacoes` (os atalhos que ele assinalou, do
+| catálogo `recomendacoes_do_fiscal`). É por essas duas coisas que o Chefe de
+| Setor e o Coordenador entendem o que o fiscal está PEDINDO e sabem para onde
+| dirigir o caso — o desfecho diz como a vistoria terminou, e não o que fazer
+| agora.
+|
+| Os dois nomes são o CONTRATO com o aplicativo do fiscal, que é quem grava: a
+| mesma informação com dois nomes é o começo da divergência.
+|
 | ⚠️ Quem declara `tramites` declara TAMBÉM a `situacao`, e as duas têm de
 | combinar: a `situacao` da denúncia é a do ÚLTIMO passo. Isso é conferido por
 | teste (`tests/Feature/DenunciasTramiteTest.php`) em vez de confiado à
@@ -176,6 +188,38 @@ return [
         'Regularizado após notificação',
         'Retorno com a situação mantida',
         'Auto de Apreensão lavrado',
+    ],
+
+    /*
+     * As RECOMENDAÇÕES que o fiscal assinala ao fechar a vistoria — os atalhos
+     * que o aplicativo dele oferece.
+     *
+     * Lista fechada, e por dois motivos. O primeiro é a leitura: é por elas que o
+     * Chefe de Setor entende o que o fiscal está pedindo, e ler oito frases
+     * diferentes para a mesma coisa ("volta lá no fim de semana", "reprogramar",
+     * "ir sábado") faria a fila de retorno virar redação. O segundo é a conta: o
+     * relatório soma "quantas vistorias pediram nova ida", e isso não se responde
+     * com texto livre.
+     *
+     * ⚠️ O texto livre continua existindo AO LADO, em `consideracoes`: o atalho
+     * diz o QUE fazer, e a consideração conta o caso. Um sem o outro perde metade
+     * — a recomendação sozinha não explica por quê, e o texto sozinho não é
+     * somável nem varrível com o olho numa fila de trinta linhas.
+     *
+     * ⚠️ Esta lista é a MESMA que o aplicativo do fiscal oferece. Ela é o contrato
+     * entre os dois lados: atalho novo entra aqui e lá no mesmo passo, senão a
+     * Retaguarda recebe uma recomendação que ela não sabe ler.
+     */
+    'recomendacoes_do_fiscal' => [
+        'Voltar ao ponto no vencimento do prazo',
+        'Reprogramar a vistoria para o dia e o horário do ponto',
+        'Incluir o ponto na próxima operação da área',
+        'Manter o ponto na passagem semanal da equipe',
+        'Encaminhar ao Chefe de Setor para a próxima medida',
+        'Conferir o cadastro do ambulante na Retaguarda',
+        'Encaminhar ao SEGUB para a retirada dos bens',
+        'Encaminhar a outro órgão — fora da competência da SEFAL',
+        'Nada mais a fazer no ponto',
     ],
 
     /*
@@ -765,6 +809,13 @@ return [
                     'detalhe' => 'Volumes recolhidos e entregues à guarda de bens, com o auto de apreensão anexado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Auto de Apreensão lavrado',
+                    'consideracoes' => 'Não havia ocupante nem responsável no local, então a via do auto não foi '
+                        .'entregue a ninguém. A estrutura estava fechada há meses e deteriorada, sem '
+                        .'sinal de atividade recente — os bens foram recolhidos e entregues à guarda.',
+                    'recomendacoes' => [
+                        'Conferir o cadastro do ambulante na Retaguarda',
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Volumes entregues', 'valor' => '9'],
                         ['rotulo' => 'Guia de recolhimento', 'valor' => 'SEGUB 2026/0417'],
@@ -1321,6 +1372,12 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'A permissionária tem ponto autorizado a oito metros dali e havia deslocado a '
+                        .'banca por causa de uma obra na calçada. Recuou na hora, sem resistência. O '
+                        .'risco era a travessia, e ela ficou livre.',
+                    'recomendacoes' => [
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência do ocupante', 'valor' => 'Recuou a banca para o ponto autorizado, liberando a travessia'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
@@ -1524,6 +1581,12 @@ return [
                         .'para retirar a puxada e recuar as mesas.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'A via foi entregue e assinada, com as duas testemunhas. O permissionário alegou '
+                        .'que a puxada está ali há anos e não a retirou na hora, então a notificação só '
+                        .'vale se alguém voltar no vencimento — sem retorno, ela fica no papel.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194903',
@@ -1632,6 +1695,12 @@ return [
                     'detalhe' => 'Notificação lavrada com prazo de 48 horas para retirar as mesas e apresentar o alvará.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'O notificado recusou-se a assinar e disse que não vai retirar as mesas. A recusa '
+                        .'ficou registrada com as duas testemunhas. Ponto de grande movimento à noite: o '
+                        .'retorno em 48 horas é o que instrui a medida seguinte.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194902',
@@ -1663,6 +1732,14 @@ return [
                         .'para a próxima medida.',
                     'situacao' => 'Retorno vencido',
                     'desfecho' => 'Retorno com a situação mantida',
+                    'consideracoes' => 'Segunda ida ao ponto, depois do vencimento: as mesas continuam no mesmo número e o '
+                        .'alvará não foi apresentado. O ocupante repetiu que "não vai tirar". A '
+                        .'orientação já foi tentada duas vezes, e a medida que a equipe sugere é a '
+                        .'apreensão das mesas e cadeiras, com apoio da guarda.',
+                    'recomendacoes' => [
+                        'Encaminhar ao Chefe de Setor para a próxima medida',
+                        'Incluir o ponto na próxima operação da área',
+                    ],
                     'campo' => [
                         'encontrado' => 'Ponto na mesma situação, com o ocupante presente',
                         'relato' => 'Retorno após o vencimento das 48 horas. As mesas continuam na calçada, '
@@ -1675,7 +1752,6 @@ return [
                     ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194902'],
-                        ['rotulo' => 'Próxima medida sugerida pela equipe', 'valor' => 'Apreensão das mesas e cadeiras, com apoio da guarda'],
                     ],
                 ],
             ],
@@ -1761,9 +1837,15 @@ return [
                         .'de semana, para nova ida no dia e horário indicados.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Nada encontrado no local',
+                    'consideracoes' => 'A ida foi em dia útil, e a vizinhança informou que o ponto só monta em fim de '
+                        .'semana. Não houve constatação, então nada foi lavrado — o caso não está '
+                        .'resolvido, só não foi encontrado. Sábado à noite, com a equipe Noturna, é a '
+                        .'hora de achar.',
+                    'recomendacoes' => [
+                        'Reprogramar a vistoria para o dia e o horário do ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — não houve constatação'],
-                        ['rotulo' => 'Recomendação da equipe', 'valor' => 'Reprogramar para sábado à noite, com a equipe Noturna'],
                     ],
                 ],
             ],
@@ -1853,6 +1935,12 @@ return [
                     'detalhe' => 'Notificação lavrada com prazo de 72 horas para retirar as mesas e apresentar o alvará.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'Via entregue e assinada com as duas testemunhas. O ocupante mostrou o protocolo do '
+                        .'alvará de mesas e cadeiras, que está em análise; o prazo de 72 horas serve para '
+                        .'ele retirar as mesas enquanto isso.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194901',
@@ -1896,6 +1984,12 @@ return [
                     'detalhe' => 'Notificação cumprida no prazo de retorno. Nenhuma penalidade aplicada.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado após notificação',
+                    'consideracoes' => 'Retorno dentro do prazo: as mesas saíram da calçada e o protocolo do alvará foi '
+                        .'apresentado. Nada a autuar. Fica pendente o resultado da análise do alvará, que '
+                        .'é de outro setor e não depende da fiscalização.',
+                    'recomendacoes' => [
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194901'],
                         ['rotulo' => 'Penalidade aplicada', 'valor' => 'Nenhuma — a notificação foi cumprida'],
@@ -1992,10 +2086,16 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'O ambulante não tem cadastro e disse que trabalha ali há pouco tempo. Deslocou o '
+                        .'carrinho na hora e liberou o rebaixo da garagem. Endereço e horário anotados '
+                        .'para nova ronda; foi orientado a procurar a SEMOP.',
+                    'recomendacoes' => [
+                        'Conferir o cadastro do ambulante na Retaguarda',
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência do ambulante', 'valor' => 'Deslocou o carrinho para fora do rebaixo, liberando a garagem'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
-                        ['rotulo' => 'Encaminhamento', 'valor' => 'Orientado a procurar a SEMOP para cadastro; endereço e horário anotados para nova ronda'],
                     ],
                 ],
             ],
@@ -2116,6 +2216,12 @@ return [
                         .'para recolher a mercadoria, regularizar a higiene e desativar a venda de bebida.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'Três motivos assinalados, e o prazo curto é proposital: manipulação de alimento e '
+                        .'venda de bebida em frente ao terminal marítimo, com muito movimento. Via '
+                        .'entregue e assinada.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194904',
@@ -2185,6 +2291,11 @@ return [
                     'detalhe' => 'Notificação cumprida dentro do prazo. Nenhuma penalidade aplicada.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado após notificação',
+                    'consideracoes' => 'Os três motivos notificados foram atendidos e a chefia conferiu o registro do '
+                        .'retorno antes do encerramento. Nada a autuar.',
+                    'recomendacoes' => [
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194904'],
                         ['rotulo' => 'Penalidade aplicada', 'valor' => 'Nenhuma — a notificação foi cumprida no prazo'],
@@ -2296,6 +2407,12 @@ return [
                         .'cadastro, quitar o DAM do exercício e a cota de despesa.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'O ponto fica em frente à escola municipal e a fila avança sobre a pista no horário '
+                        .'da saída. A pendência é de cadastro e de pagamento, não de ocupação, então o '
+                        .'prazo é de 10 dias para ele comparecer ao setor. Uma testemunha não foi colhida.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194905',
@@ -2415,10 +2532,16 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'Ambulante sem cadastro, em corredor de grande circulação. Recolheu a lona e a '
+                        .'mercadoria na hora, liberando a calçada por inteiro. Orientado a procurar a '
+                        .'SEMOP; o trecho fica na passagem semanal da equipe.',
+                    'recomendacoes' => [
+                        'Conferir o cadastro do ambulante na Retaguarda',
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência do ambulante', 'valor' => 'Recolheu a lona e a mercadoria, liberando a calçada por inteiro'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
-                        ['rotulo' => 'Encaminhamento', 'valor' => 'Orientado a procurar a SEMOP para cadastro; o trecho fica na passagem semanal da equipe'],
                     ],
                 ],
             ],
@@ -2510,10 +2633,15 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'A permissionária havia deslocado a barraca para o abrigo por causa da chuva e a '
+                        .'remontou no ponto autorizado na presença da equipe, liberando os bancos. '
+                        .'Orientada a comunicar a SEMOP antes de deslocar o ponto, mesmo por chuva.',
+                    'recomendacoes' => [
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência da ocupante', 'valor' => 'Desmontou a barraca do abrigo e a remontou no ponto autorizado, liberando os bancos'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
-                        ['rotulo' => 'Orientação registrada', 'valor' => 'Comunicar a SEMOP antes de deslocar o ponto, mesmo por causa de chuva'],
                     ],
                 ],
             ],
@@ -2614,10 +2742,15 @@ return [
                         .'reclamados, e o ponto não existe mais.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Nada encontrado no local',
+                    'consideracoes' => 'A ida foi no dia e no horário reclamados, e a vizinhança confirmou que o ponto '
+                        .'deixou de montar. Não é caso de nova ida: a esquina fica na ronda noturna da '
+                        .'orla por um mês, e só volta a ser vistoriada se houver nova denúncia.',
+                    'recomendacoes' => [
+                        'Manter o ponto na passagem semanal da equipe',
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — não houve constatação'],
-                        ['rotulo' => 'Por que não é caso de nova ida', 'valor' => 'A vistoria foi no dia e no horário indicados pela denunciante, e a vizinhança confirmou que o ponto deixou de montar'],
-                        ['rotulo' => 'Recomendação da equipe', 'valor' => 'Manter a esquina na ronda noturna da orla por um mês, sem nova denúncia'],
                     ],
                 ],
             ],

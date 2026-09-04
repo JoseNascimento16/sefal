@@ -179,7 +179,7 @@ class DenunciasFicticias
                     'motivo' => null,
                     'justificativa' => null,
                     'destino' => null,
-                    'tramites' => [...$d['tramites'], self::tramite('Triada e encaminhada à área', $detalhe)],
+                    'tramites' => [...$d['tramites'], self::tramite('Triada e encaminhada à área', $detalhe, 'Encaminhada à área')],
                 ];
             });
 
@@ -226,6 +226,7 @@ class DenunciasFicticias
                     self::tramite(
                         $arquivar ? 'Arquivada na triagem' : 'Devolvida ao canal de origem',
                         $motivo.' — '.$justificativa,
+                        $situacao,
                     ),
                 ],
             ]);
@@ -271,7 +272,7 @@ class DenunciasFicticias
                     // saídas do Chefe de Setor são alternativas, não camadas.
                     'operacao' => null,
                     'justificativa_equipe' => $justificativa,
-                    'tramites' => [...$d['tramites'], self::tramite('Direcionada à equipe', $detalhe)],
+                    'tramites' => [...$d['tramites'], self::tramite('Direcionada à equipe', $detalhe, 'Direcionada à equipe')],
                 ];
             });
 
@@ -321,6 +322,7 @@ class DenunciasFicticias
                     self::tramite(
                         'Incluída em operação',
                         "Anexada à {$operacao}".($equipe === null ? '.' : ", executada pela Equipe {$equipe}."),
+                        'Em operação',
                     ),
                 ],
             ]);
@@ -609,6 +611,15 @@ class DenunciasFicticias
                 'detalhe' => (string) ($passo['detalhe'] ?? ($integracao ? self::detalheDaIntegracao($bruta, $nomeDoCanal) : '')),
                 'situacao' => (string) ($passo['situacao'] ?? ($integracao ? 'Recebida' : '')),
                 'desfecho' => isset($passo['desfecho']) ? (string) $passo['desfecho'] : null,
+                // O que o fiscal escreveu e o que ele recomendou ao fechar a
+                // vistoria. Os dois nomes são o CONTRATO com o aplicativo dele
+                // (`consideracoes` texto livre, `recomendacoes` lista de
+                // atalhos): a mesma informação com dois nomes é o começo da
+                // divergência.
+                'consideracoes' => isset($passo['consideracoes']) && trim((string) $passo['consideracoes']) !== ''
+                    ? trim((string) $passo['consideracoes'])
+                    : null,
+                'recomendacoes' => array_values(array_map('strval', (array) ($passo['recomendacoes'] ?? []))),
                 'campos' => array_values((array) ($passo['campos'] ?? [])),
                 'campo' => isset($passo['campo']) ? self::campoResolvido((array) $passo['campo']) : null,
                 'documento' => isset($passo['documento'])
@@ -635,6 +646,8 @@ class DenunciasFicticias
         return [
             'situacao' => '',
             'desfecho' => null,
+            'consideracoes' => null,
+            'recomendacoes' => [],
             'campos' => [],
             'campo' => null,
             'documento' => null,
@@ -969,11 +982,19 @@ class DenunciasFicticias
     /**
      * Uma linha de trâmite feita AGORA, assinada por quem está usando o sistema.
      *
-     * @return array<string, string>
+     * ⚠️ Passa por {@see passo()}, e isso não é estilo: a linha vai para a SESSÃO
+     * e volta à tela sem passar mais por nenhuma normalização. Montada à mão, ela
+     * chegava ao front sem `campos`, `campo` nem `documento` — e a leitura do
+     * trâmite testa `t.documento !== null`, que é VERDADEIRO para chave ausente.
+     * O passo recém-criado derrubava a tela ao ser aberto, logo depois de a pessoa
+     * decidir algo: o pior momento possível, e sem erro nenhum no servidor para
+     * investigar.
+     *
+     * @return array<string, mixed>
      */
-    private static function tramite(string $oQue, string $detalhe): array
+    private static function tramite(string $oQue, string $detalhe, string $situacao): array
     {
-        return [
+        return self::passo([
             'em' => now()->format('Y-m-d H:i'),
             // Nullsafe: a tela é autenticada, mas um trâmite montado fora da
             // requisição (comando, teste) não tem quem assinar — e um erro de
@@ -981,6 +1002,11 @@ class DenunciasFicticias
             'quem' => (string) (Auth::user()?->name ?? 'Coordenação'),
             'o_que' => $oQue,
             'detalhe' => $detalhe,
-        ];
+            // A situação em que a denúncia ENTROU com este passo. Ela é a mesma
+            // que a decisão acabou de gravar no registro, e vem junto porque é
+            // o selo que a leitura do trâmite mostra ao lado do passo — sem
+            // ela, o passo recém-criado é o único do percurso sem selo.
+            'situacao' => $situacao,
+        ]);
     }
 }

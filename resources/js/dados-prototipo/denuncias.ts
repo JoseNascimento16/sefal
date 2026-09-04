@@ -105,6 +105,23 @@ export interface TramiteDenuncia {
     situacao: string;
     /** COMO a vistoria terminou, quando foi este passo que a terminou. */
     desfecho: string | null;
+    /**
+     * As CONSIDERAÇÕES FINAIS do fiscal — o texto que ele escreveu ao fechar a
+     * vistoria. `null` quando ele não escreveu nada (é campo livre e opcional no
+     * aplicativo).
+     *
+     * ⚠️ Este nome é o CONTRATO com o aplicativo do fiscal, e é ele que grava.
+     * A mesma informação com dois nomes é o começo da divergência.
+     */
+    consideracoes: string | null;
+    /**
+     * As RECOMENDAÇÕES que ele assinalou — os atalhos do catálogo do servidor
+     * (`recomendacoes_do_fiscal`). Vazio quando ele não recomendou nada.
+     *
+     * É por elas que o Chefe de Setor entende o que o fiscal está PEDINDO, e é
+     * por isso que a leitura as mostra em destaque, e não no meio da ficha.
+     */
+    recomendacoes: string[];
     campos: CampoLido[];
     campo: RegistroDeCampo | null;
     documento: DocumentoDeCampo | null;
