@@ -99,6 +99,14 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
            faixa cinza no rodapé — que foi exatamente o que apareceu no celular. */
         const ajuste = window.setTimeout(() => mapa.invalidateSize(), 60);
 
+        /* Tocar a cidade fora de um pino fecha a ficha. É o gesto que todo mapa
+           tem, e sem ele o cartão fica na frente enquanto o fiscal arrasta o
+           mapa para ver a vizinhança — justamente o que ele abriu o mapa para
+           fazer. O clique no PINO não passa por aqui (o Leaflet não propaga o
+           clique do marcador para o mapa), então abrir um ponto direto de outro
+           continua funcionando. */
+        mapa.on('click', () => setSelecionado(null));
+
         for (const ambulante of AMBULANTES) {
             const vencido = ambulante.retornoHaDias !== null;
             const tipo = vencido ? 'retorno' : ambulante.situacao;
@@ -365,9 +373,34 @@ function CartaoAmbulante({
 
 function Gaveta({ ambulante, aoFechar }: { ambulante: Ambulante; aoFechar: () => void }) {
     const vencido = ambulante.retornoHaDias !== null;
+    const cartao = useRef<HTMLDivElement>(null);
+
+    /* Abriu: o foco vai para o cartão, e `Esc` fecha.
+       Sem isto o cartão é alcançável só pelo toque — quem navega por teclado
+       (ou por leitor de tela no tablet) continuaria com o foco na lista atrás,
+       lendo o que a ficha cobriu. */
+    useEffect(() => {
+        cartao.current?.focus();
+
+        const aoTeclar = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                aoFechar();
+            }
+        };
+
+        window.addEventListener('keydown', aoTeclar);
+
+        return () => window.removeEventListener('keydown', aoTeclar);
+    }, [aoFechar]);
 
     return (
-        <div className="pw-gaveta" role="dialog" aria-label={`Ponto de ${ambulante.apelido}`}>
+        <div
+            ref={cartao}
+            tabIndex={-1}
+            className="pw-gaveta"
+            role="dialog"
+            aria-label={`Ponto de ${ambulante.apelido}`}
+        >
             <div className="pw-gaveta-alca" />
 
             <div className="pw-linha-espalha" style={{ marginBottom: 10 }}>
