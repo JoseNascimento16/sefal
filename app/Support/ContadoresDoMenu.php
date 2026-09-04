@@ -54,7 +54,7 @@ class ContadoresDoMenu
                 'valor' => fn (): int => Ambulante::query()->count(),
             ],
 
-            // A FILA de conferência: cadastro que nasceu em rua e espera o gestor
+            // A FILA de conferência: cadastro que nasceu em rua e espera o Chefe de Setor
             // validar. É alerta porque cobra ação — e é a razão de a quarentena
             // existir. Zero não vira selo.
             'ambulantes-em-quarentena' => [

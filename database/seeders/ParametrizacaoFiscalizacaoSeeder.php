@@ -19,11 +19,11 @@ use Illuminate\Database\Seeder;
  * que escolher, sem nada em tela dizendo que falta parametrizar.
  *
  * Idempotente e NÃO destrutivo (`firstOrCreate` pela chave de negócio): rodar de
- * novo cria só o que falta e nunca desfaz o que o gestor ajustou — inativação,
+ * novo cria só o que falta e nunca desfaz o que a gestão ajustou — inativação,
  * descrição reescrita, sigla corrigida. É o que permite semear de novo a cada
  * deploy sem medo.
  *
- * Os valores vieram da spec de design e do vocabulário da SEMOP; o gestor
+ * Os valores vieram da spec de design e do vocabulário da SEMOP; a gestão
  * ajusta pela tela de Parametrização, que é a dona da lista daqui em diante.
  */
 class ParametrizacaoFiscalizacaoSeeder extends Seeder

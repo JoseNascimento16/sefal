@@ -12,7 +12,7 @@
 |
 | ── O que este módulo NÃO é ─────────────────────────────────────────────────
 |
-| Não é a Caixa de Entrada. Lá o administrativo DIGITA o papel que chegou ao
+| Não é a Caixa de Entrada. Lá o coordenador DIGITA o papel que chegou ao
 | balcão; aqui a denúncia chega SOZINHA, por integração com a ouvidoria, e
 | ninguém a cadastra — por isso as telas não têm botão de incluir. A distinção
 | é deliberada e visível: cada denúncia carrega o carimbo de recebimento
@@ -55,10 +55,22 @@
 |    fotos, o documento lavrado com número, motivos e prazo. Esses passos são
 |    escritos um a um, com `ha_horas` RELATIVO ao recebimento (mesma razão das
 |    datas relativas: data fixa envelhece) e `quem` em forma de PAPEL
-|    (`fiscal`, `gestor`, `encarregado`…), resolvido contra
+|    (`fiscal`, `chefe-de-setor`, `encarregado`…), resolvido contra
 |    `config/prototipo_estrutura.php` na hora de servir. Nome de pessoa escrito
 |    aqui daria dois donos ao mesmo cadastro, e um fiscal removido da equipe
 |    continuaria assinando vistoria.
+|
+| ── O passo que FECHA a vistoria traz a leitura do fiscal ───────────────────
+|
+| Além do `desfecho`, o passo que encerra a ida a campo declara `consideracoes`
+| (texto livre do fiscal) e `recomendacoes` (os atalhos que ele assinalou, do
+| catálogo `recomendacoes_do_fiscal`). É por essas duas coisas que o Chefe de
+| Setor e o Coordenador entendem o que o fiscal está PEDINDO e sabem para onde
+| dirigir o caso — o desfecho diz como a vistoria terminou, e não o que fazer
+| agora.
+|
+| Os dois nomes são o CONTRATO com o aplicativo do fiscal, que é quem grava: a
+| mesma informação com dois nomes é o começo da divergência.
 |
 | ⚠️ Quem declara `tramites` declara TAMBÉM a `situacao`, e as duas têm de
 | combinar: a `situacao` da denúncia é a do ÚLTIMO passo. Isso é conferido por
@@ -131,16 +143,16 @@ return [
      * As situações, na ordem do fluxo. Duas etapas com dois donos, e depois delas
      * a vida da denúncia EM CAMPO:
      *
-     *   Recebida            → chegou por integração e espera a TRIAGEM (administrativo);
-     *   Encaminhada à área  → triada; espera o DIRECIONAMENTO do gestor daquela área;
-     *   Direcionada à equipe| Em operação → o gestor decidiu como o trabalho acontece;
+     *   Recebida            → chegou por integração e espera a TRIAGEM (coordenador);
+     *   Encaminhada à área  → triada; espera o DIRECIONAMENTO do Chefe de Setor da área;
+     *   Direcionada à equipe| Em operação → a chefia decidiu como o trabalho acontece;
      *   Em campo            → a equipe recebeu no aplicativo e foi ao local;
      *   Aguardando regularização → foi lavrada Notificação Preliminar e o PRAZO dela
      *                         está correndo: a bola está com o notificado, não com o
      *                         SEFAL. Sem este estado, uma notificação em prazo ficaria
      *                         indistinguível de vistoria que ninguém fez;
      *   Retorno vencido     → o prazo da notificação venceu e o retorno encontrou o
-     *                         ponto na MESMA situação: a denúncia volta ao gestor para
+     *                         ponto na MESMA situação: a denúncia volta ao Chefe de Setor para
      *                         a próxima medida (apreensão). É o estado que cobra
      *                         decisão de gente, e por isso ele é vermelho na tela;
      *   Concluída           → a vistoria teve desfecho e a denúncia se encerrou;
@@ -179,6 +191,38 @@ return [
     ],
 
     /*
+     * As RECOMENDAÇÕES que o fiscal assinala ao fechar a vistoria — os atalhos
+     * que o aplicativo dele oferece.
+     *
+     * Lista fechada, e por dois motivos. O primeiro é a leitura: é por elas que o
+     * Chefe de Setor entende o que o fiscal está pedindo, e ler oito frases
+     * diferentes para a mesma coisa ("volta lá no fim de semana", "reprogramar",
+     * "ir sábado") faria a fila de retorno virar redação. O segundo é a conta: o
+     * relatório soma "quantas vistorias pediram nova ida", e isso não se responde
+     * com texto livre.
+     *
+     * ⚠️ O texto livre continua existindo AO LADO, em `consideracoes`: o atalho
+     * diz o QUE fazer, e a consideração conta o caso. Um sem o outro perde metade
+     * — a recomendação sozinha não explica por quê, e o texto sozinho não é
+     * somável nem varrível com o olho numa fila de trinta linhas.
+     *
+     * ⚠️ Esta lista é a MESMA que o aplicativo do fiscal oferece. Ela é o contrato
+     * entre os dois lados: atalho novo entra aqui e lá no mesmo passo, senão a
+     * Retaguarda recebe uma recomendação que ela não sabe ler.
+     */
+    'recomendacoes_do_fiscal' => [
+        'Voltar ao ponto no vencimento do prazo',
+        'Reprogramar a vistoria para o dia e o horário do ponto',
+        'Incluir o ponto na próxima operação da área',
+        'Manter o ponto na passagem semanal da equipe',
+        'Encaminhar ao Chefe de Setor para a próxima medida',
+        'Conferir o cadastro do ambulante na Retaguarda',
+        'Encaminhar ao SEGUB para a retirada dos bens',
+        'Encaminhar a outro órgão — fora da competência da SEFAL',
+        'Nada mais a fazer no ponto',
+    ],
+
+    /*
      * Por que uma denúncia é devolvida ao canal ou arquivada na triagem. A
      * escolha é de lista para o relatório poder somar por motivo; o texto livre
      * continua obrigatório ao lado, porque o motivo genérico não conta o caso.
@@ -197,7 +241,7 @@ return [
     ],
 
     /*
-     * As operações abertas a que o gestor pode ANEXAR uma denúncia, em vez de
+     * As operações abertas a que o Chefe de Setor pode ANEXAR uma denúncia, em vez de
      * direcionar avulso à equipe. É a segunda saída do direcionamento: quando já
      * existe trabalho planejado naquela região, a denúncia entra nele em vez de
      * gerar uma ida isolada.
@@ -396,7 +440,7 @@ return [
             'bairro' => 'Mussurunga',
             'endereco_impreciso' => false,
             'anexos' => ['foto-canteiro-central.jpg'],
-            // Já encaminhada à Área 5, que é a do `gestor1`: cada gestor com conta
+            // Já encaminhada à Área 5, que é a do `gestor1`: cada chefe com conta
             // de demonstração precisa de fila NOS DOIS canais, senão a etapa de
             // direcionamento abre vazia e não há o que demonstrar. Mussurunga é
             // bairro compartilhado (Área 5 e Área 6), então esta linha também
@@ -496,10 +540,10 @@ return [
             'endereco_impreciso' => false,
             'anexos' => ['foto-manipulacao.jpg', 'video-descarte.mp4'],
             /*
-             * ── O DIRECIONAMENTO DO GESTOR, PASSO A PASSO ─────────────────────
+             * ── O DIRECIONAMENTO DO CHEFE DE SETOR, PASSO A PASSO ────────────
              *
              * A situação `Direcionada à equipe` deriva um trâmite de três linhas
-             * sem conteúdo próprio, e é justamente no passo do gestor que está a
+             * sem conteúdo próprio, e é justamente no passo da chefia que está a
              * decisão que interessa: por que ESTA equipe, e por que NÃO uma
              * operação. Escrito, o passo mostra a escolha; derivado, ele mostrava
              * só a frase "Direcionada à Equipe C2 para vistoria".
@@ -514,19 +558,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Vasco da Gama'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Manipulação de alimento e descarte de óleo em boca de lobo: risco sanitário, priorizar.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Manipulação de alimento e descarte de óleo em boca de lobo: risco sanitário, priorizar.'],
                     ],
                 ],
                 [
                     'ha_horas' => 9,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -603,19 +647,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Nazaré'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Rampa de acessibilidade bloqueada: cadeirante não sobe a calçada, priorizar.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Rampa de acessibilidade bloqueada: cadeirante não sobe a calçada, priorizar.'],
                     ],
                 ],
                 [
                     'ha_horas' => 9,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -684,19 +728,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Rio Vermelho'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Estrutura fechada há meses; verificar se há permissionário vinculado.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Estrutura fechada há meses; verificar se há permissionário vinculado.'],
                     ],
                 ],
                 [
                     'ha_horas' => 9,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -765,6 +809,13 @@ return [
                     'detalhe' => 'Volumes recolhidos e entregues à guarda de bens, com o auto de apreensão anexado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Auto de Apreensão lavrado',
+                    'consideracoes' => 'Não havia ocupante nem responsável no local, então a via do auto não foi '
+                        .'entregue a ninguém. A estrutura estava fechada há meses e deteriorada, sem '
+                        .'sinal de atividade recente — os bens foram recolhidos e entregues à guarda.',
+                    'recomendacoes' => [
+                        'Conferir o cadastro do ambulante na Retaguarda',
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Volumes entregues', 'valor' => '9'],
                         ['rotulo' => 'Guia de recolhimento', 'valor' => 'SEGUB 2026/0417'],
@@ -820,7 +871,7 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Devolvida ao canal de origem',
                     'detalhe' => 'A triagem recusou a denúncia: o fato não é de fiscalização de ambulante. '
                         .'O percurso termina aqui, sem ida a campo.',
@@ -1020,7 +1071,7 @@ return [
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
             // Fila do `gestor3` (Área 3) neste canal, e com o PRAZO JÁ VENCIDO: o
-            // gestor precisa ver na própria lista dele que há coisa atrasada.
+            // Chefe de Setor precisa ver na própria lista dele que há coisa atrasada.
             'situacao' => 'Encaminhada à área',
             'area' => 'Área 3',
         ],
@@ -1099,10 +1150,10 @@ return [
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
             /*
-             * ── A OUTRA SAÍDA DO GESTOR, ESCRITA ──────────────────────────────
+             * ── A OUTRA SAÍDA DO CHEFE DE SETOR, ESCRITA ──────────────────────
              *
              * Anexar a uma operação já planejada em vez de mandar uma ida
-             * isolada: o passo do gestor traz a operação com o que ela é (região,
+             * isolada: o passo da chefia traz a operação com o que ela é (região,
              * período e foco, tirados do catálogo de operações) e o porquê da
              * escolha. É também o caso do bairro COMPARTILHADO na triagem —
              * Comércio pertence à Área 1 e à Itinerante, e as duas respostas
@@ -1116,20 +1167,20 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Comércio — bairro compartilhado com a Itinerante'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
                         ['rotulo' => 'Por que a Área 1, e não a Itinerante', 'valor' => 'A ocupação é de um trecho fechado para evento, e não do corredor de grande circulação que a equipe itinerante percorre.'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'O cidadão pede fiscalização no fim de semana do evento, quando a rua é tomada.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'O cidadão pede fiscalização no fim de semana do evento, quando a rua é tomada.'],
                     ],
                 ],
                 [
                     'ha_horas' => 11,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Incluída em operação',
                     'detalhe' => 'Anexada à Rotina Centro, executada pela Equipe C2.',
                     'situacao' => 'Em operação',
@@ -1212,7 +1263,7 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Arquivada na triagem',
                     'detalhe' => 'A triagem arquivou a denúncia por falta de endereço. O percurso termina '
                         .'aqui, sem ida a campo.',
@@ -1263,9 +1314,9 @@ return [
              * trâmite tem de dizer isso com todas as letras, senão quem ler
              * depois vai achar que a vistoria não terminou.
              *
-             * Área 4 não tem conta de gestor na demonstração de propósito: é o
-             * caso que o administrativo e o administrador enxergam e nenhum dos
-             * três gestores com conta vê — o recorte por área em funcionamento.
+             * Área 4 não tem conta de Chefe de Setor na demonstração de propósito:
+             * é o caso que o coordenador e o administrador enxergam e nenhum dos
+             * três chefes com conta vê — o recorte por área em funcionamento.
              */
             'situacao' => 'Concluída',
             'area' => 'Área 4',
@@ -1274,19 +1325,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 4 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 4 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'São Caetano'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 4 — Liberdade'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Faixa de pedestre ocupada: risco a quem atravessa, priorizar.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Faixa de pedestre ocupada: risco a quem atravessa, priorizar.'],
                     ],
                 ],
                 [
                     'ha_horas' => 10,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe B2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -1321,6 +1372,12 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'A permissionária tem ponto autorizado a oito metros dali e havia deslocado a '
+                        .'banca por causa de uma obra na calçada. Recuou na hora, sem resistência. O '
+                        .'risco era a travessia, e ela ficou livre.',
+                    'recomendacoes' => [
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência do ocupante', 'valor' => 'Recuou a banca para o ponto autorizado, liberando a travessia'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
@@ -1365,9 +1422,9 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Itinerante para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Itinerante para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Avenida Sete de Setembro — corredor, e não bloco de bairros'],
@@ -1377,7 +1434,7 @@ return [
                 ],
                 [
                     'ha_horas' => 10,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe I1 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -1422,7 +1479,7 @@ return [
          * quando houve. Cada uma declara o trâmite passo a passo (ver o cabeçalho
          * deste arquivo).
          *
-         * A amostra é distribuída de propósito: os três gestores com conta de
+         * A amostra é distribuída de propósito: os três chefes com conta de
          * demonstração (`gestor1` = Área 5, `gestor2` = Área 1, `gestor3` =
          * Área 3) têm caso avançado NOS DOIS canais. Sem isso, a demonstração
          * abriria vazia para dois deles e pareceria sistema quebrado.
@@ -1458,8 +1515,8 @@ return [
              * prazo ficaria com a mesma cara de vistoria que ninguém fez.
              *
              * Chegou a campo por OPERAÇÃO, e não por vistoria avulsa: a Operação
-             * Verão — Orla já cobre este trecho, e é assim que o gestor evita uma
-             * ida isolada. A leitura do trâmite mostra as duas saídas do gestor em
+             * Verão — Orla já cobre este trecho, e é assim que a chefia evita uma
+             * ida isolada. A leitura do trâmite mostra as duas saídas da chefia em
              * funcionamento na mesma amostra.
              */
             'situacao' => 'Aguardando regularização',
@@ -1470,19 +1527,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 7,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Costa Azul'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Cidadã anexou foto da puxada; trecho já coberto pela operação da orla.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Cidadã anexou foto da puxada; trecho já coberto pela operação da orla.'],
                     ],
                 ],
                 [
                     'ha_horas' => 11,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Incluída em operação',
                     'detalhe' => 'Anexada à Operação Verão — Orla, executada pela Equipe C1.',
                     'situacao' => 'Em operação',
@@ -1524,6 +1581,12 @@ return [
                         .'para retirar a puxada e recuar as mesas.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'A via foi entregue e assinada, com as duas testemunhas. O permissionário alegou '
+                        .'que a puxada está ali há anos e não a retirou na hora, então a notificação só '
+                        .'vale se alguém voltar no vencimento — sem retorno, ela fica no papel.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194903',
@@ -1573,7 +1636,7 @@ return [
              * ── CASO AVANÇADO: RETORNO VENCIDO, SITUAÇÃO MANTIDA ──────────────
              *
              * O prazo da notificação venceu, a equipe voltou e o ponto continuava
-             * igual. A denúncia NÃO se conclui aqui: ela volta ao gestor para a
+             * igual. A denúncia NÃO se conclui aqui: ela volta ao Chefe de Setor para a
              * próxima medida (apreensão), e é esse o significado da situação
              * "Retorno vencido". Concluir neste ponto esconderia a única coisa que
              * a tela precisa cobrar — que alguém decida o próximo passo.
@@ -1585,19 +1648,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Itapuã'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Reclamação reiterada; a moradora diz já ter falado com o vendedor.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Reclamação reiterada; a moradora diz já ter falado com o vendedor.'],
                     ],
                 ],
                 [
                     'ha_horas' => 10,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe C1 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -1632,6 +1695,12 @@ return [
                     'detalhe' => 'Notificação lavrada com prazo de 48 horas para retirar as mesas e apresentar o alvará.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'O notificado recusou-se a assinar e disse que não vai retirar as mesas. A recusa '
+                        .'ficou registrada com as duas testemunhas. Ponto de grande movimento à noite: o '
+                        .'retorno em 48 horas é o que instrui a medida seguinte.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194902',
@@ -1659,10 +1728,18 @@ return [
                     'ha_horas' => 130,
                     'quem' => 'fiscal2',
                     'o_que' => 'Retorno de fiscalização — situação mantida',
-                    'detalhe' => 'Prazo vencido e ponto na mesma situação. A denúncia volta ao gestor da área '
+                    'detalhe' => 'Prazo vencido e ponto na mesma situação. A denúncia volta ao Chefe de Setor da área '
                         .'para a próxima medida.',
                     'situacao' => 'Retorno vencido',
                     'desfecho' => 'Retorno com a situação mantida',
+                    'consideracoes' => 'Segunda ida ao ponto, depois do vencimento: as mesas continuam no mesmo número e o '
+                        .'alvará não foi apresentado. O ocupante repetiu que "não vai tirar". A '
+                        .'orientação já foi tentada duas vezes, e a medida que a equipe sugere é a '
+                        .'apreensão das mesas e cadeiras, com apoio da guarda.',
+                    'recomendacoes' => [
+                        'Encaminhar ao Chefe de Setor para a próxima medida',
+                        'Incluir o ponto na próxima operação da área',
+                    ],
                     'campo' => [
                         'encontrado' => 'Ponto na mesma situação, com o ocupante presente',
                         'relato' => 'Retorno após o vencimento das 48 horas. As mesas continuam na calçada, '
@@ -1675,7 +1752,6 @@ return [
                     ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194902'],
-                        ['rotulo' => 'Próxima medida sugerida pela equipe', 'valor' => 'Apreensão das mesas e cadeiras, com apoio da guarda'],
                     ],
                 ],
             ],
@@ -1706,7 +1782,7 @@ return [
              *
              * Denúncia procedente na origem e improcedente na vistoria: o ponto
              * era de fim de semana, e a equipe foi num dia útil. Registrar "nada
-             * encontrado" com a data e a hora da ida é o que permite ao gestor
+             * encontrado" com a data e a hora da ida é o que permite ao Chefe de Setor
              * mandar de novo no dia certo em vez de arquivar por engano — e é por
              * isso que o desfecho é de lista, não texto livre.
              */
@@ -1717,19 +1793,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 3 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 3 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Amaralina'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 3 — Brotas'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'O cidadão diz que o ponto só aparece em fim de semana.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'O cidadão diz que o ponto só aparece em fim de semana.'],
                     ],
                 ],
                 [
                     'ha_horas' => 8,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe A2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -1761,9 +1837,15 @@ return [
                         .'de semana, para nova ida no dia e horário indicados.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Nada encontrado no local',
+                    'consideracoes' => 'A ida foi em dia útil, e a vizinhança informou que o ponto só monta em fim de '
+                        .'semana. Não houve constatação, então nada foi lavrado — o caso não está '
+                        .'resolvido, só não foi encontrado. Sábado à noite, com a equipe Noturna, é a '
+                        .'hora de achar.',
+                    'recomendacoes' => [
+                        'Reprogramar a vistoria para o dia e o horário do ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — não houve constatação'],
-                        ['rotulo' => 'Recomendação da equipe', 'valor' => 'Reprogramar para sábado à noite, com a equipe Noturna'],
                     ],
                 ],
             ],
@@ -1794,7 +1876,7 @@ return [
             /*
              * ── CASO AVANÇADO: A DENÚNCIA DE PONTA A PONTA ───────────────────
              *
-             * O ciclo inteiro numa linha só: integração › triagem › gestor ›
+             * O ciclo inteiro numa linha só: integração › triagem › chefia ›
              * vistoria › notificação › retorno › conclusão. É a que o dono usa
              * para percorrer a vida completa do registro, e a que prova que o
              * caminho educativo FUNCIONA — o notificado cumpriu, e nenhuma
@@ -1807,9 +1889,9 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 7,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 3 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 3 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Cabula'],
@@ -1819,7 +1901,7 @@ return [
                 ],
                 [
                     'ha_horas' => 12,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe A2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -1853,6 +1935,12 @@ return [
                     'detalhe' => 'Notificação lavrada com prazo de 72 horas para retirar as mesas e apresentar o alvará.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'Via entregue e assinada com as duas testemunhas. O ocupante mostrou o protocolo do '
+                        .'alvará de mesas e cadeiras, que está em análise; o prazo de 72 horas serve para '
+                        .'ele retirar as mesas enquanto isso.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194901',
@@ -1896,6 +1984,12 @@ return [
                     'detalhe' => 'Notificação cumprida no prazo de retorno. Nenhuma penalidade aplicada.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado após notificação',
+                    'consideracoes' => 'Retorno dentro do prazo: as mesas saíram da calçada e o protocolo do alvará foi '
+                        .'apresentado. Nada a autuar. Fica pendente o resultado da análise do alvará, que '
+                        .'é de outro setor e não depende da fiscalização.',
+                    'recomendacoes' => [
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194901'],
                         ['rotulo' => 'Penalidade aplicada', 'valor' => 'Nenhuma — a notificação foi cumprida'],
@@ -1944,19 +2038,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 4,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Barris'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Acesso de garagem bloqueado; a moradora já falou com o vendedor.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Acesso de garagem bloqueado; a moradora já falou com o vendedor.'],
                     ],
                 ],
                 [
                     'ha_horas' => 8,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -1992,10 +2086,16 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'O ambulante não tem cadastro e disse que trabalha ali há pouco tempo. Deslocou o '
+                        .'carrinho na hora e liberou o rebaixo da garagem. Endereço e horário anotados '
+                        .'para nova ronda; foi orientado a procurar a SEMOP.',
+                    'recomendacoes' => [
+                        'Conferir o cadastro do ambulante na Retaguarda',
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência do ambulante', 'valor' => 'Deslocou o carrinho para fora do rebaixo, liberando a garagem'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
-                        ['rotulo' => 'Encaminhamento', 'valor' => 'Orientado a procurar a SEMOP para cadastro; endereço e horário anotados para nova ronda'],
                     ],
                 ],
             ],
@@ -2009,7 +2109,7 @@ return [
          * catálogo apareciam uma vez só ou nenhuma. Daqui para baixo estão os
          * casos que faltavam, distribuídos pelos dois canais e por áreas que
          * ainda não tinham caso avançado (Área 2, Área 4, Área 6, Itinerante), de
-         * modo que a demonstração alcance também as áreas SEM conta de gestor.
+         * modo que a demonstração alcance também as áreas SEM conta de chefia.
          *
          * ⚠️ A proporção EDUCATIVA continua sendo a régua: destes cinco casos,
          * DOIS terminam em documento e TRÊS terminam sem papel nenhum. O teste
@@ -2044,7 +2144,7 @@ return [
              *
              * O percurso completo com as duas pernas que os outros casos não
              * têm: o notificado PROCURA a SEMOP dentro do prazo (ato do
-             * administrativo, que não é vistoria nem decisão de gestor) e o
+             * administrativo, que não é vistoria nem decisão de chefia) e o
              * retorno da equipe é CONFERIDO pela chefia antes de a denúncia se
              * encerrar. Existe para exercitar a leitura de um trâmite que não
              * cabe na tela sem rolar — nove passos na linha do tempo, navegáveis
@@ -2061,19 +2161,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 2 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 2 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Ribeira'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 2 — Itapagipe'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Manipulação de alimento sem água encanada: risco sanitário, e a cidadã anexou foto.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Manipulação de alimento sem água encanada: risco sanitário, e a cidadã anexou foto.'],
                     ],
                 ],
                 [
                     'ha_horas' => 10,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe A1 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -2116,6 +2216,12 @@ return [
                         .'para recolher a mercadoria, regularizar a higiene e desativar a venda de bebida.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'Três motivos assinalados, e o prazo curto é proposital: manipulação de alimento e '
+                        .'venda de bebida em frente ao terminal marítimo, com muito movimento. Via '
+                        .'entregue e assinada.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194904',
@@ -2137,7 +2243,7 @@ return [
                 ],
                 [
                     'ha_horas' => 40,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Contato do notificado registrado',
                     'detalhe' => 'O notificado procurou a SEMOP dentro do prazo e informou o que já havia '
                         .'providenciado. A denúncia continua com o prazo correndo.',
@@ -2185,6 +2291,11 @@ return [
                     'detalhe' => 'Notificação cumprida dentro do prazo. Nenhuma penalidade aplicada.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado após notificação',
+                    'consideracoes' => 'Os três motivos notificados foram atendidos e a chefia conferiu o registro do '
+                        .'retorno antes do encerramento. Nada a autuar.',
+                    'recomendacoes' => [
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento de referência', 'valor' => 'Notificação Preliminar nº 194904'],
                         ['rotulo' => 'Penalidade aplicada', 'valor' => 'Nenhuma — a notificação foi cumprida no prazo'],
@@ -2239,19 +2350,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 4,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 6 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 6 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Sussuarana'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 6 — Pau da Lima'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Fila de criança na pista no horário da saída da escola: priorizar, e há operação em curso na região.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Fila de criança na pista no horário da saída da escola: priorizar, e há operação em curso na região.'],
                     ],
                 ],
                 [
                     'ha_horas' => 8,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Incluída em operação',
                     'detalhe' => 'Anexada à Operação Volta às Aulas — Cajazeiras, executada pela Equipe B1.',
                     'situacao' => 'Em operação',
@@ -2296,6 +2407,12 @@ return [
                         .'cadastro, quitar o DAM do exercício e a cota de despesa.',
                     'situacao' => 'Aguardando regularização',
                     'desfecho' => 'Notificação Preliminar emitida',
+                    'consideracoes' => 'O ponto fica em frente à escola municipal e a fila avança sobre a pista no horário '
+                        .'da saída. A pendência é de cadastro e de pagamento, não de ocupação, então o '
+                        .'prazo é de 10 dias para ele comparecer ao setor. Uma testemunha não foi colhida.',
+                    'recomendacoes' => [
+                        'Voltar ao ponto no vencimento do prazo',
+                    ],
                     'documento' => [
                         'tipo' => 'np',
                         'numero' => '194905',
@@ -2365,9 +2482,9 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Itinerante para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Itinerante para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Avenida Joana Angélica — corredor, e não bloco de bairros'],
@@ -2377,7 +2494,7 @@ return [
                 ],
                 [
                     'ha_horas' => 11,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe I1 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -2415,10 +2532,16 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'Ambulante sem cadastro, em corredor de grande circulação. Recolheu a lona e a '
+                        .'mercadoria na hora, liberando a calçada por inteiro. Orientado a procurar a '
+                        .'SEMOP; o trecho fica na passagem semanal da equipe.',
+                    'recomendacoes' => [
+                        'Conferir o cadastro do ambulante na Retaguarda',
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência do ambulante', 'valor' => 'Recolheu a lona e a mercadoria, liberando a calçada por inteiro'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
-                        ['rotulo' => 'Encaminhamento', 'valor' => 'Orientado a procurar a SEMOP para cadastro; o trecho fica na passagem semanal da equipe'],
                     ],
                 ],
             ],
@@ -2448,9 +2571,9 @@ return [
              * ── CASO AVANÇADO: REGULARIZAÇÃO NO LOCAL, NO OUTRO CANAL ────────
              *
              * O mesmo desfecho educativo da DEN-0036, mas no e-Salvador e na
-             * Área 4 — a área que NÃO tem conta de gestor na demonstração. Serve
+             * Área 4 — a área que NÃO tem conta de chefia na demonstração. Serve
              * a duas coisas ao mesmo tempo: mostra o caminho comum vindo do
-             * portal, e reforça o recorte por área (nenhum dos três gestores com
+             * portal, e reforça o recorte por área (nenhum dos três chefes com
              * conta enxerga este caso).
              */
             'situacao' => 'Concluída',
@@ -2460,19 +2583,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 4,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 4 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 4 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Pirajá'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 4 — Liberdade'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'Abrigo de ponto de ônibus ocupado por dentro: idoso esperando coletivo na chuva.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'Abrigo de ponto de ônibus ocupado por dentro: idoso esperando coletivo na chuva.'],
                     ],
                 ],
                 [
                     'ha_horas' => 9,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe B2 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -2510,10 +2633,15 @@ return [
                         .'Nenhum documento foi lavrado.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Regularizado no local',
+                    'consideracoes' => 'A permissionária havia deslocado a barraca para o abrigo por causa da chuva e a '
+                        .'remontou no ponto autorizado na presença da equipe, liberando os bancos. '
+                        .'Orientada a comunicar a SEMOP antes de deslocar o ponto, mesmo por chuva.',
+                    'recomendacoes' => [
+                        'Manter o ponto na passagem semanal da equipe',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Providência da ocupante', 'valor' => 'Desmontou a barraca do abrigo e a remontou no ponto autorizado, liberando os bancos'],
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — a irregularidade cessou na presença da equipe'],
-                        ['rotulo' => 'Orientação registrada', 'valor' => 'Comunicar a SEMOP antes de deslocar o ponto, mesmo por causa de chuva'],
                     ],
                 ],
             ],
@@ -2552,7 +2680,7 @@ return [
              * é o que permite encerrar sem arquivar por engano.
              *
              * É também o caso da TROCA DE EQUIPE: o flagrante só é possível de
-             * madrugada, então o gestor da Área 5 passou a vistoria à Noturna, e
+             * madrugada, então o Chefe de Setor da Área 5 passou a vistoria à Noturna, e
              * a justificativa dessa troca fica escrita.
              */
             'situacao' => 'Concluída',
@@ -2564,19 +2692,19 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 7,
-                    'quem' => 'administrativo',
+                    'quem' => 'coordenador',
                     'o_que' => 'Triada e encaminhada à área',
-                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do gestor.',
+                    'detalhe' => 'Encaminhada à Área 5 para direcionamento do Chefe de Setor.',
                     'situacao' => 'Encaminhada à área',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Stella Maris'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
-                        ['rotulo' => 'Orientação ao gestor', 'valor' => 'A moradora informou dia e horário: sexta, das 22h às 4h.'],
+                        ['rotulo' => 'Orientação ao Chefe de Setor', 'valor' => 'A moradora informou dia e horário: sexta, das 22h às 4h.'],
                     ],
                 ],
                 [
                     'ha_horas' => 12,
-                    'quem' => 'gestor',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Direcionada à equipe',
                     'detalhe' => 'Direcionada à Equipe N1 para vistoria.',
                     'situacao' => 'Direcionada à equipe',
@@ -2614,10 +2742,15 @@ return [
                         .'reclamados, e o ponto não existe mais.',
                     'situacao' => 'Concluída',
                     'desfecho' => 'Nada encontrado no local',
+                    'consideracoes' => 'A ida foi no dia e no horário reclamados, e a vizinhança confirmou que o ponto '
+                        .'deixou de montar. Não é caso de nova ida: a esquina fica na ronda noturna da '
+                        .'orla por um mês, e só volta a ser vistoriada se houver nova denúncia.',
+                    'recomendacoes' => [
+                        'Manter o ponto na passagem semanal da equipe',
+                        'Nada mais a fazer no ponto',
+                    ],
                     'campos' => [
                         ['rotulo' => 'Documento lavrado', 'valor' => 'Nenhum — não houve constatação'],
-                        ['rotulo' => 'Por que não é caso de nova ida', 'valor' => 'A vistoria foi no dia e no horário indicados pela denunciante, e a vizinhança confirmou que o ponto deixou de montar'],
-                        ['rotulo' => 'Recomendação da equipe', 'valor' => 'Manter a esquina na ronda noturna da orla por um mês, sem nova denúncia'],
                     ],
                 ],
             ],

@@ -1,7 +1,7 @@
-# Mapa ao Vivo — a cidade agora, para o gestor
+# Mapa ao Vivo — a cidade agora, para o Chefe de Setor
 
 **Onde fica:** Retaguarda → menu **Fiscalização → Mapa ao Vivo** (`/retaguarda/mapa`).
-**Quem usa:** administrador, gestor e o **fiscal**, em leitura — saber onde a cidade
+**Quem usa:** administrador, Chefe de Setor e o **fiscal**, em leitura — saber onde a cidade
 está agora é do trabalho de rua.
 
 > ⚠️ **É PROTÓTIPO.** Não há tabela, model, migration nem tempo real. Pessoas,
@@ -47,12 +47,12 @@ vencido (fora do esperado) e o que acabou de entrar (rotina viva). Pulso em tudo
 não destaca nada.
 
 O ponto com **retorno vencido** carrega o **"há N dias" colado no pino**, sem
-precisar de clique: é a informação que faz o gestor agir, e informação que exige
+precisar de clique: é a informação que faz o Chefe de Setor agir, e informação que exige
 clique é informação que ninguém vê.
 
 ⚠️ **Os fiscais aparecem sempre**, inclusive com um filtro de situação ligado:
 "quem está na rua agora" não é uma situação de ponto, e esconder a equipe atrás
-desse filtro faria o gestor mandar reforço para onde já tem gente.
+desse filtro faria o Chefe de Setor mandar reforço para onde já tem gente.
 
 ### RN-04 — Filtrar pela equipe NOTURNA é filtrar por turno
 
@@ -96,7 +96,7 @@ duas **navegam**; nenhuma grava nada aqui.
 Quando o bairro do ponto é coberto por **mais de uma equipe**, o cartão diz isso
 em palavras e acrescenta que **não é duplicidade a corrigir** — o vínculo
 bairro↔equipe não é 1:1, e quem confirma é gente. É a mesma conversa que a Caixa
-de Entrada tem com o administrativo.
+de Entrada tem com o coordenador.
 
 ### RN-08 — A tela declara o INSTANTE que está mostrando
 

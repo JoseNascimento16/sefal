@@ -1,7 +1,7 @@
-# Caixa de Entrada do Administrativo
+# Caixa de Entrada do Coordenador
 
 **Onde fica:** Menu → Fiscalização → Caixa de Entrada (`/retaguarda/caixa-de-entrada`).
-**Quem usa:** administrador e gestor. **O fiscal não entra** (ver RN-08).
+**Quem usa:** administrador e Chefe de Setor. **O fiscal não entra** (ver RN-08).
 
 > ## ⚠️ ESTA TELA É UM PROTÓTIPO
 >
@@ -20,7 +20,7 @@
 > nasce `hu_status => 'nao'` declarando essa origem.
 
 O sistema não é uma ilha: **ele recebe demanda de fora**. Hoje ela chega em **papel** — o
-e-Salvador e o Fala Salvador (Disque 156) entregam documento impresso ao administrativo, e o pedido
+e-Salvador e o Fala Salvador (Disque 156) entregam documento impresso ao coordenador, e o pedido
 de nova licença chega como processo. Esta tela é a porta por onde isso entra, e de onde sai
 **trabalho dirigido** para as equipes de campo.
 
@@ -30,7 +30,7 @@ de nova licença chega como processo. Esta tela é a porta por onde isso entra, 
 
 ### RN-01 — O cadastro manual é requisito, não gambiarra
 
-O administrativo **digita** o que chegou em papel: origem, número do documento de origem, data de
+O Coordenador **digita** o que chegou em papel: origem, número do documento de origem, data de
 recebimento, requerente, endereço, bairro, assunto, descrição e o arquivo digitalizado.
 
 A adaptação para API (e-Salvador e 156) vem depois, e **o cadastro manual permanece**: papel não
@@ -53,7 +53,7 @@ opcional — **mas só quando a demanda é marcada como anônima**. Sem a marca,
 A marca existe justamente para que "anônima" nunca seja o resultado de um campo esquecido: na
 grade, a demanda anônima aparece dita como tal, nunca como um espaço em branco.
 
-### RN-04 — O BAIRRO define a equipe; o sistema sugere, o administrativo confirma
+### RN-04 — O BAIRRO define a equipe; o sistema sugere, o coordenador confirma
 
 A equipe responsável é derivada do bairro, pela estrutura Área › Equipe
 ([Áreas e Equipes](../estrutura/areas-e-equipes.md)). Ao escolher o bairro, a tela mostra a
@@ -111,7 +111,7 @@ encaminhada chega ao fiscal pelo aplicativo, **já dirigida**.
 
 Dar-lhe a caixa permitiria escolher o próprio trabalho e arquivar o que não quisesse atender — é a
 mesma razão pela qual o cadastro nascido em rua entra em quarentena. A concessão inicial é
-`administrador` e `gestor`, semeada em [`config/retaguarda_menu.php`](../../../config/retaguarda_menu.php);
+`administrador` e `chefe-de-setor`, semeada em [`config/retaguarda_menu.php`](../../../config/retaguarda_menu.php);
 depois disso quem concede e quem tira é o Modo Gerente.
 
 ### RN-09 — A busca é o filtro ÚNICO
@@ -131,7 +131,7 @@ protótipo — o prazo real de cada canal é pergunta aberta ao cliente).
 
 Demanda **aguardando triagem** com prazo passado ganha a marca laranja na ponta da linha, o selo
 "vencido" na coluna do prazo e um aviso acima da grade com a contagem. Demanda já encaminhada ou já
-retornada não é acusada: o prazo era para a decisão do administrativo, e ela foi tomada.
+retornada não é acusada: o prazo era para a decisão do coordenador, e ela foi tomada.
 
 ### RN-11 — A listagem exporta o recorte visível
 
@@ -167,3 +167,4 @@ sistema real esta rota não existe:** caixa de entrada não se reinicia.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 02/09/2026 | José Nascimento | Caixa de Entrada | Nasce o módulo, como **protótipo**: grade com busca inteligente e exportação, cadastro da demanda com as duas saídas (encaminhar / devolver-arquivar), sugestão de equipe pelo bairro com o caso do bairro compartilhado, e o trâmite de cada demanda. | Decisão da reunião com o cliente de 02/09/2026: o sistema recebe demanda de fora (e-Salvador, Fala Salvador, pedido de nova licença) e o administrativo precisa de onde registrar, triar e recusar com justificativa. Entregue como protótipo para o dono aprovar a forma antes de virar tabela e regra. |
+| 04/09/2026 | José Nascimento | Caixa de Entrada | Os papéis passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`) — slug inclusive, com migration renomeando catálogo e matriz. Ver [Papéis e setores](../papeis-e-setores.md). | A tela é o trabalho do papel que tria: o rótulo dele aparece no texto de abertura, no aviso das duas saídas e na concessão da matriz. |

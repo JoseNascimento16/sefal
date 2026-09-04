@@ -44,11 +44,11 @@ function itensDoMenu(User $u): array
         ->all();
 }
 
-/** Um gestor, que enxerga o cadastro de ambulante. */
-function gestorDaCasca(): User
+/** Um chefe de setor, que enxerga o cadastro de ambulante. */
+function chefeDaCasca(): User
 {
     $u = User::factory()->create(['admin' => false]);
-    $u->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     return $u->fresh();
 }
@@ -58,7 +58,7 @@ test('o item que declara contador chega com o numero e o tom', function () {
 
     Ambulante::factory()->count(3)->create();
 
-    $itens = itensDoMenu(gestorDaCasca());
+    $itens = itensDoMenu(chefeDaCasca());
 
     expect($itens['Ambulantes']['contador'])->toBe(['valor' => 3, 'tom' => 'neutro']);
 });

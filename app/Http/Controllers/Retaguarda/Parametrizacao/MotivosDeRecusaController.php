@@ -19,9 +19,9 @@ class MotivosDeRecusaController extends ControllerDeLookup
             titulo: 'Motivos de Recusa',
             singular: 'Motivo de recusa',
             genero: 'm',
-            // "gestor" em minúscula: é o papel, não um nome próprio — e é assim
+            // "Chefe de Setor" é o papel, não um nome próprio — e é assim
             // que o resto do sistema escreve "o fiscal" e "a fiscalização".
-            descricao: 'O que o gestor responde quando devolve um cadastro feito em rua. O fiscal '
+            descricao: 'O que o Chefe de Setor responde quando devolve um cadastro feito em rua. O fiscal '
                 .'lê este texto no aparelho, então ele precisa dizer o que corrigir.',
             exemplo: 'Ex.: Foto ilegível',
         );

@@ -169,7 +169,7 @@ class CatalogoFuncionalidades
      * CONSULTA o cadastro de ambulante (chegar na calçada sem saber quem
      * está cadastrado é trabalhar às cegas) e não grava nada por lá — ele
      * cadastra em rua, pelo aplicativo, e o que nasce em rua entra em quarentena
-     * para o gestor conferir. Deixá-lo alterar de mesa permitiria que ele mesmo
+     * para o Chefe de Setor conferir. Deixá-lo alterar de mesa permitiria que ele mesmo
      * tirasse da quarentena o cadastro que acabou de criar, e a conferência que
      * dá sentido à fila deixaria de acontecer.
      *

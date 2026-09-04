@@ -2,7 +2,7 @@
 
 **Onde fica:** Menu → Sistema → Relatórios (`/retaguarda/relatorios`) · e o botão **Exportar** de
 toda listagem da Retaguarda (`POST /retaguarda/exportar-listagem`).
-**Quem usa:** administrador e gestor (a tela de Relatórios); o botão Exportar acompanha a listagem
+**Quem usa:** administrador e Chefe de Setor (a tela de Relatórios); o botão Exportar acompanha a listagem
 que a pessoa já pode ver.
 
 São **duas coisas diferentes**, e a confusão entre elas custa retrabalho:

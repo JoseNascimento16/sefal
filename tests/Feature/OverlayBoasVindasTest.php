@@ -31,7 +31,7 @@ function usuarioQueEntra(string $nome = 'JOSÉ DA SILVA'): User
         'ativo' => true,
         'password' => Hash::make('senha-correta'),
     ]);
-    $u->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     return $u->fresh();
 }
@@ -78,7 +78,7 @@ test('a marca ATRAVESSA redirecionamento interno e e gasta na primeira TELA', fu
     $this->post('/login', ['login' => 'f9001', 'password' => 'senha-correta'])
         ->assertRedirect();
 
-    // O salto: o gestor não tem esta tela concedida, e é devolvido à inicial. A
+    // O salto: o chefe de setor não tem esta tela concedida, e é devolvido à inicial. A
     // marca NÃO pode ser gasta aqui.
     $this->get('/retaguarda/logs')->assertRedirect('/retaguarda/inicio');
 

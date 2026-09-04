@@ -6,7 +6,7 @@ import * as L from 'leaflet';
    ----------------------------------------------------------------------------
    Um lugar só cria a camada de imagens, o pino e a camada de calor. Espalhar
    isso pelas telas faria cada uma escolher um zoom, um tom de pino e um
-   provedor de imagens diferente — e o gestor veria dois mapas em vez de um.
+   provedor de imagens diferente — e a chefia veria dois mapas em vez de um.
 
    É deliberadamente o MESMO caminho do aplicativo do fiscal
    (`resources/js/pwa/mapa.ts`): mesmo provedor de imagens, mesmo plugin de
@@ -30,7 +30,7 @@ export const CENTRO_SALVADOR: [number, number] = [-12.973, -38.514];
 /**
  * O gradiente da camada de calor. O MESMO do aplicativo do fiscal: azul para
  * pouco, vermelho para muito. Duas escalas diferentes para a mesma informação
- * fariam o gestor e o fiscal discordarem sobre o que é "quente".
+ * fariam a chefia e o fiscal discordarem sobre o que é "quente".
  */
 export const GRADIENTE_CALOR = {
     0.2: '#2b83ba',
@@ -112,7 +112,7 @@ type FabricaDeCalor = (
 
 /**
  * Carrega o plugin de calor SOB DEMANDA: ele só é baixado por quem abre o mapa
- * de calor, e não por todo gestor que abre a Retaguarda.
+ * de calor, e não por toda pessoa que abre a Retaguarda.
  */
 export async function camadaDeCalor(
     pontos: [number, number, number][],

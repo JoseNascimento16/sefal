@@ -4,6 +4,7 @@ import {
     Check,
     FileText,
     Info,
+    Lightbulb,
     ListChecks,
     MapPin,
     Minus,
@@ -62,11 +63,86 @@ import { cn } from '@/lib/utils';
  * Preliminar e Auto de Apreensão é o fiscal, em rua, no aplicativo. Oferecer
  * aqui um botão de emitir criaria um segundo dono para o ato mais delicado do
  * sistema.
+ *
+ * ── As considerações do fiscal ficam em DESTAQUE, não na ficha ───────────────
+ *
+ * O passo que fecha a vistoria carrega, além do desfecho, o que o fiscal
+ * escreveu (`consideracoes`) e o que ele assinalou (`recomendacoes`) — e é por
+ * essas duas coisas que o Chefe de Setor e o Coordenador entendem o que ele está
+ * pedindo, e sabem para onde dirigir o caso. Por isso elas vêm num bloco
+ * destacado, logo abaixo do desfecho, e ganham selo próprio na linha do tempo:
+ * enterradas no meio de "o que ficou decidido neste passo", seriam lidas depois
+ * da decisão que deveriam orientar.
  */
 
 /** Quantas fotos o passo registrou — o número que vira selo na linha do tempo. */
 function totalDeFotos(t: TramiteDenuncia): number {
     return t.campo?.fotos.length ?? 0;
+}
+
+/**
+ * O QUE O FISCAL RECOMENDOU ao fechar a vistoria, e o que ele escreveu.
+ *
+ * Fica em destaque, e não como duas linhas da ficha, porque é a informação pela
+ * qual o Chefe de Setor e o Coordenador decidem o próximo ato: o desfecho conta
+ * como a vistoria terminou, e a recomendação conta o que o fiscal está PEDINDO.
+ * Enterrada no meio de "o que ficou decidido neste passo", ela seria lida depois
+ * da decisão que ela deveria orientar.
+ *
+ * As duas partes vêm juntas de propósito: o atalho diz O QUE fazer (e é somável
+ * pelo relatório), a consideração conta o caso. Uma sem a outra perde metade.
+ */
+function ConsideracoesDoFiscal({
+    consideracoes,
+    recomendacoes,
+}: {
+    consideracoes: string | null;
+    recomendacoes: string[];
+}) {
+    if (consideracoes === null && recomendacoes.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="rt-sugestao" style={{ margin: '0 0 14px' }}>
+            <Lightbulb size={16} aria-hidden />
+            <div>
+                <strong>
+                    {recomendacoes.length === 0
+                        ? 'Considerações finais do fiscal'
+                        : `${plural(recomendacoes.length, 'Recomendação', 'Recomendações')} do fiscal`}
+                </strong>
+
+                {recomendacoes.length > 0 && (
+                    <div style={{ margin: '6px 0 2px' }}>
+                        {recomendacoes.map((r) => (
+                            <span
+                                key={r}
+                                className="selo selo-info"
+                                style={{ marginRight: 6, marginBottom: 4 }}
+                            >
+                                {r}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* O texto livre vem DEPOIS dos atalhos: eles se leem de relance,
+                    ele se lê com atenção. E quando não há texto a tela diz isso,
+                    em vez de deixar o bloco pela metade — espaço em branco depois
+                    de "recomendações" parece recomendação que não carregou. */}
+                <div>
+                    {consideracoes ?? (
+                        <span style={{ color: 'var(--sm-texto-fraco)' }}>
+                            O fiscal não escreveu considerações — só assinalou{' '}
+                            {plural(recomendacoes.length, 'a recomendação', 'as recomendações')}{' '}
+                            acima.
+                        </span>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 /** Uma ficha de rótulo/valor — a mesma forma em toda a leitura do módulo. */
@@ -367,8 +443,23 @@ export function TramiteDeDenuncia({
 
                             {/* O que o passo PRODUZIU, de relance: é o que faz a pessoa
                                 saber onde clicar sem abrir os sete passos. */}
-                            {(t.documento !== null || totalDeFotos(t) > 0) && (
+                            {(t.documento !== null ||
+                                totalDeFotos(t) > 0 ||
+                                t.recomendacoes.length > 0) && (
                                 <span className="rt-tramite-passo-selos">
+                                    {/* A recomendação vem PRIMEIRO entre os selos:
+                                        é o que faz alguém abrir aquele passo em vez
+                                        dos outros seis. */}
+                                    {t.recomendacoes.length > 0 && (
+                                        <span className="selo selo-info">
+                                            <Lightbulb size={11} aria-hidden />{' '}
+                                            {contar(
+                                                t.recomendacoes.length,
+                                                'recomendação',
+                                                'recomendações',
+                                            )}
+                                        </span>
+                                    )}
                                     {t.documento !== null && (
                                         <span className="selo selo-aviso">
                                             <FileText size={11} aria-hidden />{' '}
@@ -442,6 +533,11 @@ export function TramiteDeDenuncia({
                     </p>
                 )}
 
+                <ConsideracoesDoFiscal
+                    consideracoes={atual.consideracoes}
+                    recomendacoes={atual.recomendacoes}
+                />
+
                 {/* A DECISÃO tomada no passo: para onde foi, por quê, o que
                     ficou registrado. É o conteúdo dos passos administrativos, que
                     não produzem foto nem papel. */}
@@ -461,7 +557,9 @@ export function TramiteDeDenuncia({
                 {atual.campos.length === 0 &&
                     atual.campo === null &&
                     atual.documento === null &&
-                    atual.desfecho === null && (
+                    atual.desfecho === null &&
+                    atual.consideracoes === null &&
+                    atual.recomendacoes.length === 0 && (
                         <p className="form-ajuda">
                             <UserRound size={14} aria-hidden /> Este passo registrou o ato e
                             mais nada — nenhum documento foi lavrado e nenhuma vistoria foi

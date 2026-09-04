@@ -285,14 +285,14 @@ test('quem nao tem a parametrizacao concedida e mandado de volta dizendo o porqu
 test('concedida na matriz, a parametrizacao abre para quem nao e administrador', function () {
     config(['retaguarda.permissao_enforce' => 'block']);
 
-    $gestor = User::factory()->create(['admin' => false]);
-    $gestor->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $chefe = User::factory()->create(['admin' => false]);
+    $chefe->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
     PermissaoSetor::updateOrCreate(
-        ['setor' => 'gestor', 'slug' => 'parametrizacao'],
+        ['setor' => 'chefe-de-setor', 'slug' => 'parametrizacao'],
         ['visivel' => true, 'habilitado' => true, 'incluir' => true, 'excluir' => true],
     );
 
-    $this->actingAs($gestor->fresh())->get(caminhoDoLookup('motivos-de-recusa'))->assertOk();
+    $this->actingAs($chefe->fresh())->get(caminhoDoLookup('motivos-de-recusa'))->assertOk();
 });
 
 test('as seis telas dividem UMA permissao, e ela se chama pelo nome da secao', function () {

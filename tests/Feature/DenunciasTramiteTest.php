@@ -25,7 +25,7 @@ use Database\Seeders\SetoresSeeder;
 |    campo, ou como documento sem nenhuma caixa assinalada. A varredura é uma, e
 |    cobre também o caso que alguém acrescentar amanhã.
 |
-| 2. **O recorte do gestor alcança o CONTEÚDO, não só a linha.** O trâmite
+| 2. **O recorte do chefe de setor alcança o CONTEÚDO, não só a linha.** O trâmite
 |    avançado carrega o relato do fiscal, as fotos e o documento lavrado dentro
 |    da própria denúncia. Se o recorte por área falhasse, não vazaria um número
 |    numa grade: vazaria o nome do notificado, o CPF e o número da notificação de
@@ -50,19 +50,19 @@ function denunciasComTramiteDeclarado(): array
     ));
 }
 
-/** Um gestor de verdade: a matrícula é o que o liga à área na estrutura. */
-function gestorDeArea(string $matricula): User
+/** Um chefe de setor de verdade: a matrícula é o que o liga à área na estrutura. */
+function chefeDeArea(string $matricula): User
 {
     $u = User::factory()->create(['login' => $matricula, 'admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     return $u->fresh();
 }
 
-function administrativoDoFluxo(): User
+function coordenadorDoFluxo(): User
 {
     $u = User::factory()->create(['admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'administrativo')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'coordenador')->firstOrFail());
 
     return $u->fresh();
 }
@@ -146,6 +146,114 @@ test('lei: todo passo declara um papel conhecido, uma situacao do catalogo e um 
     expect($problemas)->toBe([], "Papel, situação e desfecho saem de catálogo — não são texto livre.\n");
 });
 
+test('lei: o passo que fecha a vistoria traz a leitura do fiscal, e as recomendacoes saem do catalogo', function () {
+    /*
+     * O desfecho diz COMO a vistoria terminou; as considerações e as recomendações
+     * dizem o que o fiscal está PEDINDO — e é por elas que o Chefe de Setor e o
+     * Coordenador decidem o próximo ato. Passo de desfecho sem nenhuma das duas
+     * chega à fila do Chefe de Setor mudo: ele lê "nada encontrado no local" e não
+     * sabe se é caso de voltar em outro horário ou de encerrar.
+     *
+     * A recomendação sai de CATÁLOGO porque é o que o relatório soma ("quantas
+     * vistorias pediram nova ida") e porque é o contrato com o aplicativo do
+     * fiscal: atalho escrito à mão aqui seria uma recomendação que a Retaguarda
+     * não sabe ler.
+     */
+    $catalogo = (array) config('prototipo_denuncias.recomendacoes_do_fiscal', []);
+    $problemas = [];
+
+    expect($catalogo)->not->toBe([], 'o catálogo de recomendações não pode estar vazio');
+
+    foreach (denunciasComTramiteDeclarado() as $d) {
+        foreach ($d['tramites'] as $passo) {
+            $recomendacoes = array_values((array) ($passo['recomendacoes'] ?? []));
+
+            foreach ($recomendacoes as $recomendacao) {
+                if (! in_array((string) $recomendacao, $catalogo, true)) {
+                    $problemas[] = "DEN-{$d['id']}: recomendação fora do catálogo '{$recomendacao}'";
+                }
+            }
+
+            if (trim((string) ($passo['desfecho'] ?? '')) === '') {
+                continue;
+            }
+
+            $consideracoes = trim((string) ($passo['consideracoes'] ?? ''));
+
+            if ($consideracoes === '' && $recomendacoes === []) {
+                $problemas[] = "DEN-{$d['id']}: o passo '{$passo['o_que']}' declara desfecho e "
+                    .'não diz nada ao Chefe de Setor (sem considerações e sem recomendação)';
+            }
+        }
+    }
+
+    expect($problemas)->toBe([], "Todo desfecho vem com a leitura do fiscal, e a recomendação sai de catálogo.\n");
+});
+
+test('as consideracoes e as recomendacoes chegam a tela dentro do passo do tramite', function () {
+    /*
+     * O contrato com o aplicativo do fiscal são os NOMES `consideracoes` e
+     * `recomendacoes`, e o que se prova aqui é o efeito: eles atravessam o
+     * servidor e chegam ao passo, declarados em TODO passo (nulo e vazio nos que
+     * não os produziram) para a tela não precisar de leitura defensiva.
+     */
+    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'fala-salvador');
+    $vencida = collect($servidas)->firstWhere('id', 30);
+
+    expect($vencida)->not->toBeNull();
+
+    $passos = collect($vencida['tramites']);
+
+    // Todo passo declara as duas chaves — inclusive o de integração.
+    foreach ($passos as $passo) {
+        expect($passo)->toHaveKeys(['consideracoes', 'recomendacoes']);
+    }
+
+    $retorno = $passos->last();
+
+    expect($retorno['desfecho'])->toBe('Retorno com a situação mantida')
+        ->and($retorno['consideracoes'])->toContain('não vai tirar')
+        ->and($retorno['recomendacoes'])->toContain('Encaminhar ao Chefe de Setor para a próxima medida')
+        // O passo de recebimento não produziu leitura de fiscal nenhuma, e diz isso
+        // com valor neutro em vez de chave ausente.
+        ->and($passos->first()['consideracoes'])->toBeNull()
+        ->and($passos->first()['recomendacoes'])->toBe([]);
+});
+
+test('a linha de tramite criada por uma decisao nasce com TODAS as chaves do passo', function () {
+    /*
+     * Reproduz um defeito real: a linha acrescentada por uma decisão da tela era
+     * montada à mão, sem `campos`, `campo`, `documento`, `consideracoes` nem
+     * `recomendacoes`. A leitura do trâmite testa `t.documento !== null` — que é
+     * VERDADEIRO para chave ausente —, então abrir a denúncia recém-triada
+     * derrubava a tela, logo depois de a pessoa decidir algo e sem erro nenhum no
+     * servidor para investigar.
+     */
+    $coordenador = coordenadorDoFluxo();
+
+    $this->actingAs($coordenador)
+        ->post('/retaguarda/denuncias/encaminhar', [
+            'destinos' => [['id' => 1, 'area' => 'Área 1']],
+        ])
+        ->assertRedirect();
+
+    $ultimo = collect(DenunciasFicticias::denuncia(1)['tramites'])->last();
+
+    expect($ultimo['o_que'])->toBe('Triada e encaminhada à área')
+        ->and($ultimo)->toHaveKeys([
+            'em', 'quem', 'o_que', 'detalhe', 'situacao', 'desfecho',
+            'consideracoes', 'recomendacoes', 'campos', 'campo', 'documento',
+        ])
+        ->and($ultimo['documento'])->toBeNull()
+        ->and($ultimo['campo'])->toBeNull()
+        ->and($ultimo['campos'])->toBe([])
+        ->and($ultimo['recomendacoes'])->toBe([])
+        // E o passo novo carrega a situação em que a denúncia entrou: sem ela, o
+        // único passo do percurso sem selo seria justamente o que acabou de
+        // acontecer.
+        ->and($ultimo['situacao'])->toBe('Encaminhada à área');
+});
+
 test('lei: o documento semeado referencia caixas, sancoes e prazos que existem no impresso', function () {
     /*
      * O documento declara CHAVES (`puxada`, `autuacao`, `48h`) e a redação sai de
@@ -206,7 +314,7 @@ test('lei: situacao de pos-vistoria obriga tramite declarado', function () {
      * O trâmite DERIVADO só sabe montar recebimento, triagem e direcionamento —
      * é o que a situação implica, e nada mais. Uma denúncia marcada como
      * "Concluída" sem trâmite declarado chegaria à tela com a linha do tempo
-     * parando no gestor: o registro diria que a vistoria terminou e o percurso
+     * parando no chefe de setor: o registro diria que a vistoria terminou e o percurso
      * não mostraria vistoria nenhuma.
      */
     $posVistoria = ['Aguardando regularização', 'Retorno vencido', 'Concluída'];
@@ -349,7 +457,7 @@ test('lei: o bairro da denuncia pertence a area que a recebeu', function () {
     /*
      * A área sai do BAIRRO (a derivação da estrutura sugere, e a triagem
      * confirma), então uma denúncia semeada com a área de outro bairro faz a tela
-     * mostrar um encaminhamento que o sistema real não produziria — e o gestor
+     * mostrar um encaminhamento que o sistema real não produziria — e o chefe de setor
      * daquela área receberia caso que não é dele. Bairro compartilhado continua
      * valendo: a área pode ser a sugerida OU qualquer das alternativas.
      */
@@ -562,18 +670,18 @@ test('a amostra continua majoritariamente educativa: mais casos de campo sem doc
         ->and($comDocumento)->toBeLessThanOrEqual($semDocumento + 1);
 });
 
-test('cada gestor com conta de demonstracao tem caso avancado nos dois canais', function () {
+test('cada chefe de setor com conta de demonstracao tem caso avancado nos dois canais', function () {
     /*
-     * Sem isto a demonstração abre VAZIA para dois dos três gestores, e quem está
+     * Sem isto a demonstração abre VAZIA para dois dos três chefes de setor, e quem está
      * mostrando o sistema conclui que a tela está quebrada. É requisito da
      * demonstração, e por isso é teste — não recado no doc.
      */
     $emCampo = ['Em campo', 'Aguardando regularização', 'Retorno vencido', 'Concluída'];
 
     foreach (['gestor1', 'gestor2', 'gestor3'] as $matricula) {
-        $areas = EstruturaFicticia::areasDoGestor($matricula);
+        $areas = EstruturaFicticia::areasDoChefe($matricula);
 
-        expect($areas)->not->toBe([], "{$matricula} não é gestor de área nenhuma");
+        expect($areas)->not->toBe([], "{$matricula} não é chefe de setor de área nenhuma");
 
         foreach (['e-salvador', 'fala-salvador'] as $canal) {
             $avancadas = array_filter(
@@ -590,8 +698,8 @@ test('cada gestor com conta de demonstracao tem caso avancado nos dois canais', 
     }
 });
 
-test('o gestor recebe o tramite avancado da area dele, com o documento lavrado', function () {
-    $servidas = denunciasServidas(gestorDeArea('gestor1'), 'e-salvador');
+test('o chefe de setor recebe o tramite avancado da area dele, com o documento lavrado', function () {
+    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'e-salvador');
 
     $notificada = collect($servidas)->firstWhere('id', 29);
 
@@ -609,7 +717,7 @@ test('o gestor recebe o tramite avancado da area dele, com o documento lavrado',
         ->and($documento['agente'])->toContain('matrícula F-2504');
 });
 
-test('o gestor de outra area nao recebe nem a linha nem o conteudo do tramite alheio', function () {
+test('o chefe de setor de outra area nao recebe nem a linha nem o conteudo do tramite alheio', function () {
     /*
      * O vazamento que importa aqui não é o de uma linha de grade: é o do RELATO,
      * das fotos e do documento — nome do notificado, inscrição, número da
@@ -617,31 +725,31 @@ test('o gestor de outra area nao recebe nem a linha nem o conteudo do tramite al
      * não aparece não basta: o teste procura o número do documento no corpo
      * inteiro da resposta.
      */
-    $gestor2 = gestorDeArea('gestor2');
+    $chefe2 = chefeDeArea('gestor2');
 
-    $servidas = denunciasServidas($gestor2, 'e-salvador');
+    $servidas = denunciasServidas($chefe2, 'e-salvador');
     $ids = array_column($servidas, 'id');
 
     // 29 é da Área 5 (gestor1); 13 é da Área 1, dele.
     expect($ids)->not->toContain(29)
         ->and($ids)->toContain(13);
 
-    $this->actingAs($gestor2)
+    $this->actingAs($chefe2)
         ->get('/retaguarda/denuncias/e-salvador')
         ->assertDontSee('194903')
         ->assertDontSee('Jailson Pereira dos Santos');
 });
 
 test('quem tria ve o universo, com os casos avancados de todas as areas', function () {
-    $ids = array_column(denunciasServidas(administrativoDoFluxo(), 'fala-salvador'), 'id');
+    $ids = array_column(denunciasServidas(coordenadorDoFluxo(), 'fala-salvador'), 'id');
 
-    // 27 é da Área 4, que não tem gestor com conta: só o administrativo e o
+    // 27 é da Área 4, que não tem chefe de setor com conta: só o coordenador e o
     // administrador a enxergam, e é isso que faz dela a prova do recorte.
     expect($ids)->toContain(27, 30, 32, 33);
 });
 
 test('o catalogo de desfechos chega a tela, para a busca reconhecer a faceta', function () {
-    $props = $this->actingAs(administrativoDoFluxo())
+    $props = $this->actingAs(coordenadorDoFluxo())
         ->get('/retaguarda/denuncias/e-salvador')
         ->viewData('page')['props'];
 

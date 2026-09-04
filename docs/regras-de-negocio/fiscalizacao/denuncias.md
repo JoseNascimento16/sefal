@@ -2,7 +2,7 @@
 
 **Onde fica:** Menu → **Denúncias** (item que expande) → **e-Salvador**
 (`/retaguarda/denuncias/e-salvador`) e **Fala Salvador** (`/retaguarda/denuncias/fala-salvador`).
-**Quem usa:** administrativo, gestor e administrador. **O fiscal não entra** (ver RN-11).
+**Quem usa:** Coordenador, Chefe de Setor e administrador. **O fiscal não entra** (ver RN-11).
 
 > ## ⚠️ ESTE MÓDULO É UM PROTÓTIPO
 >
@@ -23,7 +23,7 @@
 
 As ouvidorias da Prefeitura recebem a denúncia do cidadão e a **entregam ao SEFAL**. Este módulo é
 onde ela chega, é analisada e vira trabalho dirigido de campo — e o caminho tem **duas etapas com
-dois donos**: o administrativo tria, o gestor da área direciona.
+dois donos**: o coordenador tria, o Chefe de Setor da área direciona.
 
 ---
 
@@ -40,7 +40,7 @@ pelo canal de origem, e cada uma carrega, visível:
 - uma **primeira linha de trâmite assinada pela integração**, e não por pessoa — é o que prova que o
   dado veio de fora.
 
-> **Isto separa este módulo da [Caixa de Entrada](caixa-de-entrada.md).** Lá o administrativo
+> **Isto separa este módulo da [Caixa de Entrada](caixa-de-entrada.md).** Lá o coordenador
 > **digita** o papel que chegou ao balcão (e o cadastro manual é requisito: papel não desaparece por
 > decreto). Aqui não há papel nem digitação. Ter os dois no mesmo lugar apagaria a distinção que
 > decide como o setor trabalha — e é por isso que Denúncias é seção própria do menu, e não um item
@@ -82,12 +82,12 @@ portão verde, subindo a ladeira"). A grade marca essas com o selo **"sem endere
 diz o que falta.
 
 Não é enfeite: é o dado que decide entre mandar equipe, pedir complemento ao canal ou arquivar por
-impossibilidade de localizar (RN-07). Esconder isso faria o gestor deslocar equipe para um endereço
+impossibilidade de localizar (RN-07). Esconder isso faria o Chefe de Setor deslocar equipe para um endereço
 que não existe.
 
-### RN-05 — ETAPA 1, triagem: o administrativo encaminha à ÁREA, derivada do bairro
+### RN-05 — ETAPA 1, triagem: o coordenador encaminha à ÁREA, derivada do bairro
 
-A denúncia chega como **`Recebida`** e espera a triagem. O administrativo analisa e a encaminha à
+A denúncia chega como **`Recebida`** e espera a triagem. O Coordenador analisa e a encaminha à
 **área** de fiscalização correspondente, que sai do **bairro** pela estrutura permanente
 Área › Equipe › bloco de bairros (ver [Áreas e Equipes](../estrutura/areas-e-equipes.md)).
 
@@ -100,17 +100,17 @@ escolher uma em silêncio esconderia a decisão de quem tem de tomá-la.
 A sugestão é **calculada na leitura**, nunca gravada junto da denúncia: a estrutura de áreas é
 editável, e uma sugestão congelada continuaria apontando para a área de antes do ajuste.
 
-**O triador vê PARA QUEM está encaminhando.** Cada opção de área traz o nome do **gestor** que vai
+**O triador vê PARA QUEM está encaminhando.** Cada opção de área traz o nome do **Chefe de Setor** que vai
 receber ("Área 5 — Lourdes Figueiredo Sales"), e o resumo do lote, antes de confirmar, lista área
-**e** gestor. "Encaminhei para a Área 5" diz metade; a outra metade é a pessoa que passa a responder
-por aquilo. Área **sem** gestor registrado gera aviso — a denúncia chegaria lá e ninguém seria
+**e** Chefe de Setor. "Encaminhei para a Área 5" diz metade; a outra metade é a pessoa que passa a responder
+por aquilo. Área **sem** Chefe de Setor registrado gera aviso — a denúncia chegaria lá e ninguém seria
 avisado.
 
-### RN-05b — O gestor é gestor de UMA ÁREA, e só vê o que é dela
+### RN-05b — O Chefe de Setor é Chefe de Setor de UMA ÁREA, e só vê o que é dela
 
 > "Pra ele só interessa o que for direcionado para a área dele" — decisão do dono, 02/09/2026.
 
-O gestor tem **área vinculada** (ver [Áreas e Equipes](../estrutura/areas-e-equipes.md), RN-01b), e o
+O Chefe de Setor tem **área vinculada** (ver [Áreas e Equipes](../estrutura/areas-e-equipes.md), RN-01b), e o
 recorte vale nas **duas** pontas:
 
 1. **a listagem traz só as denúncias da área dele** — as das outras áreas e as que ainda esperam a
@@ -122,25 +122,25 @@ recorte vale nas **duas** pontas:
    porque manda uma lista de identificadores.
 
 A tela **explica o recorte** em vez de deixar a lista curta sem motivo ("Você está vendo só o que foi
-encaminhado a Área 5 — Boca do Rio"), e o selo da etapa passa a nomear a área. Sem isso o gestor
+encaminhado a Área 5 — Boca do Rio"), e o selo da etapa passa a nomear a área. Sem isso o Chefe de Setor
 contaria as denúncias, acharia o número baixo e concluiria que o canal está parado.
 
-**Gestor sem área vinculada** é recusado dizendo isso, e a tela avisa na cara: ele exerce a etapa e
+**Chefe de Setor sem área vinculada** é recusado dizendo isso, e a tela avisa na cara: ele exerce a etapa e
 não tem de onde. Deixar passar daria a ele o sistema inteiro; lista vazia sem explicação pareceria
 sistema quebrado.
 
-**Quem NÃO é recortado:** o **administrador** (é o dono do sistema) e o **administrativo** — quem
+**Quem NÃO é recortado:** o **administrador** (é o dono do sistema) e o **Coordenador** — quem
 tria precisa ver o universo, porque não se tria o que não se vê, e quem encaminhou precisa saber o
-que aconteceu depois. Um gestor que também seja administrativo não é recortado: o papel que amplia
+que aconteceu depois. Um Chefe de Setor que também seja Coordenador não é recortado: o papel que amplia
 ganha, a mesma regra da união de setores na matriz de permissões.
 
-### RN-06 — ETAPA 2, direcionamento: o gestor da área escolhe COMO o trabalho acontece
+### RN-06 — ETAPA 2, direcionamento: o Chefe de Setor da área escolhe COMO o trabalho acontece
 
-A denúncia **`Encaminhada à área`** espera o gestor daquela área, que tem **duas saídas**:
+A denúncia **`Encaminhada à área`** espera o Chefe de Setor daquela área, que tem **duas saídas**:
 
 1. **direcionar à equipe** — vira vistoria dirigida e aparece no aplicativo dos fiscais da equipe;
 2. **incluir numa operação** já planejada para a região, em vez de gerar uma ida isolada ao local. A
-   equipe passa a ser a da operação. O gestor pode **abrir uma operação nova** dali mesmo, quando
+   equipe passa a ser a da operação. O Chefe de Setor pode **abrir uma operação nova** dali mesmo, quando
    ainda não existe trabalho planejado para aquele lugar.
 
 As duas são alternativas, não camadas: direcionar avulso desfaz o vínculo com operação, e anexar a
@@ -150,7 +150,7 @@ trabalho.
 ### RN-07 — Devolver ou arquivar é ato administrativo: motivo de lista MAIS justificativa escrita
 
 A triagem também retira a denúncia do fluxo, e é assim que a **improcedente ou duplicada não chega
-ao gestor**. Exige as três coisas:
+ao Chefe de Setor**. Exige as três coisas:
 
 - **motivo** de lista fechada (para o relatório poder somar por motivo);
 - **justificativa por escrito**, com **mínimo de 15 caracteres**;
@@ -185,7 +185,7 @@ Recebida ─► Encaminhada à área ─► Direcionada à equipe ─► Em camp
                                                                     │        │    (retorno cumprido)
                                                                     │        └─► Retorno vencido
                                                                     │               (situação mantida →
-                                                                    │                próxima medida do gestor)
+                                                                    │                próxima medida do Chefe de Setor)
                                                                     └─► Concluída
    └────────► Devolvida | Arquivada   (saídas da triagem, com justificativa)
 ```
@@ -196,7 +196,7 @@ pós-vistoria existem porque cada uma cobra coisa diferente de gente diferente:
 | Situação | Quem tem a bola | O que ela cobra |
 |---|---|---|
 | **Aguardando regularização** | o **notificado** | o prazo da Notificação Preliminar corre; a equipe volta ao ponto quando ele vencer |
-| **Retorno vencido** | o **gestor da área** | o prazo venceu e a situação continua: alguém tem de decidir a próxima medida |
+| **Retorno vencido** | o **Chefe de Setor da área** | o prazo venceu e a situação continua: alguém tem de decidir a próxima medida |
 
 Sem elas, uma notificação em prazo ficaria com a mesma cara de vistoria que ninguém fez, e um retorno
 frustrado ficaria escondido dentro de "Em campo".
@@ -214,7 +214,7 @@ teste que reprova a denúncia `Em campo` com desfecho preenchido.
 ### RN-10 — As duas etapas operam em LOTE e uma a uma, pelo mesmo caminho
 
 A integração entrega várias denúncias de uma vez, então o lote é o caso **normal** do
-administrativo, não a exceção:
+Coordenador, não a exceção:
 
 - caixas de seleção na grade, com "selecionar todas" alcançando **o recorte filtrado**, não só a
   página;
@@ -238,7 +238,7 @@ depois de vê-las soltas no mesmo nível dos demais itens). A **pasta não decid
 declara rota, slug nem setor — quem tem tela e permissão são os filhos, e ela aparece quando sobra ao
 menos um filho visível. Se ela também declarasse setor, a mesma decisão teria dois donos.
 
-**Concessão inicial:** administrativo, gestor e administrador — os papéis do fluxo. **O fiscal não
+**Concessão inicial:** Coordenador, Chefe de Setor e administrador — os papéis do fluxo. **O fiscal não
 entra:** dar a ele estas telas permitiria escolher o próprio trabalho e arquivar o que não quisesse
 atender. A denúncia chega a ele pelo aplicativo, **já dirigida**.
 
@@ -246,23 +246,23 @@ atender. A denúncia chega a ele pelo aplicativo, **já dirigida**.
 
 | Setor | Etapa |
 |---|---|
-| `administrativo` | **triagem** — o setor de retaguarda que recebe o que chega de fora (setor criado em 02/09/2026 por decisão do dono: não é o administrador do sistema) |
-| `gestor` | **direcionamento**, restrito à área dele (RN-05b) |
+| `coordenador` | **triagem** — o setor de retaguarda que recebe o que chega de fora (setor criado em 02/09/2026 por decisão do dono: não é o administrador do sistema) |
+| `chefe-de-setor` | **direcionamento**, restrito à área dele (RN-05b) |
 | administrador do sistema | **as duas** — é ele que demonstra o fluxo inteiro e que cobre a ausência do outro |
 
-A tela mostra um **selo "Sua etapa: …"** no cabeçalho — que para o gestor nomeia a **área**
+A tela mostra um **selo "Sua etapa: …"** no cabeçalho — que para o Chefe de Setor nomeia a **área**
 ("Sua etapa: direcionamento · Área 5 — Boca do Rio") — e oferece **só as abas da sua etapa**:
 "A triar" para quem tria, "A direcionar" para quem direciona, "Todas" para acompanhar. Quem exerce as
 duas vê as duas, na ordem do fluxo. O número **"a triar"** também só existe para quem tria: para o
-gestor ele apareceria em zero, e zero ali leria como "não há nada a triar", que é falso.
+Chefe de Setor ele apareceria em zero, e zero ali leria como "não há nada a triar", que é falso.
 
 A conferência acontece **no servidor**, e não só na tela: quem pedir a ação da etapa que não é a sua
 é recusado **com o motivo escrito** (nunca em silêncio, nunca com tela de erro seca) e nada é
 alterado. Esconder o botão é conforto; a fronteira é a recusa.
 
-**O setor `administrativo` também é o dono da [Caixa de Entrada](caixa-de-entrada.md)** — registrar o
+**O setor `coordenador` também é o dono da [Caixa de Entrada](caixa-de-entrada.md)** — registrar o
 que chega em papel é a mesma função. Nada além dessas duas telas lhe foi concedido: cadastro,
-operação, mapa e relatório são de gestão, e alargar a concessão é ato do gestor no Modo Gerente, não
+operação, mapa e relatório são de gestão, e alargar a concessão é ato do Chefe de Setor no Modo Gerente, não
 decisão embutida na semente.
 
 ### RN-13 — A busca é o filtro único; a aba é que troca a fonte
@@ -355,13 +355,49 @@ escolhido do outro.
   parece tela quebrada.
 - **O próximo passo continua sendo dito como próximo passo**, e ele muda com a situação: quem foi
   direcionado espera *vistoria*; quem tem prazo correndo espera *retorno*; quem teve retorno vencido
-  espera a *próxima medida do gestor*. Ele fica **fora** da lista de abas — não é aba, porque não tem
+  espera a *próxima medida do Chefe de Setor*. Ele fica **fora** da lista de abas — não é aba, porque não tem
   conteúdo, e clicar nele não levaria a lugar nenhum.
 
 **Nenhuma rota nova nasceu disto.** O trâmite inteiro (relato, fotos, documento) viaja **dentro da
-denúncia**, no mesmo `props` que a listagem já entrega — então o recorte de área do gestor (RN-05b)
+denúncia**, no mesmo `props` que a listagem já entrega — então o recorte de área do Chefe de Setor (RN-05b)
 governa o conteúdo do trâmite pelo mesmo caminho que governa a linha da grade, sem uma segunda
 guarda para alguém esquecer de escrever.
+
+### RN-17b — O passo que fecha a vistoria traz as CONSIDERAÇÕES e as RECOMENDAÇÕES do fiscal
+
+O desfecho (RN-16) diz **como** a vistoria terminou. Ele não diz **o que fazer agora** — e é isso que
+o Chefe de Setor e o Coordenador precisam para dirigir o caso. Quem sabe é quem esteve no ponto.
+
+Então o passo que encerra a ida a campo carrega, ao lado do desfecho, duas coisas que vêm do
+aplicativo do fiscal:
+
+| Campo | O que é |
+|---|---|
+| `consideracoes` | **Texto livre** do fiscal, escrito ao fechar a vistoria. Conta o caso: o que ele viu, o que o ocupante disse, por que o prazo é curto. Pode estar vazio. |
+| `recomendacoes` | Os **atalhos** que ele assinalou, de lista fechada (`recomendacoes_do_fiscal`). Dizem o que ele está pedindo: voltar no vencimento, reprogramar para o horário do ponto, encaminhar ao Chefe de Setor para a próxima medida, conferir o cadastro, nada mais a fazer. |
+
+- **As duas juntas, sempre.** O atalho é somável pelo relatório ("quantas vistorias pediram nova
+  ida") e se lê de relance numa fila de trinta linhas; o texto conta o caso. Uma sem a outra perde
+  metade: a recomendação sozinha não explica por quê, e o texto sozinho não é somável nem varrível
+  com o olho.
+- **Aparecem em DESTAQUE, logo abaixo do desfecho** — não como duas linhas no meio de "o que ficou
+  decidido neste passo". Enterradas na ficha, seriam lidas depois da decisão que deveriam orientar. E
+  o passo ganha **selo próprio na linha do tempo** ("2 recomendações"), que é o que faz alguém abrir
+  aquele passo em vez dos outros seis.
+- **Todo passo declara as duas chaves**, com valor neutro (`null` e `[]`) nos que não as produziram —
+  o mesmo motivo dos outros campos do passo: chave ausente em metade deles viraria leitura defensiva
+  espalhada pela tela.
+- **A recomendação sai de catálogo**, e o catálogo é o **contrato** com o aplicativo do fiscal:
+  atalho novo entra nos dois lados no mesmo passo, senão a Retaguarda recebe uma recomendação que
+  não sabe ler. Os nomes dos dois campos são parte do mesmo contrato — a mesma informação com dois
+  nomes é o começo da divergência.
+- **Fonte única:** o que virou `recomendacoes` **saiu** das linhas de ficha que diziam a mesma coisa
+  ("Recomendação da equipe", "Próxima medida sugerida pela equipe", "Encaminhamento"). Deixar as duas
+  formas faria a mesma recomendação ter dois donos, e um dia elas divergiriam.
+
+**Onde mais isso aparece:** a tela [Retorno de Campo](retorno-de-campo.md) é a **fila do Chefe de
+Setor** — todo registro de fiscalização concluído da área dele, com a recomendação em coluna própria.
+Ela **deriva** deste mesmo passo do trâmite: a vistoria é descrita num lugar só.
 
 ### RN-18 — A Retaguarda LÊ o documento de campo; ela não o emite
 
@@ -392,21 +428,21 @@ indistinguível de um nome de rua.
 | Usuário | Senha | O que vê |
 |---|---|---|
 | `admin` | `prototipo123` | as **duas** etapas e **todas** as áreas — o fluxo inteiro |
-| `administrativo1` | `adm123` | só a **triagem**, sobre o universo (Célia Andrade Portela) |
+| `administrativo1` | `adm123` | só a **triagem** (papel de **Coordenador**), sobre o universo (Célia Andrade Portela) |
 | `gestor1` | `gestor123` | só o **direcionamento**, e só da **Área 5 — Boca do Rio** (Lourdes Figueiredo Sales) |
 | `gestor2` | `gestor123` | idem, **Área 1 — Centro** (Marta Nogueira Prado) |
 | `gestor3` | `gestor123` | idem, **Área 3 — Brotas** (Verônica Lins Barreto) |
 | `fiscal1` | `fiscal123` | **não entra** — é levado à tela inicial com o motivo na tela |
 
 Roteiro: entre como `administrativo1`, selecione algumas denúncias em "A triar", confira as áreas
-sugeridas na linha (procure uma com o selo *bairro compartilhado*) e repare no **nome do gestor** em
-cada opção; clique em **Encaminhar selecionadas** e confira o resumo por área e gestor. Devolva outra
+sugeridas na linha (procure uma com o selo *bairro compartilhado*) e repare no **nome do Chefe de Setor** em
+cada opção; clique em **Encaminhar selecionadas** e confira o resumo por área e Chefe de Setor. Devolva outra
 com justificativa — note que ele **não** tem a aba "A direcionar".
 
 Depois entre como `gestor1`: a lista é só da Área 5, o selo nomeia a área e o aviso explica o
 recorte. Mande um lote à equipe (tente uma equipe de fora da área para ver a justificativa passar a
 ser obrigatória) e outro para a **Operação Verão — Orla**. Entre como `gestor2` para provar o
-recorte: a lista é outra, e o que era do gestor1 não aparece.
+recorte: a lista é outra, e o que era do `gestor1` não aparece.
 
 ### Os estágios avançados: qual conta abre qual caso
 
@@ -416,16 +452,16 @@ teclado). Cada caso abaixo mostra uma coisa diferente:
 | Denúncia | Canal | Quem vê | O que ela demonstra |
 |---|---|---|---|
 | **DEN-0029** · barraca com puxada | e-Salvador | `gestor1`, `administrativo1`, `admin` | **Notificação Preliminar com o prazo correndo** — chegou a campo por **operação**, e o documento tem motivos, penalidades, prazo de 5 dias e as três assinaturas colhidas |
-| **DEN-0030** · mesas e som em Itapuã | Fala Salvador | `gestor1`, `administrativo1`, `admin` | **retorno vencido**: notificação de 48 h com o notificado **recusando assinar**, e o retorno encontrando o ponto igual — a denúncia volta ao gestor |
+| **DEN-0030** · mesas e som em Itapuã | Fala Salvador | `gestor1`, `administrativo1`, `admin` | **retorno vencido**: notificação de 48 h com o notificado **recusando assinar**, e o retorno encontrando o ponto igual — a denúncia volta ao Chefe de Setor |
 | **DEN-0013** · quiosque abandonado | e-Salvador | `gestor2`, `administrativo1`, `admin` | **Auto de Apreensão** — cinco tipos de bem recolhidos, guarda no SEGUB por 90 dias, destino "leilão", via **não entregue** (não havia ocupante) |
 | **DEN-0033** · carrinho na garagem | Fala Salvador | `gestor2`, `administrativo1`, `admin` | o **caminho comum**: orientou, o ambulante deslocou o carrinho, **nenhum documento** |
 | **DEN-0031** · ponto na orla de Amaralina | e-Salvador | `gestor3`, `administrativo1`, `admin` | **nada encontrado no local** — o ponto é de fim de semana e a equipe foi em dia útil; a recomendação de reprogramar fica registrada |
-| **DEN-0032** · mesas de bar no Cabula | Fala Salvador | `gestor3`, `administrativo1`, `admin` | a denúncia **de ponta a ponta**, em sete passos: integração › triagem › gestor › vistoria › notificação › retorno › conclusão, com o notificado **cumprindo** e nenhuma penalidade |
-| **DEN-0027** · banca na faixa de pedestre | Fala Salvador | **só** `administrativo1` e `admin` | é da **Área 4**, que não tem gestor com conta: a prova visível de que o recorte por área funciona |
+| **DEN-0032** · mesas de bar no Cabula | Fala Salvador | `gestor3`, `administrativo1`, `admin` | a denúncia **de ponta a ponta**, em sete passos: integração › triagem › Chefe de Setor › vistoria › notificação › retorno › conclusão, com o notificado **cumprindo** e nenhuma penalidade |
+| **DEN-0027** · banca na faixa de pedestre | Fala Salvador | **só** `administrativo1` e `admin` | é da **Área 4**, que não tem Chefe de Setor com conta: a prova visível de que o recorte por área funciona |
 | **DEN-0034** · trailer na Ribeira | e-Salvador | `administrativo1`, `admin` | o trâmite **LONGO, de nove passos** — e o único em que o notificado **procura a SEMOP** dentro do prazo e a **chefia da equipe confere** o retorno antes de encerrar. Termina em `Regularizado após notificação`, sem penalidade |
 | **DEN-0035** · carrinho em frente à escola de Sussuarana | Fala Salvador | `administrativo1`, `admin` | a **segunda notificação com prazo correndo**, deliberadamente diferente da DEN-0029 na leitura do impresso: caixa que pede **complemento à mão** ("Comparecer a SEMOP no Setor ____"), a **20ª caixa "Outros"** (campo livre) preenchida, outras penalidades, prazo de **10 dias** e uma testemunha **não colhida**. Chegou a campo pela **Operação Volta às Aulas** |
 | **DEN-0036** · lona na Avenida Joana Angélica | Fala Salvador | `administrativo1`, `admin` | regularização no local numa área de **corredor** (Itinerante), vinda de denúncia **anônima**, com a vistoria assinada pela **segunda fiscal** da equipe |
-| **DEN-0037** · abrigo de ônibus em Pirajá | e-Salvador | `administrativo1`, `admin` | o mesmo caminho educativo pelo **portal**, na **Área 4** (sem gestor com conta) — a permissionária desmonta do abrigo e volta ao ponto autorizado |
+| **DEN-0037** · abrigo de ônibus em Pirajá | e-Salvador | `administrativo1`, `admin` | o mesmo caminho educativo pelo **portal**, na **Área 4** (sem Chefe de Setor com conta) — a permissionária desmonta do abrigo e volta ao ponto autorizado |
 | **DEN-0038** · som de madrugada em Stella Maris | Fala Salvador | `gestor1`, `administrativo1`, `admin` | **nada encontrado** com a ida no **dia e no horário certos**: o ponto não existe mais, e o registro diz por que não é caso de nova ida. É também a **troca de equipe** (passada à **Noturna**), com a justificativa escrita |
 
 E os **estados intermediários**, que agora também trazem o percurso escrito passo a passo — é neles
@@ -434,18 +470,18 @@ que se vê a decisão de cada dono, e não só a frase do que aconteceu:
 | Denúncia | Canal | Quem vê | O que ela demonstra |
 |---|---|---|---|
 | **DEN-0010** · higiene na Avenida Vasco da Gama | e-Salvador | `gestor2`, `administrativo1`, `admin` | o **direcionamento à equipe** escrito: a saída escolhida, **por que não entrou em operação** e a orientação à equipe. É aqui que a tela desenha o bloco de **próximo passo** (a vistoria que ainda não aconteceu), **fora** da lista de abas |
-| **DEN-0024** · evento na Rua Chile | Fala Salvador | `gestor2`, `administrativo1`, `admin` | a **outra saída do gestor**: anexar à **Rotina Centro**, com região, período e foco da operação. E o **bairro compartilhado** na triagem (Comércio está na Área 1 e na Itinerante) com a escolha registrada |
+| **DEN-0024** · evento na Rua Chile | Fala Salvador | `gestor2`, `administrativo1`, `admin` | a **outra saída do Chefe de Setor**: anexar à **Rotina Centro**, com região, período e foco da operação. E o **bairro compartilhado** na triagem (Comércio está na Área 1 e na Itinerante) com a escolha registrada |
 | **DEN-0012** · rampa de acessibilidade na Nazaré | e-Salvador | `gestor2`, `administrativo1`, `admin` | **vistoria em andamento**: a equipe está no ponto agora, com relato, duas fotos e coordenada — e **sem desfecho e sem documento** |
 | **DEN-0028** · mesas na ciclovia da Avenida Sete | Fala Salvador | `administrativo1`, `admin` | a mesma vistoria em andamento no canal do **telefone** e numa área de **corredor**, com o responsável ainda não localizado |
 | **DEN-0014** · obra na Federação | e-Salvador | **só** `administrativo1` e `admin` | a **devolução ao canal**: motivo de catálogo, justificativa por escrito e o **órgão indicado** ao cidadão. Percurso que termina na mesa, sem ida a campo |
 | **DEN-0026** · banca sem endereço em São Marcos | Fala Salvador | **só** `administrativo1` e `admin` | o **arquivamento na triagem**, com o registro do que **reabre o caso** (complemento de endereço enviado pelo canal) |
 
-> Denúncia devolvida ou arquivada **sai da área** (RN-05b), então nenhum gestor a vê — só quem tria e
+> Denúncia devolvida ou arquivada **sai da área** (RN-05b), então nenhum Chefe de Setor a vê — só quem tria e
 > o administrador. É o comportamento correto: ela não chegou a ser trabalho de área nenhuma.
 
 Use também a barra de busca: `regularizado no local` traz os casos resolvidos sem papel,
 `aguardando regularização` traz as duas notificações com prazo correndo, `em campo` traz as equipes
-que estão na rua agora, e `retorno vencido` traz o que está parado esperando decisão do gestor.
+que estão na rua agora, e `retorno vencido` traz o que está parado esperando decisão do Chefe de Setor.
 
 ---
 
@@ -456,12 +492,12 @@ que estão na rua agora, e `retorno vencido` traz o que está parado esperando d
 - **Prazo real de atendimento** de cada canal — o protótipo usa 10 dias para os dois.
 - **Canal de devolução**: por onde o e-Salvador e o 156 aceitam o retorno com a justificativa
   (**PEND-025**).
-- **Modelagem definitiva do vínculo gestor ↔ área.** A regra está decidida (RN-05b: o gestor é de uma
+- **Modelagem definitiva do vínculo Chefe de Setor ↔ área.** A regra está decidida (RN-05b: o Chefe de Setor é de uma
   área), mas no protótipo o vínculo mora em `config/prototipo_estrutura.php` e liga pela matrícula.
-  Em produção ele é **tabela usuário↔área**: uma pessoa pode responder por mais de uma, gestor entra
-  e sai, e a troca é fato datado. O código já trata **lista** de áreas por gestor, para a modelagem
-  real não obrigar a reescrever quem lê. Falta também definir se existe **gestor geral** (que vê
-  todas) e quem cobre a área cujo gestor está ausente.
+  Em produção ele é **tabela usuário↔área**: uma pessoa pode responder por mais de uma, Chefe de Setor entra
+  e sai, e a troca é fato datado. O código já trata **lista** de áreas por Chefe de Setor, para a modelagem
+  real não obrigar a reescrever quem lê. Falta também definir se existe **Chefe de Setor geral** (que vê
+  todas) e quem cobre a área cujo Chefe de Setor está ausente.
 - **Numeração definitiva** do protocolo interno: no protótipo é `DEN-NNNN` calculado; no sistema sai
   de `App\Support\Protocolo::proximo()`, a fonte única de numeração.
 - **Ligação com a fiscalização de campo**: hoje os estágios avançados são **semeados** — o trâmite
@@ -477,7 +513,7 @@ que estão na rua agora, e `retorno vencido` traz o que está parado esperando d
 - **Numeração dos blocos.** Os números de Notificação (`1949xx`) e de Auto de Apreensão (`1600xx`)
   são os das faixas dos blocos de papel do cliente, escritos à mão no dado semeado. No sistema eles
   saem do estoque reservado por aparelho, para o documento nascer numerado no meio da rua sem sinal.
-- **O que o gestor FAZ com um retorno vencido** ainda não é ação de tela: a situação existe e cobra a
+- **O que o Chefe de Setor FAZ com um retorno vencido** ainda não é ação de tela: a situação existe e cobra a
   decisão, mas o botão que autoriza a apreensão nasce junto do módulo de fiscalização, não aqui.
 - **Derivação bairro → área com bairro compartilhado** e os casos Itinerante (corredor) e Noturna
   (turno) — a mesma **PEND-022** da Caixa de Entrada.
@@ -492,3 +528,4 @@ que estão na rua agora, e `retorno vencido` traz o que está parado esperando d
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | **A vida da denúncia depois do direcionamento, e o trâmite navegável.** (1) Nascem duas situações de pós-vistoria — **Aguardando regularização** (prazo da notificação correndo) e **Retorno vencido** (prazo vencido com a situação mantida) — e o catálogo de **desfechos** de vistoria, que a denúncia herda do último passo do trâmite (RN-09 e RN-16). (2) A amostra ganha os **estágios avançados**: vistoria com relato, situação encontrada, fotos e coordenada; Notificação Preliminar com prazo correndo; retorno vencido escalando; Auto de Apreensão com bens no SEGUB; regularização no local sem documento; nada encontrado; e uma denúncia de ponta a ponta — distribuídas pelos dois canais e pelas áreas dos três gestores com conta, com o trâmite escrito passo a passo e quem agiu resolvido contra a estrutura de áreas e equipes. (3) O **trâmite passa a ser navegável**: linha do tempo com abas verticais de teclado, e o painel do passo mostrando a decisão tomada, o registro de campo e o **documento lavrado em leitura**, na forma do papel (RN-17 e RN-18). A redação dos impressos passa a viver em `config/prototipo_documentos_campo.php`, referenciada por chave. | Pedido do dono de 02/09/2026: os dados paravam no direcionamento, e ele precisa ver o que a equipe recebeu no aplicativo, o que encontrou em campo e o desfecho que voltou — inclusive os casos em que documento foi emitido. A amostra é deliberadamente **majoritariamente educativa** (a maioria termina sem papel), porque uma demonstração em que todo caso de campo termina autuado desenharia um sistema punitivo que não é o do cliente. |
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | **Retorno do dono, três mudanças.** (1) As duas telas passam a ser **filhas de um item de menu "Denúncias" que expande**, e não itens soltos — estrutura genérica de pasta no config, com as três formas da casca resolvidas (RN-11). (2) O **gestor é de uma área**: vínculo gestor↔área na estrutura, listagem recortada pela área dele, ação sobre denúncia de outra área recusada no servidor, selo da etapa nomeando a área e o triador passando a ver o **nome do gestor** que vai receber (RN-05b e RN-05). (3) Nasce o setor **`administrativo`**, dono da triagem e também da Caixa de Entrada — a triagem deixa de ser do setor `administrador` (RN-12). | Respostas do dono às perguntas estruturais que o protótipo abriu: "pra ele só interessa o que for direcionado para a área dele" e "não é o admin do sistema, mas o admin pode fazer também". O submenu veio do print do dono, que mostrava os dois canais no mesmo nível dos demais itens do menu. |
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Fala Salvador) | Nasce o módulo, como **protótipo**: duas telas de canal com a mesma mecânica, denúncias semeadas como se tivessem chegado por integração (com carimbo de recebimento e número de origem), fluxo de duas etapas com dois papéis — triagem encaminhando à área derivada do bairro e gestor direcionando à equipe ou a uma operação —, decisão em lote e individual, devolução/arquivamento com justificativa, trâmite por ato, busca inteligente e exportação. | Pedido do dono de 02/09/2026, a partir do cenário da reunião com o cliente: as ouvidorias da Prefeitura passarão a entregar denúncia ao SEFAL por API, e o setor precisa de onde triar, encaminhar à área e direcionar o trabalho — fluxo NOVO e paralelo ao da Caixa de Entrada, que continua sendo o que chega em papel. Entregue como protótipo para o dono aprovar a forma antes de virar tabela, migration e contrato de integração. |
+| 04/09/2026 | José Nascimento | Denúncias | Os papéis passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`) — slug inclusive, com migration renomeando catálogo e matriz. Ver [Papéis e setores](../papeis-e-setores.md). | As duas etapas do fluxo são nomeadas pelos papéis em quase toda a tela; deixar o nome antigo aqui faria a tela chamar de "gestor" quem o resto do sistema já chama de Chefe de Setor. |

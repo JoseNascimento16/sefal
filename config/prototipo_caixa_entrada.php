@@ -2,7 +2,7 @@
 
 /*
 |--------------------------------------------------------------------------
-| PROTÓTIPO — Caixa de Entrada do Administrativo
+| PROTÓTIPO — Caixa de Entrada do Coordenador
 |--------------------------------------------------------------------------
 |
 | ⚠️ DADO DE PROTÓTIPO. A tela existe para o dono olhar o fluxo e aprovar a
@@ -13,11 +13,11 @@
 | ── De onde a demanda vem (reunião com o cliente, 02/09/2026) ───────────────
 |
 | Hoje ela chega em PAPEL: o e-Salvador e o Fala Salvador (Disque 156) entregam
-| documento impresso ao administrativo, que digita, decide o destino e encaminha
+| documento impresso ao coordenador, que digita, decide o destino e encaminha
 | à equipe da ÁREA do bairro. O cadastro manual é requisito, não gambiarra — a
 | adaptação para API vem depois, e o papel não desaparece por decreto.
 |
-| ── As duas decisões do administrativo ──────────────────────────────────────
+| ── As duas decisões do coordenador ─────────────────────────────────────────
 |
 |   Registrada e atendida  → encaminhada à equipe responsável (derivada do
 |                            BAIRRO, confirmada por quem registra);
@@ -88,7 +88,7 @@ return [
     'prazo_padrao_em_dias' => 10,
 
     /*
-     * A caixa como ela chega ao administrativo numa manhã comum. Cada linha é um
+     * A caixa como ela chega ao coordenador numa manhã comum. Cada linha é um
      * caso que o dono reconhece — inclusive os que não dão certo.
      */
     'demandas' => [

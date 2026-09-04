@@ -148,7 +148,7 @@ casca** está aqui.
   miolo. Quem abre um mapa está olhando a cidade, não uma tela com um mapa dentro;
 - **o menu PERMANECE.** O mockup punha a navegação numa pílula flutuante no topo,
   no lugar do painel lateral. Foi a única peça dele que não veio: o imersivo é
-  sobre o **conteúdo**, e trocar a casca em duas telas faria o gestor perder o
+  sobre o **conteúdo**, e trocar a casca em duas telas faria o Chefe de Setor perder o
   menu justamente onde ele mais precisa pular para "Cadastro de Operação" — e
   criaria uma segunda navegação para manter. O que o modo imersivo faz na casca
   são três coisas, e só: o miolo perde o preenchimento, a página perde a rolagem
@@ -184,7 +184,7 @@ nova deve manter isso.
 
 Um item pode declarar `oculto` em `config/retaguarda_menu.php`. O efeito é um só: o
 item sai do menu. **Continuam vivas** a rota (a tela abre pelo endereço), a tela em
-si e a permissão no Modo Gerente — inclusive a concessão que o gestor já tenha
+si e a permissão no Modo Gerente — inclusive a concessão que o Chefe de Setor já tenha
 feito. Seção que fica sem nenhum item visível desaparece da barra junto.
 
 **Por que não apagar:** esconder apagando transforma "voltar atrás" em "refazer", e

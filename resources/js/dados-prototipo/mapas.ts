@@ -10,13 +10,13 @@
 | Os DADOS não moram aqui — moram em `App\Support\Prototipo\MapasFicticios`, que
 | deriva a área/equipe de cada bairro da MESMA fonte que a tela de Áreas e
 | Equipes mostra (`EstruturaFicticia`). Uma segunda lista bairro→equipe no front
-| discordaria dela no primeiro ajuste, e o mapa passaria a mandar o gestor cobrar
+| discordaria dela no primeiro ajuste, e o mapa passaria a mandar a chefia cobrar
 | a equipe errada.
 |
 | As CONTAS, essas, moram aqui de propósito: é a RN-06 do desenho da Retaguarda —
 | número de painel sai da mesma lista que o mapa desenha, e não de um segundo
 | cálculo no servidor. Assim o painel não pode discordar da mancha ao lado dele,
-| e ele reage ao filtro do gestor no mesmo instante.
+| e ele reage ao filtro da chefia no mesmo instante.
 |
 | Quando o protótipo virar produção, os tipos passam a descrever o retorno real
 | do controller e as contas continuam onde estão.
@@ -30,7 +30,7 @@ import { GRADIENTE_CALOR } from '@/lib/mapa';
 /** A situação de um ponto conhecido — a MESMA do aplicativo do fiscal. */
 export type Situacao = 'regular' | 'irregular';
 
-/** Uma equipe, como o filtro do gestor precisa dela. */
+/** Uma equipe, como o filtro da chefia precisa dela. */
 export interface Equipe {
     equipe: string;
     area: string;
@@ -160,7 +160,7 @@ export const COR_DO_PINO = {
 
 export const GRADIENTE_CSS = `linear-gradient(90deg, ${Object.values(GRADIENTE_CALOR).join(', ')})`;
 
-// ── O recorte do gestor ─────────────────────────────────────────────────────
+// ── O recorte da chefia ─────────────────────────────────────────────────────
 
 /**
  * O filtro está satisfeito por esta linha?

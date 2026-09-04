@@ -18,19 +18,19 @@ use Illuminate\Support\Facades\Session;
  *
  * ── O fluxo tem DUAS etapas, com DOIS donos ─────────────────────────────────
  *
- *   1. **Triagem** (administrativo) — lê a denúncia `Recebida`, decide se ela
+ *   1. **Triagem** (coordenador) — lê a denúncia `Recebida`, decide se ela
  *      procede e a **encaminha à ÁREA** correspondente, derivada do bairro. A
  *      derivação SUGERE; quem confirma é gente, porque um bairro pode pertencer
  *      a duas áreas e aí as duas respostas estão certas. As saídas da triagem são
  *      `Devolvida` e `Arquivada`, sempre com motivo e justificativa: denúncia
- *      improcedente ou duplicada não deve chegar ao gestor.
- *   2. **Direcionamento** (gestor da área) — pega o que foi encaminhado à área
+ *      improcedente ou duplicada não deve chegar ao Chefe de Setor.
+ *   2. **Direcionamento** (Chefe de Setor da área) — pega o que foi encaminhado à área
  *      dele e escolhe COMO o trabalho acontece: direciona à **equipe** (a da
  *      área, ou outra, e aí a justificativa é obrigatória) ou anexa a uma
  *      **operação** já planejada.
  *
  * As duas etapas operam em LOTE e uma a uma. O lote é o caso normal do
- * administrativo (a integração entrega várias de uma vez), e é por isso que os
+ * coordenador (a integração entrega várias de uma vez), e é por isso que os
  * métodos daqui recebem lista de identificadores, nunca um só: dois caminhos —
  * um para o lote e outro para o registro isolado — seriam a mesma regra com dois
  * donos, e um dia só um deles ganharia a validação nova.
@@ -63,10 +63,10 @@ class DenunciasFicticias
 
     private const CHAVE_OPERACOES = 'prototipo.denuncias.operacoes';
 
-    /** As situações em que a denúncia ainda espera a TRIAGEM do administrativo. */
+    /** As situações em que a denúncia ainda espera a TRIAGEM do coordenador. */
     public const AGUARDANDO_TRIAGEM = ['Recebida'];
 
-    /** As situações em que ela espera o DIRECIONAMENTO do gestor da área. */
+    /** As situações em que ela espera o DIRECIONAMENTO do Chefe de Setor da área. */
     public const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada à área'];
 
     /**
@@ -80,8 +80,8 @@ class DenunciasFicticias
      */
     public const PAPEIS_DO_TRAMITE = [
         'integracao',
-        'administrativo',
-        'gestor',
+        'coordenador',
+        'chefe-de-setor',
         'encarregado',
         'equipe',
         'fiscal',
@@ -163,7 +163,7 @@ class DenunciasFicticias
 
         foreach ($areasPorId as $id => $area) {
             $mudou = self::alterar((int) $id, static function (array $d) use ($area, $observacao): array {
-                $detalhe = "Encaminhada à {$area} para direcionamento do gestor.";
+                $detalhe = "Encaminhada à {$area} para direcionamento do Chefe de Setor.";
 
                 if (is_string($observacao) && trim($observacao) !== '') {
                     $detalhe .= ' '.trim($observacao);
@@ -179,7 +179,7 @@ class DenunciasFicticias
                     'motivo' => null,
                     'justificativa' => null,
                     'destino' => null,
-                    'tramites' => [...$d['tramites'], self::tramite('Triada e encaminhada à área', $detalhe)],
+                    'tramites' => [...$d['tramites'], self::tramite('Triada e encaminhada à área', $detalhe, 'Encaminhada à área')],
                 ];
             });
 
@@ -214,7 +214,7 @@ class DenunciasFicticias
             $mudou = self::alterar((int) $id, static fn (array $d): array => [
                 ...$d,
                 'situacao' => $situacao,
-                // A denúncia recusada não chega ao gestor: sai da área e da equipe.
+                // A denúncia recusada não chega ao Chefe de Setor: sai da área e da equipe.
                 'area' => null,
                 'equipe' => null,
                 'operacao' => null,
@@ -226,6 +226,7 @@ class DenunciasFicticias
                     self::tramite(
                         $arquivar ? 'Arquivada na triagem' : 'Devolvida ao canal de origem',
                         $motivo.' — '.$justificativa,
+                        $situacao,
                     ),
                 ],
             ]);
@@ -241,7 +242,7 @@ class DenunciasFicticias
     }
 
     /**
-     * DIRECIONAMENTO — o gestor manda a denúncia para uma equipe.
+     * DIRECIONAMENTO — o Chefe de Setor manda a denúncia para uma equipe.
      *
      * A justificativa só é exigida quando a equipe NÃO é a da área da denúncia
      * (regra do controller): tirar trabalho da equipe responsável é decisão que
@@ -268,10 +269,10 @@ class DenunciasFicticias
                     'situacao' => 'Direcionada à equipe',
                     'equipe' => $equipe,
                     // Direcionar avulso desfaz o vínculo com operação: as duas
-                    // saídas do gestor são alternativas, não camadas.
+                    // saídas do Chefe de Setor são alternativas, não camadas.
                     'operacao' => null,
                     'justificativa_equipe' => $justificativa,
-                    'tramites' => [...$d['tramites'], self::tramite('Direcionada à equipe', $detalhe)],
+                    'tramites' => [...$d['tramites'], self::tramite('Direcionada à equipe', $detalhe, 'Direcionada à equipe')],
                 ];
             });
 
@@ -286,7 +287,7 @@ class DenunciasFicticias
     }
 
     /**
-     * DIRECIONAMENTO — o gestor anexa a denúncia a uma operação já planejada.
+     * DIRECIONAMENTO — o Chefe de Setor anexa a denúncia a uma operação já planejada.
      *
      * A equipe passa a ser a da operação: é ela que vai a campo, e deixar a
      * denúncia apontando para outra faria a tela mostrar dois responsáveis.
@@ -321,6 +322,7 @@ class DenunciasFicticias
                     self::tramite(
                         'Incluída em operação',
                         "Anexada à {$operacao}".($equipe === null ? '.' : ", executada pela Equipe {$equipe}."),
+                        'Em operação',
                     ),
                 ],
             ]);
@@ -336,7 +338,7 @@ class DenunciasFicticias
     }
 
     /**
-     * As operações a que o gestor pode anexar denúncia — as do arquivo de dados
+     * As operações a que o Chefe de Setor pode anexar denúncia — as do arquivo de dados
      * mais as que a sessão criou.
      *
      * @return list<array<string, mixed>>
@@ -361,7 +363,7 @@ class DenunciasFicticias
 
     /**
      * Cria uma operação a partir do direcionamento — o caso em que não há
-     * trabalho planejado ainda para aquela região e o gestor abre um.
+     * trabalho planejado ainda para aquela região e o Chefe de Setor abre um.
      *
      * @param  array<string, mixed>  $dados
      * @return array<string, mixed> A operação como ela ficou
@@ -510,7 +512,7 @@ class DenunciasFicticias
         if (in_array($situacao, ['Devolvida', 'Arquivada'], true)) {
             $tramites[] = self::passo([
                 'em' => $passoDepois(6),
-                'quem' => 'Setor Administrativo',
+                'quem' => 'Coordenação',
                 'o_que' => $situacao === 'Arquivada' ? 'Arquivada na triagem' : 'Devolvida ao canal de origem',
                 'detalhe' => ((string) ($bruta['motivo'] ?? '')).' — '.((string) ($bruta['justificativa'] ?? '')),
                 'situacao' => $situacao,
@@ -525,9 +527,9 @@ class DenunciasFicticias
 
         $tramites[] = self::passo([
             'em' => $passoDepois(5),
-            'quem' => 'Setor Administrativo',
+            'quem' => 'Coordenação',
             'o_que' => 'Triada e encaminhada à área',
-            'detalhe' => "Encaminhada à {$area} para direcionamento do gestor.",
+            'detalhe' => "Encaminhada à {$area} para direcionamento do Chefe de Setor.",
             'situacao' => 'Encaminhada à área',
         ]);
 
@@ -535,12 +537,12 @@ class DenunciasFicticias
             return $tramites;
         }
 
-        $gestor = self::pessoaDoPasso('gestor', $bruta, $nomeDoCanal)['texto'];
+        $chefe = self::pessoaDoPasso('chefe-de-setor', $bruta, $nomeDoCanal)['texto'];
 
         if ($situacao === 'Em operação') {
             $tramites[] = self::passo([
                 'em' => $passoDepois(9),
-                'quem' => $gestor,
+                'quem' => $chefe,
                 'o_que' => 'Incluída em operação',
                 'detalhe' => 'Anexada à '.((string) ($bruta['operacao'] ?? ''))
                     .($equipe === '' ? '.' : ", executada pela Equipe {$equipe}."),
@@ -549,7 +551,7 @@ class DenunciasFicticias
         } else {
             $tramites[] = self::passo([
                 'em' => $passoDepois(9),
-                'quem' => $gestor,
+                'quem' => $chefe,
                 'o_que' => 'Direcionada à equipe',
                 'detalhe' => "Direcionada à Equipe {$equipe} para vistoria."
                     .(($bruta['justificativa_equipe'] ?? null) !== null
@@ -594,7 +596,7 @@ class DenunciasFicticias
         $resolvidos = [];
 
         foreach ($passos as $passo) {
-            $papel = (string) ($passo['quem'] ?? 'administrativo');
+            $papel = (string) ($passo['quem'] ?? 'coordenador');
             $integracao = $papel === 'integracao';
             $em = Date::parse($recebidaEm)->addHours((int) ($passo['ha_horas'] ?? 0));
             $pessoa = self::pessoaDoPasso($papel, $bruta, $nomeDoCanal);
@@ -609,6 +611,15 @@ class DenunciasFicticias
                 'detalhe' => (string) ($passo['detalhe'] ?? ($integracao ? self::detalheDaIntegracao($bruta, $nomeDoCanal) : '')),
                 'situacao' => (string) ($passo['situacao'] ?? ($integracao ? 'Recebida' : '')),
                 'desfecho' => isset($passo['desfecho']) ? (string) $passo['desfecho'] : null,
+                // O que o fiscal escreveu e o que ele recomendou ao fechar a
+                // vistoria. Os dois nomes são o CONTRATO com o aplicativo dele
+                // (`consideracoes` texto livre, `recomendacoes` lista de
+                // atalhos): a mesma informação com dois nomes é o começo da
+                // divergência.
+                'consideracoes' => isset($passo['consideracoes']) && trim((string) $passo['consideracoes']) !== ''
+                    ? trim((string) $passo['consideracoes'])
+                    : null,
+                'recomendacoes' => array_values(array_map('strval', (array) ($passo['recomendacoes'] ?? []))),
                 'campos' => array_values((array) ($passo['campos'] ?? [])),
                 'campo' => isset($passo['campo']) ? self::campoResolvido((array) $passo['campo']) : null,
                 'documento' => isset($passo['documento'])
@@ -635,6 +646,8 @@ class DenunciasFicticias
         return [
             'situacao' => '',
             'desfecho' => null,
+            'consideracoes' => null,
+            'recomendacoes' => [],
             'campos' => [],
             'campo' => null,
             'documento' => null,
@@ -659,7 +672,7 @@ class DenunciasFicticias
      * ⚠️ As palavras de papel são NEUTRAS de propósito ("gestão da Área 5",
      * "chefia da Equipe C1"). A estrutura tem homens e mulheres nos mesmos
      * cargos — Andréa Rocha é encarregada da B2, Lourdes Figueiredo Sales
-     * responde pela Área 5 —, e "Gestor da Área 5" fixo no molde erra o gênero de
+     * responde pela Área 5 —, e "Chefe da Área 5" fixo no molde erra o gênero de
      * metade da estrutura. Concordância é do dado, não do texto.
      *
      * @param  array<string, mixed>  $bruta
@@ -675,16 +688,16 @@ class DenunciasFicticias
             return ['texto' => "Integração · {$nomeDoCanal}", 'assinante' => $nomeDoCanal];
         }
 
-        if ($papel === 'gestor') {
-            $nome = trim((string) (EstruturaFicticia::gestoresPorArea()[$area]['nome'] ?? ''));
+        if ($papel === 'chefe-de-setor') {
+            $nome = trim((string) (EstruturaFicticia::chefiasPorArea()[$area]['nome'] ?? ''));
 
             return $nome === ''
-                // Área sem gestor registrado: o passo continua tendo autor
+                // Área sem Chefe de Setor registrado: o passo continua tendo autor
                 // institucional. Devolver texto vazio deixaria a linha do trâmite
                 // sem assinatura, e é justamente o que o módulo existe para não
                 // fazer.
-                ? ['texto' => 'Gestão da '.($area === '' ? 'área' : $area), 'assinante' => 'Gestão da área']
-                : ['texto' => "{$nome} · gestão da ".($area === '' ? 'área' : $area), 'assinante' => $nome];
+                ? ['texto' => 'Chefia da '.($area === '' ? 'área' : $area), 'assinante' => 'Chefia da área']
+                : ['texto' => "{$nome} · chefia da ".($area === '' ? 'área' : $area), 'assinante' => $nome];
         }
 
         if ($papel === 'encarregado') {
@@ -719,7 +732,7 @@ class DenunciasFicticias
             return ['texto' => "Equipe {$codigo}", 'assinante' => "Equipe {$codigo}"];
         }
 
-        return ['texto' => 'Setor Administrativo', 'assinante' => 'Setor Administrativo'];
+        return ['texto' => 'Coordenação', 'assinante' => 'Coordenação'];
     }
 
     /**
@@ -969,18 +982,31 @@ class DenunciasFicticias
     /**
      * Uma linha de trâmite feita AGORA, assinada por quem está usando o sistema.
      *
-     * @return array<string, string>
+     * ⚠️ Passa por {@see passo()}, e isso não é estilo: a linha vai para a SESSÃO
+     * e volta à tela sem passar mais por nenhuma normalização. Montada à mão, ela
+     * chegava ao front sem `campos`, `campo` nem `documento` — e a leitura do
+     * trâmite testa `t.documento !== null`, que é VERDADEIRO para chave ausente.
+     * O passo recém-criado derrubava a tela ao ser aberto, logo depois de a pessoa
+     * decidir algo: o pior momento possível, e sem erro nenhum no servidor para
+     * investigar.
+     *
+     * @return array<string, mixed>
      */
-    private static function tramite(string $oQue, string $detalhe): array
+    private static function tramite(string $oQue, string $detalhe, string $situacao): array
     {
-        return [
+        return self::passo([
             'em' => now()->format('Y-m-d H:i'),
             // Nullsafe: a tela é autenticada, mas um trâmite montado fora da
             // requisição (comando, teste) não tem quem assinar — e um erro de
             // acesso a propriedade de nulo aqui derrubaria a gravação inteira.
-            'quem' => (string) (Auth::user()?->name ?? 'Setor Administrativo'),
+            'quem' => (string) (Auth::user()?->name ?? 'Coordenação'),
             'o_que' => $oQue,
             'detalhe' => $detalhe,
-        ];
+            // A situação em que a denúncia ENTROU com este passo. Ela é a mesma
+            // que a decisão acabou de gravar no registro, e vem junto porque é
+            // o selo que a leitura do trâmite mostra ao lado do passo — sem
+            // ela, o passo recém-criado é o único do percurso sem selo.
+            'situacao' => $situacao,
+        ]);
     }
 }

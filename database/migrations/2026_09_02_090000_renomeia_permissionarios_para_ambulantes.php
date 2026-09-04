@@ -51,7 +51,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * Quem tem `numero_permissao` preenchido recebe `permissionario = true`. Não é
  * chute: a única razão de um cadastro ter número de permissão é ter permissão.
- * Deixar todo mundo em `false` marcaria como sem-permissão quem o gestor
+ * Deixar todo mundo em `false` marcaria como sem-permissão quem a chefia
  * cadastrou justamente lendo o documento da permissão na tela.
  */
 return new class extends Migration

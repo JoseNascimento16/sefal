@@ -405,9 +405,9 @@ test('quem nao tem a tela concedida e mandado de volta dizendo o porque', functi
 test('concedida na matriz, a tela abre para quem nao e administrador', function () {
     config(['retaguarda.permissao_enforce' => 'block']);
 
-    $gestor = User::factory()->create(['admin' => false]);
-    $gestor->setores()->attach(Setor::create(['slug' => 'gestor', 'nome' => 'Gestor']));
-    PermissaoSetor::create(['setor' => 'gestor', 'slug' => 'logs', 'visivel' => true]);
+    $chefe = User::factory()->create(['admin' => false]);
+    $chefe->setores()->attach(Setor::create(['slug' => 'chefe-de-setor', 'nome' => 'Chefe de Setor']));
+    PermissaoSetor::create(['setor' => 'chefe-de-setor', 'slug' => 'logs', 'visivel' => true]);
 
-    $this->actingAs($gestor->fresh())->get('/retaguarda/logs')->assertOk();
+    $this->actingAs($chefe->fresh())->get('/retaguarda/logs')->assertOk();
 });

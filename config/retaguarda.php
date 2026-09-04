@@ -11,24 +11,32 @@ return [
     | nasce daqui (SetoresSeeder, idempotente por slug) e os comandos de bootstrap
     | validam contra esta lista. Um usuário pertence a N setores (`user_setores`).
     |
-    | administrador — enxerga e administra tudo;
-    | administrativo— o setor de retaguarda que RECEBE o que chega de fora: tria a
-    |                 denúncia das ouvidorias e registra o que vem em papel. NÃO é
-    |                 o administrador do sistema (decisão do dono, 02/09/2026) — é
-    |                 quem faz o trabalho administrativo. O administrador também
-    |                 pode fazer esse trabalho, por ser administrador;
-    | fiscal        — usa o PWA em rua e registra fiscalizações;
-    | gestor        — gestor de uma ÁREA de fiscalização: direciona o que foi
-    |                 encaminhado à área dele, valida cadastros de campo e
-    |                 acompanha a operação.
+    | administrador  — enxerga e administra tudo;
+    | coordenador    — o setor de retaguarda que RECEBE o que chega de fora e faz a
+    |                  TRIAGEM: lê a denúncia das ouvidorias, registra o que vem em
+    |                  papel e encaminha à área. NÃO é o administrador do sistema —
+    |                  é quem coordena a entrada do trabalho. O administrador também
+    |                  pode fazer esse trabalho, por ser administrador;
+    | fiscal         — usa o PWA em rua e registra fiscalizações;
+    | chefe-de-setor — responde por uma ÁREA de fiscalização: direciona o que foi
+    |                  encaminhado à área dele, recebe de volta o que a equipe
+    |                  concluiu em campo, valida cadastros de rua e acompanha a
+    |                  operação.
+    |
+    | ⚠️ Os dois últimos NASCERAM com outro nome — `administrativo` e `gestor` —, e
+    | a renomeação (decisão do dono, 04/09/2026) alcançou o SLUG, não só o rótulo:
+    | slug é a chave da matriz de permissões e do vínculo do usuário, então a
+    | migration `2026_09_04_090000_renomeia_papeis_para_coordenador_e_chefe_de_setor`
+    | renomeia as linhas já gravadas. As MATRÍCULAS de demonstração (`gestor1`,
+    | `administrativo1`) ficam como estão: matrícula identifica gente, não cargo.
     |
     */
 
     'setores' => [
         'administrador' => 'Administrador',
-        'administrativo' => 'Administrativo',
+        'coordenador' => 'Coordenador',
         'fiscal' => 'Fiscal',
-        'gestor' => 'Gestor',
+        'chefe-de-setor' => 'Chefe de Setor',
     ],
 
     /*

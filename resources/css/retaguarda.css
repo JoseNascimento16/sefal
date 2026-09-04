@@ -2811,7 +2811,7 @@ button.rt-numero:focus-visible {
 
    O menu PERMANECE — o imersivo é sobre o conteúdo, não sobre a casca. Foi
    decisão explícita: a navegação em pílula do mockup substituía o painel
-   lateral, e trocar a casca só nestas duas telas faria o gestor perder o menu
+   lateral, e trocar a casca só nestas duas telas faria a chefia perder o menu
    justamente onde ele mais precisa pular para "Cadastro de Operação".
 
    A PALETA daqui é FIXA nos dois temas, e tem nome próprio (--sm-mapa-*), pelo
@@ -2988,7 +2988,7 @@ button.rt-numero:focus-visible {
     border: 2.5px solid #fff;
     box-shadow: 0 0 0 7px rgba(124, 196, 255, 0.24);
 }
-/* "há 3 dias" colado no pino do retorno vencido: é a informação que faz o gestor
+/* "há 3 dias" colado no pino do retorno vencido: é a informação que faz a chefia
    agir, e ela não pode depender de um clique para aparecer. */
 .rt-pino-selo {
     position: absolute;
@@ -3120,7 +3120,7 @@ button.rt-numero:focus-visible {
     text-shadow: 0 1px 10px rgba(4, 10, 22, 0.95);
 }
 
-/* ── Os filtros do gestor: chips de vidro sobre o mapa ─────────────────────── */
+/* ── Os filtros da chefia: chips de vidro sobre o mapa ─────────────────────── */
 .rt-mapa-filtros {
     display: flex;
     align-items: center;
@@ -3353,7 +3353,7 @@ button.rt-chip-vidro:focus-visible {
 /* ── O cartão de detalhe do ponto selecionado ─────────────────────────────────
    Ele mora no TOPO da coluna da direita, e não flutuando junto ao pino como no
    mockup: solto, ele cobria o painel de quem está na rua justamente quando o
-   gestor acabara de clicar num ponto para comparar as duas coisas. Lugar fixo
+   pessoa acabara de clicar num ponto para comparar as duas coisas. Lugar fixo
    também dá previsibilidade — a resposta do clique aparece sempre no mesmo
    canto. O que fica do mockup é o vidro mais fechado: é a peça em foco. */
 .rt-mapa-coluna .rt-vidro.detalhe {

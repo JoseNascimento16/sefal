@@ -49,11 +49,11 @@ class EstruturaFicticia
                 );
 
                 return [
-                    // `gestor` declarado ANTES do espalhamento: área criada pela
-                    // tela (na sessão) não tem a chave, e a tela lê
-                    // `area.gestor.nome` de qualquer cartão. Chave ausente em
-                    // metade dos registros vira leitura defensiva espalhada.
-                    'gestor' => null,
+                    // `chefe_de_setor` declarado ANTES do espalhamento: área
+                    // criada pela tela (na sessão) não tem a chave, e a tela lê
+                    // `area.chefe_de_setor.nome` de qualquer cartão. Chave ausente
+                    // em metade dos registros vira leitura defensiva espalhada.
+                    'chefe_de_setor' => null,
                     ...$area,
                     'bairros' => $bairros,
                     'total_bairros' => count($bairros),
@@ -138,28 +138,29 @@ class EstruturaFicticia
     }
 
     /**
-     * `área => gestor` — quem responde por cada área DENTRO do sistema.
+     * `área => Chefe de Setor` — quem responde por cada área DENTRO do sistema.
      *
-     * Não confundir com o `encarregado`, que chefia a equipe em campo. O gestor é
-     * quem recebe a denúncia encaminhada e decide equipe ou operação, e é o nome
-     * que o triador precisa ver antes de encaminhar: "encaminhei para a Área 5" só
-     * diz metade — a outra metade é para QUEM.
+     * Não confundir com o `encarregado`, que chefia a equipe em campo. O Chefe de
+     * Setor é quem recebe a denúncia encaminhada e decide equipe ou operação, quem
+     * recebe de volta o que a equipe concluiu em campo, e é o nome que quem tria
+     * precisa ver antes de encaminhar: "encaminhei para a Área 5" só diz metade — a
+     * outra metade é para QUEM.
      *
      * @return array<string, array{nome: string, matricula: string|null}>
      */
-    public static function gestoresPorArea(): array
+    public static function chefiasPorArea(): array
     {
         $mapa = [];
 
         foreach (self::cruas() as $area) {
-            $gestor = (array) ($area['gestor'] ?? []);
+            $chefe = (array) ($area['chefe_de_setor'] ?? []);
 
             $mapa[(string) $area['nome']] = [
-                'nome' => (string) ($gestor['nome'] ?? ''),
-                // Área sem conta de demonstração tem nome de gestor e não tem
+                'nome' => (string) ($chefe['nome'] ?? ''),
+                // Área sem conta de demonstração tem nome de chefe e não tem
                 // matrícula: é o caso normal aqui, não dado faltando.
-                'matricula' => isset($gestor['matricula']) && $gestor['matricula'] !== null
-                    ? (string) $gestor['matricula']
+                'matricula' => isset($chefe['matricula']) && $chefe['matricula'] !== null
+                    ? (string) $chefe['matricula']
                     : null,
             ];
         }
@@ -168,7 +169,7 @@ class EstruturaFicticia
     }
 
     /**
-     * As áreas de que esta matrícula é gestora — vazio quando ela não é gestora de
+     * As áreas de que esta matrícula é a chefia — vazio quando ela não responde por
      * nenhuma.
      *
      * Devolve LISTA, e não uma área só, porque na vida real uma pessoa responde por
@@ -177,7 +178,7 @@ class EstruturaFicticia
      *
      * @return list<string>
      */
-    public static function areasDoGestor(?string $matricula): array
+    public static function areasDoChefe(?string $matricula): array
     {
         if ($matricula === null || trim($matricula) === '') {
             return [];
@@ -186,8 +187,8 @@ class EstruturaFicticia
         $procurada = mb_strtolower(trim($matricula));
         $areas = [];
 
-        foreach (self::gestoresPorArea() as $area => $gestor) {
-            if ($gestor['matricula'] !== null && mb_strtolower($gestor['matricula']) === $procurada) {
+        foreach (self::chefiasPorArea() as $area => $chefe) {
+            if ($chefe['matricula'] !== null && mb_strtolower($chefe['matricula']) === $procurada) {
                 $areas[] = $area;
             }
         }
@@ -199,7 +200,7 @@ class EstruturaFicticia
      * A equipe SUGERIDA para um bairro — e as alternativas, quando o bairro
      * pertence a mais de uma área.
      *
-     * A sugestão nunca decide sozinha: quem confirma é o administrativo. Um
+     * A sugestão nunca decide sozinha: quem confirma é o coordenador. Um
      * bairro compartilhado (Mussurunga, Patamares, Jardim das Margaridas) tem
      * duas respostas igualmente certas, e escolher uma em silêncio esconderia a
      * decisão de quem tem de tomá-la.

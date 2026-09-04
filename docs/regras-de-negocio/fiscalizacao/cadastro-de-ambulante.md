@@ -1,7 +1,7 @@
 # Cadastro de Ambulante — a identidade de quem é fiscalizado
 
 **Onde fica:** Menu → Fiscalização → **Ambulantes** (`/retaguarda/ambulantes`).
-**Quem usa:** administrador, gestor e **fiscal**. É a tela-núcleo da fiscalização: sem um
+**Quem usa:** administrador, Chefe de Setor e **fiscal**. É a tela-núcleo da fiscalização: sem um
 ambulante cadastrado, não há a quem ligar uma vistoria.
 
 O desenho desta tela responde a uma realidade concreta da rua, e não a um cadastro de escritório: **o
@@ -85,15 +85,15 @@ situação declarada nunca entra como regular.
 
 **A quarentena não é oferecida na INCLUSÃO pela Retaguarda**, e o servidor recusa (não é a tela
 escondendo a opção): `Cadastrado em campo` significa "isto nasceu na rua, sem conferência", e um
-cadastro feito de mesa — com o gestor lendo o documento na tela — não nasce assim. Permiti-lo
+cadastro feito de mesa — com o Chefe de Setor lendo o documento na tela — não nasce assim. Permiti-lo
 sujaria com registros dispensáveis justamente a fila que dá sentido à quarentena. A inclusão de mesa
 **propõe `Regular`**, que é o caso comum de quem cadastra com o documento em mão.
 
 Na **alteração** as três valem: devolver à fila um cadastro que se mostrou duvidoso é exatamente o
-que o gestor precisa poder fazer.
+que o Chefe de Setor precisa poder fazer.
 
 **A tela de validação dessa fila (aprovar / mesclar duplicado / recusar com motivo) é de entrega
-futura.** Hoje a situação é um valor que o gestor troca à mão nesta própria tela, e a busca sabe
+futura.** Hoje a situação é um valor que o Chefe de Setor troca à mão nesta própria tela, e a busca sabe
 achar quem está esperando ("cadastrado em campo", "quarentena").
 
 ### RN-04 — O código do cadastro nasce sozinho, pelo gerador de protocolo
@@ -173,7 +173,7 @@ A foto nova é guardada na pasta `ambulantes/` desse disco; as anteriores contin
 não há convenção deduzida em tempo de execução para quebrar. Nenhum arquivo precisou ser movido.
 
 **Consequência no deploy:** a pasta privada é tão volátil quanto a pública — o que não estiver em
-volume/PVC some a cada subida de imagem, **sem erro nenhum**, e só aparece quando um gestor abre um
+volume/PVC some a cada subida de imagem, **sem erro nenhum**, e só aparece quando um Chefe de Setor abre um
 cadastro antigo e não vê o retrato. Por isso a persistência declarada em `docker-compose.homolog.yml`
 e em `docs/deploy/okd.md` cobre a pasta do disco onde a foto de fato mora, e essa amarração é
 verificada por teste — a decisão tem três donos (controller, compose, doc do OKD) e, sem asserção,
@@ -184,7 +184,7 @@ um dia eles divergem em silêncio.
 O campo único interpreta a frase em facetas do domínio + termos livres, sem acento: `regular`,
 `irregular`, `cadastrado em campo` / `quarentena`, `sem documento`, `com documento`,
 **`permissionários`** / **`sem permissão`**, `permissão vencida` — e **o nome de qualquer atividade da
-parametrização**, que vira faceta em tempo de execução (a lista é do gestor; escrita na tela,
+parametrização**, que vira faceta em tempo de execução (a lista é do Chefe de Setor; escrita na tela,
 envelheceria no primeiro ramo renomeado). Como faceta, "bebidas" filtra pelo **ramo**, e não casa por
 acaso com um apelido que tenha a palavra.
 
@@ -217,24 +217,24 @@ nunca o universo, nunca só a página atual. Datas saem em **dd/mm/aaaa** e o do
 ### RN-10 — Quem entra: o fiscal CONSULTA; criar e apagar é da gestão
 
 A tela é controlada pela permissão **`ambulantes`** (primeiro trecho do caminho), semeada para
-**administrador, gestor e fiscal**. O fiscal está na lista porque chegar à calçada sem saber quem está
+**administrador, Chefe de Setor e fiscal**. O fiscal está na lista porque chegar à calçada sem saber quem está
 cadastrado é trabalhar às cegas.
 
 Mas ele entra para **consultar**, e só: a semente concede a ele **"Só consulta"**, que derruba
 *opera*, *inclui* e *exclui* de uma vez. O motivo é o desenho do fluxo, não desconfiança — o fiscal
-cadastra em **rua**, pelo aplicativo, e o que nasce em rua entra em **quarentena** até o gestor
+cadastra em **rua**, pelo aplicativo, e o que nasce em rua entra em **quarentena** até o Chefe de Setor
 conferir (RN-03). Cadastro criado de mesa por ele passaria ao largo dessa conferência; apagar
 cadastro é ato de gestão, porque leva embora a identidade a que uma fiscalização se liga.
 
 ⚠️ **Por que "Só consulta", e não apenas *inclui* e *exclui* desligados.** É a diferença que decide
 se a quarentena existe de verdade. Com *opera* ligado o fiscal **alterava** o cadastro — e a
 **situação é campo do mesmo formulário** (RN-03), então ele tirava da fila o registro que ele mesmo
-acabara de criar em rua, e a conferência do gestor simplesmente não acontecia, sem nada no sistema
+acabara de criar em rua, e a conferência do Chefe de Setor simplesmente não acontecia, sem nada no sistema
 registrando que foi pulada. "Pode alterar" e "pode validar" são a mesma coisa aqui.
 
-O gestor mantém o pacote inteiro: validar e corrigir cadastro de campo é o trabalho dele.
+O Chefe de Setor mantém o pacote inteiro: validar e corrigir cadastro de campo é o trabalho dele.
 
-Isto é a **concessão inicial**. Alargar ou apertar depois é ato do gestor no Modo Gerente.
+Isto é a **concessão inicial**. Alargar ou apertar depois é ato do Chefe de Setor no Modo Gerente.
 
 **A tela obedece à matriz, e não só o servidor.** O que a pessoa pode fazer chega junto com a tela
 (prop `acoes`, vinda do mesmo serviço que as guardas consultam), e os botões que ela não tem

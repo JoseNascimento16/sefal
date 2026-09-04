@@ -78,7 +78,7 @@ return new class extends Migration
             /*
              * `Regular` / `Irregular` / `Cadastrado em campo`. O último é
              * QUARENTENA: o cadastro nascido em rua espera a validação do
-             * Gestor. Por isso é o padrão da coluna — o que chega sem situação
+             * Chefe de Setor. Por isso é o padrão da coluna — o que chega sem situação
              * declarada nunca entra como regular.
              */
             $table->string('situacao', 30)->default('Cadastrado em campo');

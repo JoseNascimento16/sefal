@@ -128,10 +128,10 @@ test('item de menu restrito a um setor nao aparece para quem nao pertence a ele'
 
     $this->seed(PermissoesSetorSeeder::class);
 
-    $gestor = User::factory()->create();
-    $gestor->setores()->attach(Setor::where('slug', 'gestor')->firstOrFail());
+    $chefe = User::factory()->create();
+    $chefe->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
-    $this->actingAs($gestor)->get('/retaguarda/inicio')
+    $this->actingAs($chefe)->get('/retaguarda/inicio')
         ->assertInertia(fn ($p) => $p->where('menu', []));
 
     $fiscal = User::factory()->create();

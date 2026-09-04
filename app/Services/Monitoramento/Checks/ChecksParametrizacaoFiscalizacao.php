@@ -13,7 +13,7 @@ use App\Support\Texto;
  * para, e para em silêncio.
  *
  * É exatamente o caso que a tela de Monitoramento existe para pegar: inativar o
- * último registro de uma lista obrigatória não avisa ninguém. O gestor tira de
+ * último registro de uma lista obrigatória não avisa ninguém. A gestão tira de
  * circulação a última atividade, e dias depois o cadastro de ambulante
  * simplesmente não salva — com uma mensagem de campo que ninguém relaciona a uma
  * decisão tomada em outra tela.

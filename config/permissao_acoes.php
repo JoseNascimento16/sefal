@@ -37,13 +37,13 @@ return [
 
     /*
      * (d) A própria conta. Trocar os próprios dados e a própria senha não é
-     * decisão de gestor: colocar isso na matriz permitiria trancar alguém fora
+     * decisão de chefia: colocar isso na matriz permitiria trancar alguém fora
      * da conta dele — e, no caso da senha, deixá-lo sem como recuperá-la. As
      * telas moram sob `/retaguarda/perfil`, que de propósito não declara `slug`
      * no menu, então a inferência não as atribui a tela nenhuma.
      */
-    'profile.update' => $livre('Dados da própria conta — não é decisão de gestor.'),
-    'user-password.update' => $livre('Senha da própria conta — não é decisão de gestor.'),
+    'profile.update' => $livre('Dados da própria conta — não é decisão de chefia.'),
+    'user-password.update' => $livre('Senha da própria conta — não é decisão de chefia.'),
 
     /*
      * (a) Emitir relatório é LEITURA, e a ação que a governa é a que abre a tela.

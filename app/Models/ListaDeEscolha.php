@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
  * Todas respondem às MESMAS duas perguntas ("quais existem?" e "quais podem ser
  * escolhidas hoje?"), e todas têm nome e situação. Isso mora aqui, uma vez só:
  * seis cópias de `where('ativo', true)` divergiriam no primeiro ajuste, e a
- * lista esquecida continuaria oferecendo em rua um valor que o gestor tirou de
+ * lista esquecida continuaria oferecendo em rua um valor que a gestão tirou de
  * circulação.
  *
  * É classe-base, e não trait, porque o tipo é usado como CONTRATO: a

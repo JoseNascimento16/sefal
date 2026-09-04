@@ -23,7 +23,7 @@ test('seeder cria o catalogo de setores declarado na config', function () {
     expect(Setor::pluck('slug')->sort()->values()->all())->toBe($daConfig)
         // E o catálogo tem de conter os quatro papéis do fluxo: perder um deles em
         // silêncio é perder o acesso de quem o exerce.
-        ->and($daConfig)->toContain('administrador', 'administrativo', 'fiscal', 'gestor');
+        ->and($daConfig)->toContain('administrador', 'coordenador', 'fiscal', 'chefe-de-setor');
 });
 
 test('usuario pertence a N setores e ehAdmin reconhece o setor administrador', function () {
@@ -148,7 +148,7 @@ test('usuario comum sem setor administrador nao e admin', function () {
 
 test('o vinculo usuario-setor registra quando o acesso foi concedido', function () {
     $u = User::factory()->create(['login' => 'F8888']);
-    $u->setores()->attach(Setor::where('slug', 'gestor')->first());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->first());
 
     $vinculo = $u->fresh()->setores->first()->pivot;
 

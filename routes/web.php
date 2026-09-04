@@ -19,6 +19,7 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeInfracaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
+use App\Http\Controllers\Retaguarda\RetornoDeCampoController;
 use App\Http\Controllers\Retaguarda\TelasEmPreparacaoController;
 use Illuminate\Support\Facades\Route;
 
@@ -193,7 +194,7 @@ Route::middleware(['auth'])->group(function () {
      *
      * Duas telas, uma por canal (e-Salvador e Fala Salvador), e as mutações do
      * fluxo de duas etapas: a triagem encaminha à ÁREA ou devolve/arquiva; o
-     * gestor da área direciona à EQUIPE ou anexa a uma OPERAÇÃO.
+     * Chefe de Setor da área direciona à EQUIPE ou anexa a uma OPERAÇÃO.
      *
      * As duas telas dividem o primeiro trecho do caminho (`denuncias`), e é
      * dele que as guardas deduzem a permissão: a concessão é UMA, para o
@@ -218,6 +219,34 @@ Route::middleware(['auth'])->group(function () {
         Route::post('operacao', [DenunciasController::class, 'operacao'])->name('operacao');
         // Só existe porque é protótipo: devolve o módulo ao estado da demonstração.
         Route::post('reiniciar', [DenunciasController::class, 'reiniciar'])->name('reiniciar');
+    });
+
+    /*
+     * Retorno de Campo — a fila do CHEFE DE SETOR. PROTÓTIPO.
+     *
+     * Tudo que a equipe da área dele concluiu em rua volta para cá, com o desfecho
+     * e a recomendação do fiscal. As duas decisões da chefia: dar CIÊNCIA (o
+     * retorno sai da fila) ou determinar NOVA VISTORIA (a equipe volta ao ponto,
+     * com justificativa obrigatória).
+     *
+     * Não há rota de INCLUSÃO, e isso é deliberado: registro de fiscalização nasce
+     * em RUA, no aplicativo do fiscal. Um botão de cadastrar aqui criaria um
+     * segundo dono para o ato que dá sentido a esta fila.
+     *
+     * O primeiro trecho do caminho é o slug da tela (`retorno-de-campo`), de onde
+     * as guardas deduzem a permissão: as mutações nascem protegidas pela convenção
+     * de nomes (nada a declarar em `config/permissao_acoes.php`).
+     *
+     * As mutações vão no CORPO do POST porque carregam lista de identificadores e
+     * texto livre de justificativa — em query string o WAF da Prefeitura
+     * barraria, e a falha voltaria disfarçada de erro de CORS.
+     */
+    Route::prefix('retaguarda/retorno-de-campo')->name('retaguarda.retorno-de-campo.')->group(function () {
+        Route::get('/', [RetornoDeCampoController::class, 'index'])->name('index');
+        Route::post('ciencia', [RetornoDeCampoController::class, 'ciencia'])->name('ciencia');
+        Route::post('nova-vistoria', [RetornoDeCampoController::class, 'novaVistoria'])->name('nova-vistoria');
+        // Só existe porque é protótipo: devolve a fila ao estado de demonstração.
+        Route::post('reiniciar', [RetornoDeCampoController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*

@@ -16,8 +16,8 @@ use Inertia\Response;
  * Denúncias das ouvidorias — PROTÓTIPO.
  *
  * Duas telas, uma por canal (`e-Salvador` e `Fala Salvador`), com a MESMA
- * mecânica: as denúncias chegam por integração, o administrativo tria e
- * encaminha à área, e o gestor da área direciona à equipe ou anexa a uma
+ * mecânica: as denúncias chegam por integração, o coordenador tria e
+ * encaminha à área, e o Chefe de Setor da área direciona à equipe ou anexa a uma
  * operação. O que muda entre elas é a origem e o que o formato do canal
  * carrega — o e-Salvador vem com requerente identificado, endereço estruturado
  * e anexos; o Fala Salvador pode ser anônimo e traz a transcrição do
@@ -34,7 +34,7 @@ use Inertia\Response;
  * ── Nada é digitado aqui ────────────────────────────────────────────────────
  *
  * Não há rota de inclusão, e isso é deliberado: estas telas não são a Caixa de
- * Entrada (onde o administrativo digita o papel que chegou ao balcão). A
+ * Entrada (onde o coordenador digita o papel que chegou ao balcão). A
  * denúncia entra pela integração, e cada uma mostra o carimbo de quando o canal
  * a entregou e sob que número. Um botão "cadastrar denúncia" aqui apagaria
  * justamente a distinção que o módulo existe para deixar clara.
@@ -43,21 +43,21 @@ use Inertia\Response;
  *
  * A permissão de ABRIR a tela é uma só (slug `denuncias`, no Modo Gerente). O
  * que separa os papéis é a ETAPA, derivada do setor de quem entrou: o
- * ADMINISTRATIVO tria, o GESTOR direciona, e o administrador do sistema exerce
+ * COORDENADOR tria, o CHEFE DE SETOR direciona, e o administrador do sistema exerce
  * as duas — é ele que demonstra o fluxo inteiro e que cobre a ausência do outro.
  * A conferência acontece AQUI, no servidor, e não só na tela: esconder o botão é
  * conforto, nunca fronteira.
  *
- * ── E o gestor é gestor de uma ÁREA ─────────────────────────────────────────
+ * ── E o Chefe de Setor responde por uma ÁREA ────────────────────────────────
  *
  * "Pra ele só interessa o que for direcionado para a área dele" (decisão do dono,
- * 02/09/2026). Então o gestor tem RECORTE: a listagem dele traz só as denúncias
+ * 02/09/2026). Então o Chefe de Setor tem RECORTE: a listagem dele traz só as denúncias
  * da área que ele responde, e a ação sobre denúncia de outra área é RECUSADA com
  * o motivo escrito. As duas coisas, e não uma: esconder da lista sem barrar a
  * ação deixaria a fronteira valendo apenas para quem não sabe mandar a
  * requisição.
  *
- * O administrador continua vendo tudo — é o dono do sistema. O administrativo
+ * O administrador continua vendo tudo — é o dono do sistema. O coordenador
  * também, porque quem tria precisa saber o que aconteceu com o que encaminhou.
  *
  * ⚠️ PROTÓTIPO: nada é gravado em banco. As denúncias de partida vêm da config
@@ -92,7 +92,7 @@ class DenunciasController extends Controller
      * O corpo traz `destinos`: uma lista de pares identificador → área. Não é um
      * identificador por requisição nem uma área para o lote inteiro, porque a
      * triagem real é os dois casos ao mesmo tempo — chegam dez denúncias de
-     * bairros diferentes, cada uma com a sua área, e o administrativo confirma
+     * bairros diferentes, cada uma com a sua área, e o coordenador confirma
      * todas de uma vez.
      */
     public function encaminhar(Request $request): RedirectResponse
@@ -122,8 +122,8 @@ class DenunciasController extends Controller
 
         return back()->with(...$this->recado(
             $efeito,
-            'encaminhada à área, para o gestor direcionar',
-            'encaminhadas às áreas, para os gestores direcionarem',
+            'encaminhada à área, para o Chefe de Setor direcionar',
+            'encaminhadas às áreas, para os Chefes de Setor direcionarem',
         ));
     }
 
@@ -169,7 +169,7 @@ class DenunciasController extends Controller
     }
 
     /**
-     * DIRECIONAMENTO — o gestor manda as denúncias a uma equipe.
+     * DIRECIONAMENTO — o Chefe de Setor manda as denúncias a uma equipe.
      *
      * A justificativa passa a ser OBRIGATÓRIA quando a equipe escolhida não é a
      * da área da denúncia: tirar o trabalho da equipe responsável é decisão que
@@ -220,7 +220,7 @@ class DenunciasController extends Controller
     }
 
     /**
-     * DIRECIONAMENTO — o gestor anexa as denúncias a uma operação.
+     * DIRECIONAMENTO — o Chefe de Setor anexa as denúncias a uma operação.
      *
      * A operação pode ser uma das que já existem ou uma NOVA, aberta dali mesmo:
      * é o caso de não haver trabalho planejado para aquela região ainda. Um
@@ -305,19 +305,19 @@ class DenunciasController extends Controller
         $configuracao = (array) config("prototipo_denuncias.canais.{$canal}", []);
 
         $usuario = $request->user();
-        $areasDoGestor = self::areasDoGestor($usuario);
+        $areasDoChefe = self::areasDoChefe($usuario);
         $comRecorte = self::temRecorteDeArea($usuario);
 
         return Inertia::render("Retaguarda/Denuncias/{$pagina}", [
             'canal' => $configuracao,
-            // O gestor recebe SÓ o que é da área dele — o recorte é feito aqui, e
+            // O Chefe de Setor recebe SÓ o que é da área dele — o recorte é feito aqui, e
             // não na tela: filtro de front esconde, não protege, e a lista inteira
             // teria viajado até o navegador de quem não deve vê-la.
             'denuncias' => $comRecorte
                 ? array_values(array_filter(
                     DenunciasFicticias::doCanal($canal),
                     static fn (array $d): bool => is_string($d['area'] ?? null)
-                        && in_array($d['area'], $areasDoGestor, true),
+                        && in_array($d['area'], $areasDoChefe, true),
                 ))
                 : DenunciasFicticias::doCanal($canal),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
@@ -336,7 +336,7 @@ class DenunciasController extends Controller
             // Quem responde por cada área. É o que o triador precisa ver ANTES de
             // encaminhar: "vai para a Área 5" só diz metade; a outra metade é para
             // quem.
-            'gestores' => EstruturaFicticia::gestoresPorArea(),
+            'chefias' => EstruturaFicticia::chefiasPorArea(),
             'operacoes' => DenunciasFicticias::operacoes(),
             // A etapa de quem entrou — é ela que decide o que a tela oferece, e a
             // mesma resposta governa a recusa no servidor.
@@ -344,7 +344,7 @@ class DenunciasController extends Controller
             // As áreas que esta pessoa responde, e se a listagem está recortada
             // por elas. A tela usa isso para dizer QUAL é a sua área no selo, e
             // para explicar que a lista não é o universo.
-            'areasDoGestor' => $areasDoGestor,
+            'areasDoChefe' => $areasDoChefe,
             'recorteDeArea' => $comRecorte,
             'alterada' => DenunciasFicticias::alterada(),
         ]);
@@ -353,8 +353,8 @@ class DenunciasController extends Controller
     /**
      * As etapas do fluxo que esta pessoa exerce.
      *
-     * O papel vem do SETOR, não de uma coluna nova: `administrativo` tria,
-     * `gestor` direciona, e quem administra o sistema exerce as duas — é ele quem
+     * O papel vem do SETOR, não de uma coluna nova: `coordenador` tria,
+     * `chefe-de-setor` direciona, e quem administra o sistema exerce as duas — é ele quem
      * demonstra o fluxo inteiro e quem cobre a ausência do outro. O setor
      * `administrador` não precisa de linha própria aqui: `ehAdmin()` já o
      * reconhece, e uma segunda conta do mesmo papel um dia discordaria da
@@ -380,11 +380,11 @@ class DenunciasController extends Controller
 
         $etapas = [];
 
-        if (in_array('administrativo', $setores, true)) {
+        if (in_array('coordenador', $setores, true)) {
             $etapas[] = 'triagem';
         }
 
-        if (in_array('gestor', $setores, true)) {
+        if (in_array('chefe-de-setor', $setores, true)) {
             $etapas[] = 'direcionamento';
         }
 
@@ -392,30 +392,30 @@ class DenunciasController extends Controller
     }
 
     /**
-     * As áreas que esta pessoa responde como gestora — vazio para quem não é
-     * gestor de área nenhuma.
+     * As áreas que esta pessoa responde como Chefe de Setor — vazio para quem não
+     * responde por área nenhuma.
      *
      * ⚠️ PROTÓTIPO: o vínculo mora em `config/prototipo_estrutura.php`, junto da
      * área, e liga pela matrícula. Em produção ele é entre USUÁRIO e área (uma
-     * pessoa pode responder por mais de uma, e gestor entra e sai), e isso é
+     * pessoa pode responder por mais de uma, e chefe de setor entra e sai), e isso é
      * tabela — está registrado como pendência no doc de regra. Quem chama aqui já
      * trata LISTA, então a modelagem definitiva não obriga a mexer em quem lê.
      *
      * @return list<string>
      */
-    private static function areasDoGestor(?User $usuario): array
+    private static function areasDoChefe(?User $usuario): array
     {
         return $usuario === null
             ? []
-            : EstruturaFicticia::areasDoGestor($usuario->login);
+            : EstruturaFicticia::areasDoChefe($usuario->login);
     }
 
     /**
      * A listagem desta pessoa é recortada pela área dela?
      *
-     * É o gestor, e só ele: quem TRIA precisa ver o universo (não se tria o que
+     * É o Chefe de Setor, e só ele: quem TRIA precisa ver o universo (não se tria o que
      * não se vê, e quem encaminhou precisa saber o que aconteceu depois), e o
-     * administrador é o dono do sistema. Um gestor que também seja administrativo
+     * administrador é o dono do sistema. Um Chefe de Setor que também seja coordenador
      * não é recortado — o papel que amplia ganha, a mesma regra da união de
      * setores na matriz de permissões.
      */
@@ -446,23 +446,23 @@ class DenunciasController extends Controller
         }
 
         $recado = $etapa === 'triagem'
-            ? 'A triagem das denúncias é do setor administrativo. Você acompanha o que foi encaminhado à sua área.'
-            : 'O direcionamento é do gestor da área. A triagem encaminha; quem escolhe equipe ou operação é ele.';
+            ? 'A triagem das denúncias é do Coordenador. Você acompanha o que foi encaminhado à sua área.'
+            : 'O direcionamento é do Chefe de Setor da área. A triagem encaminha; quem escolhe equipe ou operação é ele.';
 
         return back()->with('flash.erro', $recado);
     }
 
     /**
-     * Recusa a ação do gestor sobre denúncia que NÃO é da área dele.
+     * Recusa a ação do Chefe de Setor sobre denúncia que NÃO é da área dele.
      *
-     * Existe porque esconder da listagem não é fronteira: a lista do gestor já vem
+     * Existe porque esconder da listagem não é fronteira: a lista do Chefe de Setor já vem
      * recortada, mas quem souber montar a requisição alcançaria a denúncia de
      * outra área — e o lote é justamente o caminho fácil para isso, porque manda
      * uma lista de identificadores.
      *
      * A conferência é contra a área GRAVADA em cada denúncia e o vínculo do
      * usuário, as duas coisas que o corpo da requisição não controla. O
-     * administrador passa: é o dono do sistema. Quem não é gestor de área nenhuma
+     * administrador passa: é o dono do sistema. Quem não responde por área nenhuma
      * também passa aqui — quem o barra é a guarda de ETAPA, que roda antes.
      *
      * @param  list<int>  $ids
@@ -475,10 +475,10 @@ class DenunciasController extends Controller
             return null;
         }
 
-        $minhas = self::areasDoGestor($usuario);
+        $minhas = self::areasDoChefe($usuario);
 
         /*
-         * Gestor SEM área vinculada não é caso de passar batido: ele exerce a etapa
+         * Chefe de Setor SEM área vinculada não é caso de passar batido: ele exerce a etapa
          * de direcionamento (senão não chegaria aqui) e não tem área para
          * direcionar. Recusar dizendo isso é o que faz alguém corrigir o cadastro —
          * deixar passar daria a ele o sistema inteiro.

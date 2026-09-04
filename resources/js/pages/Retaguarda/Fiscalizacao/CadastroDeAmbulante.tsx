@@ -110,7 +110,7 @@ function escapaExpressao(valor: string): string {
 
 /**
  * As atividades viram facetas em tempo de execução — a lista é mantida pelo
- * gestor, então não há como escrevê-las aqui.
+ * Chefe de Setor, então não há como escrevê-las aqui.
  *
  * Da mais longa para a mais curta: declarada ao contrário, uma atividade
  * "Bebidas" comeria a expressão de "Bebidas e água de coco". E como faceta (e
@@ -300,7 +300,7 @@ export default function CadastroDeAmbulante({
      * O que esta pessoa pode fazer AQUI, respondido pelo servidor.
      *
      * O fiscal, por exemplo, abre esta tela para consultar — ele cadastra em RUA,
-     * pelo aplicativo, e o que nasce em rua espera a conferência do gestor. Sem
+     * pelo aplicativo, e o que nasce em rua espera a conferência do Chefe de Setor. Sem
      * isto a tela oferecia Incluir, Editar e Excluir a ele, e a recusa só aparecia
      * depois do formulário preenchido.
      *
@@ -312,7 +312,7 @@ export default function CadastroDeAmbulante({
     const filtrados = useMemo(() => {
         const { facetas, termos } = parseConsulta<Faceta>(busca, [
             // O vocabulário fixo do domínio primeiro: nome de atividade é texto
-            // que o gestor digita, e não pode redefinir "regular" ou "vencida".
+            // que a chefia digita, e não pode redefinir "regular" ou "vencida".
             ...FACETAS,
             ...facetasDeAtividade(atividades),
         ]);
@@ -647,7 +647,7 @@ export default function CadastroDeAmbulante({
                                 'irregular',
                                 'permissão vencida',
                                 // Um ramo de verdade, tirado da lista que o
-                                // gestor mantém — exemplo escrito à mão aqui
+                                // chefia mantém — exemplo escrito à mão aqui
                                 // envelheceria na primeira atividade renomeada.
                                 ...atividades
                                     .filter((a) => a.ativo)
@@ -1268,7 +1268,7 @@ export default function CadastroDeAmbulante({
                                         estado de quem foi cadastrado em RUA, e o
                                         servidor recusa (não é só a tela
                                         escondendo). Num registro já existente as
-                                        três aparecem — é como o gestor devolve à
+                                        três aparecem — é como o Chefe de Setor devolve à
                                         fila um cadastro duvidoso. */}
                                     {(aberto === null
                                         ? situacoesDeInclusao

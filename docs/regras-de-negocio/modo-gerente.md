@@ -85,7 +85,7 @@ Duas coisas **nunca** dependem da matriz:
 1. **A tela inicial.** É o destino da própria negativa de acesso — controlá-la
    fecharia um loop de redirecionamento, e o navegador morreria sem explicar
    nada.
-2. **A área da própria conta** (dados e senha). Não é decisão de gestor:
+2. **A área da própria conta** (dados e senha). Não é decisão de Chefe de Setor:
    colocá-la na matriz permitiria trancar alguém fora da própria conta e deixá-lo
    sem como recuperar a senha.
 
@@ -121,7 +121,7 @@ que não é isso — `'fiscal' => ['incluir' => false, 'excluir' => false]`. Foi
 preciso justamente no cadastro de ambulante: o fiscal precisa **consultar**
 quem está cadastrado (chegar na calçada sem saber é trabalhar às cegas) e não
 cria nem apaga por lá — ele cadastra em rua, pelo aplicativo, e o que nasce em
-rua entra em quarentena para o gestor conferir. Cadastro criado de mesa por ele
+rua entra em quarentena para o Chefe de Setor conferir. Cadastro criado de mesa por ele
 passaria ao largo dessa conferência; excluir cadastro é ato de gestão.
 
 ### RN-10 — Toda alteração de permissão deixa rastro do que MUDOU
@@ -129,7 +129,7 @@ passaria ao largo dessa conferência; excluir cadastro é ato de gestão.
 Quem salvou, quando, em qual tela — e **o que mudou, por setor**:
 
 ```
-Tela "Vistorias": fiscal: +visivel, +habilitado | gestor: -excluir
+Tela "Vistorias": fiscal: +visivel, +habilitado | Chefe de Setor: -excluir
 ```
 
 O **nome** de quem alterou vai gravado no registro, não só a chave da conta (que
@@ -244,3 +244,4 @@ Consequências, todas com a régua no mesmo servidor:
 | 26/08/2026 | José Nascimento | Modo Gerente | A tela passa a derrubar Opera/Só consulta/Inclui/Exclui quando "Vê" é desmarcado (RN-02); o rastro passa a **exibir** o que mudou, em coluna própria, e a seção aparece também vazia (RN-10); seção com alteração pendente é sinalizada, o botão fica indisponível sem alteração e sair com pendência pergunta antes (RN-10-b); a semente aceita ajuste por setor, e o fiscal nasce sem Inclui/Exclui no cadastro de permissionário (RN-09). | A legenda prometia que sem "Vê" nada vale, e a tela deixava Inclui/Exclui marcados: o gestor saía convencido de ter concedido o que o servidor nega. O rastro gravava o delta desde o dia 25 e a tela não o mostrava — a auditoria respondia "alguém mexeu". E salvamento por seção sem aviso descartava, em silêncio, o que a pessoa acabou de marcar em outra. |
 | 26/08/2026 | José Nascimento | Modo Gerente | A **semente** passa pela mesma normalização que a tela aplica ao gravar (RN-02/RN-09); toda tela da Retaguarda passa a **receber as ações da pessoa** junto com a página, e a esconder o que ela não tem; telas que dividem o mesmo slug aparecem na matriz com o nome da **seção**, decidido numa passada só (RN-09). | A semente montava a linha somando ajustes sobre o pacote completo, sem normalizar: declarar "Só consulta" gravava uma linha que se contradiz — "só consulta" marcado ao lado de Opera/Inclui/Exclui ligados. Como a resolução lê as colunas cruas, ela dava poder de gravar a quem a config diz que só olha, e a config parecia certa. As telas, por sua vez, decidiam o que oferecer por conta própria: ofereciam a ação que a guarda barra, e a pessoa só descobria depois de preencher o formulário. E o rótulo do slug compartilhado emergia da ordem de iteração — com duas telas em seções diferentes, resolvia pelo nome da última. |
 | 27/08/2026 | José Nascimento | Modo Gerente | A matriz deixa de ser página e passa a abrir como **painel sobre a tela atual**, pelo item do menu Sistema (RN-13); a leitura pedida em JSON é negada com o motivo, em vez de redirecionada; gravar relê a matriz do servidor sem fechar o painel; o endereço antigo leva à tela inicial com o painel abrindo lá. | Quem distribui acesso está sempre no meio de uma conferência ("por que esta pessoa não vê isto?"), e trocar de página fazia perder o lugar — e a resposta. Manter a rota como fonte da matriz preserva a guarda de leitura no mesmo servidor: o container mudou, a régua não. |
+| 04/09/2026 | José Nascimento | Modo Gerente | Os dois papéis de retaguarda passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`), **slug inclusive** — a matriz gravada é renomeada por migration, preservando as concessões ajustadas à mão. Ver [Papéis e setores](papeis-e-setores.md). | O slug é a chave da matriz, não um rótulo: trocar só a lista da config faria a semente criar linhas novas com as decisões de fábrica e abandonar as ajustadas, tirando acesso de gente em silêncio. |

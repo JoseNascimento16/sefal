@@ -80,7 +80,7 @@ class AmbulanteFactory extends Factory
         ]);
     }
 
-    /** Nascido em rua, esperando a validação do Gestor. */
+    /** Nascido em rua, esperando a validação do Chefe de Setor. */
     public function emQuarentena(): static
     {
         return $this->state(fn (): array => [
