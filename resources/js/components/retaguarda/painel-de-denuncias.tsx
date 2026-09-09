@@ -21,12 +21,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
+import type { Listagens } from '@/components/retaguarda/grade-enxuta';
+import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
 import { TramiteDeDenuncia } from '@/components/retaguarda/tramite-de-denuncia';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
+import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
     Paginacao,
-    ThOrdenavel,
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
@@ -114,6 +116,11 @@ interface Props {
     areasDoChefe: string[];
     /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
     recorteDeArea: boolean;
+    /**
+     * As colunas de cada aba — da grade e do arquivo —, declaradas no servidor.
+     * Ver `docs/padroes/listagem-clean.md`.
+     */
+    listagens: Listagens;
     /** A sessão já decidiu algo sobre a demonstração? */
     alterada: boolean;
 }
@@ -340,6 +347,7 @@ export function PainelDeDenuncias({
     etapas,
     areasDoChefe,
     recorteDeArea,
+    listagens,
     alterada,
 }: Props) {
     const { enviando, ocupado, enviar } = useEnvio();
@@ -558,8 +566,11 @@ export function PainelDeDenuncias({
         });
     }, [fonte, busca, facetas, hoje]);
 
+    // `campo` é a CHAVE da coluna do catálogo, e `acessor` o dado por onde se
+    // ordena: com nomes diferentes, a seta de ordenação não acenderia na coluna
+    // que está de fato ordenando a lista.
     const ord = useOrdenacao(filtradas, {
-        campo: 'recebida_em_hora',
+        campo: 'recebida',
         dir: 'desc',
         acessor: 'recebida_em_hora',
     });
@@ -754,6 +765,192 @@ export function PainelDeDenuncias({
             foco: operacaoForm.foco.trim() === '' ? null : operacaoForm.foco.trim(),
         });
     }
+
+    /*
+     * ── A GRADE ENXUTA ───────────────────────────────────────────────────────
+     *
+     * As colunas — as da tela e as do arquivo — vêm do servidor, uma listagem
+     * por aba. A régua está em `docs/padroes/listagem-clean.md`: uma linha por
+     * denúncia, altura fixa, cinco colunas, e o ASSUNTO (texto livre, que era o
+     * que esticava a linha) fora da grade.
+     *
+     * Cada aba mostra o dado com que a etapa dela se decide: a triagem olha o
+     * BAIRRO e confirma a ÁREA; o direcionamento olha a área já definida; e
+     * "Todas" olha a SITUAÇÃO. Requerente, assunto e destino ficam no clique — e
+     * continuam no arquivo exportado.
+     */
+    const listagem =
+        listagens[
+            aba === 'triagem'
+                ? 'denuncias.triagem'
+                : aba === 'direcionamento'
+                  ? 'denuncias.direcionamento'
+                  : 'denuncias.todas'
+        ];
+
+    /** Como ORDENAR por cada coluna. Sem entrada, a coluna não ordena. */
+    const acessores: Record<string, AcessorOrd<Denuncia> | undefined> = {
+        protocolo: 'protocolo',
+        recebida: 'recebida_em_hora',
+        bairro: 'bairro',
+        situacao: 'situacao',
+        prazo: 'prazo',
+        // Na triagem a célula é um seletor: ordenar por ela ordenaria pela
+        // sugestão, que é o que a pessoa está ali para trocar.
+        area: aba === 'triagem' ? undefined : (d: Denuncia) => areaDe(d),
+    };
+
+    /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
+    const fraco = { color: 'var(--sm-texto-fraco)' };
+
+    /**
+     * O que cada célula DESENHA, com o texto inteiro para a dica.
+     *
+     * `interativa` marca a célula que tem controle dentro (o seletor de área):
+     * ali o clique não pode subir para a linha, senão escolher a área abriria a
+     * denúncia.
+     */
+    function celula(
+        d: Denuncia,
+        chave: string,
+        vencida: boolean,
+    ): { conteudo: ReactNode; dica?: string; interativa?: boolean } {
+        if (chave === 'protocolo') {
+            return {
+                conteudo: d.protocolo,
+                dica: `${d.protocolo} · ${canal.nome} ${d.protocolo_origem}`,
+            };
+        }
+
+        if (chave === 'recebida') {
+            return {
+                conteudo: dataBR(d.recebida_em_hora),
+                dica: `Entregue pela integração em ${dataHoraBR(d.recebida_em_hora)}`,
+            };
+        }
+
+        if (chave === 'bairro') {
+            // O endereço impreciso entra como ÍCONE, não como um segundo chip:
+            // a linha já tem um selo (a situação, ou o prazo vencido), e dois
+            // chips na mesma linha voltam a empilhar conteúdo na célula.
+            return {
+                conteudo: (
+                    <>
+                        {d.endereco_impreciso && (
+                            <MapPinOff
+                                size={13}
+                                aria-hidden
+                                style={{ color: 'var(--sm-aviso)', marginRight: 5 }}
+                            />
+                        )}
+                        {d.bairro}
+                    </>
+                ),
+                dica: d.endereco_impreciso
+                    ? `${d.bairro} — o canal não entregou número nem referência confiável`
+                    : d.bairro,
+            };
+        }
+
+        if (chave === 'situacao') {
+            return {
+                conteudo: (
+                    <span
+                        className={cn(
+                            'selo',
+                            TOM_DA_SITUACAO[d.situacao] ?? 'selo-neutro',
+                        )}
+                    >
+                        {d.situacao}
+                    </span>
+                ),
+                dica: `${d.situacao} · ${destinoAtual(d)}`,
+            };
+        }
+
+        if (chave === 'prazo') {
+            // Vencido é COR no texto, e não um selo: o selo desta linha é o da
+            // situação. A marca laranja na ponta da linha já grita a pendência.
+            return {
+                conteudo: (
+                    <span style={vencida ? { color: 'var(--sm-perigo)', fontWeight: 650 } : undefined}>
+                        {dataBR(d.prazo)}
+                    </span>
+                ),
+                dica: vencida
+                    ? `Prazo do canal vencido em ${dataBR(d.prazo)}`
+                    : `Prazo do canal: ${dataBR(d.prazo)}`,
+            };
+        }
+
+        // A ÁREA. Na triagem ela é editável na própria linha — é assim que o
+        // lote deixa de ser "manda tudo para o mesmo lugar".
+        if (!(emLote && aba === 'triagem')) {
+            const area = d.area ?? d.area_sugerida?.area ?? '';
+
+            return {
+                conteudo: area === '' ? <span style={fraco}>{VAZIO}</span> : area,
+                dica:
+                    area === ''
+                        ? 'Sem área definida'
+                        : `${area}${chefeDa(area) === null ? '' : ` · ${chefeDa(area)}`}`,
+            };
+        }
+
+        const sugerida = d.area_sugerida;
+
+        return {
+            interativa: true,
+            conteudo: (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <select
+                        className="form-control"
+                        style={{ minWidth: 150 }}
+                        value={areaDe(d)}
+                        aria-label={`Área da denúncia ${d.protocolo}`}
+                        onChange={(e) =>
+                            setAreaPorId((atual) => ({
+                                ...atual,
+                                [d.id]: e.target.value,
+                            }))
+                        }
+                    >
+                        <option value="">Escolha a área…</option>
+                        {/* O nome do CHEFE DE SETOR vai na opção: encaminhar é
+                            entregar trabalho a alguém, e "Área 5" não diz a
+                            quem. Vai aqui, e não numa linha extra, para não
+                            dobrar a altura da grade. */}
+                        {areas.map((a) => (
+                            <option key={a} value={a}>
+                                {chefeDa(a) === null ? a : `${a} — ${chefeDa(a)}`}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Bairro que pertence a duas áreas: o aviso vira ÍCONE com
+                        dica, e não o chip que antes ia embaixo do seletor —
+                        empilhado, ele dobrava a altura justamente da aba em que
+                        se varrem trinta linhas. */}
+                    {sugerida !== null && sugerida.alternativas.length > 0 && (
+                        <Info
+                            size={14}
+                            aria-hidden
+                            style={{ color: 'var(--sm-info)', flexShrink: 0 }}
+                        />
+                    )}
+                </span>
+            ),
+            dica:
+                sugerida !== null && sugerida.alternativas.length > 0
+                    ? `O bairro ${d.bairro} também é coberto por ${sugerida.alternativas
+                          .map((a) => a.area)
+                          .join(', ')}`
+                    : undefined,
+        };
+    }
+
+    /** Quantas colunas a grade tem — para o `colSpan` da linha vazia. */
+    const colunas = (emLote ? 1 : 0) + listagem.grade.length;
 
     // Só as chaves declaradas entram no arquivo, e a data sai em BR: o documento
     // é lido fora do sistema, onde ninguém traduz ISO.
@@ -1118,19 +1315,7 @@ export function PainelDeDenuncias({
                                         `Aba: ${rotuloDaAba[aba]}`
                                         + (busca.trim() ? ` · busca: "${busca.trim()}"` : '')
                                     }
-                                    colunas={[
-                                        { chave: 'protocolo', titulo: 'Protocolo' },
-                                        { chave: 'protocolo_origem', titulo: 'Nº na origem' },
-                                        { chave: 'recebida', titulo: 'Recebida', alinhar: 'center' },
-                                        { chave: 'requerente', titulo: 'Requerente' },
-                                        { chave: 'assunto', titulo: 'Assunto' },
-                                        { chave: 'bairro', titulo: 'Bairro' },
-                                        { chave: 'area', titulo: 'Área' },
-                                        { chave: 'destino', titulo: 'Destino' },
-                                        { chave: 'situacao', titulo: 'Situação' },
-                                        { chave: 'desfecho', titulo: 'Desfecho' },
-                                        { chave: 'prazo', titulo: 'Prazo', alinhar: 'center' },
-                                    ]}
+                                    colunas={listagem.exportacao}
                                     linhas={linhasExportacao}
                                 />
                             </div>
@@ -1139,7 +1324,8 @@ export function PainelDeDenuncias({
                         {pag.visiveis.length > 0 && (
                             <p className="form-ajuda" style={{ marginBottom: 8 }}>
                                 Clique numa linha — ou tecle Enter sobre ela — para
-                                abrir a denúncia, o relato e o trâmite dela.
+                                abrir a denúncia, o requerente, o assunto, o relato e
+                                o trâmite dela.
                                 {emLote && aba === 'triagem'
                                     ? ' A área vem sugerida pelo bairro: confira e troque na própria linha antes de encaminhar.'
                                     : ''}
@@ -1147,7 +1333,7 @@ export function PainelDeDenuncias({
                         )}
 
                         <div className="table-wrap">
-                            <table className="data-table">
+                            <table className="data-table enxuta">
                                 <thead>
                                     <tr>
                                         {emLote && (
@@ -1161,65 +1347,23 @@ export function PainelDeDenuncias({
                                                 />
                                             </th>
                                         )}
-                                        <ThOrdenavel campo="protocolo" acessor="protocolo" ord={ord}>
-                                            Protocolo
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="protocolo_origem"
-                                            acessor="protocolo_origem"
+                                        {/* Cabeçalho e células saem da MESMA lista de
+                                            colunas: escritos em dois lugares, uma
+                                            coluna nova entra só num deles e a grade
+                                            passa a mostrar o valor embaixo do título
+                                            errado. */}
+                                        <CabecaDaGrade
+                                            grade={listagem.grade}
                                             ord={ord}
-                                        >
-                                            Nº na origem
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="recebida_em_hora"
-                                            acessor="recebida_em_hora"
-                                            ord={ord}
-                                        >
-                                            Recebida
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="requerente"
-                                            acessor={(d: Denuncia) => quemDenunciou(d)}
-                                            ord={ord}
-                                        >
-                                            Requerente
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="assunto" acessor="assunto" ord={ord}>
-                                            Assunto
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="bairro" acessor="bairro" ord={ord}>
-                                            Bairro
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="area"
-                                            acessor={(d: Denuncia) => areaDe(d)}
-                                            ord={ord}
-                                        >
-                                            {aba === 'triagem' ? 'Área (sugerida)' : 'Área'}
-                                        </ThOrdenavel>
-                                        {aba !== 'triagem' && (
-                                            <ThOrdenavel
-                                                campo="destino"
-                                                acessor={(d: Denuncia) => destinoAtual(d)}
-                                                ord={ord}
-                                            >
-                                                Destino
-                                            </ThOrdenavel>
-                                        )}
-                                        <ThOrdenavel campo="situacao" acessor="situacao" ord={ord}>
-                                            Situação
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="prazo" acessor="prazo" ord={ord}>
-                                            Prazo
-                                        </ThOrdenavel>
+                                            acessores={acessores}
+                                        />
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     {pag.visiveis.length === 0 && (
                                         <tr>
-                                            <td colSpan={12} className="tabela-vazia">
+                                            <td colSpan={colunas} className="tabela-vazia">
                                                 {fonte.length === 0
                                                     ? aba === 'triagem'
                                                         ? 'Nada a triar: toda denúncia recebida deste canal já foi encaminhada ou retornada.'
@@ -1237,7 +1381,6 @@ export function PainelDeDenuncias({
                                             AGUARDANDO_TRIAGEM.concat(AGUARDANDO_DIRECIONAMENTO).includes(
                                                 d.situacao,
                                             );
-                                        const sugerida = d.area_sugerida;
 
                                         return (
                                             <tr
@@ -1262,133 +1405,30 @@ export function PainelDeDenuncias({
                                                     </td>
                                                 )}
 
-                                                <td className="cell-id">{d.protocolo}</td>
-                                                <td className="cell-id">{d.protocolo_origem}</td>
-                                                <td className="cell-id">
-                                                    {dataHoraBR(d.recebida_em_hora)}
-                                                </td>
-                                                <td>
-                                                    {d.anonima ? (
-                                                        <span
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                gap: 5,
-                                                                color: 'var(--sm-texto-fraco)',
-                                                            }}
+                                                {listagem.grade.map((coluna) => {
+                                                    const { conteudo, dica, interativa } =
+                                                        celula(d, coluna.chave, vencida);
+
+                                                    return (
+                                                        <Celula
+                                                            key={coluna.chave}
+                                                            coluna={coluna}
+                                                            dica={dica}
+                                                            onClick={
+                                                                interativa
+                                                                    ? (e) => e.stopPropagation()
+                                                                    : undefined
+                                                            }
+                                                            onKeyDown={
+                                                                interativa
+                                                                    ? (e) => e.stopPropagation()
+                                                                    : undefined
+                                                            }
                                                         >
-                                                            <UserX size={14} aria-hidden /> Anônimo
-                                                        </span>
-                                                    ) : (
-                                                        (d.requerente ?? VAZIO)
-                                                    )}
-                                                </td>
-                                                <td>{d.assunto}</td>
-                                                <td>
-                                                    {d.bairro}
-                                                    {d.endereco_impreciso && (
-                                                        <>
-                                                            {' '}
-                                                            <span
-                                                                className="selo selo-aviso"
-                                                                title="Endereço sem número nem referência confiável"
-                                                            >
-                                                                <MapPinOff size={12} aria-hidden />{' '}
-                                                                sem endereço
-                                                            </span>
-                                                        </>
-                                                    )}
-                                                </td>
-
-                                                {/* Na triagem a área é EDITÁVEL na própria
-                                                    linha: é assim que o lote deixa de ser
-                                                    "manda tudo para o mesmo lugar". */}
-                                                <td
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    onKeyDown={(e) => e.stopPropagation()}
-                                                >
-                                                    {emLote && aba === 'triagem' ? (
-                                                        <>
-                                                            <select
-                                                                className="form-control"
-                                                                style={{ minWidth: 150 }}
-                                                                value={areaDe(d)}
-                                                                aria-label={`Área da denúncia ${d.protocolo}`}
-                                                                onChange={(e) =>
-                                                                    setAreaPorId((atual) => ({
-                                                                        ...atual,
-                                                                        [d.id]: e.target.value,
-                                                                    }))
-                                                                }
-                                                            >
-                                                                <option value="">Escolha a área…</option>
-                                                                {/* O nome do CHEFE DE SETOR vai na opção:
-                                                                    encaminhar é entregar trabalho a
-                                                                    alguém, e "Área 5" não diz a quem.
-                                                                    Vai aqui, e não numa linha extra,
-                                                                    para não dobrar a altura da grade. */}
-                                                                {areas.map((a) => (
-                                                                    <option key={a} value={a}>
-                                                                        {chefeDa(a) === null
-                                                                            ? a
-                                                                            : `${a} — ${chefeDa(a)}`}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                            {sugerida !== null &&
-                                                                sugerida.alternativas.length > 0 && (
-                                                                    <span
-                                                                        className="selo selo-info"
-                                                                        title={`O bairro ${d.bairro} também é coberto por ${sugerida.alternativas
-                                                                            .map((a) => a.area)
-                                                                            .join(', ')}`}
-                                                                    >
-                                                                        bairro compartilhado
-                                                                    </span>
-                                                                )}
-                                                        </>
-                                                    ) : (
-                                                        (d.area ?? sugerida?.area ?? VAZIO)
-                                                    )}
-                                                </td>
-
-                                                {aba !== 'triagem' && (
-                                                    <td>
-                                                        {d.operacao !== null ? (
-                                                            <span className="selo selo-info">
-                                                                {d.operacao}
-                                                            </span>
-                                                        ) : d.equipe !== null ? (
-                                                            <span className="selo selo-neutro">
-                                                                Equipe {d.equipe}
-                                                            </span>
-                                                        ) : (
-                                                            VAZIO
-                                                        )}
-                                                    </td>
-                                                )}
-
-                                                <td>
-                                                    <span
-                                                        className={cn(
-                                                            'selo',
-                                                            TOM_DA_SITUACAO[d.situacao] ?? 'selo-neutro',
-                                                        )}
-                                                    >
-                                                        {d.situacao}
-                                                    </span>
-                                                </td>
-                                                <td className="cell-id">
-                                                    {dataBR(d.prazo)}
-                                                    {vencida && (
-                                                        <>
-                                                            {' '}
-                                                            <span className="selo selo-perigo">
-                                                                vencido
-                                                            </span>
-                                                        </>
-                                                    )}
-                                                </td>
+                                                            {conteudo}
+                                                        </Celula>
+                                                    );
+                                                })}
                                             </tr>
                                         );
                                     })}

@@ -10,12 +10,14 @@ import {
     RotateCcw,
     Target,
     Trash2,
-    Users,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
+import type { Listagens } from '@/components/retaguarda/grade-enxuta';
+import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
 import { useAcoes } from '@/hooks/use-acoes';
@@ -23,7 +25,7 @@ import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta } from '@/lib/busca';
 import { dataBR, hojeISO, VAZIO } from '@/lib/datas';
 import { linhaClicavel } from '@/lib/linha-clicavel';
-import { contar, plural } from '@/lib/plural';
+import { plural } from '@/lib/plural';
 import { cn } from '@/lib/utils';
 import {
     destroy,
@@ -100,6 +102,11 @@ interface Props {
     cadastra: boolean;
     areasDoChefe: string[];
     recorteDeArea: boolean;
+    /**
+     * As colunas da grade e as do arquivo, declaradas no servidor. Ver
+     * `docs/padroes/listagem-clean.md`.
+     */
+    listagens: Listagens;
     alterada: boolean;
 }
 
@@ -139,6 +146,7 @@ export default function CadastroDeOperacao({
     cadastra,
     areasDoChefe,
     recorteDeArea,
+    listagens,
     alterada,
 }: Props) {
     const acoes = useAcoes();
@@ -308,6 +316,72 @@ export default function CadastroDeOperacao({
 
         return nome.trim() === '' ? null : nome;
     };
+
+    /*
+     * ── A GRADE ENXUTA ───────────────────────────────────────────────────────
+     *
+     * Régua em `docs/padroes/listagem-clean.md`. Quem varre esta lista está
+     * procurando QUE operação existe e se ela está aberta — normalmente para
+     * anexar trabalho a ela. Nome, área, período, equipes e situação respondem
+     * isso em uma linha.
+     *
+     * O FOCO era a frase que ia embaixo do nome, e é texto livre: desceu para a
+     * ficha. Região e bairros desceram com ele — contam o alcance, que interessa
+     * depois de escolher a operação, não durante a varredura. Os três continuam
+     * no arquivo exportado.
+     */
+    const listagem = listagens.operacoes;
+
+    /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
+    const fraco = { color: 'var(--sm-texto-fraco)' };
+
+    /** O que cada célula desenha, com o texto inteiro para a dica. */
+    function celula(o: Operacao, chave: string): { conteudo: ReactNode; dica?: string } {
+        if (chave === 'nome') {
+            return {
+                conteudo: o.nome,
+                dica: o.foco === '' ? o.nome : `${o.nome} — ${o.foco}`,
+            };
+        }
+
+        if (chave === 'area') {
+            return {
+                conteudo: o.area,
+                dica: `${o.area} · ${chefeDa(o.area) ?? 'sem Chefe de Setor registrado'}`,
+            };
+        }
+
+        if (chave === 'periodo') {
+            return { conteudo: o.periodo, dica: o.periodo };
+        }
+
+        if (chave === 'equipes') {
+            // Texto, e não uma fileira de selos: com quatro equipes a fileira
+            // quebrava e a linha crescia. O selo desta linha é a situação.
+            return o.equipes.length === 0
+                ? {
+                      conteudo: <span style={fraco}>sem equipe definida</span>,
+                      dica: 'A operação foi planejada antes de a escala sair.',
+                  }
+                : {
+                      conteudo: o.equipes.join(', '),
+                      dica: `${o.equipes.length === 1 ? 'Equipe' : 'Equipes'} ${o.equipes.join(', ')}`,
+                  };
+        }
+
+        return {
+            conteudo: (
+                <span
+                    className={cn('selo', TOM_DA_SITUACAO[o.situacao] ?? 'selo-neutro')}
+                >
+                    {o.situacao}
+                </span>
+            ),
+            dica: o.encerrada
+                ? `${o.situacao} — não recebe denúncia nova`
+                : o.situacao,
+        };
+    }
 
     // Só as chaves declaradas entram no arquivo, e a data sai em BR: o documento é
     // lido fora do sistema, onde ninguém traduz ISO.
@@ -561,40 +635,30 @@ export default function CadastroDeOperacao({
                                         .filter(Boolean)
                                         .join(' · ')}
                                     orientacao="landscape"
-                                    colunas={[
-                                        { chave: 'nome', titulo: 'Operação' },
-                                        { chave: 'area', titulo: 'Área' },
-                                        { chave: 'regiao', titulo: 'Região' },
-                                        { chave: 'equipes', titulo: 'Equipes' },
-                                        { chave: 'periodo', titulo: 'Período' },
-                                        { chave: 'inicio', titulo: 'Início' },
-                                        { chave: 'fim', titulo: 'Fim' },
-                                        { chave: 'situacao', titulo: 'Situação' },
-                                        { chave: 'bairros', titulo: 'Bairros alcançados' },
-                                        { chave: 'foco', titulo: 'Foco' },
-                                        { chave: 'observacao', titulo: 'Observação' },
-                                    ]}
+                                    colunas={listagem.exportacao}
                                     linhas={linhasExportacao}
                                 />
                             </div>
                         </div>
 
                         <div className="table-wrap">
-                            <table className="data-table">
+                            <table className="data-table enxuta">
                                 <thead>
                                     <tr>
-                                        <th>Operação</th>
-                                        <th>Área e chefia</th>
-                                        <th>Equipes</th>
-                                        <th>Período</th>
-                                        <th>Alcance</th>
-                                        <th>Situação</th>
+                                        {/* Cabeçalho e células saem da MESMA lista de
+                                            colunas: escritos em dois lugares, uma
+                                            coluna nova entra só num deles e a grade
+                                            mostra o valor sob o título errado. */}
+                                        <CabecaDaGrade grade={listagem.grade} />
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filtradas.length === 0 && (
                                         <tr>
-                                            <td colSpan={6} className="tabela-vazia">
+                                            <td
+                                                colSpan={listagem.grade.length}
+                                                className="tabela-vazia"
+                                            >
                                                 {operacoes.length === 0
                                                     ? 'Nenhuma operação cadastrada. Use "Nova operação" para montar a primeira.'
                                                     : 'Nenhuma operação casa com a busca. Limpe o campo para ver a lista inteira.'}
@@ -611,62 +675,22 @@ export default function CadastroDeOperacao({
                                                 o.id === abertaId && 'ativo',
                                             )}
                                         >
-                                            <td className="cell-id">
-                                                {o.nome}
-                                                {o.foco !== '' && (
-                                                    <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                        {o.foco}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td>
-                                                {o.area}
-                                                <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                    {chefeDa(o.area) ?? 'sem Chefe de Setor registrado'}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {o.equipes.length === 0 ? (
-                                                    <span style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                        sem equipe definida
-                                                    </span>
-                                                ) : (
-                                                    o.equipes.map((e) => (
-                                                        <span
-                                                            key={e}
-                                                            className="selo selo-neutro"
-                                                            style={{ marginRight: 6 }}
-                                                        >
-                                                            <Users size={11} aria-hidden /> {e}
-                                                        </span>
-                                                    ))
-                                                )}
-                                            </td>
-                                            <td>{o.periodo}</td>
-                                            <td>
-                                                {o.regiao === '' ? (
-                                                    <span style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                        a área inteira
-                                                    </span>
-                                                ) : (
-                                                    o.regiao
-                                                )}
-                                                <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                    {o.total_bairros === 0
-                                                        ? 'todos os bairros da área'
-                                                        : contar(o.total_bairros, 'bairro', 'bairros')}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span
-                                                    className={cn(
-                                                        'selo',
-                                                        TOM_DA_SITUACAO[o.situacao] ?? 'selo-neutro',
-                                                    )}
-                                                >
-                                                    {o.situacao}
-                                                </span>
-                                            </td>
+                                            {listagem.grade.map((coluna) => {
+                                                const { conteudo, dica } = celula(
+                                                    o,
+                                                    coluna.chave,
+                                                );
+
+                                                return (
+                                                    <Celula
+                                                        key={coluna.chave}
+                                                        coluna={coluna}
+                                                        dica={dica}
+                                                    >
+                                                        {conteudo}
+                                                    </Celula>
+                                                );
+                                            })}
                                         </tr>
                                     ))}
                                 </tbody>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
 use App\Rules\NomeDeCadastro;
+use App\Support\ListagensDaRetaguarda;
 use App\Support\Prototipo\CaixaDeEntradaFicticia;
 use App\Support\Prototipo\EstruturaFicticia;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +62,11 @@ class CaixaDeEntradaController extends Controller
             // faz a sugestão aparecer no instante em que a pessoa escolhe o
             // bairro, sem uma ida ao servidor por tecla digitada.
             'sugestoes' => $this->mapaDeSugestoes(),
+            // As COLUNAS da grade e as do arquivo — APRESENTAÇÃO, e só ela: o
+            // fluxo, os dados de `config/prototipo_caixa_entrada.php`, as ações e
+            // as abas desta tela seguem intocados. Ver
+            // docs/padroes/listagem-clean.md.
+            'listagens' => ListagensDaRetaguarda::para('caixa-de-entrada'),
             'alterada' => CaixaDeEntradaFicticia::alterada(),
         ]);
     }

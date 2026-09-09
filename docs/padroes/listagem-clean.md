@@ -1,0 +1,247 @@
+# Padrão de LISTAGEM — grade enxuta, detalhe no clique, arquivo completo
+
+> **Ordem do dono, 09/09/2026:** _"As listagens estão muito poluídas, muita informação quebrando
+> linha de forma irregular. Deixe as listagens mais CLEAN, deixando a informação detalhada para
+> quando o usuário clicar e quiser mais informações. **Adote como padrão no sistema.**"_
+
+Este documento é a régua. Vale para **toda** listagem da Retaguarda — a aba "Localizar" das telas de
+cadastro e a grade operacional (caixas de entrada, filas, consultas, painéis, logs) — e para as que
+ainda vão nascer.
+
+Onde ela é aplicada, listagem por listagem: [`config/listagens_da_retaguarda.php`](../../config/listagens_da_retaguarda.php).
+Onde ela é travada: [`tests/Feature/ListagemCleanTest.php`](../../tests/Feature/ListagemCleanTest.php).
+
+---
+
+## O diagnóstico — por que esta régua existe
+
+O print que gerou a ordem era a fila de Fiscalizações. Ela tinha:
+
+- **sete colunas**, com o texto livre do fiscal dentro de uma delas ("Três permissionários de barraca
+  de praia, todos com permissão regular no trecho");
+- **texto secundário empilhado embaixo do primário** em quatro das sete: "Costa Azul · Área 5" sob o
+  endereço, "Barracas de chapa com toldo" sob a descrição, o nome do fiscal sob a equipe, o número da
+  notificação sob o desfecho;
+- e, por consequência, **altura de linha variando de ~60 a ~160 px**.
+
+O defeito não é estético. Uma grade tem **uma** vantagem sobre um cartão: o olho desce a coluna e
+compara. Com a linha mudando de altura a cada registro, a coluna deixa de ser uma coluna — passa a
+ser uma pilha de blocos de tamanhos diferentes, e quem lê perde exatamente a leitura que foi buscar
+ali. A informação empilhada não estava a mais: estava **no lugar errado**.
+
+---
+
+## A régua
+
+### 1. Uma linha por registro, altura fixa
+
+Nada quebra linha dentro da célula. O que não couber é **truncado com reticências**, com o texto
+inteiro no `title` **e** no detalhe.
+
+A altura é declarada na célula (`table.data-table.enxuta td { height: 56px }`), **não derivada do
+conteúdo**. Derivada, a linha que tem selo fica alguns pixels mais alta que a que tem só texto — e
+volta a irregularidade, em escala menor e mais difícil de nomear.
+
+> **O corte é do CSS, nunca um `substring` no dado.** `text-overflow: ellipsis` esconde do olho e
+> mantém o texto inteiro no DOM: leitor de tela, busca do navegador (Ctrl+F) e cópia continuam
+> vendo o valor completo. Cortar no JavaScript apagaria a informação para quem não vê a tela.
+>
+> A exceção é quando a tela **resume de verdade** (o primeiro selo de uma lista, com "+2"). Aí o que
+> ficou de fora só existe na dica, e ela passa a ser obrigatória — e também `aria-label`.
+
+### 2. No máximo cinco colunas
+
+Cinco respostas: **quando · onde · quem · o que deu · em que estado**. Coluna a mais é decisão de não
+olhar nenhuma.
+
+O teto é conferido por teste, nas **duas** resoluções da grade (com e sem a coluna condicional do
+item 4) — testar só uma deixaria a outra passar de seis sem nada acusar.
+
+### 3. Texto livre não entra na grade
+
+Relato, "quem foi encontrado" escrito em frase, justificativa, observação, descrição, foco,
+recomendação em frase inteira, assunto longo: nada disso é coluna. Na linha cabe, no máximo, **um
+selo dizendo a categoria**.
+
+A lista dos campos de texto livre do sistema está no topo de
+[`config/listagens_da_retaguarda.php`](../../config/listagens_da_retaguarda.php) (`texto_livre`), e é
+**global** de propósito: se cada autor declarasse os seus, bastaria esquecer de declarar para o campo
+passar.
+
+### 4. Sem sub-linha secundária dentro da célula
+
+Bairro, área, equipamento, nome do fiscal sob a equipe, código sob o nome — tudo isso desce para o
+detalhe. Se **um** deles é essencial para varrer, ele vira **coluna própria e curta**; nunca texto
+empilhado.
+
+E "essencial para varrer" depende de **quem está olhando**. A área é o caso concreto: o Chefe de
+Setor só vê a dele (a coluna repetiria a mesma palavra em toda linha, gastando largura sem
+informação), enquanto o Coordenador varre cinco áreas e para ele a área **é** o que torna a fila
+navegável. Isso se resolve com **coluna condicional** (`'quando' => 'varias-areas'` no catálogo,
+resolvida no servidor), não com sub-linha.
+
+> A conta de quem vê quantas áreas é a **mesma** que já decide o recorte dos dados
+> (`PapelNaArea`). Repeti-la na tela criaria um segundo dono para a resposta.
+
+### 5. A linha inteira abre o detalhe
+
+Sempre por [`resources/js/lib/linha-clicavel.ts`](../../resources/js/lib/linha-clicavel.ts), que já
+resolve clique, foco, `Enter`/`Espaço` e a dica de acesso. **Nunca** um ícone de lupa no fim da
+linha: ele gasta uma coluna, é alvo pequeno e só existe para quem usa mouse.
+
+### 6. A EXPORTAÇÃO continua completa
+
+**Enxugar é da TELA.** O arquivo (PDF/XLSX/DOCX) é lido por quem decide, fora do sistema, e mantém as
+colunas detalhadas.
+
+Esta é a regra mais fácil de quebrar sem perceber, e por isso a mais protegida: quem apaga a coluna da
+grade apaga a linha vizinha do `<BotaoExportar>` no mesmo impulso, e o arquivo perde o dado **em
+silêncio** — ninguém reclama de uma coluna que nunca viu. Por isso o catálogo declara as três listas
+no mesmo lugar:
+
+| Chave | O que é |
+|---|---|
+| `grade` | as colunas visíveis, na ordem |
+| `detalhe` | o que **desceu** da grade para a ficha do registro |
+| `exportacao` | as colunas do arquivo |
+
+E o teste cruza: `grade ⊆ exportacao`, `detalhe ⊆ exportacao`, `detalhe` não vazio, e a exportação
+estritamente mais rica que a grade. Mover um campo da tela para a ficha sem pôr a coluna na
+exportação **reprova**, nominalmente.
+
+### 7. Número à direita, data curta, um selo por linha
+
+- Número/quantidade alinhado à direita; identificador (protocolo, código) à esquerda, sem quebra.
+- Data em `dd/mm/aaaa` — a **hora** vai para a dica e para o detalhe. (Lei do projeto: nunca ISO à
+  vista.)
+- **Um selo de ESTADO por linha** — o da coluna de situação/estado, com cor semântica. Marca de
+  exceção (prazo vencido, endereço impreciso) entra como **cor no texto** ou **um ícone**, nunca como
+  um segundo chip: dois chips na mesma linha voltam a empilhar conteúdo na célula.
+- Valor categórico curto que não é o estado (equipes, "Permissionário / Sem permissão") vai como
+  **texto**, não como chip.
+
+---
+
+## Antes e depois — Fiscalizações, aba "A decidir"
+
+A tela do print.
+
+**Antes** (7 colunas, 4 delas com sub-linha):
+
+| Concluída | Ponto | Equipe e fiscal | Desfecho | Recomendação do fiscal | Estado |
+|---|---|---|---|---|---|
+| 08/09/2026 14:20<br>_há 2 dias na fila_ | Rua da Paciência, 120<br>_Rio Vermelho · Área 4_ | Equipe C1<br>_Ana Prado_ | Notificado<br>`Notificação nº 194903` | `Voltar ao ponto no vencimento` `Abrir SGCI` | `Aguardando leitura` |
+
+**Depois** (4 colunas para o Chefe de Setor, 5 para o Coordenador):
+
+| Concluída | Ponto | _(Área)_ | Desfecho | Recomendação do fiscal |
+|---|---|---|---|---|
+| 08/09/2026 | Rua da Paciência, 120 | _Área 4_ | Notificado | `Voltar ao ponto no vencimento` +1 |
+
+O que mudou, e por quê:
+
+- **`Estado` saiu.** A aba já filtra por "aguardando leitura": a coluna repetia a mesma palavra em
+  toda linha. A marca laranja na ponta da linha continua dizendo que aquilo espera alguém.
+- **`Equipe e fiscal` desceu.** A decisão da chefia é sobre o **ponto**; a assinatura de quem foi
+  importa ao abrir o registro. As duas continuam no arquivo.
+- **`Bairro` e o número do documento desceram** — eram as sub-linhas que dobravam a altura.
+- **`Área` virou coluna condicional**, pelo item 4.
+- **A recomendação** continua na grade (é o motivo de a fila existir), mas como **a primeira** frase
+  mais "+N"; a lista inteira está na dica, na ficha e no arquivo.
+- **A hora e o "há N dias na fila"** foram para a dica e para a ficha.
+
+### Os números, medidos no DOM (1440×900)
+
+Não é impressão: a geometria era o defeito, e ela é medível. "Alturas" é o conjunto de alturas de
+linha **distintas** encontradas na mesma grade — mais de um valor já significa que a coluna deixou de
+dar régua vertical.
+
+| Listagem | Colunas (antes → depois) | Alturas antes | Alturas depois | Maior − menor (antes → depois) |
+|---|---|---|---|---|
+| Fiscalizações · A decidir | 6 → 5 (4 para quem tem uma área) | 93, 98, 135, 139, 148, 156 | 56 | 63 px → **0** |
+| Fiscalizações · Acervo | 8 → 5 | 114, 135, 139, 156, 177 | 56 | 63 px → **0** |
+| Denúncias · A triar | 9 → 5 | 114, 135 | 56 | 21 px → **0** |
+| Cadastro de Operação | 6 → 5 | 114, 135, 156 | 56 | 42 px → **0** |
+| Ambulantes · Localizar | 6 → 5 | 87 | 56 | 0 → **0** |
+| Caixa de Entrada | 9 → 5 | 93, 114, 135 | 56 | 42 px → **0** |
+
+E, no "depois", em todas elas: **nenhuma** célula quebrando linha, **nenhuma** célula truncada sem o
+texto inteiro no `title`, e a página sem rolagem horizontal — nem em 1440×900 nem em 560×820 (aí a
+tabela rola dentro do `.table-wrap`, como deve).
+
+Para comparação do "antes": na fila de Fiscalizações, **58 das 60 células** ocupavam mais de uma linha
+de texto, e a pior chegava a **sete**.
+
+---
+
+## E quando a informação parece essencial demais para sair da grade?
+
+É a pergunta que sempre aparece, e ela quase sempre tem uma destas cinco respostas — nesta ordem:
+
+1. **Ela é essencial para VARRER, ou para DECIDIR depois de achar?** Só a primeira justifica coluna.
+   "Preciso ver isso quando abro o registro" é detalhe, não coluna.
+2. **A BUSCA já responde?** A barra é o filtro único da tela e é acento-insensível: documento, número
+   de permissão, "prazo vencido", "Área 5", "não identificado" são achados por lá. Campo que serve
+   para **procurar** não precisa de coluna para ser **lido**.
+3. **Cabe na DICA?** Se o valor completo do que já está na coluna basta (bairro junto do endereço,
+   chefia junto da área, hora junto da data), ele vai no `title` — e no detalhe.
+4. **Vira uma coluna CURTA, trocando outra?** O teto é cinco. Se ela entra, alguma sai — e a decisão
+   é qual das duas quem usa a tela olha mais.
+5. **É condicional?** Se é essencial para um perfil e constante para outro, ela é coluna com
+   `quando`, resolvida no servidor.
+
+E, valendo para todas as cinco: **sair da grade não é sair do sistema.** O campo continua na ficha do
+clique e no arquivo exportado — e o teste não deixa você esquecer a segunda parte.
+
+---
+
+## Como aplicar numa listagem nova
+
+1. Declare a listagem em [`config/listagens_da_retaguarda.php`](../../config/listagens_da_retaguarda.php):
+   `tela`, `grade` (≤ 5, sem texto livre), `detalhe`, `exportacao`. O comentário de cada listagem
+   existente diz **quem varre aquela tela e procurando o quê** — escreva o seu também: é a
+   justificativa que a próxima pessoa vai querer ler antes de acrescentar a sexta coluna.
+2. No controller, passe a listagem para a tela:
+   `'listagens' => ListagensDaRetaguarda::para('minha-listagem')` — e, se houver coluna condicional,
+   o contexto: `ListagensDaRetaguarda::para($ids, ['varias-areas' => ...])`.
+3. Na tela, monte o cabeçalho e as células a partir da **mesma** lista:
+   ```tsx
+   <table className="data-table enxuta">
+       <thead><tr><CabecaDaGrade grade={listagem.grade} ord={ord} acessores={acessores} /></tr></thead>
+       <tbody>
+           {pag.visiveis.map((r) => (
+               <tr key={r.id} {...linhaClicavel(() => abrir(r), 'Abrir o registro')}>
+                   {listagem.grade.map((coluna) => {
+                       const { conteudo, dica } = celula(r, coluna.chave);
+                       return <Celula key={coluna.chave} coluna={coluna} dica={dica}>{conteudo}</Celula>;
+                   })}
+               </tr>
+           ))}
+       </tbody>
+   </table>
+   ```
+   Cabeçalho e células saem da mesma lista de propósito: escritos em dois lugares, uma coluna nova
+   entra só num deles e a grade passa a mostrar o valor sob o título errado.
+4. `<BotaoExportar colunas={listagem.exportacao} linhas={...} />` — e as linhas são o **recorte
+   visível inteiro** (`ord.itens`), nunca `pag.visiveis`.
+5. Garanta que o **detalhe** mostra o que desceu. Duas formas sancionadas, e nenhuma terceira:
+   - a **aba do registro** dentro do mesmo cartão (telas de cadastro e de tramitação, onde o detalhe
+     é uma vista completa com ações) — Ambulantes, Operações, Caixa de Entrada, Denúncias;
+   - a **linha de detalhe** expandida (`tr.linha-detalhe`) ou a **folha sobreposta**
+     ([`sobreposicao.tsx`](../../resources/js/components/retaguarda/sobreposicao.tsx)) quando a
+     listagem é uma fila e o detalhe é leitura rápida — Fiscalizações.
+6. Rode `tests/Feature/ListagemCleanTest.php`. Ele é nominal: diz qual listagem, qual coluna e o quê.
+
+### Exceções declaradas do CSS
+
+`table.data-table.enxuta` prende a altura e proíbe a quebra de linha. Duas células escapam, e só
+duas: `td.tabela-vazia` (é uma frase, e precisa quebrar) e `tr.linha-detalhe td` (é ficha, não
+registro). Fora dessas, célula que quebra linha é defeito.
+
+---
+
+## Changelog
+
+| Data | Autor | Alteração | Motivo |
+|---|---|---|---|
+| 09/09/2026 | José Nascimento | Documento criado; régua aplicada nas sete listagens existentes (Fiscalizações A decidir/Acervo, Denúncias A triar/A direcionar/Todas, Cadastro de Operação, Ambulantes, Caixa de Entrada); catálogo em `config/listagens_da_retaguarda.php`; grade enxuta em CSS; teste-lei. | Ordem do dono: listagens poluídas, com texto livre na célula e altura de linha irregular. |

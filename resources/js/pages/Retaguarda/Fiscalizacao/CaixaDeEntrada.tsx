@@ -13,15 +13,18 @@ import {
     UserRound,
     UserX,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
+import type { Listagens } from '@/components/retaguarda/grade-enxuta';
+import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
     Paginacao,
-    ThOrdenavel,
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
@@ -81,6 +84,11 @@ interface Props {
     bairros: string[];
     /** `bairro → equipe sugerida`, para a sugestão aparecer sem ida ao servidor. */
     sugestoes: Record<string, Sugestao>;
+    /**
+     * As colunas da grade e as do arquivo, declaradas no servidor. Ver
+     * `docs/padroes/listagem-clean.md`.
+     */
+    listagens: Listagens;
     /** A sessão já mexeu na caixa de demonstração? */
     alterada: boolean;
 }
@@ -136,6 +144,7 @@ export default function CaixaDeEntrada({
     equipes,
     bairros,
     sugestoes,
+    listagens,
     alterada,
 }: Props) {
     const acoes = useAcoes();
@@ -351,6 +360,94 @@ export default function CaixaDeEntrada({
 
     // Só as chaves declaradas entram no arquivo, e a data sai em BR: o documento
     // é lido fora do sistema, onde ninguém traduz ISO.
+    /*
+     * ── A GRADE ENXUTA ───────────────────────────────────────────────────────
+     *
+     * Régua em `docs/padroes/listagem-clean.md`. Quem varre esta caixa está
+     * vendo o que chegou em papel e o que está estourando prazo: protocolo,
+     * data de recebimento, bairro (o dado que define a equipe), situação e
+     * prazo.
+     *
+     * O ASSUNTO era o texto livre que esticava a linha, e desceu com origem,
+     * requerente e equipe — a ficha do clique já mostrava os quatro por
+     * inteiro. Todos continuam no arquivo exportado.
+     *
+     * ⚠️ A mudança aqui é SÓ de apresentação: o fluxo, os dados, as ações e as
+     * abas desta tela seguem como estavam.
+     */
+    const listagem = listagens['caixa-de-entrada'];
+
+    /** Como ORDENAR por cada coluna. */
+    const acessores: Record<string, AcessorOrd<Demanda> | undefined> = {
+        protocolo: 'protocolo',
+        recebida_em: 'recebida_em',
+        bairro: 'bairro',
+        situacao: 'situacao',
+        prazo: 'prazo',
+    };
+
+    /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
+    const fraco = { color: 'var(--sm-texto-fraco)' };
+
+    /** O que cada célula desenha, com o texto inteiro para a dica. */
+    function celula(
+        d: Demanda,
+        chave: string,
+        vencida: boolean,
+    ): { conteudo: ReactNode; dica?: string } {
+        if (chave === 'protocolo') {
+            return {
+                conteudo: d.protocolo,
+                dica: `${d.protocolo} · ${d.origem} ${d.documento_origem}`,
+            };
+        }
+
+        if (chave === 'recebida_em') {
+            return {
+                conteudo: dataBR(d.recebida_em),
+                dica: `Recebida em ${dataBR(d.recebida_em)} · ${d.origem}`,
+            };
+        }
+
+        if (chave === 'bairro') {
+            return {
+                conteudo: d.bairro,
+                dica: `${d.bairro} · ${d.equipe ? `Equipe ${d.equipe}` : 'ainda sem equipe'}`,
+            };
+        }
+
+        if (chave === 'situacao') {
+            return {
+                conteudo: (
+                    <span
+                        className={cn(
+                            'selo',
+                            TOM_DA_SITUACAO[d.situacao] ?? 'selo-neutro',
+                        )}
+                    >
+                        {d.situacao}
+                    </span>
+                ),
+                dica: `${d.situacao} · ${quemPediu(d)} — ${d.assunto}`,
+            };
+        }
+
+        // Vencido é COR no texto, e não um segundo selo: o selo da linha é o da
+        // situação, e a marca laranja na ponta já grita a pendência.
+        return {
+            conteudo: vencida ? (
+                <span style={{ color: 'var(--sm-perigo)', fontWeight: 650 }}>
+                    {dataBR(d.prazo)}
+                </span>
+            ) : (
+                <span style={d.prazo === '' ? fraco : undefined}>{dataBR(d.prazo)}</span>
+            ),
+            dica: vencida
+                ? `Prazo vencido em ${dataBR(d.prazo)}`
+                : `Prazo: ${dataBR(d.prazo)}`,
+        };
+    }
+
     const linhasExportacao = ord.itens.map((d) => ({
         protocolo: d.protocolo,
         origem: d.origem,
@@ -539,18 +636,7 @@ export default function CaixaDeEntrada({
                                             ? `Busca: "${busca.trim()}"`
                                             : 'Caixa completa'
                                     }
-                                    colunas={[
-                                        { chave: 'protocolo', titulo: 'Protocolo' },
-                                        { chave: 'origem', titulo: 'Origem' },
-                                        { chave: 'documento_origem', titulo: 'Documento' },
-                                        { chave: 'recebida_em', titulo: 'Recebida em', alinhar: 'center' },
-                                        { chave: 'requerente', titulo: 'Requerente' },
-                                        { chave: 'assunto', titulo: 'Assunto' },
-                                        { chave: 'bairro', titulo: 'Bairro' },
-                                        { chave: 'equipe', titulo: 'Equipe' },
-                                        { chave: 'situacao', titulo: 'Situação' },
-                                        { chave: 'prazo', titulo: 'Prazo', alinhar: 'center' },
-                                    ]}
+                                    colunas={listagem.exportacao}
                                     linhas={linhasExportacao}
                                 />
                             </div>
@@ -564,51 +650,29 @@ export default function CaixaDeEntrada({
                         )}
 
                         <div className="table-wrap">
-                            <table className="data-table">
+                            <table className="data-table enxuta">
                                 <thead>
                                     <tr>
-                                        <ThOrdenavel campo="protocolo" acessor="protocolo" ord={ord}>
-                                            Protocolo
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="origem" acessor="origem" ord={ord}>
-                                            Origem
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="recebida_em" acessor="recebida_em" ord={ord}>
-                                            Recebida
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="requerente"
-                                            acessor={(d: Demanda) => quemPediu(d)}
+                                        {/* Cabeçalho e células saem da MESMA lista
+                                            de colunas: escritos em dois lugares,
+                                            uma coluna nova entra só num deles e a
+                                            grade mostra o valor sob o título
+                                            errado. */}
+                                        <CabecaDaGrade
+                                            grade={listagem.grade}
                                             ord={ord}
-                                        >
-                                            Requerente
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="assunto" acessor="assunto" ord={ord}>
-                                            Assunto
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="bairro" acessor="bairro" ord={ord}>
-                                            Bairro
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="equipe"
-                                            acessor={(d: Demanda) => d.equipe ?? ''}
-                                            ord={ord}
-                                        >
-                                            Equipe
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="situacao" acessor="situacao" ord={ord}>
-                                            Situação
-                                        </ThOrdenavel>
-                                        <ThOrdenavel campo="prazo" acessor="prazo" ord={ord}>
-                                            Prazo
-                                        </ThOrdenavel>
+                                            acessores={acessores}
+                                        />
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     {pag.visiveis.length === 0 && (
                                         <tr>
-                                            <td colSpan={9} className="tabela-vazia">
+                                            <td
+                                                colSpan={listagem.grade.length}
+                                                className="tabela-vazia"
+                                            >
                                                 {demandas.length === 0
                                                     ? 'Nenhuma demanda na caixa. Use "Cadastrar Demanda" para lançar o que chegou.'
                                                     : 'Nenhuma demanda casa com a busca. Limpe o campo para ver a caixa inteira.'}
@@ -629,58 +693,23 @@ export default function CaixaDeEntrada({
                                                     vencida && 'pendente',
                                                 )}
                                             >
-                                                <td className="cell-id">{d.protocolo}</td>
-                                                <td>{d.origem}</td>
-                                                <td className="cell-id">{dataBR(d.recebida_em)}</td>
-                                                <td>
-                                                    {d.anonima ? (
-                                                        <span
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                gap: 5,
-                                                                color: 'var(--sm-texto-fraco)',
-                                                            }}
+                                                {listagem.grade.map((coluna) => {
+                                                    const { conteudo, dica } = celula(
+                                                        d,
+                                                        coluna.chave,
+                                                        vencida,
+                                                    );
+
+                                                    return (
+                                                        <Celula
+                                                            key={coluna.chave}
+                                                            coluna={coluna}
+                                                            dica={dica}
                                                         >
-                                                            <UserX size={14} aria-hidden /> Anônimo
-                                                        </span>
-                                                    ) : (
-                                                        (d.requerente ?? VAZIO)
-                                                    )}
-                                                </td>
-                                                <td>{d.assunto}</td>
-                                                <td>{d.bairro}</td>
-                                                <td>
-                                                    {d.equipe ? (
-                                                        <span className="selo selo-neutro">
-                                                            {d.equipe}
-                                                        </span>
-                                                    ) : (
-                                                        VAZIO
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <span
-                                                        className={cn(
-                                                            'selo',
-                                                            TOM_DA_SITUACAO[d.situacao] ??
-                                                                'selo-neutro',
-                                                        )}
-                                                    >
-                                                        {d.situacao}
-                                                    </span>
-                                                </td>
-                                                <td className="cell-id">
-                                                    {dataBR(d.prazo)}
-                                                    {vencida && (
-                                                        <>
-                                                            {' '}
-                                                            <span className="selo selo-perigo">
-                                                                vencido
-                                                            </span>
-                                                        </>
-                                                    )}
-                                                </td>
+                                                            {conteudo}
+                                                        </Celula>
+                                                    );
+                                                })}
                                             </tr>
                                         );
                                     })}

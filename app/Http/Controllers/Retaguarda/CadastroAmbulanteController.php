@@ -8,6 +8,7 @@ use App\Models\AtividadeAmbulante;
 use App\Rules\ArquivoSeguro;
 use App\Rules\CpfOuCnpj;
 use App\Rules\NomeDeCadastro;
+use App\Support\ListagensDaRetaguarda;
 use App\Support\Protocolo;
 use Closure;
 use Illuminate\Http\RedirectResponse;
@@ -87,6 +88,10 @@ class CadastroAmbulanteController extends Controller
             // tela ofereceria uma opção que o servidor recusa.
             'situacoes' => Ambulante::SITUACOES,
             'situacoesDeInclusao' => Ambulante::SITUACOES_DE_MESA,
+            // As COLUNAS da aba "Localizar" e as do arquivo — ver
+            // docs/padroes/listagem-clean.md. Documento, código e validade da
+            // permissão descem para o cadastro aberto e seguem no arquivo.
+            'listagens' => ListagensDaRetaguarda::para('ambulantes'),
         ]);
     }
 

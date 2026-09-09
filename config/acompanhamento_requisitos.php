@@ -346,6 +346,31 @@ return [
         ],
 
         /*
+         * Também sem item de menu, e pelo mesmo motivo da casca e da exportação: é
+         * a régua que TODA listagem segue. Ela entra no mapa porque é exatamente o
+         * tipo de regra transversal que ninguém lembra de conferir depois — e
+         * porque foi ordem direta do dono, não decisão de desenho nossa.
+         */
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Padrão de listagem (grade enxuta)',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.fiscalizacoes.index',
+            'breadcrumb' => 'Presente em toda listagem da Retaguarda',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: ordem do dono de 09/09/2026 ("as listagens estão '
+                .'muito poluídas, muita informação quebrando linha de forma irregular; deixe a informação '
+                .'detalhada para quando o usuário clicar — adote como padrão no sistema"). Toda listagem '
+                .'mostra uma linha por registro, de altura fixa, com no máximo cinco colunas e nada de '
+                .'texto escrito em frase dentro da célula: o que não couber é cortado com reticências e o '
+                .'texto inteiro aparece ao passar o mouse. O restante da informação abre no clique na '
+                .'linha, e o arquivo exportado continua trazendo as colunas detalhadas. A coluna de área '
+                .'só existe para quem responde por mais de uma. Régua e justificativa em '
+                .'docs/padroes/listagem-clean.md; colunas declaradas em config/listagens_da_retaguarda.php.',
+        ],
+
+        /*
          * Não tem item de menu porque não é uma tela: é o botão que TODA
          * listagem carrega. Fica no mapa mesmo assim — o acompanhamento é de
          * funcionalidade entregue, não de linha do menu, e uma regra que vale em
@@ -362,7 +387,10 @@ return [
             'nota' => $origemSpec.' Toda listagem entrega em PDF, Excel e Word exatamente o que está à '
                 .'vista — o que a busca, o filtro e a aba deixaram na tela —, nunca o universo inteiro '
                 .'nem apenas a página aberta, e sempre com o recorte declarado no documento para quem o '
-                .'receber saber do que ele fala.',
+                .'receber saber do que ele fala. As colunas do arquivo são declaradas ao lado das colunas '
+                .'da tela (config/listagens_da_retaguarda.php): a tela ficou enxuta por ordem do dono, e o '
+                .'arquivo NÃO — ele segue trazendo o que desceu para o detalhe, e isso é conferido por '
+                .'teste, para a limpeza da tela não virar perda de dado no documento em silêncio.',
         ],
 
         [

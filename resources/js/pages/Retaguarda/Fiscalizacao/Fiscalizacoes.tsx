@@ -13,16 +13,19 @@ import {
     Undo2,
     UserRound,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
+import type { Listagens } from '@/components/retaguarda/grade-enxuta';
+import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
     Paginacao,
-    ThOrdenavel,
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
@@ -62,12 +65,23 @@ import { ciencia, index, novaVistoria, reiniciar } from '@/routes/retaguarda/fis
  * entrega ("vencido", "operação"). Aba que só filtra o mesmo conjunto seria um
  * segundo filtro concorrendo com a barra, contra o padrão de busca do projeto.
  *
+ * ── A grade é ENXUTA; o resto está no clique ─────────────────────────────────
+ *
+ * Padrão do sistema, em `docs/padroes/listagem-clean.md`: uma linha por
+ * registro, altura fixa, no máximo cinco colunas, texto livre fora da grade.
+ * As colunas — as da tela e as do arquivo — vêm do servidor
+ * (`config/listagens_da_retaguarda.php`), porque enxugar é da TELA: o arquivo
+ * exportado continua levando equipe, fiscal, documento, considerações e tudo o
+ * mais que desceu para a ficha.
+ *
  * ── A RECOMENDAÇÃO do fiscal é a coluna que decide ───────────────────────────
  *
  * O desfecho diz como a vistoria terminou; a recomendação diz o que quem esteve
  * no ponto está PEDINDO. É por ela que a chefia direciona, então ela tem coluna
  * própria na fila — não uma linha no detalhe. Quem precisa varrer trinta retornos
- * com o olho não abre trinta detalhes.
+ * com o olho não abre trinta detalhes. Na linha vai a PRIMEIRA, com o quanto
+ * falta ("+2"); a lista inteira está na dica e na ficha, e é a dica que devolve
+ * ao leitor de tela o que a linha resumiu.
  *
  * ── A lista não é o universo, e a tela avisa ─────────────────────────────────
  *
@@ -234,6 +248,7 @@ export default function Fiscalizacoes({
     decide,
     areasDoChefe,
     recorteDeArea,
+    listagens,
     alterada,
 }: {
     registros: Registro[];
@@ -252,6 +267,12 @@ export default function Fiscalizacoes({
     areasDoChefe: string[];
     /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
     recorteDeArea: boolean;
+    /**
+     * As colunas de cada aba — da grade e do arquivo —, resolvidas no servidor
+     * (a de ÁREA só existe para quem varre mais de uma). Ver
+     * `docs/padroes/listagem-clean.md`.
+     */
+    listagens: Listagens;
     alterada: boolean;
 }) {
     const { enviando, ocupado, enviar } = useEnvio();
@@ -472,43 +493,133 @@ export default function Fiscalizacoes({
     };
 
     /*
-     * O que vai para o ARQUIVO — e as colunas mudam com a aba, porque as duas abas
-     * respondem perguntas diferentes: a fila leva o que decide (recomendação,
-     * considerações); o acervo leva o que PROVA (alvo, provas, prazo).
-     *
-     * Só as chaves declaradas entram, e a data sai em BR: o documento é lido fora
-     * do sistema, onde ninguém traduz ISO.
+     * As COLUNAS da aba — da grade e do arquivo. Vêm do servidor porque as duas
+     * listas têm de ser conferidas uma contra a outra: a grade é enxuta por
+     * ordem do dono, e o arquivo continua completo. Ver
+     * `docs/padroes/listagem-clean.md` e `config/listagens_da_retaguarda.php`.
      */
-    const colunasDaFila = [
-        { chave: 'protocolo', titulo: 'Registro' },
-        { chave: 'concluida_em', titulo: 'Concluída em' },
-        { chave: 'area', titulo: 'Área' },
-        { chave: 'equipe', titulo: 'Equipe' },
-        { chave: 'fiscal', titulo: 'Fiscal' },
-        { chave: 'ponto', titulo: 'Ponto' },
-        { chave: 'desfecho', titulo: 'Desfecho' },
-        { chave: 'documento', titulo: 'Documento' },
-        { chave: 'recomendacoes', titulo: 'Recomendação do fiscal' },
-        { chave: 'consideracoes', titulo: 'Considerações do fiscal' },
-        { chave: 'origem', titulo: 'Origem' },
-        { chave: 'estado', titulo: 'Estado' },
-    ];
+    const listagem =
+        listagens[aba === 'a-decidir' ? 'fiscalizacoes.a-decidir' : 'fiscalizacoes.acervo'];
 
-    const colunasDoAcervo = [
-        { chave: 'protocolo', titulo: 'Registro' },
-        { chave: 'concluida_em', titulo: 'Concluída em' },
-        { chave: 'area', titulo: 'Área' },
-        { chave: 'equipe', titulo: 'Equipe' },
-        { chave: 'fiscal', titulo: 'Fiscal' },
-        { chave: 'ponto', titulo: 'Ponto' },
-        { chave: 'alvo', titulo: 'Quem foi encontrado' },
-        { chave: 'desfecho', titulo: 'Desfecho' },
-        { chave: 'documento', titulo: 'Documento' },
-        { chave: 'prazo', titulo: 'Prazo de retorno' },
-        { chave: 'provas', titulo: 'Provas' },
-        { chave: 'origem', titulo: 'Origem' },
-        { chave: 'estado', titulo: 'Estado' },
-    ];
+    /** Como ORDENAR por cada coluna. Sem entrada, a coluna não ordena. */
+    const acessores: Record<string, AcessorOrd<Registro> | undefined> = {
+        concluida_em: 'concluida_em',
+        ponto: (r) => r.endereco,
+        area: 'area',
+        alvo: 'alvo',
+        desfecho: 'desfecho',
+        // Pelo VENCIMENTO, e não pelo texto exibido: ordenar por "vence em 3
+        // dias" ordenaria alfabeticamente pela palavra "vence".
+        prazo: (r) => r.prazo?.vence_em ?? '',
+        recomendacoes: undefined,
+    };
+
+    /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
+    const fraco = { color: 'var(--sm-texto-fraco)' };
+
+    /**
+     * O que cada célula DESENHA, e o texto inteiro para a dica.
+     *
+     * `resumida` marca o único caso em que a tela realmente omite conteúdo (a
+     * primeira recomendação com "+2"): aí a dica também é anunciada, porque é o
+     * único lugar onde o que ficou de fora volta a existir.
+     */
+    function celula(
+        r: Registro,
+        chave: string,
+    ): { conteudo: ReactNode; dica?: string; resumida?: boolean } {
+        if (chave === 'concluida_em') {
+            return {
+                conteudo: dataBR(r.concluida_em),
+                dica:
+                    `Concluída em ${dataHoraBR(r.concluida_em)}`
+                    + (r.dias_parado !== null && r.dias_parado > 0
+                        ? ` · há ${contar(r.dias_parado, 'dia', 'dias')} na fila`
+                        : ''),
+            };
+        }
+
+        if (chave === 'ponto') {
+            return {
+                conteudo: r.endereco,
+                dica: [r.endereco, r.bairro, r.area]
+                    .filter((parte) => parte !== null && String(parte).trim() !== '')
+                    .join(' · '),
+            };
+        }
+
+        if (chave === 'area') {
+            return { conteudo: r.area || VAZIO, dica: r.area || undefined };
+        }
+
+        if (chave === 'alvo') {
+            // "não identificado" e não um travessão: o alvo nulo é INFORMAÇÃO —
+            // a equipe foi e não achou ninguém —, e o traço a leria como falta
+            // de dado.
+            return r.alvo === null
+                ? {
+                      conteudo: <span style={fraco}>não identificado</span>,
+                      dica: 'Ninguém foi identificado no ponto — a foto do local é a prova da ida.',
+                  }
+                : {
+                      conteudo: r.alvo,
+                      dica: [r.alvo, r.equipamento].filter(Boolean).join(' · '),
+                  };
+        }
+
+        if (chave === 'desfecho') {
+            return { conteudo: r.desfecho, dica: r.desfecho };
+        }
+
+        if (chave === 'prazo') {
+            if (r.prazo === null) {
+                return { conteudo: <span style={fraco}>sem prazo correndo</span> };
+            }
+
+            return {
+                conteudo: (
+                    <span
+                        className={cn(
+                            'selo',
+                            r.prazo.vencido ? 'selo-perigo' : 'selo-aviso',
+                        )}
+                    >
+                        <Timer size={11} aria-hidden /> {dataBR(r.prazo.vence_em)}
+                        {r.prazo.vencido ? ' · vencido' : ''}
+                    </span>
+                ),
+                dica: [
+                    `${dataBR(r.prazo.vence_em)} — ${textoDoPrazo(r.prazo)}`,
+                    r.prazo.notificado,
+                ]
+                    .filter(Boolean)
+                    .join(' · '),
+            };
+        }
+
+        const frases = textosDasRecomendacoes(r.recomendacoes, recomendacoesDoFiscal);
+
+        if (frases.length === 0) {
+            return { conteudo: <span style={fraco}>o fiscal não recomendou nada</span> };
+        }
+
+        return {
+            conteudo: (
+                <>
+                    <span className="selo selo-info">
+                        <Lightbulb size={11} aria-hidden /> {frases[0]}
+                    </span>
+                    {frases.length > 1 && (
+                        <span style={{ ...fraco, marginLeft: 6, fontSize: 12 }}>
+                            +{frases.length - 1}
+                        </span>
+                    )}
+                </>
+            ),
+            dica: frases.join(' · '),
+            resumida: frases.length > 1,
+        };
+    }
 
     const linhasExportacao = ord.itens.map((r) => ({
         protocolo: r.protocolo,
@@ -544,8 +655,7 @@ export default function Fiscalizacoes({
     }));
 
     /** Quantas colunas a grade tem — para o `colSpan` da linha vazia e do detalhe. */
-    const colunas =
-        (selecionavel ? 1 : 0) + (aba === 'a-decidir' ? 6 : 8);
+    const colunas = (selecionavel ? 1 : 0) + listagem.grade.length;
 
     return (
         <>
@@ -959,13 +1069,13 @@ export default function Fiscalizacoes({
                         ]
                             .filter(Boolean)
                             .join(' · ')}
-                        colunas={aba === 'a-decidir' ? colunasDaFila : colunasDoAcervo}
+                        colunas={listagem.exportacao}
                         linhas={linhasExportacao}
                     />
                 </div>
 
                 <div className="table-wrap">
-                    <table className="data-table">
+                    <table className="data-table enxuta">
                         <thead>
                             <tr>
                                 {selecionavel && (
@@ -984,39 +1094,20 @@ export default function Fiscalizacoes({
                                         />
                                     </th>
                                 )}
-                                <ThOrdenavel campo="concluida_em" acessor="concluida_em" ord={ord}>
-                                    Concluída
-                                </ThOrdenavel>
-                                <ThOrdenavel campo="endereco" acessor="endereco" ord={ord}>
-                                    Ponto
-                                </ThOrdenavel>
-                                {/* O ALVO é coluna do ACERVO, e não da fila: quem
-                                    decide o retorno decide sobre o PONTO, e quem
-                                    consulta o histórico procura pela PESSOA. */}
-                                {aba === 'acervo' && (
-                                    <ThOrdenavel campo="alvo" acessor="alvo" ord={ord}>
-                                        Quem foi encontrado
-                                    </ThOrdenavel>
-                                )}
-                                <ThOrdenavel campo="equipe" acessor="equipe" ord={ord}>
-                                    Equipe e fiscal
-                                </ThOrdenavel>
-                                <ThOrdenavel campo="desfecho" acessor="desfecho" ord={ord}>
-                                    Desfecho
-                                </ThOrdenavel>
-                                {aba === 'a-decidir' ? (
-                                    /* A coluna que decide: ela é o motivo de a fila
-                                       existir, então tem lugar próprio na grade. */
-                                    <th>Recomendação do fiscal</th>
-                                ) : (
-                                    <>
-                                        <th>Prazo de retorno</th>
-                                        <th>Provas</th>
-                                    </>
-                                )}
-                                <ThOrdenavel campo="estado" acessor="estado" ord={ord}>
-                                    Estado
-                                </ThOrdenavel>
+                                {/* O cabeçalho e as células saem da MESMA lista de
+                                    colunas: escritos em dois lugares, um dia uma
+                                    coluna nova entra só num deles e a grade passa a
+                                    mostrar o valor embaixo do título errado.
+
+                                    O ALVO é coluna do ACERVO e a RECOMENDAÇÃO é da
+                                    fila — quem decide o retorno decide sobre o
+                                    PONTO, e quem consulta o histórico procura pela
+                                    PESSOA. Quem declara isso é o catálogo. */}
+                                <CabecaDaGrade
+                                    grade={listagem.grade}
+                                    ord={ord}
+                                    acessores={acessores}
+                                />
                             </tr>
                         </thead>
 
@@ -1060,140 +1151,96 @@ export default function Fiscalizacoes({
                                                 />
                                             </td>
                                         )}
-                                        <td className="cell-id">
-                                            {dataHoraBR(r.concluida_em)}
-                                            {r.dias_parado !== null && r.dias_parado > 0 && (
-                                                <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                    há {contar(r.dias_parado, 'dia', 'dias')} na fila
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {r.endereco}
-                                            <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                {r.bairro}
-                                                {r.area ? ` · ${r.area}` : ''}
-                                            </div>
-                                        </td>
+                                        {listagem.grade.map((coluna) => {
+                                            const { conteudo, dica, resumida } = celula(
+                                                r,
+                                                coluna.chave,
+                                            );
 
-                                        {aba === 'acervo' && (
-                                            <td>
-                                                {r.alvo === null ? (
-                                                    <span style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                        não identificado
-                                                    </span>
-                                                ) : (
-                                                    r.alvo
-                                                )}
-                                                {r.equipamento !== null && (
-                                                    <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                        {r.equipamento}
-                                                    </div>
-                                                )}
-                                            </td>
-                                        )}
-
-                                        <td>
-                                            {r.equipe ? `Equipe ${r.equipe}` : VAZIO}
-                                            <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                {r.fiscal}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {r.desfecho}
-                                            {r.documento !== null && (
-                                                <div>
-                                                    <span className="selo selo-aviso">
-                                                        <FileText size={11} aria-hidden />{' '}
-                                                        {nomeDoDocumento(r.documento)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </td>
-
-                                        {aba === 'a-decidir' ? (
-                                            <td>
-                                                {r.recomendacoes.length === 0 ? (
-                                                    <span style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                        o fiscal não recomendou nada
-                                                    </span>
-                                                ) : (
-                                                    r.recomendacoes.map((rec) => (
-                                                        <span
-                                                            key={rec}
-                                                            className="selo selo-info"
-                                                            style={{ marginRight: 6, marginBottom: 4 }}
-                                                        >
-                                                            <Lightbulb size={11} aria-hidden />{' '}
-                                                            {textoDaRecomendacao(
-                                                                rec,
-                                                                recomendacoesDoFiscal,
-                                                            )}
-                                                        </span>
-                                                    ))
-                                                )}
-                                            </td>
-                                        ) : (
-                                            <>
-                                                <td>
-                                                    {r.prazo === null ? (
-                                                        <span style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                            sem prazo correndo
-                                                        </span>
-                                                    ) : (
-                                                        <span
-                                                            className={cn(
-                                                                'selo',
-                                                                r.prazo.vencido
-                                                                    ? 'selo-perigo'
-                                                                    : 'selo-aviso',
-                                                            )}
-                                                        >
-                                                            <Timer size={11} aria-hidden />{' '}
-                                                            {dataBR(r.prazo.vence_em)} ·{' '}
-                                                            {textoDoPrazo(r.prazo)}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {r.fotos.length === 0 ? (
-                                                        <span style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                            sem foto
-                                                        </span>
-                                                    ) : (
-                                                        <span>
-                                                            <Camera size={12} aria-hidden />{' '}
-                                                            {contar(r.fotos.length, 'foto', 'fotos')}
-                                                        </span>
-                                                    )}
-                                                    <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                        {r.gps === null
-                                                            ? 'sem coordenada'
-                                                            : r.gps}
-                                                    </div>
-                                                </td>
-                                            </>
-                                        )}
-
-                                        <td>
-                                            <span
-                                                className={cn(
-                                                    'selo',
-                                                    TOM_DO_ESTADO[r.estado] ?? 'selo-neutro',
-                                                )}
-                                            >
-                                                {r.estado}
-                                            </span>
-                                        </td>
+                                            return (
+                                                <Celula
+                                                    key={coluna.chave}
+                                                    coluna={coluna}
+                                                    dica={dica}
+                                                    resumida={resumida}
+                                                >
+                                                    {conteudo}
+                                                </Celula>
+                                            );
+                                        })}
                                     </tr>
 
                                     {abertoId === r.id && (
-                                        <tr>
+                                        <tr className="linha-detalhe">
                                             <td colSpan={colunas}>
                                                 <dl className="rt-ficha">
                                                     <div>
                                                         <dt>Registro</dt>
                                                         <dd>{r.protocolo}</dd>
+                                                    </div>
+                                                    {/* A HORA da conclusão e o tempo na
+                                                        fila moram aqui: na grade a coluna
+                                                        leva só dd/mm/aaaa, e a espera já é
+                                                        dita pela marca laranja na ponta da
+                                                        linha. */}
+                                                    <div>
+                                                        <dt>Concluída em</dt>
+                                                        <dd>
+                                                            {dataHoraBR(r.concluida_em)}
+                                                            {r.dias_parado !== null &&
+                                                                r.dias_parado > 0 && (
+                                                                    <div style={fraco}>
+                                                                        há{' '}
+                                                                        {contar(
+                                                                            r.dias_parado,
+                                                                            'dia',
+                                                                            'dias',
+                                                                        )}{' '}
+                                                                        na fila
+                                                                    </div>
+                                                                )}
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>Estado</dt>
+                                                        <dd>
+                                                            <span
+                                                                className={cn(
+                                                                    'selo',
+                                                                    TOM_DO_ESTADO[r.estado] ??
+                                                                        'selo-neutro',
+                                                                )}
+                                                            >
+                                                                {r.estado}
+                                                            </span>
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>Ponto</dt>
+                                                        <dd>
+                                                            {r.endereco}
+                                                            {/* O BAIRRO desceu da grade: na
+                                                                coluna ele era a sub-linha que
+                                                                dobrava a altura, e a área
+                                                                tem linha própria logo abaixo. */}
+                                                            <div style={fraco}>{r.bairro}</div>
+                                                        </dd>
+                                                    </div>
+                                                    {/* Equipe e fiscal desceram da grade: a
+                                                        decisão da chefia é sobre o PONTO, e
+                                                        a assinatura de quem foi importa ao
+                                                        abrir o registro. O arquivo exportado
+                                                        continua levando as duas. */}
+                                                    <div>
+                                                        <dt>Equipe e fiscal</dt>
+                                                        <dd>
+                                                            {r.equipe ? `Equipe ${r.equipe}` : VAZIO}
+                                                            <div style={fraco}>{r.fiscal}</div>
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>Desfecho</dt>
+                                                        <dd>{r.desfecho}</dd>
                                                     </div>
                                                     <div>
                                                         <dt>Origem da ida ao ponto</dt>
