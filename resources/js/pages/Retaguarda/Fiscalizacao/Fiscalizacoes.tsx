@@ -605,16 +605,17 @@ export default function Fiscalizacoes({
 
         return {
             conteudo: (
-                <>
-                    <span className="selo selo-info">
-                        <Lightbulb size={11} aria-hidden /> {frases[0]}
-                    </span>
-                    {frases.length > 1 && (
-                        <span style={{ ...fraco, marginLeft: 6, fontSize: 12 }}>
-                            +{frases.length - 1}
-                        </span>
-                    )}
-                </>
+                /*
+                 * O "+N" mora DENTRO do selo, e não ao lado: fora dele, ele é
+                 * outra caixa na linha e — com o selo ocupando a largura toda da
+                 * célula — descia para uma terceira linha, estourando a altura
+                 * da grade. Dentro, ele flui junto das palavras e cabe nas duas
+                 * linhas que a coluna declara.
+                 */
+                <span className="selo selo-info">
+                    <Lightbulb size={11} aria-hidden /> {frases[0]}
+                    {frases.length > 1 && ` (+${frases.length - 1})`}
+                </span>
             ),
             dica: frases.join(' · '),
             resumida: frases.length > 1,

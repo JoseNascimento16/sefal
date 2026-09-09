@@ -49,6 +49,27 @@ volta a irregularidade, em escala menor e mais difícil de nomear.
 > A exceção é quando a tela **resume de verdade** (o primeiro selo de uma lista, com "+2"). Aí o que
 > ficou de fora só existe na dica, e ela passa a ser obrigatória — e também `aria-label`.
 
+#### Duas linhas, quando a frase É a informação (`linhas: 2`)
+
+Há coluna em que o corte não esconde o fim de um dado — esconde **o dado**. A recomendação do fiscal
+é o caso: `Voltar ao ponto no venci…` não diz nada, e é justamente a frase que o Chefe de Setor foi
+ler para decidir. Para esses casos a coluna declara `'linhas' => 2` no catálogo, e a célula:
+
+- **quebra a linha** (`.celula-2l`), com `overflow-wrap: break-word` — **nunca `anywhere`**, que faz
+  a largura mínima do texto virar um caractere e o navegador quebrar palavra por palavra (medido: 88
+  px de conteúdo numa célula de 32);
+- usa a fonte **um ponto menor** (12,4 px em vez de 13,5), que é o que faz duas linhas caberem na
+  altura de antes;
+- tem **teto de altura igual à altura da linha** — não calculado a partir do texto: quando o
+  conteúdo é um **selo**, o acolchoamento dele entra na conta (duas linhas de texto = 52 px de selo);
+- e o **contador "+N" vai DENTRO do selo**, fluindo com as palavras. Fora dele é outra caixa na
+  linha: com o selo ocupando a largura toda da célula, ela descia para uma terceira linha e
+  estourava a altura.
+
+**A linha da grade não cresce** — é isso que mantém a régua de pé. Quem declara `linhas: 2` está
+dizendo "aqui a frase vale duas linhas", não "aqui a régua não vale". Se um dia três colunas de uma
+mesma grade pedirem isso, o problema não é o teto: é que a tela está tentando ser a ficha.
+
 ### 2. No máximo cinco colunas
 
 Cinco respostas: **quando · onde · quem · o que deu · em que estado**. Coluna a mais é decisão de não
@@ -283,5 +304,6 @@ registro). Fora dessas, célula que quebra linha é defeito.
 
 | Data | Autor | Alteração | Motivo |
 |---|---|---|---|
+| 09/09/2026 | José Nascimento | A régua ganha a **terceira exceção declarada**: coluna com `'linhas' => 2` quebra a linha com a fonte um ponto menor e teto igual à altura da linha. Aplicada à **recomendação do fiscal** na fila de Fiscalizações. | O corte escondia a própria informação que se ia ler: "Voltar ao ponto no venci…" não diz nada, e a frase é o que faz o Chefe de Setor decidir. Pedido do dono, medido depois: 10 células, 0 cortadas, todas as linhas em 56px. |
 | 09/09/2026 | José Nascimento | A régua alcança as **duas listagens de Sistema** — Logs (`sistema.logs`) e Acompanhamento de Requisitos (`sistema.requisitos`) —, as duas entram no teste-lei e ele **cresceu**: passou a cobrar o **flip** da coluna condicional (a resolução em que ela entra e a em que ela sai). `mensagem` e `nota` entraram na lista global de texto livre, e o item 7 ganhou **uma exceção declarada**: a coluna "Quando" dos Logs leva a hora. | As duas ficaram de fora da primeira aplicação, e listagem fora da varredura é a que apodrece. Eram, medidas, as piores da casa: a observação do acompanhamento chegava a noventa linhas de texto numa célula (linha de 1.785px) e a mensagem de exceção a seis. Como são telas de diagnóstico, e não de fluxo, a escolha de colunas é outra — está escrita acima, junto do motivo. |
 | 09/09/2026 | José Nascimento | Documento criado; régua aplicada nas sete listagens existentes (Fiscalizações A decidir/Acervo, Denúncias A triar/A direcionar/Todas, Cadastro de Operação, Ambulantes, Caixa de Entrada); catálogo em `config/listagens_da_retaguarda.php`; grade enxuta em CSS; teste-lei. | Ordem do dono: listagens poluídas, com texto livre na célula e altura de linha irregular. |
