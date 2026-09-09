@@ -104,6 +104,29 @@ campo longo (CLOB no Oracle) e custa uma ida ao banco por linha: no sistema irm�
 derrubou esta mesma tela por tempo esgotado com setenta registros — a ferramenta de diagnóstico caiu
 no dia em que foi preciso diagnosticar.
 
+### RN-07b — A grade responde ao diagnóstico: quando · código · tipo · onde · quem
+
+> Numerada como continuação da RN-07 de propósito: é a mesma decisão — o que é **prosa** não entra na
+> listagem — e a numeração seguinte (RN-11 em diante) já é do Monitoramento.
+
+A listagem mostra cinco colunas — **Quando · Código · Tipo do erro · Onde · Usuário** — e nada mais.
+Quem abre esta tela procura *o que quebrou, onde e quando*, quase sempre sobre o mais recente ou o
+que se repete; a **mensagem** da exceção é prosa de tamanho imprevisível e era ela que esticava a
+linha a até seis linhas de texto, escondendo justamente o resto. Mensagem e rastro abrem **no clique
+na linha**, que é onde os dois de fato se leem.
+
+Duas escolhas desta tela merecem registro:
+
+- **A coluna "Quando" leva a HORA** (`dd/mm/aaaa hh:mm`), por exceção declarada à régua geral, que
+  manda a hora para a dica. Num log a data sozinha não identifica a ocorrência: um surto põe dezenas
+  no mesmo dia, e "o que aconteceu agora" é a pergunta da tela.
+- **O tipo do erro aparece pelo nome curto** ("QueryException"), que é como as pessoas o chamam, com
+  o nome completo na dica, na ficha e no arquivo.
+
+A régua da listagem, com o porquê de cada item, está em
+[`docs/padroes/listagem-clean.md`](../padroes/listagem-clean.md); as colunas desta tela são
+declaradas em `config/listagens_da_retaguarda.php` (`sistema.logs`).
+
 ### RN-08 — O período é a JANELA dos dados; a busca recorta o que veio
 
 A tela abre nos **últimos 7 dias** e carrega no máximo **500 ocorrências**, das mais recentes para
@@ -123,6 +146,11 @@ mão: quando o guard do aplicativo do fiscal nascer, o erro vindo da rua já nas
 
 Como toda listagem da Retaguarda (PDF/XLSX/DOCX), com as datas em BR e o período impresso no
 documento.
+
+O arquivo é **mais rico que a tela**, e aqui isso pesa mais que em qualquer outra listagem: é ele
+que se manda para alguém analisar. Ele leva a **mensagem** e o **verbo** da requisição, que saíram
+da grade (RN-07b). O **rastro** continua fora, pelo motivo da RN-07 — trazê-lo para as 500 linhas
+custaria uma ida ao banco por linha.
 
 ---
 
@@ -225,6 +253,7 @@ a sensação de sistema saudável justamente quando ele não está.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 09/09/2026 | José Nascimento | Logs | **A grade ficou enxuta** (padrão [`docs/padroes/listagem-clean.md`](../padroes/listagem-clean.md), listagem `sistema.logs`): **Quando · Código · Tipo do erro · Onde · Usuário**. A **mensagem** da exceção e o **verbo** da requisição saíram da grade e abrem no clique na linha, junto do rastro (RN-07b); as duas continuam no arquivo exportado (RN-10). A coluna "Quando" mantém a **hora**, como exceção declarada; o tipo do erro passa a aparecer pelo **nome curto**, com o completo na dica, na ficha e no arquivo. Saiu a coluna do sinal de abrir/fechar — a linha inteira abre o detalhe, com teclado. | Ordem do dono (09/09/2026): _"as listagens estão muito poluídas, muita informação quebrando linha de forma irregular… deixe a informação detalhada para quando o usuário clicar"_. Medido no DOM antes: 7 colunas, alturas de linha de 93 a 156px e 25 de 63 células ocupando mais de uma linha de texto — a pior com seis. Depois: 5 colunas, **56px em toda linha** e nenhuma célula quebrando. |
 | 25/08/2026 | José Nascimento | Logs | A coluna do endereço passa a se chamar **`caminho`** (banco, model e tela com o mesmo nome), a máscara do link de confirmação de e-mail passa a apontar o caminho real do Fortify (`email/verify/{id}/{hash}`), e a lista de caminhos sensíveis passa a ser conferida contra as **rotas reais** do sistema. | O nome `url` prometia o endereço inteiro numa coluna que guarda só o caminho; o padrão antigo (`verify-email/*/*`) nunca casaria com rota nenhuma; e a lista escrita à mão envelheceria calada, gravando credencial de rota nova. |
 | 25/08/2026 | José Nascimento | Logs | A ocorrência passa a guardar o **caminho** (sem a consulta, com os trechos sensíveis mascarados) em vez do endereço completo, e o **rastro é montado sem os argumentos** das chamadas. | O endereço completo levava o token de redefinição de senha e o e-mail para uma tabela que qualquer administrador lê e exporta; o rastro do PHP levava os argumentos — a senha digitada no login em texto claro. |
 | 25/08/2026 | José Nascimento | Logs / Monitoramento | Criação do registro central de exceções (com código de requisição compartilhado com a página de erro), da tela de consulta só-leitura e do motor de verificações com os dois primeiros checks (conta de administrador ativa e armazenamento gravável). | O sistema não tinha como responder "o que aconteceu com esse usuário" sem entrar no servidor, e nada avisava quando uma condição mínima de funcionamento deixava de valer. |

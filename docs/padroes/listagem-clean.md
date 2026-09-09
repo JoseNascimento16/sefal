@@ -83,6 +83,17 @@ resolvida no servidor), não com sub-linha.
 > A conta de quem vê quantas áreas é a **mesma** que já decide o recorte dos dados
 > (`PapelNaArea`). Repeti-la na tela criaria um segundo dono para a resposta.
 
+A condição também pode ser **o que os dados têm**, e não quem olha — é o mesmo defeito visto do outro
+lado: coluna que mostra o mesmo valor em toda linha não informa nada. No Acompanhamento de
+Requisitos, `origem` só é coluna quando existe funcionalidade de mais de uma frente (hoje é tudo
+Retaguarda) e `hus` só é coluna quando alguma linha aponta HU (hoje nenhuma aponta, e o selo "Sem
+requisito" já diz isso uma vez). Quem resolve continua sendo o **servidor**, pela mesma leitura que
+monta as linhas.
+
+> Toda coluna condicional precisa do **flip** no teste: a resolução em que ela entra E a em que ela
+> sai. Sem a primeira metade, uma condição travada em `false` passa para sempre — e a coluna nunca
+> volta no dia em que fizesse falta.
+
 ### 5. A linha inteira abre o detalhe
 
 Sempre por [`resources/js/lib/linha-clicavel.ts`](../../resources/js/lib/linha-clicavel.ts), que já
@@ -114,6 +125,12 @@ exportação **reprova**, nominalmente.
 - Número/quantidade alinhado à direita; identificador (protocolo, código) à esquerda, sem quebra.
 - Data em `dd/mm/aaaa` — a **hora** vai para a dica e para o detalhe. (Lei do projeto: nunca ISO à
   vista.)
+
+  > **Exceção declarada — a coluna "Quando" dos Logs.** Numa listagem de diagnóstico a data sozinha
+  > não identifica a ocorrência: um surto de erros põe dezenas no mesmo dia, e "o que aconteceu
+  > agora" é a pergunta da tela. Lá a coluna leva `dd/mm/aaaa hh:mm`, numa linha só, sem sub-linha —
+  > a geometria continua de pé e a data continua em BR. Exceção **declarada no catálogo**, com o
+  > motivo escrito: se ela virar hábito, o item 7 morre por mil exceções tácitas.
 - **Um selo de ESTADO por linha** — o da coluna de situação/estado, com cor semântica. Marca de
   exceção (prazo vencido, endereço impreciso) entra como **cor no texto** ou **um ícone**, nunca como
   um segundo chip: dois chips na mesma linha voltam a empilhar conteúdo na célula.
@@ -164,13 +181,35 @@ dar régua vertical.
 | Cadastro de Operação | 6 → 5 | 114, 135, 156 | 56 | 42 px → **0** |
 | Ambulantes · Localizar | 6 → 5 | 87 | 56 | 0 → **0** |
 | Caixa de Entrada | 9 → 5 | 93, 114, 135 | 56 | 42 px → **0** |
+| Sistema · Logs | 7 → 5 | 93, 100, 135, 156 | 56 | 63 px → **0** |
+| Sistema · Acompanhamento de Requisitos | 6 → 3 (5 com as condicionais) | 147, 167, 284, 303, 342, 1005, 1785 | 56 | **1.638 px → 0** |
 
 E, no "depois", em todas elas: **nenhuma** célula quebrando linha, **nenhuma** célula truncada sem o
 texto inteiro no `title`, e a página sem rolagem horizontal — nem em 1440×900 nem em 560×820 (aí a
 tabela rola dentro do `.table-wrap`, como deve).
 
 Para comparação do "antes": na fila de Fiscalizações, **58 das 60 células** ocupavam mais de uma linha
-de texto, e a pior chegava a **sete**.
+de texto, e a pior chegava a **sete**. No Acompanhamento de Requisitos a pior chegava a **noventa** —
+era a observação, um parágrafo inteiro dentro da célula —, e a página inteira rolava na horizontal em
+retrato estreito (565px de conteúdo em 560px de viewport). Depois: nenhuma célula quebrando linha em
+nenhuma das duas, nenhuma truncada sem o texto no `title`, e a rolagem horizontal só dentro do
+`.table-wrap`.
+
+### As duas listagens de DIAGNÓSTICO — por que elas escolhem outras colunas
+
+Logs e Acompanhamento de Requisitos não movem trabalho: elas respondem a uma pergunta de
+diagnóstico, e isso muda o que a grade precisa mostrar.
+
+- **Logs** — quem abre procura *o que quebrou, onde e quando*, quase sempre o mais recente ou o que
+  se repete. Grade: **Quando · Código · Tipo do erro · Onde · Usuário**. A **mensagem** da exceção
+  sai (é prosa, e das longas — era ela que ocupava seis linhas na célula) e abre no clique junto do
+  **rastro**, que é onde os dois de fato se leem. O **código** fica porque é a razão de a tela
+  existir: a pessoa dita o que apareceu na página dela e quem atende cai na ocorrência exata.
+- **Acompanhamento de Requisitos** — quem abre procura *o que está fora do requisito*. Grade:
+  **Módulo · Funcionalidade · Requisito**, com origem e HU condicionais. O selo de situação é o
+  coração da tela e **fica**; a observação, que descreve a divergência, abre no clique. Foi o cuidado
+  central aqui: enxugar não pode mandar para o detalhe o motivo de a tela existir — o **sinal** fica
+  na grade, o **parágrafo** desce.
 
 ---
 
@@ -244,4 +283,5 @@ registro). Fora dessas, célula que quebra linha é defeito.
 
 | Data | Autor | Alteração | Motivo |
 |---|---|---|---|
+| 09/09/2026 | José Nascimento | A régua alcança as **duas listagens de Sistema** — Logs (`sistema.logs`) e Acompanhamento de Requisitos (`sistema.requisitos`) —, as duas entram no teste-lei e ele **cresceu**: passou a cobrar o **flip** da coluna condicional (a resolução em que ela entra e a em que ela sai). `mensagem` e `nota` entraram na lista global de texto livre, e o item 7 ganhou **uma exceção declarada**: a coluna "Quando" dos Logs leva a hora. | As duas ficaram de fora da primeira aplicação, e listagem fora da varredura é a que apodrece. Eram, medidas, as piores da casa: a observação do acompanhamento chegava a noventa linhas de texto numa célula (linha de 1.785px) e a mensagem de exceção a seis. Como são telas de diagnóstico, e não de fluxo, a escolha de colunas é outra — está escrita acima, junto do motivo. |
 | 09/09/2026 | José Nascimento | Documento criado; régua aplicada nas sete listagens existentes (Fiscalizações A decidir/Acervo, Denúncias A triar/A direcionar/Todas, Cadastro de Operação, Ambulantes, Caixa de Entrada); catálogo em `config/listagens_da_retaguarda.php`; grade enxuta em CSS; teste-lei. | Ordem do dono: listagens poluídas, com texto livre na célula e altura de linha irregular. |

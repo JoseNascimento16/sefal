@@ -44,10 +44,16 @@
 return [
 
     /*
-    | Os campos de TEXTO LIVRE do sistema — o que o usuário escreve em frase
-    | inteira. Nenhum deles pode ser coluna de grade: é o que quebra a linha em
-    | duas, três e cinco alturas diferentes, e foi o diagnóstico do print que
-    | gerou esta régua. Na grade cabe, no máximo, um selo com a CATEGORIA.
+    | Os campos de TEXTO LIVRE do sistema — o que é escrito em frase inteira.
+    | Nenhum deles pode ser coluna de grade: é o que quebra a linha em duas, três
+    | e cinco alturas diferentes, e foi o diagnóstico do print que gerou esta
+    | régua. Na grade cabe, no máximo, um selo com a CATEGORIA.
+    |
+    | "Escrito em frase" NÃO quer dizer "digitado por um usuário": a mensagem de
+    | uma exceção é prosa como qualquer outra, e das mais longas — quem procura
+    | o que quebrou é justamente quem não consegue varrer a coluna que ela ocupa.
+    | O mesmo vale para a observação do acompanhamento de requisitos, que é um
+    | parágrafo inteiro descrevendo a divergência.
     |
     | A lista é global e não por listagem de propósito: se cada autor declarasse
     | os seus, bastaria esquecer de declarar para o campo passar.
@@ -63,6 +69,8 @@ return [
         'foco',
         'ponto_de_referencia',
         'quem_encontrado',
+        'mensagem',
+        'nota',
     ],
 
     'listagens' => [
@@ -373,6 +381,109 @@ return [
                 ['chave' => 'equipe', 'titulo' => 'Equipe'],
                 ['chave' => 'situacao', 'titulo' => 'Situação'],
                 ['chave' => 'prazo', 'titulo' => 'Prazo', 'alinhar' => 'center'],
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Logs
+        |----------------------------------------------------------------------
+        |
+        | Quem varre NÃO está trabalhando um fluxo: está diagnosticando. A
+        | pergunta é "o que quebrou, onde e quando?", quase sempre sobre o mais
+        | RECENTE ou sobre o que se REPETE. Então a grade responde só isso —
+        | quando · qual erro · em que tela · quem estava lá — mais o CÓDIGO, que
+        | é a razão de a tela existir: a pessoa liga, dita o código que apareceu
+        | na página dela, e quem atende cai na ocorrência exata.
+        |
+        | A MENSAGEM da exceção sai da grade, e é a mudança que mais importa
+        | aqui: era ela que ocupava até seis linhas de texto numa célula, e é
+        | justamente o que impede varrer o resto. Ela abre no clique, junto do
+        | rastro — que é onde os dois de fato se leem — e continua no arquivo.
+        |
+        | ⚠️ O RASTRO (a pilha de chamadas) não está declarado em `detalhe`, e
+        | não é esquecimento: ele nunca esteve na grade e não pode entrar no
+        | arquivo. É campo longo (CLOB no Oracle), carregado uma ocorrência de
+        | cada vez — trazê-lo para as 500 linhas da lista derrubaria por tempo
+        | esgotado justamente a tela que se abre quando algo já está quebrado.
+        |
+        | ⚠️ A coluna "Quando" leva a HORA, e é EXCEÇÃO DECLARADA ao item 7 da
+        | régua (data curta, hora na dica). Num log a data sozinha não identifica
+        | a ocorrência: um surto põe dezenas no mesmo dia, e "o que aconteceu
+        | agora" é a pergunta da tela. A hora entra em `dd/mm/aaaa hh:mm`, numa
+        | linha só e sem sub-linha — a geometria continua de pé, e a lei da data
+        | em BR também.
+        */
+        'sistema.logs' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Logs.tsx',
+            'grade' => [
+                ['chave' => 'ocorridoEm', 'titulo' => 'Quando', 'largura' => 148, 'alinhar' => 'center'],
+                ['chave' => 'requestId', 'titulo' => 'Código', 'largura' => 126],
+                ['chave' => 'classe', 'titulo' => 'Tipo do erro', 'largura' => 196],
+                ['chave' => 'caminho', 'titulo' => 'Onde', 'largura' => 250],
+                ['chave' => 'usuario', 'titulo' => 'Usuário', 'largura' => 160],
+            ],
+            'detalhe' => ['mensagem', 'metodo'],
+            'exportacao' => [
+                ['chave' => 'ocorridoEm', 'titulo' => 'Quando', 'alinhar' => 'center'],
+                ['chave' => 'requestId', 'titulo' => 'Código'],
+                ['chave' => 'classe', 'titulo' => 'Tipo do erro'],
+                ['chave' => 'mensagem', 'titulo' => 'Mensagem'],
+                ['chave' => 'metodo', 'titulo' => 'Verbo'],
+                ['chave' => 'caminho', 'titulo' => 'Caminho'],
+                ['chave' => 'usuario', 'titulo' => 'Usuário'],
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Acompanhamento de Requisitos
+        |----------------------------------------------------------------------
+        |
+        | Quem varre também está diagnosticando, mas o alvo é outro: "o que está
+        | FORA do requisito?". O coração da tela é a SITUAÇÃO — divergente, sem
+        | requisito, alinhada —, e por isso ela é a única coluna de selo e a
+        | ordem inicial da grade.
+        |
+        | A observação (o parágrafo que descreve a divergência ou a origem da
+        | funcionalidade) desce, e o cuidado aqui é não jogar no detalhe o motivo
+        | de a tela existir: o SINAL continua na grade, como selo curto, e é o
+        | texto que abre no clique. Selo dizendo "Divergente" em toda linha que
+        | divergiu responde a varredura; o parágrafo responde a decisão, e essa
+        | vem depois de achar.
+        |
+        | ⚠️ Duas colunas são CONDICIONAIS pelo mesmo motivo da área nas
+        | Fiscalizações — coluna que repete o mesmo valor em toda linha gasta
+        | largura sem informar. A diferença é o que resolve a condição: lá é
+        | QUEM olha, aqui é o que os dados TÊM.
+        |
+        |   · `origem` entra quando existe funcionalidade de mais de uma frente.
+        |     Hoje é tudo Retaguarda; quando o aplicativo do fiscal chegar, a
+        |     coluna aparece sozinha — sem ninguém precisar lembrar.
+        |   · `hus` entra quando ALGUMA linha aponta HU. Enquanto nenhuma
+        |     aponta, a coluna seria um travessão repetido — e o selo "Sem
+        |     requisito" já diz isso, uma vez, no lugar certo.
+        |
+        | As duas continuam na ficha do clique e no arquivo, sempre.
+        */
+        'sistema.requisitos' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/AcompanhamentoDeRequisitos.tsx',
+            'grade' => [
+                ['chave' => 'modulo', 'titulo' => 'Módulo', 'largura' => 160],
+                ['chave' => 'tela', 'titulo' => 'Funcionalidade', 'largura' => 330],
+                ['chave' => 'origem', 'titulo' => 'Origem', 'largura' => 140, 'quando' => 'varias-origens'],
+                ['chave' => 'hus', 'titulo' => 'HU', 'largura' => 140, 'quando' => 'alguma-hu'],
+                ['chave' => 'situacao', 'titulo' => 'Requisito', 'largura' => 180],
+            ],
+            'detalhe' => ['origem', 'breadcrumb', 'hus', 'nota'],
+            'exportacao' => [
+                ['chave' => 'modulo', 'titulo' => 'Módulo'],
+                ['chave' => 'tela', 'titulo' => 'Funcionalidade'],
+                ['chave' => 'origem', 'titulo' => 'Origem'],
+                ['chave' => 'breadcrumb', 'titulo' => 'Onde fica'],
+                ['chave' => 'situacao', 'titulo' => 'Requisito'],
+                ['chave' => 'hus', 'titulo' => 'HU'],
+                ['chave' => 'nota', 'titulo' => 'Observação'],
             ],
         ],
     ],
