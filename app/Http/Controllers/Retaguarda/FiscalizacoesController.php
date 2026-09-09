@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Support\ListagensDaRetaguarda;
 use App\Support\Prototipo\EstruturaFicticia;
 use App\Support\Prototipo\FiscalizacoesFicticias;
 use App\Support\Prototipo\PapelNaArea;
@@ -142,6 +143,18 @@ class FiscalizacoesController extends Controller
             'decide' => PapelNaArea::decide($usuario),
             'areasDoChefe' => $areas,
             'recorteDeArea' => $comRecorte,
+            // As COLUNAS da grade e as do arquivo — uma listagem por aba, porque
+            // a aba troca a fonte dos dados. Ver docs/padroes/listagem-clean.md.
+            //
+            // A coluna de ÁREA é condicional e quem resolve é aqui: para o Chefe
+            // de Setor de uma área só ela repetiria a mesma palavra em toda
+            // linha (gasto de largura sem informação); para quem varre várias,
+            // ela é o que torna a fila navegável. A conta usa a MESMA resposta
+            // do recorte, e não uma segunda regra de tela.
+            'listagens' => ListagensDaRetaguarda::para(
+                ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo'],
+                ['varias-areas' => ! $comRecorte || count($areas) > 1],
+            ),
             'alterada' => FiscalizacoesFicticias::alterada(),
         ]);
     }
