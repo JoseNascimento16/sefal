@@ -223,12 +223,29 @@ export interface Denuncia {
 }
 
 /** Uma operação a que o Chefe de Setor pode anexar denúncia. */
+/**
+ * Uma operação, como o direcionamento a recebe do servidor.
+ *
+ * ⚠️ Isto é uma VISTA do catálogo único de operações
+ * (`App\Support\Prototipo\OperacoesFicticias`), que o Cadastro de Operação também
+ * consome — não um tipo próprio das denúncias. O que chega aqui são só as que
+ * ainda RECEBEM trabalho novo: a encerrada fica fora, porque anexar denúncia a ela
+ * é recusado (e oferecê-la seria convidar para uma recusa).
+ *
+ * `equipes` é LISTA porque operação grande junta equipe de mais de uma área — a
+ * Noturna reforçando a orla no verão. O campo nasceu singular, e o rótulo do
+ * seletor continuou lendo `equipe` depois de a lista chegar: a opção passou a
+ * mostrar "(Equipe )" em branco, e a chefia escolhia sem saber quem executa.
+ */
 export interface Operacao {
     id: number;
     nome: string;
     area: string;
-    equipe: string;
+    /** Códigos de equipe (`C1`, `N1`…). Vazio = operação sem equipe definida. */
+    equipes: string[];
+    /** A etiqueta do período, já em dd/mm/aaaa — a conta de data é do servidor. */
     periodo: string;
+    situacao: string;
     foco: string;
 }
 

@@ -3,6 +3,9 @@
 namespace App\Support;
 
 use App\Models\Ambulante;
+use App\Support\Prototipo\FiscalizacoesFicticias;
+use App\Support\Prototipo\PapelNaArea;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 /**
@@ -60,6 +63,46 @@ class ContadoresDoMenu
             'ambulantes-em-quarentena' => [
                 'tom' => self::TOM_ALERTA,
                 'valor' => fn (): int => Ambulante::query()->emQuarentena()->count(),
+            ],
+
+            /*
+             * A FILA da aba "A decidir" de Fiscalizações: o que voltou da rua e
+             * espera a leitura da chefia. Alerta porque cobra ação, e porque é o
+             * gatilho de trabalho de quem decide — sem o número, a chefia só
+             * descobre que tem sete retornos parados quando abre a tela.
+             *
+             * ⚠️ O número é RECORTADO pela área, pela mesma regra que recorta a
+             * listagem ({@see PapelNaArea}): um contador que somasse o universo
+             * mostraria "12" a quem abre a tela e encontra 3, e a diferença
+             * pareceria registro perdido. É a mesma fonte, o mesmo recorte.
+             *
+             * ⚠️ E ele só conta para quem DECIDE. Para o Coordenador — que
+             * acompanha e não decide — e para o fiscal, o número seria uma
+             * cobrança sobre trabalho que não é deles.
+             *
+             * É PROTÓTIPO, e por isso não é consulta a banco: a fila é derivada do
+             * trâmite das denúncias mais o arquivo das avulsas, e as decisões vivem
+             * na sessão. Continua barato (nenhuma linha vai ao banco) e continua
+             * best-effort, como os outros.
+             */
+            'fiscalizacoes-a-decidir' => [
+                'tom' => self::TOM_ALERTA,
+                'valor' => function (): int {
+                    $usuario = Auth::user();
+
+                    if (! PapelNaArea::decide($usuario)) {
+                        return 0;
+                    }
+
+                    $areas = PapelNaArea::areas($usuario);
+                    $recorta = PapelNaArea::recorta($usuario);
+
+                    return count(array_filter(
+                        FiscalizacoesFicticias::registros(),
+                        static fn (array $r): bool => (string) $r['estado'] === FiscalizacoesFicticias::AGUARDANDO
+                            && (! $recorta || in_array((string) $r['area'], $areas, true)),
+                    ));
+                },
             ],
         ];
     }

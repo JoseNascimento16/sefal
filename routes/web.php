@@ -6,12 +6,14 @@ use App\Http\Controllers\Retaguarda\CadastroAmbulanteController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\DenunciasController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
+use App\Http\Controllers\Retaguarda\FiscalizacoesController;
 use App\Http\Controllers\Retaguarda\InicioController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\MapaAoVivoController;
 use App\Http\Controllers\Retaguarda\MapaDeCalorController;
 use App\Http\Controllers\Retaguarda\ModoGerenteController;
 use App\Http\Controllers\Retaguarda\MonitoramentoParametrizacoesController;
+use App\Http\Controllers\Retaguarda\OperacoesController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\AtividadesDoAmbulanteController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\MotivosDeRecusaController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\OrigensDeOperacaoController;
@@ -19,8 +21,6 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeInfracaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
-use App\Http\Controllers\Retaguarda\RetornoDeCampoController;
-use App\Http\Controllers\Retaguarda\TelasEmPreparacaoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,6 +31,31 @@ use Illuminate\Support\Facades\Route;
  * O nome `home` fica: é o destino a que o Fortify manda quem sai do sistema.
  */
 Route::redirect('/', '/login')->name('home');
+
+/*
+ * O endereço APOSENTADO do Retorno de Campo.
+ *
+ * A tela virou a aba "A decidir" de Fiscalizações, e o caminho antigo continua
+ * respondendo — redirecionando. Quem trabalhava nela tem o endereço no
+ * favorito, no e-mail de aviso, na conversa de ontem; devolver "não
+ * encontrado" a esse link seria transformar uma melhoria em falha, e a pessoa
+ * concluiria que perdeu a fila dela.
+ *
+ * É 301 (permanente) de propósito: o endereço não volta. E é um redirecionamento,
+ * e não uma segunda rota para o mesmo controller — duas portas para a mesma tela
+ * dariam dois slugs à mesma permissão, e a guarda deduz a tela do caminho.
+ *
+ * ⚠️ Só GET, e escrito à mão em vez de `Route::permanentRedirect`: aquele helper
+ * registra o caminho para TODOS os verbos, e um POST/PUT/DELETE sob um caminho que
+ * já não é tela de ninguém é mutação que a guarda de ações não consegue atribuir a
+ * tela nenhuma — brecha, e `PermissaoAcaoCoberturaTest` reprova com razão. O que
+ * se preserva aqui é LINK SALVO, e link salvo é GET; as antigas rotas de ação
+ * mudaram de caminho junto com a tela e não têm de onde ser chamadas.
+ *
+ * ⚠️ Fica FORA do grupo autenticado: exigir sessão para ser desviado mandaria quem
+ * não está logado para o login sem nunca chegar ao destino certo depois.
+ */
+Route::get('retaguarda/retorno-de-campo', fn () => redirect('/retaguarda/fiscalizacoes', 301));
 
 Route::middleware(['auth'])->group(function () {
     // Tela inicial da Retaguarda: é para cá que o login joga quem entrou — e é
@@ -69,25 +94,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('retaguarda/mapa-de-calor', [MapaDeCalorController::class, 'index'])
         ->name('retaguarda.mapa-de-calor.index');
-
-    /*
-     * As telas do caminho da fiscalização que ainda não existem — Cadastro de
-     * Operação e Fiscalizações.
-     *
-     * Elas abrem e dizem, em uma linha, o que vão ser e em que fase chegam (ver o
-     * cabeçalho do controller). O laço nasce do catálogo do próprio controller, e
-     * não de uma segunda lista aqui: a tela real, quando chegar, toma o slug e a
-     * rota, e a entrada sai de LÁ — sem deixar aqui um caminho apontando para
-     * andaime removido.
-     *
-     * O nome da rota é `retaguarda.<slug>.index`, o mesmo padrão das telas de
-     * verdade: assim o menu não precisa saber que se trata de um stub, e trocar o
-     * andaime pela tela é trocar o destino de uma linha.
-     */
-    foreach (TelasEmPreparacaoController::slugs() as $slugEmPreparacao) {
-        Route::get('retaguarda/'.$slugEmPreparacao, [TelasEmPreparacaoController::class, 'mostrar'])
-            ->name('retaguarda.'.$slugEmPreparacao.'.index');
-    }
 
     /*
      * Relatórios — documento oficial, pedido de propósito, com período e totais.
@@ -222,31 +228,66 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /*
-     * Retorno de Campo — a fila do CHEFE DE SETOR. PROTÓTIPO.
+     * Fiscalizações — TODO registro de fiscalização concluído. PROTÓTIPO.
      *
-     * Tudo que a equipe da área dele concluiu em rua volta para cá, com o desfecho
-     * e a recomendação do fiscal. As duas decisões da chefia: dar CIÊNCIA (o
-     * retorno sai da fila) ou determinar NOVA VISTORIA (a equipe volta ao ponto,
-     * com justificativa obrigatória).
+     * Uma tela, duas abas sobre o MESMO conjunto: "A decidir" é a fila do Chefe de
+     * Setor (o que voltou da rua e espera a leitura dele) e "Acervo" é a consulta
+     * do que já passou por aqui. Elas eram DUAS telas — "Retorno de Campo",
+     * construída, e "Fiscalizações", um andaime que prometia a consulta —, e duas
+     * telas sobre o mesmo registro divergem: uma ganharia regra nova e a outra
+     * continuaria mostrando o mundo de antes. Unificadas por decisão do dono
+     * (09/09/2026).
+     *
+     * As duas decisões da chefia: dar CIÊNCIA (o retorno sai da fila e fica no
+     * acervo) ou determinar NOVA VISTORIA (a equipe volta ao ponto, com
+     * justificativa obrigatória).
      *
      * Não há rota de INCLUSÃO, e isso é deliberado: registro de fiscalização nasce
      * em RUA, no aplicativo do fiscal. Um botão de cadastrar aqui criaria um
-     * segundo dono para o ato que dá sentido a esta fila.
+     * segundo dono para o ato que dá sentido às duas abas.
      *
-     * O primeiro trecho do caminho é o slug da tela (`retorno-de-campo`), de onde
+     * O primeiro trecho do caminho é o slug da tela (`fiscalizacoes`), de onde
      * as guardas deduzem a permissão: as mutações nascem protegidas pela convenção
-     * de nomes (nada a declarar em `config/permissao_acoes.php`).
+     * de nomes (nada a declarar em `config/permissao_acoes.php`). É por isso que
+     * elas MUDARAM de caminho junto com a tela — deixadas sob `retorno-de-campo`,
+     * elas passariam a pedir a permissão de uma tela que não existe mais.
      *
      * As mutações vão no CORPO do POST porque carregam lista de identificadores e
      * texto livre de justificativa — em query string o WAF da Prefeitura
      * barraria, e a falha voltaria disfarçada de erro de CORS.
      */
-    Route::prefix('retaguarda/retorno-de-campo')->name('retaguarda.retorno-de-campo.')->group(function () {
-        Route::get('/', [RetornoDeCampoController::class, 'index'])->name('index');
-        Route::post('ciencia', [RetornoDeCampoController::class, 'ciencia'])->name('ciencia');
-        Route::post('nova-vistoria', [RetornoDeCampoController::class, 'novaVistoria'])->name('nova-vistoria');
+    Route::prefix('retaguarda/fiscalizacoes')->name('retaguarda.fiscalizacoes.')->group(function () {
+        Route::get('/', [FiscalizacoesController::class, 'index'])->name('index');
+        Route::post('ciencia', [FiscalizacoesController::class, 'ciencia'])->name('ciencia');
+        Route::post('nova-vistoria', [FiscalizacoesController::class, 'novaVistoria'])->name('nova-vistoria');
         // Só existe porque é protótipo: devolve a fila ao estado de demonstração.
-        Route::post('reiniciar', [RetornoDeCampoController::class, 'reiniciar'])->name('reiniciar');
+        Route::post('reiniciar', [FiscalizacoesController::class, 'reiniciar'])->name('reiniciar');
+    });
+
+    /*
+     * Cadastro de Operação — PROTÓTIPO.
+     *
+     * "A operação é evento; a equipe é organização." O trabalho de rua com começo,
+     * fim e foco que a gestão monta em cima da estrutura de áreas e equipes.
+     *
+     * ⚠️ Esta tela lê e escreve o MESMO catálogo que o direcionamento das
+     * denúncias consome (`App\Support\Prototipo\OperacoesFicticias`): com duas
+     * listas, o direcionamento ofereceria amanhã uma operação que o cadastro não
+     * conhece.
+     *
+     * O identificador vai como NÚMERO no caminho, e não o nome: o WAF da
+     * Prefeitura barra assinatura de SQL na URL, e nome de operação é texto livre
+     * digitado por gente.
+     */
+    Route::prefix('retaguarda/operacoes')->name('retaguarda.operacoes.')->group(function () {
+        Route::get('/', [OperacoesController::class, 'index'])->name('index');
+        Route::post('/', [OperacoesController::class, 'store'])->name('store');
+        Route::put('{operacao}', [OperacoesController::class, 'update'])
+            ->name('update')->whereNumber('operacao');
+        Route::delete('{operacao}', [OperacoesController::class, 'destroy'])
+            ->name('destroy')->whereNumber('operacao');
+        // Só existe porque é protótipo: devolve o catálogo ao estado de demonstração.
+        Route::post('reiniciar', [OperacoesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*

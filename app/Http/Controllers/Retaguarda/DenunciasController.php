@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Prototipo\DenunciasFicticias;
 use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Prototipo\OperacoesFicticias;
+use App\Support\Prototipo\PapelNaArea;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -236,12 +238,47 @@ class DenunciasController extends Controller
 
         $nova = $request->boolean('nova');
 
+        /*
+         * OPERAÇÃO ENCERRADA não recebe denúncia nova, e a recusa vem ANTES da
+         * validação para poder dizer o porquê.
+         *
+         * A tela não a oferece (o catálogo servido são as disponíveis), mas
+         * esconder da lista não é fronteira: quem souber montar a requisição
+         * mandaria o nome de uma encerrada, e a denúncia entraria num trabalho que
+         * ninguém vai mais executar — desaparecendo da fila sem nunca chegar a
+         * campo. É a pior falha possível aqui, porque não parece falha nenhuma.
+         */
+        if (! $nova) {
+            $escolhida = OperacoesFicticias::porNome((string) $request->input('operacao'));
+
+            if ($escolhida !== null && $escolhida['encerrada'] === true) {
+                /*
+                 * Recado por `flash.erro`, e não por erro de campo: esta tela não
+                 * renderiza o saco de erros de validação, e uma recusa que não
+                 * aparece é exatamente o bloqueio em silêncio que a lei do projeto
+                 * proíbe. O aviso flutuante é o caminho único das mensagens aqui.
+                 */
+                return back()->with(
+                    'flash.erro',
+                    "A {$escolhida['nome']} está encerrada e não recebe denúncia nova. Escolha uma "
+                    .'operação em andamento, abra uma nova aqui mesmo, ou direcione a denúncia à '
+                    .'equipe.',
+                );
+            }
+        }
+
         $dados = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'ids.*' => ['required', 'integer'],
             'nova' => ['required', 'boolean'],
 
-            // Operação existente: o nome tem de ser uma das que existem.
+            /*
+             * Operação existente: o nome tem de ser uma das que RECEBEM trabalho
+             * novo. A ENCERRADA fica fora da lista — e a recusa dela ganha
+             * mensagem própria logo abaixo, porque `Rule::in` diria só "seleção
+             * inválida": quem escolheu uma operação que existe na tela de cadastro
+             * merece ouvir que ela foi encerrada, não que ela não existe.
+             */
             'operacao' => ['exclude_if:nova,true', 'required', Rule::in(DenunciasFicticias::nomesDeOperacao())],
 
             // Operação nova: o mínimo para ela ser reconhecível depois.
@@ -262,6 +299,19 @@ class DenunciasController extends Controller
 
         if (($recusa = $this->exigirArea($request, $ids)) !== null) {
             return $recusa;
+        }
+
+        /*
+         * Nome de operação repetido é recusado: é por ele que a equipe reconhece a
+         * operação em rua, e é ele que a denúncia grava na linha. Com duas do mesmo
+         * nome, a anexação aponta para qualquer uma das duas e ninguém sabe qual.
+         */
+        if ($nova && OperacoesFicticias::nomeEmUso((string) $dados['nome'])) {
+            return back()->with(
+                'flash.erro',
+                'Já existe uma operação com esse nome. Escolha outro nome, ou anexe a denúncia à '
+                .'operação que já existe.',
+            );
         }
 
         $operacao = $nova
@@ -399,43 +449,27 @@ class DenunciasController extends Controller
     }
 
     /**
-     * As áreas que esta pessoa responde como Chefe de Setor — vazio para quem não
-     * responde por área nenhuma.
+     * As áreas que esta pessoa responde como Chefe de Setor, e se a listagem dela
+     * vem recortada por elas.
      *
-     * ⚠️ PROTÓTIPO: o vínculo mora em `config/prototipo_estrutura.php`, junto da
-     * área, e liga pela matrícula. Em produção ele é entre USUÁRIO e área (uma
-     * pessoa pode responder por mais de uma, e chefe de setor entra e sai), e isso é
-     * tabela — está registrado como pendência no doc de regra. Quem chama aqui já
-     * trata LISTA, então a modelagem definitiva não obriga a mexer em quem lê.
+     * As duas respostas DELEGAM para {@see PapelNaArea}, que é a fonte única da
+     * regra: as mesmas perguntas governam esta tela, a de Fiscalizações e o
+     * Cadastro de Operação. Elas viviam copiadas aqui e na fila do retorno de
+     * campo, e cópia da mesma regra é a mesma regra com dois donos — no dia em que
+     * "Chefe de Setor que também é Coordenador" mudasse de resposta, uma tela
+     * passaria a recortar e a outra não, e a que não recortasse continuaria
+     * abrindo sem nada acusar.
      *
      * @return list<string>
      */
     private static function areasDoChefe(?User $usuario): array
     {
-        return $usuario === null
-            ? []
-            : EstruturaFicticia::areasDoChefe($usuario->login);
+        return PapelNaArea::areas($usuario);
     }
 
-    /**
-     * A listagem desta pessoa é recortada pela área dela?
-     *
-     * É o Chefe de Setor, e só ele: quem TRIA precisa ver o universo (não se tria o que
-     * não se vê, e quem encaminhou precisa saber o que aconteceu depois), e o
-     * administrador é o dono do sistema. Um Chefe de Setor que também seja coordenador
-     * não é recortado — o papel que amplia ganha, a mesma regra da união de
-     * setores na matriz de permissões.
-     */
     private static function temRecorteDeArea(?User $usuario): bool
     {
-        if ($usuario === null || $usuario->ehAdmin()) {
-            return false;
-        }
-
-        $etapas = self::etapas($usuario);
-
-        return in_array('direcionamento', $etapas, true)
-            && ! in_array('triagem', $etapas, true);
+        return PapelNaArea::recorta($usuario);
     }
 
     /**

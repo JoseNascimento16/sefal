@@ -5,9 +5,9 @@
 | PROTÓTIPO — Registros de fiscalização AVULSOS (sem denúncia)
 |--------------------------------------------------------------------------
 |
-| ⚠️ DADO DE PROTÓTIPO. Nada aqui é gravado: a tela de Retorno de Campo lê daqui
-| e guarda o que o Chefe de Setor decide na SESSÃO do navegador (ver
-| `App\Support\Prototipo\RetornoDeCampoFicticio`).
+| ⚠️ DADO DE PROTÓTIPO. Nada aqui é gravado: a tela **Fiscalizações** lê daqui —
+| nas duas abas, "A decidir" e "Acervo" — e guarda o que o Chefe de Setor decide
+| na SESSÃO do navegador (ver `App\Support\Prototipo\FiscalizacoesFicticias`).
 |
 | ── Por que este arquivo tem SÓ as avulsas ──────────────────────────────────
 |
@@ -49,6 +49,19 @@
 | frase que a tela mostra sai da mesma chave, na redação `explicito`; escrita à
 | mão aqui, seria recomendação que a Retaguarda não sabe ler nem contar.
 |
+| `alvo`, `equipamento` e `fotos` são o que a equipe registrou NO PONTO, e é o que
+| a aba **Acervo** usa para provar o que foi feito. `alvo` NULO é caso previsto, e
+| não dado faltando: "nada encontrado no local" é desfecho legítimo, e a foto do
+| ponto vazio é justamente a prova da ida. As fotos entram como NOME de arquivo —
+| o protótipo não guarda imagem, e inventar miniatura falsa prometeria o que a
+| tela não entrega.
+|
+| O `documento` da NOTIFICAÇÃO PRELIMINAR declara `notificado` e `prazo` no MESMO
+| formato do trâmite das denúncias (`"5d"`): é dele que sai o vencimento do
+| retorno, que a aba Acervo mostra porque é a única informação da fila que
+| continua correndo depois de a chefia dar ciência. Dois formatos para a mesma
+| informação (horas aqui, dias lá) dariam duas contas do mesmo prazo.
+|
 | ⚠️ A proporção EDUCATIVA vale aqui também: a maioria termina sem documento. Ao
 | acrescentar casos, mantenha isso — uma amostra em que todo mundo é autuado
 | desenha um sistema punitivo que não é o do cliente.
@@ -85,6 +98,9 @@ return [
             'documento' => null,
             'gps' => '-12.9977, -38.4356',
             'precisao_m' => 9,
+            'alvo' => 'Três permissionários de barraca de praia, todos com permissão regular no trecho',
+            'equipamento' => 'Barracas de chapa com toldo',
+            'fotos' => ['vistoria-barracas-faixa.jpg', 'vistoria-recuo-concluido.jpg'],
             'consideracoes' => 'Três barracas avançavam sobre a faixa de areia liberada. As três '
                 .'recuaram na presença da equipe, sem resistência, e os permissionários têm ponto '
                 .'autorizado no trecho. O avanço acontece todo fim de semana de sol.',
@@ -108,6 +124,11 @@ return [
             'documento' => null,
             'gps' => '-12.9484, -38.3591',
             'precisao_m' => 14,
+            // Nada encontrado: o alvo é NULO de propósito, e o registro vale — a
+            // ida ao ponto é o fato, e a foto do ponto vazio é a prova dela.
+            'alvo' => null,
+            'equipamento' => null,
+            'fotos' => ['vistoria-ponto-vazio.jpg'],
             'consideracoes' => 'O carrinho de milho que a equipe vinha encontrando ali não estava no '
                 .'ponto. Comerciantes vizinhos informaram que ele passou a montar depois das 19h.',
             'recomendacoes' => [
@@ -131,9 +152,22 @@ return [
             // da denúncia (a Retaguarda não emite documento de campo — ver o doc
             // de regra das Denúncias, RN-18). Aqui a fila só precisa dizer QUE
             // houve papel, e qual.
-            'documento' => ['tipo' => 'np', 'numero' => '194906'],
+            'documento' => [
+                'tipo' => 'np',
+                'numero' => '194906',
+                'notificado' => 'Ocupante não identificado — recusou-se a informar o documento',
+                // O prazo é a CHAVE do catálogo do impresso
+                // (`prototipo_documentos_campo.prazos_np`), a mesma que o documento
+                // do trâmite declara. A DURAÇÃO dela mora lá, e num lugar só: escrita
+                // aqui em dias, mudar "48 horas" no catálogo deixaria este registro
+                // contando o prazo antigo, e a chefia voltaria ao ponto no dia errado.
+                'prazo' => '48h',
+            ],
             'gps' => '-12.9738, -38.5122',
             'precisao_m' => 7,
+            'alvo' => 'Ocupante sem cadastro, presente no local',
+            'equipamento' => 'Banca de bijuteria sobre a calçada',
+            'fotos' => ['vistoria-calcada-estreita.jpg', 'vistoria-via-assinada.jpg'],
             'consideracoes' => 'Banca de bijuteria montada sobre a calçada estreita, obrigando o '
                 .'pedestre a andar na pista, em rua de grande circulação. O ocupante não tem '
                 .'cadastro e recusou-se a desmontar; notificado com prazo de 48 horas. A via foi '
@@ -159,6 +193,9 @@ return [
             'documento' => null,
             'gps' => '-12.9799, -38.4922',
             'precisao_m' => 11,
+            'alvo' => 'Josivaldo Menezes da Paz — permissão 2019/033.410, regular',
+            'equipamento' => 'Carrinho de água de coco',
+            'fotos' => ['vistoria-rampa-ocupada.jpg', 'vistoria-rampa-liberada.jpg'],
             'consideracoes' => 'O ponto avançava sobre a rampa de acesso do mercado. O permissionário '
                 .'recuou o equipamento e liberou a rampa na hora. Ele pediu orientação sobre a '
                 .'renovação da permissão, que vence no mês que vem.',
@@ -182,6 +219,9 @@ return [
             'documento' => null,
             'gps' => '-12.9866, -38.4993',
             'precisao_m' => 12,
+            'alvo' => null,
+            'equipamento' => null,
+            'fotos' => ['vistoria-faixa-onibus-livre.jpg'],
             'consideracoes' => 'A equipe foi ao trecho indicado no pedido e não encontrou ocupação '
                 .'na faixa nem na parada. O ponto que motivou o pedido foi desmontado, segundo os '
                 .'permissionários vizinhos, na semana passada.',
@@ -211,6 +251,9 @@ return [
             'documento' => null,
             'gps' => '-12.9218, -38.5081',
             'precisao_m' => 10,
+            'alvo' => 'Antônia Ferreira dos Anjos — permissão 2021/007.118, regular',
+            'equipamento' => 'Trailer com mesas no largo',
+            'fotos' => ['vistoria-largo-mesas.jpg', 'vistoria-largo-liberado.jpg'],
             'consideracoes' => 'Mesas de um trailer ocupavam a passagem do largo em dia de movimento. '
                 .'Foram recolhidas na presença da equipe. O permissionário alegou desconhecer o '
                 .'limite do ponto e recebeu a orientação por escrito.',

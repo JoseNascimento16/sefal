@@ -51,17 +51,18 @@ use Illuminate\Support\Facades\Session;
 class DenunciasFicticias
 {
     /*
-     * ⚠️ As duas chaves são IRMÃS (`…denuncias.itens` e `…denuncias.operacoes`), e
-     * nenhuma é prefixo da outra. A sessão do Laravel interpreta ponto como
-     * caminho aninhado: com `prototipo.denuncias` guardando a lista e
-     * `prototipo.denuncias.operacoes` guardando as operações, a segunda gravação
-     * entrava DENTRO da primeira — a lista de denúncias passava a ter um item a
-     * mais, que era o array de operações, e a leitura seguinte estourava ao
+     * ⚠️ O `.itens` no fim não é enfeite. A sessão do Laravel interpreta ponto como
+     * caminho aninhado: enquanto as operações moravam aqui, `prototipo.denuncias`
+     * guardava a lista e `prototipo.denuncias.operacoes` as operações — e a segunda
+     * gravação entrava DENTRO da primeira. A lista de denúncias passava a ter um
+     * item a mais, que era o array de operações, e a leitura seguinte estourava ao
      * procurar o identificador dele.
+     *
+     * As operações saíram para `prototipo.operacoes` ({@see OperacoesFicticias}),
+     * mas a lição fica: chave de sessão nova neste protótipo nasce com nome que
+     * não seja prefixo de outra.
      */
     private const CHAVE = 'prototipo.denuncias.itens';
-
-    private const CHAVE_OPERACOES = 'prototipo.denuncias.operacoes';
 
     /** As situações em que a denúncia ainda espera a TRIAGEM do coordenador. */
     public const AGUARDANDO_TRIAGEM = ['Recebida'];
@@ -297,15 +298,15 @@ class DenunciasFicticias
      */
     public static function anexarAOperacao(array $ids, string $operacao): array
     {
-        $equipe = null;
-
-        foreach (self::operacoes() as $registro) {
-            if ((string) $registro['nome'] === $operacao) {
-                $equipe = (string) $registro['equipe'];
-
-                break;
-            }
-        }
+        /*
+         * A operação pode juntar MAIS DE UMA equipe (a Noturna reforçando a orla no
+         * verão é o caso real), e a denúncia tem uma só: quem vai ao ponto responde
+         * por ele. Então a denúncia fica com a PRIMEIRA equipe da operação, que é a
+         * dona dela — a de reforço entra no trabalho, não na responsabilidade.
+         */
+        $registro = OperacoesFicticias::porNome($operacao);
+        $equipes = array_values((array) ($registro['equipes'] ?? []));
+        $equipe = $equipes === [] ? null : (string) $equipes[0];
 
         $alteradas = 0;
         $ignoradas = 0;
@@ -338,27 +339,28 @@ class DenunciasFicticias
     }
 
     /**
-     * As operações a que o Chefe de Setor pode anexar denúncia — as do arquivo de dados
-     * mais as que a sessão criou.
+     * As operações a que o Chefe de Setor pode anexar denúncia — as que ainda
+     * RECEBEM trabalho novo.
+     *
+     * DELEGA, e não tem lista própria: o catálogo de operações é um só
+     * ({@see OperacoesFicticias}), lido também pelo Cadastro de Operação. Com duas
+     * listas, o direcionamento ofereceria amanhã uma operação que o cadastro não
+     * conhece — e recusaria a que ele acabou de criar.
+     *
+     * A ENCERRADA fica de fora: ela não recebe denúncia nova, e oferecê-la seria
+     * convidar para uma recusa que o servidor já dá com o motivo.
      *
      * @return list<array<string, mixed>>
      */
     public static function operacoes(): array
     {
-        /** @var list<array<string, mixed>>|null $daSessao */
-        $daSessao = Session::get(self::CHAVE_OPERACOES);
-
-        if (is_array($daSessao)) {
-            return $daSessao;
-        }
-
-        return array_values((array) config('prototipo_denuncias.operacoes', []));
+        return OperacoesFicticias::disponiveis();
     }
 
     /** @return list<string> */
     public static function nomesDeOperacao(): array
     {
-        return array_map(static fn (array $o): string => (string) $o['nome'], self::operacoes());
+        return OperacoesFicticias::nomesDisponiveis();
     }
 
     /**
@@ -370,33 +372,19 @@ class DenunciasFicticias
      */
     public static function criarOperacao(array $dados): array
     {
-        $operacoes = self::operacoes();
-
-        $operacao = [
-            'id' => max([0, ...array_map(static fn (array $o): int => (int) $o['id'], $operacoes)]) + 1,
-            'nome' => (string) $dados['nome'],
-            'area' => (string) ($dados['area'] ?? ''),
-            'equipe' => (string) ($dados['equipe'] ?? ''),
-            'periodo' => (string) ($dados['periodo'] ?? 'a definir'),
-            'foco' => (string) ($dados['foco'] ?? ''),
-        ];
-
-        $operacoes[] = $operacao;
-        Session::put(self::CHAVE_OPERACOES, array_values($operacoes));
-
-        return $operacao;
+        return OperacoesFicticias::criarDoDirecionamento($dados);
     }
 
     /** Volta as denúncias e as operações ao estado de partida. */
     public static function reiniciar(): void
     {
         Session::forget(self::CHAVE);
-        Session::forget(self::CHAVE_OPERACOES);
+        OperacoesFicticias::reiniciar();
     }
 
     public static function alterada(): bool
     {
-        return Session::has(self::CHAVE) || Session::has(self::CHAVE_OPERACOES);
+        return Session::has(self::CHAVE) || OperacoesFicticias::alterada();
     }
 
     /**
