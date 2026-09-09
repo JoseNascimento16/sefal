@@ -1,5 +1,18 @@
 import { Head } from '@inertiajs/react';
-import { Camera, Check, ClipboardCheck, FileText, Info, Lightbulb, ListChecks, MapPin, RotateCcw, Undo2, UserRound } from 'lucide-react';
+import {
+    Archive,
+    Camera,
+    Check,
+    ClipboardCheck,
+    FileText,
+    Info,
+    Lightbulb,
+    MapPin,
+    RotateCcw,
+    Timer,
+    Undo2,
+    UserRound,
+} from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
@@ -15,34 +28,46 @@ import {
 } from '@/components/retaguarda/th-ordenavel';
 import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta } from '@/lib/busca';
-import { dataHoraBR, VAZIO } from '@/lib/datas';
+import { dataBR, dataHoraBR, VAZIO } from '@/lib/datas';
 import { linhaClicavel } from '@/lib/linha-clicavel';
 import { contar, plural } from '@/lib/plural';
 import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
 import { textoDaRecomendacao, textosDasRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
-import { ciencia, index, novaVistoria, reiniciar } from '@/routes/retaguarda/retorno-de-campo';
+import { ciencia, index, novaVistoria, reiniciar } from '@/routes/retaguarda/fiscalizacoes';
 
 /**
- * Retorno de Campo — a fila do CHEFE DE SETOR. PROTÓTIPO.
+ * Fiscalizações — TODO registro de fiscalização concluído, numa tela só.
+ * PROTÓTIPO.
  *
- * Tudo que a equipe da área dele concluiu em rua volta para cá. Sem esta tela o
- * trabalho da equipe termina no aplicativo do fiscal e ninguém do outro lado é
- * obrigado a ler: o desfecho existiria no sistema e a decisão que ele pede —
- * voltar ao ponto, encerrar — ficaria sem dono.
+ * ── Por que UMA tela, e não duas ─────────────────────────────────────────────
  *
- * ── Não é a Caixa de Entrada ─────────────────────────────────────────────────
+ * Isto era duas coisas: "Retorno de Campo", construída, com a fila do Chefe de
+ * Setor; e "Fiscalizações", um andaime que prometia a consulta por ambulante,
+ * área e período. Duas telas sobre o MESMO registro — a fiscalização concluída —,
+ * e o gestor tinha de pular de menu para juntar as duas metades da mesma
+ * informação. Unificadas por decisão do dono (09/09/2026).
  *
- * Lá o Coordenador digita o que chegou em PAPEL ao balcão, no começo da cadeia;
- * aqui a chefia lê o que voltou do CAMPO, no fim dela. São as duas pontas do
- * mesmo trabalho, e a tela diz isso em cima para ninguém confundir as duas.
+ * ── As duas abas, e a pergunta que cada uma responde ────────────────────────
+ *
+ *  · **A decidir** — "o que eu tenho para fazer agora?". É a FILA: o que voltou da
+ *    rua e espera a leitura da chefia. Tela de TRABALHO: seleção, comando
+ *    flutuante, janela de decisão.
+ *  · **Acervo** — "o que foi feito naquele ponto?". É a CONSULTA, sem ação: tudo
+ *    o que passou por aqui, inclusive o já lido, com o alvo encontrado, as fotos,
+ *    a coordenada, o documento que saiu na hora e o PRAZO de quem foi notificado.
+ *
+ * ⚠️ Não há uma terceira aba, e isso foi decidido: "por operação" e "por prazo
+ * vencido" não são conjuntos diferentes — são recortes do acervo, e a BUSCA os
+ * entrega ("vencido", "operação"). Aba que só filtra o mesmo conjunto seria um
+ * segundo filtro concorrendo com a barra, contra o padrão de busca do projeto.
  *
  * ── A RECOMENDAÇÃO do fiscal é a coluna que decide ───────────────────────────
  *
  * O desfecho diz como a vistoria terminou; a recomendação diz o que quem esteve
  * no ponto está PEDINDO. É por ela que a chefia direciona, então ela tem coluna
- * própria na grade — não uma linha no detalhe. Quem precisa varrer trinta
- * retornos com o olho não abre trinta detalhes.
+ * própria na fila — não uma linha no detalhe. Quem precisa varrer trinta retornos
+ * com o olho não abre trinta detalhes.
  *
  * ── A lista não é o universo, e a tela avisa ─────────────────────────────────
  *
@@ -61,6 +86,16 @@ interface Decisao {
     quem: string;
     o_que: string;
     detalhe: string;
+}
+
+/** O prazo de retorno de quem foi notificado — só a Notificação Preliminar tem. */
+interface Prazo {
+    /** ISO — quem escreve dd/mm/aaaa é a tela. */
+    vence_em: string;
+    /** Dias até o vencimento; NEGATIVO quando já venceu. Conta do servidor. */
+    dias: number;
+    vencido: boolean;
+    notificado: string | null;
 }
 
 interface Registro {
@@ -83,9 +118,26 @@ interface Registro {
     ponto_de_referencia: string | null;
     gps: string | null;
     precisao_m: number | null;
+    /**
+     * Quem a equipe encontrou no ponto. NULO é caso previsto, e não dado
+     * faltando: "nada encontrado no local" é desfecho legítimo — a foto do ponto
+     * vazio é a prova da ida.
+     */
+    alvo: string | null;
+    equipamento: string | null;
+    /** Nomes dos arquivos de foto: o protótipo não guarda imagem. */
+    fotos: string[];
     desfecho: string;
     /** `np` = Notificação Preliminar; `aa` = Auto de Apreensão. */
-    documento: { tipo: 'np' | 'aa'; numero: string } | null;
+    documento: {
+        tipo: 'np' | 'aa';
+        numero: string;
+        notificado: string | null;
+        /** ISO. Vem PRONTO do servidor: a duração do prazo tem um dono só. */
+        vence_em: string | null;
+        /** "48 horas", "05 dias" — a redação do impresso. */
+        prazo_rotulo: string | null;
+    } | null;
     consideracoes: string | null;
     /**
      * As **CHAVES** dos atalhos que o fiscal assinalou (`retorno`, `sgci`…),
@@ -99,9 +151,10 @@ interface Registro {
     decisao: Decisao | null;
     /** Dias esperando a leitura da chefia. Nulo depois de decidido. */
     dias_parado: number | null;
+    prazo: Prazo | null;
 }
 
-type Aba = 'a-ler' | 'todos';
+type Aba = 'a-decidir' | 'acervo';
 
 /** O tom do selo de cada estado da fila. */
 const TOM_DO_ESTADO: Record<string, string> = {
@@ -111,14 +164,40 @@ const TOM_DO_ESTADO: Record<string, string> = {
 };
 
 /** As expressões do domínio que a busca reconhece e retira do texto livre. */
-type Faceta = 'com-documento' | 'sem-documento' | 'de-denuncia' | 'avulsa' | 'com-recomendacao';
+type Faceta =
+    | 'com-documento'
+    | 'sem-documento'
+    | 'de-denuncia'
+    | 'avulsa'
+    | 'com-recomendacao'
+    | 'nao-identificado'
+    | 'com-foto'
+    | 'prazo-vencido'
+    | 'prazo-correndo'
+    | 'ultimos-7'
+    | 'ultimos-30';
 
-const FACETAS = [
-    { expressao: /\bsem documento\b|\bsem papel\b/, valor: 'sem-documento' as const },
-    { expressao: /\bcom documento\b|\bnotificad\w*\b|\bautuad\w*\b/, valor: 'com-documento' as const },
-    { expressao: /\bde denuncia\b|\bdenuncia\b/, valor: 'de-denuncia' as const },
-    { expressao: /\bavuls\w*\b|\brond\w*\b|\boperacao\b/, valor: 'avulsa' as const },
-    { expressao: /\bcom recomendacao\b|\brecomendad\w*\b/, valor: 'com-recomendacao' as const },
+/*
+ * ⚠️ A ORDEM importa: a expressão mais específica vem antes, senão a genérica come
+ * a outra ("prazo vencido" antes de "prazo").
+ */
+const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
+    { expressao: /\bsem documento\b|\bsem papel\b/, valor: 'sem-documento' },
+    { expressao: /\bcom documento\b|\bnotificad\w*\b|\bautuad\w*\b/, valor: 'com-documento' },
+    { expressao: /\bde denuncia\b|\bdenuncia\b/, valor: 'de-denuncia' },
+    { expressao: /\bavuls\w*\b|\brond\w*\b|\boperacao\b/, valor: 'avulsa' },
+    { expressao: /\bcom recomendacao\b|\brecomendad\w*\b/, valor: 'com-recomendacao' },
+    // O alvo: "não identificado" é caso previsto do domínio, e quem procura por
+    // ele está procurando exatamente os registros sem alvo — não uma falha.
+    { expressao: /\bnao identificad\w*\b|\bsem alvo\b/, valor: 'nao-identificado' },
+    { expressao: /\bcom foto\w*\b/, valor: 'com-foto' },
+    { expressao: /\bprazo vencid\w*\b|\bvencid\w*\b/, valor: 'prazo-vencido' },
+    { expressao: /\bprazo corrend\w*\b|\bcom prazo\b/, valor: 'prazo-correndo' },
+    // O PERÍODO como faceta, e não como par de campos de data: o padrão do projeto
+    // é uma barra só que interpreta a frase. "Nos últimos 7 dias" é como a chefia
+    // pergunta; dois seletores de data seriam um segundo filtro ao lado da busca.
+    { expressao: /\bultimos 7 dias\b|\bultima semana\b|\besta semana\b/, valor: 'ultimos-7' },
+    { expressao: /\bultimos 30 dias\b|\bultimo mes\b|\beste mes\b/, valor: 'ultimos-30' },
 ];
 
 /** O documento em uma linha: "Notificação nº 194903". */
@@ -126,7 +205,28 @@ function nomeDoDocumento(d: NonNullable<Registro['documento']>): string {
     return `${d.tipo === 'np' ? 'Notificação' : 'Apreensão'} nº ${d.numero}`;
 }
 
-export default function RetornoDeCampo({
+/** Quantos dias inteiros separam a conclusão de hoje — para a faceta de período. */
+function diasDesde(iso: string): number {
+    const [data] = String(iso).replace(' ', 'T').split('T');
+    const [ano, mes, dia] = data.split('-').map(Number);
+
+    return Math.floor(
+        (Date.now() - Date.UTC(ano, (mes ?? 1) - 1, dia ?? 1)) / 86400000,
+    );
+}
+
+/** "vence em 3 dias" / "venceu há 2 dias" / "vence hoje". */
+function textoDoPrazo(prazo: Prazo): string {
+    if (prazo.dias === 0) {
+        return 'vence hoje';
+    }
+
+    return prazo.dias > 0
+        ? `vence em ${contar(prazo.dias, 'dia', 'dias')}`
+        : `venceu há ${contar(-prazo.dias, 'dia', 'dias')}`;
+}
+
+export default function Fiscalizacoes({
     registros,
     estados,
     recomendacoesDoFiscal,
@@ -147,7 +247,7 @@ export default function RetornoDeCampo({
      */
     recomendacoesDoFiscal: CatalogoDeRecomendacoes;
     chefias: Record<string, { nome: string; matricula: string | null }>;
-    /** Esta pessoa DECIDE aqui, ou apenas acompanha? Quem responde é o servidor. */
+    /** Esta pessoa DECIDE aqui, ou apenas consulta? Quem responde é o servidor. */
     decide: boolean;
     areasDoChefe: string[];
     /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
@@ -156,7 +256,7 @@ export default function RetornoDeCampo({
 }) {
     const { enviando, ocupado, enviar } = useEnvio();
 
-    const [aba, setAba] = useState<Aba>('a-ler');
+    const [aba, setAba] = useState<Aba>('a-decidir');
     const [busca, setBusca] = useState('');
     const [abertoId, setAbertoId] = useState<number | null>(null);
     const [marcados, setMarcados] = useState<number[]>([]);
@@ -168,7 +268,7 @@ export default function RetornoDeCampo({
      * O estado da FILA, e ele vem do servidor: o catálogo chega na ordem em que a
      * fila anda, e o primeiro é o que espera a leitura da chefia. Escrito na tela,
      * "Aguardando leitura" seria a mesma palavra com dois donos — e no dia em que
-     * ela mudasse, a aba "A ler" ficaria vazia sem nada acusar.
+     * ela mudasse, a aba "A decidir" ficaria vazia sem nada acusar.
      */
     const aguardando = estados[0];
 
@@ -179,12 +279,13 @@ export default function RetornoDeCampo({
         return nome.trim() === '' ? null : nome;
     };
 
-    // A ABA troca a FONTE: "A ler" é a fila propriamente dita, "Todos" é o
-    // histórico do que a área devolveu. Não é filtro paralelo à busca — é outro
-    // conjunto de partida, e é por isso que ela entra no contexto da exportação.
+    // A ABA troca a FONTE: "A decidir" é a fila propriamente dita, "Acervo" é
+    // tudo o que passou por aqui — inclusive o já lido e o devolvido à equipe.
+    // Não é filtro paralelo à busca: é outro conjunto de partida, e é por isso que
+    // ela entra no contexto da exportação.
     const daAba = useMemo(
         () =>
-            aba === 'a-ler'
+            aba === 'a-decidir'
                 ? registros.filter((r) => r.estado === aguardando)
                 : registros,
         [registros, aba, aguardando],
@@ -214,6 +315,33 @@ export default function RetornoDeCampo({
                 return false;
             }
 
+            if (facetas.includes('nao-identificado') && r.alvo !== null) {
+                return false;
+            }
+
+            if (facetas.includes('com-foto') && r.fotos.length === 0) {
+                return false;
+            }
+
+            if (facetas.includes('prazo-vencido') && !(r.prazo?.vencido ?? false)) {
+                return false;
+            }
+
+            if (
+                facetas.includes('prazo-correndo') &&
+                (r.prazo === null || r.prazo.vencido)
+            ) {
+                return false;
+            }
+
+            if (facetas.includes('ultimos-7') && diasDesde(r.concluida_em) > 7) {
+                return false;
+            }
+
+            if (facetas.includes('ultimos-30') && diasDesde(r.concluida_em) > 30) {
+                return false;
+            }
+
             return casaTermos(termos, [
                 r.protocolo,
                 r.referencia,
@@ -225,6 +353,13 @@ export default function RetornoDeCampo({
                 r.area,
                 r.desfecho,
                 r.consideracoes,
+                // O ALVO entra na busca: "consultar por ambulante" é a pergunta que
+                // o acervo existe para responder, e o nome de quem foi encontrado
+                // no ponto é como se procura por ele.
+                r.alvo,
+                r.equipamento,
+                r.documento?.numero,
+                r.documento?.notificado,
                 // Contra a FRASE, e não contra a chave: quem procura por
                 // "operação" tem de achar o registro em que o fiscal pediu
                 // operação — a chave `operacao` casaria por acidente, e
@@ -243,6 +378,12 @@ export default function RetornoDeCampo({
     const pag = usePaginacao(ord.itens);
 
     /*
+     * A SELEÇÃO só existe na aba "A decidir". O acervo é leitura — oferecer
+     * caixinha lá prometeria uma ação que a aba não tem.
+     */
+    const selecionavel = decide && aba === 'a-decidir';
+
+    /*
      * Trocar de aba, filtrar ou receber a lista de volta do servidor deixaria
      * marcado um registro que já não está à vista — e a decisão em lote alcançaria
      * o que a pessoa não está vendo. A seleção é do RECORTE VISÍVEL, e some com
@@ -254,8 +395,15 @@ export default function RetornoDeCampo({
         );
     }, [filtrados]);
 
+    /* Ir para o acervo desfaz a seleção: ela pertence à fila. */
+    useEffect(() => {
+        if (!selecionavel) {
+            setMarcados([]);
+        }
+    }, [selecionavel]);
+
     const selecionados = registros.filter((r) => marcados.includes(r.id));
-    const podeDecidir = decide && selecionados.length > 0;
+    const podeDecidir = selecionavel && selecionados.length > 0;
 
     /* A janela de decisão fica fechada até o comando flutuante ser tocado. */
     const [decidindo, setDecidindo] = useState(false);
@@ -320,10 +468,48 @@ export default function RetornoDeCampo({
             (r) => r.estado === aguardando && r.recomendacoes.length > 0,
         ).length,
         comDocumento: registros.filter((r) => r.documento !== null).length,
+        prazoVencido: registros.filter((r) => r.prazo?.vencido ?? false).length,
     };
 
-    // Só as chaves declaradas entram no arquivo, e a data sai em BR: o documento é
-    // lido fora do sistema, onde ninguém traduz ISO.
+    /*
+     * O que vai para o ARQUIVO — e as colunas mudam com a aba, porque as duas abas
+     * respondem perguntas diferentes: a fila leva o que decide (recomendação,
+     * considerações); o acervo leva o que PROVA (alvo, provas, prazo).
+     *
+     * Só as chaves declaradas entram, e a data sai em BR: o documento é lido fora
+     * do sistema, onde ninguém traduz ISO.
+     */
+    const colunasDaFila = [
+        { chave: 'protocolo', titulo: 'Registro' },
+        { chave: 'concluida_em', titulo: 'Concluída em' },
+        { chave: 'area', titulo: 'Área' },
+        { chave: 'equipe', titulo: 'Equipe' },
+        { chave: 'fiscal', titulo: 'Fiscal' },
+        { chave: 'ponto', titulo: 'Ponto' },
+        { chave: 'desfecho', titulo: 'Desfecho' },
+        { chave: 'documento', titulo: 'Documento' },
+        { chave: 'recomendacoes', titulo: 'Recomendação do fiscal' },
+        { chave: 'consideracoes', titulo: 'Considerações do fiscal' },
+        { chave: 'origem', titulo: 'Origem' },
+        { chave: 'estado', titulo: 'Estado' },
+    ];
+
+    const colunasDoAcervo = [
+        { chave: 'protocolo', titulo: 'Registro' },
+        { chave: 'concluida_em', titulo: 'Concluída em' },
+        { chave: 'area', titulo: 'Área' },
+        { chave: 'equipe', titulo: 'Equipe' },
+        { chave: 'fiscal', titulo: 'Fiscal' },
+        { chave: 'ponto', titulo: 'Ponto' },
+        { chave: 'alvo', titulo: 'Quem foi encontrado' },
+        { chave: 'desfecho', titulo: 'Desfecho' },
+        { chave: 'documento', titulo: 'Documento' },
+        { chave: 'prazo', titulo: 'Prazo de retorno' },
+        { chave: 'provas', titulo: 'Provas' },
+        { chave: 'origem', titulo: 'Origem' },
+        { chave: 'estado', titulo: 'Estado' },
+    ];
+
     const linhasExportacao = ord.itens.map((r) => ({
         protocolo: r.protocolo,
         concluida_em: dataHoraBR(r.concluida_em),
@@ -331,8 +517,21 @@ export default function RetornoDeCampo({
         equipe: r.equipe || VAZIO,
         fiscal: r.fiscal,
         ponto: [r.endereco, r.bairro].filter(Boolean).join(' — '),
+        // "não identificado" e não vazio: o alvo nulo é uma INFORMAÇÃO (a equipe
+        // foi e não achou ninguém), e um travessão a esconderia como dado faltando.
+        alvo: r.alvo ?? 'não identificado',
         desfecho: r.desfecho,
         documento: r.documento === null ? 'nenhum' : nomeDoDocumento(r.documento),
+        prazo:
+            r.prazo === null
+                ? VAZIO
+                : `${dataBR(r.prazo.vence_em)} (${textoDoPrazo(r.prazo)})`,
+        provas: [
+            r.fotos.length > 0 ? contar(r.fotos.length, 'foto', 'fotos') : null,
+            r.gps === null ? 'sem coordenada' : r.gps,
+        ]
+            .filter(Boolean)
+            .join(' · '),
         // O arquivo vai EXPLÍCITO: quem o abre é quem decide, não o aparelho —
         // uma célula com `sgci` não é resposta para ninguém.
         recomendacoes:
@@ -344,23 +543,27 @@ export default function RetornoDeCampo({
         estado: r.estado,
     }));
 
+    /** Quantas colunas a grade tem — para o `colSpan` da linha vazia e do detalhe. */
+    const colunas =
+        (selecionavel ? 1 : 0) + (aba === 'a-decidir' ? 6 : 8);
+
     return (
         <>
-            <Head title="Retorno de Campo" />
+            <Head title="Fiscalizações" />
 
             <div className="rt-page-head">
                 <div>
                     <p className="sobrancelha">Fiscalização</p>
-                    <h1>Retorno de Campo</h1>
+                    <h1>Fiscalizações</h1>
                     <p>
-                        Tudo que a equipe <strong>concluiu em rua</strong> volta para
-                        cá, com o desfecho e a{' '}
-                        <strong>recomendação do fiscal</strong> — é por ela que se
-                        sabe se o ponto pede nova ida ou se o caso se encerra.
+                        Tudo que a equipe <strong>concluiu em rua</strong>: o que
+                        acabou de voltar e espera a sua leitura, na aba{' '}
+                        <strong>A decidir</strong>, e o histórico consultável do
+                        ponto, no <strong>Acervo</strong>.
                     </p>
 
                     {/* Qual é o SEU papel aqui. O dono usa o selo para mostrar que
-                        a mesma tela serve dois papéis: um decide, o outro acompanha. */}
+                        a mesma tela serve dois papéis: um decide, o outro consulta. */}
                     <ul className="rt-chips">
                         {decide && (
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
@@ -389,8 +592,8 @@ export default function RetornoDeCampo({
                         {!decide && (
                             <li className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                Você acompanha o que a fiscalização devolveu; a decisão
-                                é do Chefe de Setor da área
+                                Você consulta o que a fiscalização registrou; a decisão
+                                sobre o retorno é do Chefe de Setor da área
                             </li>
                         )}
                     </ul>
@@ -404,16 +607,16 @@ export default function RetornoDeCampo({
                         className="rt-numero"
                         title={
                             recorteDeArea
-                                ? 'Ver todos os retornos da sua área'
-                                : 'Ver todos os retornos'
+                                ? 'Ver o acervo da sua área'
+                                : 'Ver o acervo inteiro'
                         }
                         onClick={() => {
                             setBusca('');
-                            setAba('todos');
+                            setAba('acervo');
                         }}
                     >
                         <strong>{numeros.total}</strong>
-                        <span>{recorteDeArea ? 'da sua área' : 'concluídos'}</span>
+                        <span>{recorteDeArea ? 'da sua área' : 'concluídas'}</span>
                     </button>
 
                     <div className="rt-numeros-separador" />
@@ -423,11 +626,11 @@ export default function RetornoDeCampo({
                         title="Ver os que ainda esperam a leitura da chefia"
                         onClick={() => {
                             setBusca('');
-                            setAba('a-ler');
+                            setAba('a-decidir');
                         }}
                     >
                         <strong>{numeros.aLer}</strong>
-                        <span>a ler</span>
+                        <span>a decidir</span>
                     </button>
 
                     <div className="rt-numeros-separador" />
@@ -436,7 +639,7 @@ export default function RetornoDeCampo({
                         className="rt-numero info"
                         title="Ver os que esperam leitura e trazem recomendação do fiscal"
                         onClick={() => {
-                            setAba('a-ler');
+                            setAba('a-decidir');
                             setBusca('com recomendação');
                         }}
                     >
@@ -450,25 +653,48 @@ export default function RetornoDeCampo({
                         className="rt-numero"
                         title="Ver os que tiveram documento lavrado"
                         onClick={() => {
-                            setAba('todos');
+                            setAba('acervo');
                             setBusca('com documento');
                         }}
                     >
                         <strong>{numeros.comDocumento}</strong>
                         <span>com documento</span>
                     </button>
+
+                    {/* Prazo VENCIDO é o único número desta tela que cobra ação de
+                        quem não está na fila: a notificação sem retorno fica no
+                        papel. Ele mora no acervo porque continua correndo depois de
+                        a chefia dar ciência. */}
+                    {numeros.prazoVencido > 0 && (
+                        <>
+                            <div className="rt-numeros-separador" />
+                            <button
+                                type="button"
+                                className="rt-numero alerta"
+                                title="Ver os notificados cujo prazo de retorno já venceu"
+                                onClick={() => {
+                                    setAba('acervo');
+                                    setBusca('prazo vencido');
+                                }}
+                            >
+                                <strong>{numeros.prazoVencido}</strong>
+                                <span>prazo vencido</span>
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
             <SeloPrototipo>
-                Esta tela é a proposta da fila, para conferência da forma antes de
-                virar sistema. Os retornos são de exemplo e{' '}
+                Esta tela é a proposta das duas abas, para conferência da forma antes
+                de virar sistema. Os registros são de exemplo e{' '}
                 <strong>nada é gravado</strong>: a ciência e o pedido de nova
                 vistoria valem só nesta sessão do navegador.
             </SeloPrototipo>
 
-            {/* O aviso que separa esta tela da Caixa de Entrada. Fica em cima, e
-                não numa coluna da grade, porque é a natureza da tela inteira. */}
+            {/* O aviso que separa esta tela das duas portas de ENTRADA. Fica em
+                cima, e não numa coluna da grade, porque é a natureza da tela
+                inteira. */}
             <div className="rt-sugestao" style={{ marginBottom: 18 }}>
                 <Undo2 size={16} aria-hidden />
                 <div>
@@ -499,7 +725,7 @@ export default function RetornoDeCampo({
                             {areasDoChefe.join(' e ')}.
                         </strong>
                         <div>
-                            Os retornos das outras áreas não aparecem aqui — e a
+                            As fiscalizações das outras áreas não aparecem aqui — e a
                             decisão sobre registro de outra área é recusada pelo
                             sistema, não só escondida.
                         </div>
@@ -508,42 +734,76 @@ export default function RetornoDeCampo({
             )}
 
             <div className="card-premium">
-                {/* A ABA troca a FONTE dos dados (a fila × o histórico da área),
-                    e por isso ela é aba e não chip de filtro — a busca continua
-                    sendo o filtro único dentro do conjunto escolhido. */}
-                <div className="abas" role="tablist" aria-label="Recorte da fila">
+                {/* A ABA troca a FONTE dos dados (a fila × o acervo da área), e por
+                    isso ela é aba e não chip de filtro — a busca continua sendo o
+                    filtro único dentro do conjunto escolhido. */}
+                <div className="abas" role="tablist" aria-label="Recorte das fiscalizações">
                     <button
                         type="button"
                         role="tab"
                         className="aba"
-                        aria-selected={aba === 'a-ler'}
-                        onClick={() => setAba('a-ler')}
+                        aria-selected={aba === 'a-decidir'}
+                        onClick={() => setAba('a-decidir')}
                     >
-                        <Undo2 size={16} aria-hidden />
-                        <span className="aba-rotulo">A ler ({numeros.aLer})</span>
+                        <ClipboardCheck size={16} aria-hidden />
+                        <span className="aba-rotulo">A decidir ({numeros.aLer})</span>
                     </button>
                     <button
                         type="button"
                         role="tab"
                         className="aba"
-                        aria-selected={aba === 'todos'}
-                        onClick={() => setAba('todos')}
+                        aria-selected={aba === 'acervo'}
+                        onClick={() => setAba('acervo')}
                     >
-                        <ListChecks size={16} aria-hidden />
-                        <span className="aba-rotulo">Todos ({numeros.total})</span>
+                        <Archive size={16} aria-hidden />
+                        <span className="aba-rotulo">Acervo ({numeros.total})</span>
                     </button>
                 </div>
+
+                {/* O que a aba do ACERVO é, dito na própria aba: sem isto ela parece
+                    a mesma grade com mais linhas, e ninguém procuraria por ponto
+                    antigo aqui. */}
+                {aba === 'acervo' && (
+                    <div className="rt-sugestao" style={{ marginBottom: 4 }}>
+                        <Archive size={16} aria-hidden />
+                        <div>
+                            <strong>
+                                O histórico do ponto — consulta, sem ação.
+                            </strong>
+                            <div>
+                                Tudo o que a equipe concluiu, inclusive o que já foi
+                                lido: quem foi encontrado, as fotos, a coordenada, o
+                                documento que saiu na hora e o prazo de retorno de
+                                quem foi notificado. Procure por ambulante, por área
+                                ou por período — a barra abaixo entende a frase.
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <BuscaInteligente
                     busca={busca}
                     setBusca={setBusca}
-                    placeholder="Procure por ponto, bairro, equipe, fiscal, desfecho ou o que o fiscal escreveu"
-                    exemplos={[
-                        'com recomendação',
-                        'sem documento',
-                        'de denúncia',
-                        'ronda',
-                    ]}
+                    placeholder={
+                        aba === 'acervo'
+                            ? 'Procure por ambulante, ponto, bairro, área, equipe, documento ou período'
+                            : 'Procure por ponto, bairro, equipe, fiscal, desfecho ou o que o fiscal escreveu'
+                    }
+                    exemplos={
+                        aba === 'acervo'
+                            ? [
+                                  'nos últimos 7 dias',
+                                  'prazo vencido',
+                                  'não identificado',
+                                  'com documento',
+                              ]
+                            : [
+                                  'com recomendação',
+                                  'sem documento',
+                                  'de denúncia',
+                                  'ronda',
+                              ]
+                    }
                 />
 
                 {/* A DECISÃO mora numa janela, aberta pelo comando flutuante.
@@ -569,7 +829,7 @@ export default function RetornoDeCampo({
                         }}
                         role="dialog"
                         aria-modal="true"
-                        aria-label="Decidir sobre os retornos selecionados"
+                        aria-label="Decidir sobre as fiscalizações selecionadas"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="sobreposicao-titulo">
@@ -587,7 +847,7 @@ export default function RetornoDeCampo({
                                 <Check size={16} aria-hidden /> Dar ciência
                             </h3>
                             <p className="card-sub">
-                                O retorno sai da sua fila.{' '}
+                                O retorno sai da sua fila e fica no acervo.{' '}
                                 {contar(selecionados.length, 'registro', 'registros')}{' '}
                                 {plural(selecionados.length, 'selecionado', 'selecionados')}.
                             </p>
@@ -688,10 +948,10 @@ export default function RetornoDeCampo({
                     )}
 
                     <BotaoExportar
-                        titulo="Retorno de Campo"
-                        subtitulo="Fiscalização › Retorno de Campo"
+                        titulo="Fiscalizações"
+                        subtitulo="Fiscalização › Fiscalizações"
                         contexto={[
-                            `Aba: ${aba === 'a-ler' ? 'A ler' : 'Todos'}`,
+                            `Aba: ${aba === 'a-decidir' ? 'A decidir' : 'Acervo'}`,
                             recorteDeArea
                                 ? `Áreas: ${areasDoChefe.join(' e ')}`
                                 : 'Todas as áreas',
@@ -699,20 +959,7 @@ export default function RetornoDeCampo({
                         ]
                             .filter(Boolean)
                             .join(' · ')}
-                        colunas={[
-                            { chave: 'protocolo', titulo: 'Registro' },
-                            { chave: 'concluida_em', titulo: 'Concluída em' },
-                            { chave: 'area', titulo: 'Área' },
-                            { chave: 'equipe', titulo: 'Equipe' },
-                            { chave: 'fiscal', titulo: 'Fiscal' },
-                            { chave: 'ponto', titulo: 'Ponto' },
-                            { chave: 'desfecho', titulo: 'Desfecho' },
-                            { chave: 'documento', titulo: 'Documento' },
-                            { chave: 'recomendacoes', titulo: 'Recomendação do fiscal' },
-                            { chave: 'consideracoes', titulo: 'Considerações do fiscal' },
-                            { chave: 'origem', titulo: 'Origem' },
-                            { chave: 'estado', titulo: 'Estado' },
-                        ]}
+                        colunas={aba === 'a-decidir' ? colunasDaFila : colunasDoAcervo}
                         linhas={linhasExportacao}
                     />
                 </div>
@@ -721,7 +968,7 @@ export default function RetornoDeCampo({
                     <table className="data-table">
                         <thead>
                             <tr>
-                                {decide && (
+                                {selecionavel && (
                                     <th style={{ width: 34 }}>
                                         <input
                                             type="checkbox"
@@ -743,15 +990,30 @@ export default function RetornoDeCampo({
                                 <ThOrdenavel campo="endereco" acessor="endereco" ord={ord}>
                                     Ponto
                                 </ThOrdenavel>
+                                {/* O ALVO é coluna do ACERVO, e não da fila: quem
+                                    decide o retorno decide sobre o PONTO, e quem
+                                    consulta o histórico procura pela PESSOA. */}
+                                {aba === 'acervo' && (
+                                    <ThOrdenavel campo="alvo" acessor="alvo" ord={ord}>
+                                        Quem foi encontrado
+                                    </ThOrdenavel>
+                                )}
                                 <ThOrdenavel campo="equipe" acessor="equipe" ord={ord}>
                                     Equipe e fiscal
                                 </ThOrdenavel>
                                 <ThOrdenavel campo="desfecho" acessor="desfecho" ord={ord}>
                                     Desfecho
                                 </ThOrdenavel>
-                                {/* A coluna que decide: ela é o motivo de a fila
-                                    existir, então tem lugar próprio na grade. */}
-                                <th>Recomendação do fiscal</th>
+                                {aba === 'a-decidir' ? (
+                                    /* A coluna que decide: ela é o motivo de a fila
+                                       existir, então tem lugar próprio na grade. */
+                                    <th>Recomendação do fiscal</th>
+                                ) : (
+                                    <>
+                                        <th>Prazo de retorno</th>
+                                        <th>Provas</th>
+                                    </>
+                                )}
                                 <ThOrdenavel campo="estado" acessor="estado" ord={ord}>
                                     Estado
                                 </ThOrdenavel>
@@ -761,12 +1023,12 @@ export default function RetornoDeCampo({
                         <tbody>
                             {pag.visiveis.length === 0 && (
                                 <tr>
-                                    <td colSpan={decide ? 7 : 6} className="tabela-vazia">
+                                    <td colSpan={colunas} className="tabela-vazia">
                                         {registros.length === 0
-                                            ? 'Nenhum retorno de campo por aqui ainda. Quando a equipe concluir uma fiscalização, ela aparece nesta fila.'
-                                            : aba === 'a-ler' && busca.trim() === ''
-                                              ? 'Nada a ler: todos os retornos desta fila já foram lidos. Veja a aba “Todos” para o histórico.'
-                                              : 'Nenhum registro casa com a busca. Limpe o campo para ver a fila inteira.'}
+                                            ? 'Nenhuma fiscalização por aqui ainda. Quando a equipe concluir uma em rua, ela aparece nesta tela.'
+                                            : aba === 'a-decidir' && busca.trim() === ''
+                                              ? 'Nada a decidir: todos os retornos desta fila já foram lidos. Veja a aba “Acervo” para o histórico.'
+                                              : 'Nenhum registro casa com a busca. Limpe o campo para ver a lista inteira.'}
                                     </td>
                                 </tr>
                             )}
@@ -780,10 +1042,12 @@ export default function RetornoDeCampo({
                                                     abertoId === r.id ? null : r.id,
                                                 ),
                                             'Abrir ou fechar o que o fiscal registrou neste ponto',
-                                            r.estado === aguardando && 'pendente',
+                                            aba === 'a-decidir' &&
+                                                r.estado === aguardando &&
+                                                'pendente',
                                         )}
                                     >
-                                        {decide && (
+                                        {selecionavel && (
                                             <td
                                                 onClick={(e) => e.stopPropagation()}
                                                 onKeyDown={(e) => e.stopPropagation()}
@@ -811,6 +1075,24 @@ export default function RetornoDeCampo({
                                                 {r.area ? ` · ${r.area}` : ''}
                                             </div>
                                         </td>
+
+                                        {aba === 'acervo' && (
+                                            <td>
+                                                {r.alvo === null ? (
+                                                    <span style={{ color: 'var(--sm-texto-fraco)' }}>
+                                                        não identificado
+                                                    </span>
+                                                ) : (
+                                                    r.alvo
+                                                )}
+                                                {r.equipamento !== null && (
+                                                    <div style={{ color: 'var(--sm-texto-fraco)' }}>
+                                                        {r.equipamento}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        )}
+
                                         <td>
                                             {r.equipe ? `Equipe ${r.equipe}` : VAZIO}
                                             <div style={{ color: 'var(--sm-texto-fraco)' }}>
@@ -828,27 +1110,71 @@ export default function RetornoDeCampo({
                                                 </div>
                                             )}
                                         </td>
-                                        <td>
-                                            {r.recomendacoes.length === 0 ? (
-                                                <span style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                    o fiscal não recomendou nada
-                                                </span>
-                                            ) : (
-                                                r.recomendacoes.map((rec) => (
-                                                    <span
-                                                        key={rec}
-                                                        className="selo selo-info"
-                                                        style={{ marginRight: 6, marginBottom: 4 }}
-                                                    >
-                                                        <Lightbulb size={11} aria-hidden />{' '}
-                                                        {textoDaRecomendacao(
-                                                            rec,
-                                                            recomendacoesDoFiscal,
-                                                        )}
+
+                                        {aba === 'a-decidir' ? (
+                                            <td>
+                                                {r.recomendacoes.length === 0 ? (
+                                                    <span style={{ color: 'var(--sm-texto-fraco)' }}>
+                                                        o fiscal não recomendou nada
                                                     </span>
-                                                ))
-                                            )}
-                                        </td>
+                                                ) : (
+                                                    r.recomendacoes.map((rec) => (
+                                                        <span
+                                                            key={rec}
+                                                            className="selo selo-info"
+                                                            style={{ marginRight: 6, marginBottom: 4 }}
+                                                        >
+                                                            <Lightbulb size={11} aria-hidden />{' '}
+                                                            {textoDaRecomendacao(
+                                                                rec,
+                                                                recomendacoesDoFiscal,
+                                                            )}
+                                                        </span>
+                                                    ))
+                                                )}
+                                            </td>
+                                        ) : (
+                                            <>
+                                                <td>
+                                                    {r.prazo === null ? (
+                                                        <span style={{ color: 'var(--sm-texto-fraco)' }}>
+                                                            sem prazo correndo
+                                                        </span>
+                                                    ) : (
+                                                        <span
+                                                            className={cn(
+                                                                'selo',
+                                                                r.prazo.vencido
+                                                                    ? 'selo-perigo'
+                                                                    : 'selo-aviso',
+                                                            )}
+                                                        >
+                                                            <Timer size={11} aria-hidden />{' '}
+                                                            {dataBR(r.prazo.vence_em)} ·{' '}
+                                                            {textoDoPrazo(r.prazo)}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {r.fotos.length === 0 ? (
+                                                        <span style={{ color: 'var(--sm-texto-fraco)' }}>
+                                                            sem foto
+                                                        </span>
+                                                    ) : (
+                                                        <span>
+                                                            <Camera size={12} aria-hidden />{' '}
+                                                            {contar(r.fotos.length, 'foto', 'fotos')}
+                                                        </span>
+                                                    )}
+                                                    <div style={{ color: 'var(--sm-texto-fraco)' }}>
+                                                        {r.gps === null
+                                                            ? 'sem coordenada'
+                                                            : r.gps}
+                                                    </div>
+                                                </td>
+                                            </>
+                                        )}
+
                                         <td>
                                             <span
                                                 className={cn(
@@ -863,7 +1189,7 @@ export default function RetornoDeCampo({
 
                                     {abertoId === r.id && (
                                         <tr>
-                                            <td colSpan={decide ? 7 : 6}>
+                                            <td colSpan={colunas}>
                                                 <dl className="rt-ficha">
                                                     <div>
                                                         <dt>Registro</dt>
@@ -884,10 +1210,50 @@ export default function RetornoDeCampo({
                                                                 : ` · ${chefeDa(r.area)}`}
                                                         </dd>
                                                     </div>
+                                                    <div>
+                                                        <dt>Quem foi encontrado</dt>
+                                                        <dd>
+                                                            {r.alvo ?? 'não identificado'}
+                                                            {r.equipamento === null
+                                                                ? ''
+                                                                : ` · ${r.equipamento}`}
+                                                        </dd>
+                                                    </div>
                                                     {r.situacao_da_origem !== null && (
                                                         <div>
                                                             <dt>Situação da denúncia</dt>
                                                             <dd>{r.situacao_da_origem}</dd>
+                                                        </div>
+                                                    )}
+                                                    {r.documento !== null && (
+                                                        <div>
+                                                            <dt>Documento lavrado</dt>
+                                                            <dd>
+                                                                {nomeDoDocumento(r.documento)}
+                                                                {r.documento.notificado === null
+                                                                    ? ''
+                                                                    : ` · ${r.documento.notificado}`}
+                                                            </dd>
+                                                        </div>
+                                                    )}
+                                                    {r.prazo !== null && (
+                                                        <div>
+                                                            <dt>Prazo de retorno</dt>
+                                                            <dd>
+                                                                {dataBR(r.prazo.vence_em)} —{' '}
+                                                                {textoDoPrazo(r.prazo)}
+                                                                {/* A redação do IMPRESSO ("48 horas"),
+                                                                    e não os dias que a conta usou: é
+                                                                    o que está escrito na via que o
+                                                                    notificado tem na mão. */}
+                                                                {r.documento?.prazo_rotulo == null ? (
+                                                                    ''
+                                                                ) : (
+                                                                    <div style={{ color: 'var(--sm-texto-fraco)' }}>
+                                                                        prazo de {r.documento.prazo_rotulo} na via entregue
+                                                                    </div>
+                                                                )}
+                                                            </dd>
                                                         </div>
                                                     )}
                                                     {r.ponto_de_referencia !== null && (
@@ -907,6 +1273,25 @@ export default function RetornoDeCampo({
                                                         {r.precisao_m !== null
                                                             ? ` · precisão de ±${r.precisao_m} m`
                                                             : ''}
+                                                    </p>
+                                                )}
+
+                                                {/* As FOTOS entram como nome de
+                                                    arquivo: o protótipo não guarda
+                                                    imagem, e miniatura falsa
+                                                    prometeria o que a tela não
+                                                    entrega. O que importa aqui é
+                                                    saber QUANTAS provas existem. */}
+                                                {r.fotos.length > 0 && (
+                                                    <p className="form-ajuda" style={{ marginTop: 6 }}>
+                                                        <Camera size={14} aria-hidden />{' '}
+                                                        {contar(r.fotos.length, 'foto', 'fotos')}{' '}
+                                                        {plural(
+                                                            r.fotos.length,
+                                                            'registrada',
+                                                            'registradas',
+                                                        )}{' '}
+                                                        no ponto: {r.fotos.join(', ')}
                                                     </p>
                                                 )}
 
@@ -956,7 +1341,7 @@ export default function RetornoDeCampo({
 
                                                 {r.denuncia_protocolo !== null && (
                                                     <p className="form-ajuda" style={{ marginTop: 10 }}>
-                                                        <Camera size={14} aria-hidden /> O percurso
+                                                        <FileText size={14} aria-hidden /> O percurso
                                                         inteiro — relato, fotos e o documento
                                                         lavrado — está no trâmite da denúncia{' '}
                                                         <strong>{r.denuncia_protocolo}</strong>, em
@@ -1040,6 +1425,6 @@ export default function RetornoDeCampo({
     );
 }
 
-RetornoDeCampo.layout = {
-    breadcrumbs: [{ title: 'Retorno de Campo', href: index() }],
+Fiscalizacoes.layout = {
+    breadcrumbs: [{ title: 'Fiscalizações', href: index() }],
 };

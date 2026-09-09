@@ -3,32 +3,40 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Prototipo\FiscalizacoesFicticias;
+use App\Support\Prototipo\PapelNaArea;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
-use App\Support\Prototipo\RetornoDeCampoFicticio;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Retorno de Campo — a fila do CHEFE DE SETOR: tudo que a equipe da área dele
- * concluiu em rua e voltou para ele. PROTÓTIPO.
+ * Fiscalizações — TODO registro de fiscalização concluído, numa tela só.
+ * PROTÓTIPO.
  *
- * ── Por que esta tela existe, e por que ela não é a Caixa de Entrada ─────────
+ * ── Por que UMA tela, e não duas ────────────────────────────────────────────
  *
- * "Todo registro de fiscalização concluído volta para a caixa de entrada do
- * Chefe de Setor" (decisão do dono, 04/09/2026). Sem ela, o trabalho da equipe
- * termina no aplicativo do fiscal e ninguém do outro lado é obrigado a ler: o
- * desfecho existiria no sistema e a decisão que ele pede — voltar ao ponto,
- * incluir numa operação, encerrar — ficaria sem dono.
+ * Isto era duas coisas: "Retorno de Campo", construída, com a fila do Chefe de
+ * Setor; e "Fiscalizações", um andaime que prometia a consulta por ambulante,
+ * área e período. Duas telas sobre o MESMO registro — a fiscalização concluída —
+ * e a lei do projeto diz onde isso ia parar: no dia em que uma ganhasse regra
+ * nova, a outra continuaria mostrando o mundo de antes, e o gestor teria de pular
+ * de menu para juntar as duas metades da mesma informação.
  *
- * NÃO é a Caixa de Entrada. Lá o Coordenador digita o que chegou em PAPEL ao
- * balcão, no começo da cadeia; aqui a chefia lê o que voltou do CAMPO, no fim
- * dela. São as duas pontas do mesmo trabalho, com papéis, dados e decisões
- * diferentes — e é justamente essa distinção que as duas telas existem para
- * deixar clara.
+ * O dono decidiu unificar (09/09/2026). Ficaram duas ABAS, que respondem a
+ * perguntas diferentes sobre o mesmo conjunto:
+ *
+ *   · **A decidir** (padrão) — a FILA: o que voltou da rua e espera a leitura da
+ *     chefia. É tela de trabalho: seleção, comando flutuante, janela de decisão.
+ *     Responde "o que eu tenho para fazer agora?";
+ *   · **Acervo** — a CONSULTA, sem ação: tudo o que já passou por aqui, com o
+ *     alvo encontrado, as fotos, a coordenada, o documento que saiu na hora e o
+ *     PRAZO de quem foi notificado. Responde "o que foi feito naquele ponto?".
+ *
+ * A aba troca a FONTE (a fila é o acervo com o corte do estado), não é um filtro
+ * paralelo à busca — e é por isso que ela entra no contexto da exportação.
  *
  * ── O que a fila entrega, e por que a RECOMENDAÇÃO vem em destaque ──────────
  *
@@ -43,7 +51,8 @@ use Inertia\Response;
  * A listagem do Chefe de Setor traz só os registros das equipes da área que ele
  * responde. O Coordenador e o administrador veem o universo — quem tria precisa
  * saber o que aconteceu com o que encaminhou, e o administrador é o dono do
- * sistema.
+ * sistema. Quem decide isso é {@see PapelNaArea}, a fonte única da regra, e não
+ * uma cópia por tela.
  *
  * Mas esconder da lista NÃO é fronteira: quem souber montar a requisição
  * alcançaria registro de outra área, e o lote é o caminho fácil para isso porque
@@ -60,15 +69,35 @@ use Inertia\Response;
  * As duas recusam dizendo o motivo, e sem tela de erro seca: quem clicou perdeu
  * a seleção, não a explicação.
  *
+ * ── O FISCAL entra, e entra para LER ────────────────────────────────────────
+ *
+ * A concessão inclui o fiscal em apenas leitura (decisão do dono, 09/09/2026),
+ * e com uma ressalva escrita: **o fiscal é usuário do APLICATIVO**; o acesso dele
+ * à Retaguarda é improvável e existe por completude, não por fluxo. Decidir sobre
+ * o retorno continua sendo da chefia — quem escreveu o retorno foi ele, e dar-lhe
+ * a decisão apagaria a conferência que a fila existe para provocar. O servidor
+ * recusa o ato dele, e a tela não lhe oferece o que o servidor recusa.
+ *
+ * ⚠️ Ele vê o ACERVO INTEIRO, e não só o que assinou. O recorte por área é do
+ * Chefe de Setor; entre a CONTA do fiscal e os registros que ela assinou não há
+ * vínculo hoje — o registro guarda o NOME de quem assinou, a estrutura guarda a
+ * MATRÍCULA do fiscal na equipe, e nada liga os dois. Casar por nome seria
+ * adivinhar, e adivinhar em fronteira de dados é pior que não ter fronteira: cria
+ * a impressão de que existe uma. Está registrado como pendência no doc de regra.
+ *
  * ⚠️ PROTÓTIPO: nada é gravado. Os registros vêm do trâmite das denúncias e de
  * `config/prototipo_registros_de_campo.php`, e as decisões vivem na sessão de
- * quem navega (ver `App\Support\Prototipo\RetornoDeCampoFicticio`).
+ * quem navega (ver {@see FiscalizacoesFicticias}).
+ *
+ * Não há rota de INCLUSÃO, e isso é deliberado: registro de fiscalização nasce em
+ * RUA, no aplicativo do fiscal. Um botão de cadastrar aqui criaria um segundo
+ * dono para o ato que dá sentido a estas duas abas.
  *
  * A guarda de acesso deduz a tela do primeiro trecho do caminho
- * (`/retaguarda/retorno-de-campo/…`), então as mutações abaixo nascem protegidas
+ * (`/retaguarda/fiscalizacoes/…`), então as mutações abaixo nascem protegidas
  * sem ninguém declarar nada.
  */
-class RetornoDeCampoController extends Controller
+class FiscalizacoesController extends Controller
 {
     /** Quantos registros o lote aceita de uma vez — o mesmo teto da página da grade. */
     private const MAX_LOTE = 200;
@@ -76,23 +105,24 @@ class RetornoDeCampoController extends Controller
     public function index(Request $request): Response
     {
         $usuario = $request->user();
-        $areas = self::areasDoChefe($usuario);
-        $comRecorte = self::temRecorteDeArea($usuario);
+        $areas = PapelNaArea::areas($usuario);
+        $comRecorte = PapelNaArea::recorta($usuario);
 
-        return Inertia::render('Retaguarda/Fiscalizacao/RetornoDeCampo', [
+        return Inertia::render('Retaguarda/Fiscalizacao/Fiscalizacoes', [
             // O recorte é feito AQUI, e não na tela: filtro de front esconde, não
-            // protege, e a fila inteira teria viajado até o navegador de quem não
-            // deve vê-la — com o relato do fiscal e o número do documento dentro.
+            // protege, e o acervo inteiro teria viajado até o navegador de quem não
+            // deve vê-lo — com o relato do fiscal, as fotos e o número do documento
+            // dentro.
             'registros' => $comRecorte
                 ? array_values(array_filter(
-                    RetornoDeCampoFicticio::registros(),
+                    FiscalizacoesFicticias::registros(),
                     static fn (array $r): bool => in_array((string) $r['area'], $areas, true),
                 ))
-                : RetornoDeCampoFicticio::registros(),
+                : FiscalizacoesFicticias::registros(),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige e
             // que a busca reconhece como faceta. Escritos também na tela, um dia
             // discordariam — e a tela ofereceria um estado que o servidor recusa.
-            'estados' => RetornoDeCampoFicticio::estados(),
+            'estados' => FiscalizacoesFicticias::estados(),
             'desfechos' => array_values((array) config('prototipo_denuncias.desfechos', [])),
             // O catálogo de recomendações na redação EXPLÍCITA — o registro traz
             // a CHAVE (`retorno`, `sgci`…), que é o que o aplicativo do fiscal
@@ -109,10 +139,10 @@ class RetornoDeCampoController extends Controller
             // O que esta pessoa exerce nesta tela, e sobre o que. A tela usa para
             // dizer qual é a sua área no selo e para explicar que a lista não é o
             // universo — e a MESMA resposta governa a recusa no servidor.
-            'decide' => self::decide($usuario),
+            'decide' => PapelNaArea::decide($usuario),
             'areasDoChefe' => $areas,
             'recorteDeArea' => $comRecorte,
-            'alterada' => RetornoDeCampoFicticio::alterada(),
+            'alterada' => FiscalizacoesFicticias::alterada(),
         ]);
     }
 
@@ -144,12 +174,12 @@ class RetornoDeCampoController extends Controller
             return $recusa;
         }
 
-        $efeito = RetornoDeCampoFicticio::darCiencia($ids, $dados['observacao'] ?? null);
+        $efeito = FiscalizacoesFicticias::darCiencia($ids, $dados['observacao'] ?? null);
 
         return back()->with(...$this->recado(
             $efeito,
-            'retorno lido — sai da fila da sua área',
-            'retornos lidos — saem da fila da sua área',
+            'retorno lido — sai da fila da sua área e fica no acervo',
+            'retornos lidos — saem da fila da sua área e ficam no acervo',
         ));
     }
 
@@ -185,7 +215,7 @@ class RetornoDeCampoController extends Controller
             return $recusa;
         }
 
-        $efeito = RetornoDeCampoFicticio::pedirNovaVistoria($ids, (string) $dados['justificativa']);
+        $efeito = FiscalizacoesFicticias::pedirNovaVistoria($ids, (string) $dados['justificativa']);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -202,85 +232,29 @@ class RetornoDeCampoController extends Controller
      */
     public function reiniciar(): RedirectResponse
     {
-        RetornoDeCampoFicticio::reiniciar();
+        FiscalizacoesFicticias::reiniciar();
 
         return back()->with('flash.sucesso', 'Fila devolvida ao estado de demonstração.');
     }
 
     /**
-     * Esta pessoa DECIDE nesta tela, ou apenas acompanha?
-     *
-     * Decide o Chefe de Setor (é a fila dele) e o administrador, que cobre a
-     * ausência dele e demonstra o fluxo inteiro. O Coordenador acompanha: ele
-     * precisa saber o que aconteceu com o que encaminhou, e a decisão sobre o
-     * ponto continua sendo de quem responde pela área.
-     */
-    private static function decide(?User $usuario): bool
-    {
-        if ($usuario === null) {
-            return false;
-        }
-
-        if ($usuario->ehAdmin()) {
-            return true;
-        }
-
-        return in_array('chefe-de-setor', $usuario->setores->pluck('slug')->all(), true);
-    }
-
-    /**
-     * As áreas que esta pessoa responde como Chefe de Setor — vazio para quem não
-     * responde por área nenhuma.
-     *
-     * ⚠️ PROTÓTIPO: o vínculo mora em `config/prototipo_estrutura.php` e liga pela
-     * matrícula. Em produção ele é entre USUÁRIO e área, e isso é tabela — está
-     * registrado como pendência no doc de regra. Quem chama aqui já trata LISTA,
-     * então a modelagem definitiva não obriga a mexer em quem lê.
-     *
-     * @return list<string>
-     */
-    private static function areasDoChefe(?User $usuario): array
-    {
-        return $usuario === null ? [] : EstruturaFicticia::areasDoChefe($usuario->login);
-    }
-
-    /**
-     * A listagem desta pessoa é recortada pela área dela?
-     *
-     * É o Chefe de Setor, e só ele. O administrador é o dono do sistema, e o
-     * Coordenador precisa do universo — não se acompanha o que não se vê. Um
-     * Chefe de Setor que também seja Coordenador não é recortado: o papel que
-     * amplia ganha, a mesma regra da união de setores na matriz de permissões.
-     */
-    private static function temRecorteDeArea(?User $usuario): bool
-    {
-        if ($usuario === null || $usuario->ehAdmin()) {
-            return false;
-        }
-
-        $setores = $usuario->setores->pluck('slug')->all();
-
-        return in_array('chefe-de-setor', $setores, true)
-            && ! in_array('coordenador', $setores, true);
-    }
-
-    /**
      * Recusa a decisão de quem apenas ACOMPANHA a fila.
      *
-     * Isto é papel, e não permissão de tela: a permissão (slug `retorno-de-campo`)
+     * Isto é papel, e não permissão de tela: a permissão (slug `fiscalizacoes`)
      * diz quem entra; isto diz de quem é a decisão. As duas conferências existem,
-     * e nenhuma substitui a outra.
+     * e nenhuma substitui a outra — e é esta que barra o FISCAL, que entra para
+     * consultar o próprio trabalho e não pode dar ciência dele.
      */
     private function exigirDecisao(Request $request): ?RedirectResponse
     {
-        if (self::decide($request->user())) {
+        if (PapelNaArea::decide($request->user())) {
             return null;
         }
 
         return back()->with(
             'flash.erro',
             'A leitura do retorno de campo é do Chefe de Setor da área — é ele que decide se a '
-            .'equipe volta ao ponto. Você acompanha o que a fiscalização devolveu.',
+            .'equipe volta ao ponto. Você consulta o que a fiscalização registrou.',
         );
     }
 
@@ -305,7 +279,7 @@ class RetornoDeCampoController extends Controller
             return null;
         }
 
-        $minhas = self::areasDoChefe($usuario);
+        $minhas = PapelNaArea::areas($usuario);
 
         /*
          * Chefe de Setor SEM área vinculada não é caso de passar batido: ele
@@ -324,7 +298,7 @@ class RetornoDeCampoController extends Controller
         $deFora = [];
 
         foreach ($ids as $id) {
-            $registro = RetornoDeCampoFicticio::registro($id);
+            $registro = FiscalizacoesFicticias::registro($id);
             $area = $registro === null ? null : (string) $registro['area'];
 
             if ($area === null || ! in_array($area, $minhas, true)) {

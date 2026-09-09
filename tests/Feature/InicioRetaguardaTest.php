@@ -47,17 +47,18 @@ class InicioRetaguardaTest extends TestCase
         );
     }
 
-    public function test_atalho_de_tela_em_preparacao_leva_a_tela_que_explica_a_espera()
+    public function test_atalho_do_caminho_da_fiscalizacao_leva_a_tela_que_abre()
     {
         /*
-         * As telas do caminho da fiscalização deixaram de ser cartão esmaecido sem
-         * link: elas TÊM endereço, e a tela que abre diz o que vai ser e em que fase
-         * chega (`TelasEmPreparacaoController`). A espera passou a morar dentro da
-         * tela, que é onde ela pode ser explicada — em vez de num cartão que não
-         * responde ao clique.
+         * As quatro telas do caminho da fiscalização deixaram de ser cartão
+         * esmaecido sem link: elas TÊM endereço, e o endereço responde. As duas de
+         * mapa desde 02/09/2026; o Cadastro de Operação e as Fiscalizações desde
+         * 09/09/2026, quando o andaime das telas "em preparação" foi removido por
+         * ter ficado sem morador.
          *
          * O que este teste trava é isso: o atalho leva a algum lugar, e o lugar
-         * abre.
+         * abre. (Que o lugar tem CONTEÚDO, e não só um anúncio do que vai ser, é a
+         * lei em `TelasEmPreparacaoTest`.)
          */
         $admin = User::factory()->create(['admin' => true]);
         $atalhos = $this->atalhosDe($admin);

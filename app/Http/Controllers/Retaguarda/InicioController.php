@@ -64,12 +64,14 @@ class InicioController extends Controller
             'slug' => 'ambulantes',
         ],
         /*
-         * As quatro do caminho da fiscalização. As duas de MAPA já existem
-         * (protótipo, 02/09/2026); Cadastro de Operação e Fiscalizações têm
-         * endereço e uma tela que abre dizendo o que vão ser (ver
-         * `TelasEmPreparacaoController`) — então nenhuma das quatro é cartão
-         * esmaecido sem link: a espera, onde ainda há, mora dentro da tela, que é
-         * onde ela pode ser explicada.
+         * As quatro do caminho da fiscalização — e as quatro EXISTEM: as duas de
+         * MAPA desde 02/09/2026, o Cadastro de Operação e as Fiscalizações desde
+         * 09/09/2026. Nenhuma delas é mais cartão esmaecido sem link nem tela que
+         * só anuncia o que vai ser.
+         *
+         * A mecânica de cartão "em construção" FICA (ver o cabeçalho desta classe):
+         * ela é o que permite declarar um atalho antes de a tela existir, e é a
+         * próxima tela do plano que vai usá-la.
          *
          * O `slug` está declarado porque existe permissão de verdade para cada uma:
          * quem não a tem não vê o atalho, em vez de ser convidado para uma recusa.
@@ -115,7 +117,7 @@ class InicioController extends Controller
         [
             'chave' => 'fiscalizacoes',
             'titulo' => 'Fiscalizações',
-            'descricao' => 'O que os fiscais registraram em campo, com foto e local.',
+            'descricao' => 'O que voltou da rua para você decidir, e o acervo do que já foi feito.',
             'rota' => 'retaguarda.fiscalizacoes.index',
             'slug' => 'fiscalizacoes',
         ],

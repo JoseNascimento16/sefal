@@ -225,21 +225,23 @@ return [
                 ],
 
                 /*
-                 * AS QUATRO A SEGUIR SÃO STUBS — a tela existe, responde e mostra
-                 * "em preparação"; o conteúdo chega nas Fases 2 e 3
-                 * (`TelasEmPreparacaoController`).
+                 * Cadastro de Operação — PROTÓTIPO (09/09/2026).
                  *
-                 * Entram no menu agora porque o caminho do trabalho tem de estar
-                 * visível: quem abre o sistema precisa ver que fiscalização,
-                 * operação e mapa fazem parte dele, e em que ordem chegam. O que
-                 * NÃO se pode é prometer link e não ter endereço — daí o stub, com
-                 * a espera dita dentro da tela em vez de num item morto na barra.
+                 * "A operação é evento; a equipe é organização": o trabalho de rua
+                 * com começo, fim e foco que a gestão monta em cima da estrutura de
+                 * áreas e equipes. Era um STUB que anunciava a Fase 2; passou a
+                 * existir junto com a unificação de Fiscalizações, porque o
+                 * direcionamento das denúncias já anexava demanda a operação e o
+                 * catálogo não tinha tela que o mantivesse.
                  *
-                 * A concessão inicial segue o mesmo critério das telas prontas: o
-                 * fiscal consulta o que é do trabalho DELE (o que registrou em
-                 * campo e onde a cidade está agora) e não entra no que é de gestão
-                 * (planejar operação, analisar concentração). Ele não grava nada
-                 * pela Retaguarda — grava em rua, pelo aplicativo.
+                 * Concessão inicial: o Chefe de Setor CADASTRA (é ele que responde
+                 * pelo trabalho de rua da área dele) e o COORDENADOR consulta — ele
+                 * tria a entrada e precisa saber que operação existe para onde
+                 * encaminhar a demanda, mas montar a operação não é dele. A recusa
+                 * do ato dele mora no controller, dizendo o motivo.
+                 *
+                 * O FISCAL não entra: planejar operação é ato de gestão, e ele
+                 * recebe o trabalho já dirigido, pelo aplicativo.
                  */
                 [
                     'rotulo' => 'Cadastro de Operação',
@@ -247,8 +249,11 @@ return [
                     'icone' => 'operacoes',
                     'slug' => 'operacoes',
                     'curto' => 'OPERAÇÃO',
-                    // Planejar operação é ato de gestão: o fiscal executa em rua.
-                    'setores' => ['administrador', 'chefe-de-setor'],
+                    'setores' => [
+                        'administrador',
+                        'chefe-de-setor',
+                        'coordenador' => ['apenas_leitura' => true],
+                    ],
                 ],
                 /*
                  * Caixa de Entrada do Administrativo — PROTÓTIPO (reunião com o
@@ -276,47 +281,60 @@ return [
                     'curto' => 'ENTRADA',
                     'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
                 ],
+                /*
+                 * Fiscalizações — TUDO o que a equipe concluiu em rua, numa tela
+                 * só (PROTÓTIPO, decisão do dono 09/09/2026).
+                 *
+                 * Este item e "Retorno de Campo" eram DOIS, sobre o MESMO registro:
+                 * aqui um stub que prometia a consulta por ambulante, área e
+                 * período; lá a fila construída, com o desfecho e a recomendação do
+                 * fiscal. Duas telas sobre o mesmo dado divergem — uma ganharia
+                 * regra nova e a outra continuaria mostrando o mundo de antes — e
+                 * obrigavam o gestor a pular de menu para juntar as duas metades da
+                 * mesma informação. Viraram duas ABAS: "A decidir" (a fila) e
+                 * "Acervo" (a consulta). O item "Retorno de Campo" saiu do menu, e
+                 * o endereço dele redireciona para cá.
+                 *
+                 * Vem DEPOIS da Caixa de Entrada porque é o fim da cadeia: a
+                 * demanda entra por lá ou pelas Denúncias, é dirigida, vira
+                 * trabalho de rua — e volta para cá. O menu desenha a ordem do
+                 * trabalho.
+                 *
+                 * Concessão inicial: Chefe de Setor (a fila é dele), Coordenador
+                 * (acompanha o que aconteceu com o que encaminhou, SEM decidir — a
+                 * recusa mora no controller) e administrador.
+                 *
+                 * ⚠️ O FISCAL entra, em apenas leitura, e isto é decisão do dono
+                 * (09/09/2026) COM uma ressalva registrada: **o fiscal é usuário do
+                 * aplicativo**, e o acesso dele à Retaguarda é improvável — existe
+                 * por completude, não por fluxo. Dar ciência do próprio retorno
+                 * continua recusado pelo servidor, o que preserva a conferência que
+                 * a fila existe para provocar.
+                 *
+                 * ⚠️ E o que ele vê é o ACERVO INTEIRO, não "o que ele mesmo
+                 * registrou": o recorte por área é do Chefe de Setor, e não existe
+                 * hoje vínculo entre a CONTA do fiscal e os registros que ela
+                 * assinou (o registro guarda o nome de quem assinou, e a estrutura
+                 * guarda a matrícula do fiscal na equipe — nada liga os dois).
+                 * Restringir por nome seria adivinhar. Está registrado como
+                 * pendência no doc de regra; até lá, a frase honesta é esta.
+                 */
                 [
                     'rotulo' => 'Fiscalizações',
                     'rota' => 'retaguarda.fiscalizacoes.index',
                     'icone' => 'fiscalizacoes',
                     'slug' => 'fiscalizacoes',
                     'curto' => 'REGISTROS',
+                    // A FILA, ao lado do item: é o gatilho de trabalho de quem
+                    // decide — "tenho 7 retornos esperando, começo por ali". Zero
+                    // não vira selo (ver `App\Support\ContadoresDoMenu`).
+                    'contador' => 'fiscalizacoes-a-decidir',
                     'setores' => [
                         'administrador',
+                        'coordenador',
                         'chefe-de-setor',
-                        // O fiscal CONSULTA o que ele mesmo registrou em campo.
                         'fiscal' => ['apenas_leitura' => true],
                     ],
-                ],
-                /*
-                 * Retorno de Campo — a fila do CHEFE DE SETOR (PROTÓTIPO,
-                 * decisão do dono 04/09/2026).
-                 *
-                 * Vem DEPOIS de "Fiscalizações" porque é o fim da cadeia: a
-                 * demanda entra pela Caixa de Entrada ou pelas Denúncias, é
-                 * dirigida, vira trabalho de rua — e volta para cá, com o
-                 * desfecho e a recomendação do fiscal. O menu desenha a ordem do
-                 * trabalho.
-                 *
-                 * Não é a Caixa de Entrada: lá o Coordenador digita o que chegou
-                 * em PAPEL, no começo da cadeia; aqui a chefia lê o que voltou do
-                 * CAMPO. São as duas pontas do mesmo trabalho.
-                 *
-                 * Concessão inicial: Chefe de Setor (é a fila dele), Coordenador
-                 * (acompanha o que aconteceu com o que encaminhou, sem decidir —
-                 * a recusa mora no controller) e administrador. O FISCAL não
-                 * entra: quem escreveu o retorno foi ele, e dar-lhe a fila
-                 * permitiria dar ciência do próprio trabalho, o que apaga a
-                 * conferência que a fila existe para provocar.
-                 */
-                [
-                    'rotulo' => 'Retorno de Campo',
-                    'rota' => 'retaguarda.retorno-de-campo.index',
-                    'icone' => 'retorno',
-                    'slug' => 'retorno-de-campo',
-                    'curto' => 'RETORNO',
-                    'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Mapa ao Vivo',

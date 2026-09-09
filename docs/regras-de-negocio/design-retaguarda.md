@@ -194,42 +194,42 @@ de volta é remover uma linha.
 Em uso hoje: as **seis telas de Parametrização** (decisão do dono, 27/08/2026) —
 prontas, mas fora do menu por ora.
 
-### RN-09 — Tela que ainda não existe ABRE e diz o que vai ser
+### RN-09 — Tela que ainda não existe ABRE e diz o que vai ser — e o andaime SAI quando ela chega
 
 O plano do sistema anda na frente das telas. Enquanto isso aparecia como item de
 menu sem destino e cartão "Em construção" sem link, quem clicava não recebia
 resposta e a espera não era explicada em lugar nenhum.
 
-Agora cada tela do caminho que ainda não chegou tem **endereço, permissão e uma
-tela de verdade**: cabeçalho editorial normal (a pessoa caiu no lugar certo) e um
-corpo que diz, em uma linha, o que a tela vai ser, **em que fase chega** e o que
-vai permitir fazer. Duas variantes, e a diferença é conteúdo, não enfeite:
+A resposta foi dar a cada tela do caminho **endereço, permissão e uma tela de
+verdade**: cabeçalho editorial normal (a pessoa caiu no lugar certo) e um corpo que
+dizia, em uma linha, o que a tela vai ser, **em que fase chega** e o que vai
+permitir fazer.
 
-- **mapa** — painel navy com a malha de ruas, para as telas de mapa: elas se
-  explicam melhor mostrando o que vão mostrar;
-- **cartão** — aviso sóbrio para as telas de lista. Desenhar um mapa decorativo
-  numa tela de lista prometeria a coisa errada.
+**A regra de produto FICA; o andaime SAIU.** As quatro telas do catálogo passaram a
+existir — o **Mapa ao Vivo** e o **Mapa de Calor** em 02/09/2026, o **Cadastro de
+Operação** e as **Fiscalizações** em 09/09/2026 —, e com a última o
+`TelasEmPreparacaoController` ficou sem morador. Ele foi **removido**, junto com a
+página `EmPreparacao` e o `.prep-*` do CSS. Andaime vazio é a armadilha seguinte à
+que ele resolvia, e pior que ela: um laço sobre catálogo vazio **passa sem verificar
+nada**, e a lei morre sem ninguém notar.
 
-Em uso hoje (`TelasEmPreparacaoController`): **Cadastro de Operação** e
-**Fiscalizações** (Fase 2). O **Mapa ao Vivo** e o **Mapa de Calor** saíram do
-catálogo em 02/09/2026, quando passaram a existir — é a troca que o ⚠️ abaixo
-prevê, e ela não tocou o menu.
+O que ficou no lugar é uma lei mais larga, em `TelasEmPreparacaoTest`: **toda tela
+do menu tem conteúdo próprio** — nenhuma se limita a anunciar o que vai ser. Ela
+varre o menu inteiro, e não só as que alguém listou.
 
-⚠️ Com a saída dos dois, **nenhuma entrada usa a variante `mapa` hoje**. Ela fica
-porque é ela que a próxima tela em preparação com cara de mapa vai querer; se
-ficar sem uso por muito tempo, o certo é apagá-la junto com o `.prep-cidade` do
-CSS, e não deixá-la envelhecendo aqui.
-
-⚠️ Isto é **andaime**. Quando a tela real nascer, ela toma o `slug` e a rota, e a
-entrada sai do catálogo do controller — o nome de rota já segue o padrão das telas
-de verdade (`retaguarda.<slug>.index`) justamente para essa troca não tocar no menu.
+**Se o plano voltar a andar na frente** (e vai), o desenho está registrado aqui para
+ser refeito de propósito: cabeçalho normal, corpo com a frase e a fase, nome de rota
+no padrão das telas de verdade (`retaguarda.<slug>.index`) — para a troca não tocar
+no menu — e a entrada saindo do catálogo no dia em que a tela chegar. Havia duas
+variantes de corpo, e a distinção continua valendo: **cartão** (aviso sóbrio) para
+tela de lista e **mapa** (painel navy com malha de ruas) para tela de mapa, porque
+mapa decorativo numa tela de lista prometeria a coisa errada.
 
 **A concessão inicial das quatro telas do caminho** segue o critério das telas
-prontas (e continua valendo para as duas de mapa, agora que elas existem): o fiscal
-consulta o que é do trabalho dele — o que registrou em campo (Fiscalizações) e onde
-a cidade está agora (Mapa ao Vivo) — e não entra no que é de gestão (planejar
-operação, analisar concentração). Ele não grava nada pela Retaguarda: grava em rua,
-pelo aplicativo.
+prontas: o fiscal consulta o que é do trabalho dele — o que registrou em campo
+(Fiscalizações, em **apenas leitura**) e onde a cidade está agora (Mapa ao Vivo) — e
+não entra no que é de gestão (planejar operação, analisar concentração). Ele não
+grava nada pela Retaguarda: grava em rua, pelo aplicativo.
 
 ### RN-10 — O tema padrão é o CLARO
 
@@ -269,6 +269,7 @@ como o menu (RN-01); o formulário de acesso, esse sim, acompanha o tema.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 09/09/2026 | José Nascimento | Casca da Retaguarda | **O andaime das telas em preparação foi removido** (RN-09): a última tela do catálogo passou a existir, e com ela saíram o controller, a página `EmPreparacao` e o `.prep-*` do CSS. A regra de produto ficou escrita para ser refeita de propósito quando o plano voltar a andar na frente das telas, e a lei que a guardava mudou de forma — passou a exigir que **toda tela do menu** tenha conteúdo próprio, e não só as quatro que estavam listadas. Nasceu a lista de **marcadores** (`.rt-marcadores`), para escolher muitos valores irmãos de um conjunto (as equipes de uma operação, os bairros que ela alcança), distinta do cartão de escolha, que é para escolher entre caminhos com consequências diferentes. | Andaime sem morador é a armadilha seguinte à que ele resolvia, e pior que ela: um laço sobre catálogo vazio passa sem verificar nada, e a lei morre sem ninguém notar. |
 | 27/08/2026 | José Nascimento | Casca da Retaguarda | Criação do doc. A casca passa a ser a "editorial curva" (RN-01), a barra superior sai e o topo da tela vira o cabeçalho da página (RN-02), o menu ganha número vivo declarado por item (RN-03) e duas formas — painel e doca, com barra inferior no telefone (RN-04); as linhas de grade viram cartões com marca de pendência e chip com ponto (RN-05); números de cabeçalho saem da própria lista da tela (RN-06). Registrada a diretriz para as telas de mapa (RN-07). | A casca anterior era genérica: barra superior repetindo o título em corpo 13, menu branco encostado em miolo branco, grade de linhas sem hierarquia e nenhum número à vista — quem abria o sistema não sabia por onde começar o dia. O menu, abaixo de 900px, ficava escondido atrás de um hambúrguer. |
 | 02/09/2026 | José Nascimento | Casca da Retaguarda · telas de mapa | A RN-07 sai de "decidido, ainda não construído" para **construído**: as duas telas de mapa nascem no padrão imersivo, declarado por propriedade de layout (`imersivo: true`). Registrada a única divergência do mockup — o **menu permanece** — e o que o modo imersivo faz na casca (miolo sem preenchimento, página sem rolagem, cluster clareado). Registrados também a paleta fixa `--sm-mapa-*`, o escurecimento das imagens por filtro e a malha de ruas por baixo como degradação. A RN-09 perde as duas do catálogo de telas em preparação. | O desenho já estava aprovado em mockup e as duas telas existiam como andaime prometendo a Fase 3. O cenário da reunião de 02/09 (estrutura Área › Equipe › bairros) deu a elas o conteúdo que faltava: é o que transforma um mapa bonito em decisão de operação. |
 | 27/08/2026 | José Nascimento | Casca da Retaguarda | As seis telas de Parametrização saem do menu por flag, sem nada ser desligado (RN-08); as quatro telas do caminho da fiscalização entram no menu como tela que abre e explica a espera (RN-09); o tema padrão passa de "do aparelho" para CLARO (RN-10). | O menu mostrava telas de manutenção interna e não mostrava o caminho do trabalho — quem abria o sistema não via que fiscalização, operação e mapa fazem parte dele. E o padrão "do aparelho" fazia quem tem o sistema operacional no escuro abrir a Retaguarda em navy sem nunca ter pedido. |

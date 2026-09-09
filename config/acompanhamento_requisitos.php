@@ -44,13 +44,16 @@
 $origemSpec = 'Sem requisito escrito — origem: spec de design 2026-08-24 + decisões do dono.';
 
 /*
- * A origem das telas que entraram no menu como STUB: elas nasceram da decisão do
- * dono de deixar o caminho do trabalho visível antes de o conteúdo existir. O texto
- * declara também O QUE FALTA, que é a informação que a linha tem de carregar
- * enquanto o conteúdo não chega.
+ * ⚠️ Havia aqui um `$origemStub` — a origem das telas que entraram no MENU antes
+ * de o conteúdo existir (decisão do dono, 27/08/2026: "o caminho do trabalho
+ * aparece no menu antes do conteúdo").
+ *
+ * Ele saiu em 09/09/2026 porque não há mais stub: as quatro telas que o usavam
+ * passaram a existir — as duas de mapa em 02/09, o Cadastro de Operação e as
+ * Fiscalizações em 09/09 —, e com elas o andaime foi removido. Variável de origem
+ * sem nenhuma linha que a use é convite para a próxima tela pela metade nascer
+ * declarando "stub aguardando a Fase 2" quando a fase já passou.
  */
-$origemStub = 'Sem requisito escrito — origem: decisão do dono 2026-08-27 (o caminho do trabalho '
-    .'aparece no menu antes do conteúdo).';
 
 /*
  * A origem dos dois módulos que nasceram da reunião com o cliente de 02/09/2026 e
@@ -201,16 +204,19 @@ return [
         ],
 
         /*
-         * AS DUAS TELAS EM PREPARAÇÃO — Fase 2.
+         * O CAMINHO DA FISCALIZAÇÃO — as duas telas que fecharam a cadeia.
          *
-         * Entram no mapa porque estão ENTREGUES como stub: têm endereço, permissão
-         * e uma tela que abre dizendo o que vai ser. O mapa é de funcionalidade
-         * entregue, e o que existe pela metade é justamente o que precisa aparecer
-         * com o estado escrito — senão passa por pronto na leitura de cima.
+         * As duas eram STUB ("em preparação", Fase 2) e passaram a existir como
+         * PROTÓTIPO em 09/09/2026. Com elas, o andaime das telas em preparação
+         * ficou sem morador e foi removido: item de menu que promete e não entrega
+         * é o defeito que ele existia para evitar, e andaime vazio é o defeito
+         * seguinte.
          *
-         * Eram QUATRO: o Mapa ao Vivo e o Mapa de Calor saíram desta vizinhança em
-         * 02/09/2026, quando passaram a existir como protótipo — as linhas deles
-         * estão junto das outras telas de protótipo, mais abaixo.
+         * A linha "Retorno de Campo" SAIU deste mapa, e não porque a funcionalidade
+         * acabou: ela virou a aba "A decidir" de Fiscalizações. Duas linhas para a
+         * mesma entrega dariam dois donos à mesma informação — a pergunta "bate com
+         * o requisito?" passaria a ter duas respostas, e um dia elas discordariam.
+         * O conteúdo dela está incorporado abaixo.
          */
         [
             'modulo' => 'Fiscalização',
@@ -220,69 +226,99 @@ return [
             'breadcrumb' => 'Fiscalização › Cadastro de Operação',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemStub.' Stub aguardando a Fase 2. A tela abre e anuncia o que vai fazer — abrir '
-                .'operação com data, área e equipe, acompanhar o que ela produziu em campo e '
-                .'encerrá-la com o resultado. Rota, permissão e item de menu já valem; o conteúdo '
-                .'chega com a fase.',
+            'nota' => 'Sem requisito escrito — origem: decisão do dono 09/09/2026 ("faça também já o '
+                .'cadastro de operação"), sobre a spec de design e a estrutura de áreas e equipes. '
+                .'Entregue como PROTÓTIPO. "A operação é evento; a equipe é organização": o trabalho '
+                .'de rua com começo, fim e foco que a gestão monta em cima da estrutura permanente. '
+                .'Listagem com busca inteligente (facetas em andamento / planejadas / encerradas / '
+                .'permanentes) e formulário com nome, ÁREA, região, bairros alcançados, período '
+                .'(início e fim), foco, EQUIPES envolvidas (lista — operação grande junta equipe de '
+                .'outra área como reforço), situação e observação. FONTE ÚNICA: esta tela lê e '
+                .'escreve o MESMO catálogo que o direcionamento das Denúncias consome (as operações '
+                .'saíram de config/prototipo_denuncias.php para config/prototipo_operacoes.php, e '
+                .'DenunciasFicticias::operacoes() passou a DELEGAR) — com duas listas, o '
+                .'direcionamento ofereceria amanhã uma operação que o cadastro não conhece. REGRAS, '
+                .'todas com o motivo escrito na recusa: período com FIM antes do início não passa (a '
+                .'operação apareceria encerrada antes de começar); ÁREA é obrigatória, porque é ela '
+                .'que decide quem vê e quem executa; NOME é único, porque é por ele que a equipe '
+                .'reconhece a operação em rua e que a denúncia a registra ao ser anexada; operação '
+                .'ENCERRADA não recebe denúncia nova — sai da escolha do direcionamento e é recusada '
+                .'no servidor, continuando consultável aqui. RECORTE POR ÁREA: o Chefe de Setor '
+                .'cadastra e vê as da área dele; Coordenador e administrador veem o universo, e o '
+                .'Coordenador consulta sem cadastrar (montar operação é de quem responde pela área). '
+                .'O recorte é do SERVIDOR e a recusa é NOMINAL, dizendo por quais áreas a pessoa '
+                .'responde — na alteração as DUAS áreas são conferidas (a de origem e a de destino), '
+                .'senão bastaria mover a operação alheia para a própria área para poder alterá-la. '
+                .'Exportação do recorte visível em PDF/XLSX/DOCX pelo ponto único. É PROTÓTIPO: '
+                .'não há tabela nem gravação — a lista de partida é config/prototipo_operacoes.php e '
+                .'o que se cria ou altera vive na sessão de quem navega. Pendências que isto abre: a '
+                .'operação como TABELA, o vínculo dela com os registros de campo que ela produziu '
+                .'(hoje a fiscalização avulsa aponta para a operação por TEXTO, no campo referência) '
+                .'e o encerramento com resultado consolidado, que a spec previa e ninguém definiu.',
         ],
 
         [
             'modulo' => 'Fiscalização',
-            'tela' => 'Fiscalizações',
+            'tela' => 'Fiscalizações (A decidir + Acervo)',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.fiscalizacoes.index',
             'breadcrumb' => 'Fiscalização › Fiscalizações',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemStub.' Stub aguardando a Fase 2. Vai receber o que o aplicativo do fiscal registra '
-                .'na rua: consulta por ambulante, área e período, com foto, ponto de GPS, o '
-                .'documento emitido na hora e o prazo de retorno de quem foi notificado. Nada se '
-                .'perde à espera dela — o aplicativo guarda o registro.',
-        ],
-
-        [
-            'modulo' => 'Fiscalização',
-            'tela' => 'Retorno de Campo',
-            'origem' => 'Retaguarda',
-            'rota' => 'retaguarda.retorno-de-campo.index',
-            'breadcrumb' => 'Fiscalização › Retorno de Campo',
-            'hu_status' => 'nao',
-            'hus' => [],
             'nota' => 'Sem requisito escrito — origem: decisão do dono 04/09/2026 ("todo registro de '
                 .'fiscalização concluído volta para a caixa de entrada do Chefe de Setor, e as '
-                .'considerações finais do fiscal aparecem no histórico do trâmite"). Entregue como '
-                .'PROTÓTIPO. A FILA do Chefe de Setor: tudo que a equipe da área dele concluiu em rua '
-                .'volta para cá, com quando, equipe e fiscal, o ponto, o desfecho, o documento lavrado '
-                .'(quando houve) e — em coluna própria, porque é o que decide — a RECOMENDAÇÃO DO '
-                .'FISCAL, ao lado das considerações que ele escreveu. A recomendação chega como CHAVE '
-                .'(é o que o aplicativo do fiscal grava, e é o que o relatório soma) e é mostrada aqui '
-                .'na redação EXPLÍCITA do catálogo do servidor — a curta é a pílula do celular, e quem '
-                .'decide precisa da frase inteira; chave que o catálogo não conhece aparece CRUA, em '
-                .'vez de desaparecer da tela. Duas decisões da chefia, em lote '
-                .'e uma a uma: dar CIÊNCIA (o retorno sai da fila; observação opcional, porque o ato '
-                .'de ler já é a informação) ou determinar NOVA VISTORIA (o ponto volta à equipe, com '
-                .'justificativa obrigatória de 15 caracteres no servidor — "voltar lá" não diz à '
-                .'equipe o que procurar). RECORTE POR ÁREA: o Chefe de Setor vê só o que as equipes da '
-                .'área dele concluíram; o Coordenador e o administrador veem o universo, porque quem '
-                .'tria precisa saber o que aconteceu com o que encaminhou. O recorte é feito no '
-                .'SERVIDOR, e há DUAS recusas explicadas ali: quem apenas acompanha (Coordenador) não '
-                .'decide, e decisão sobre registro de outra área é recusada nominalmente — esconder da '
-                .'lista não é fronteira, e o lote é o caminho fácil para alcançar o que não se vê. '
-                .'Busca inteligente com facetas do domínio (com/sem documento, de denúncia, avulsa, '
-                .'com recomendação), aba que troca a FONTE (a fila × o histórico da área) e exportação '
-                .'do recorte visível em PDF/XLSX/DOCX. NÃO é a Caixa de Entrada: lá o Coordenador '
-                .'digita o que chegou em PAPEL, no começo da cadeia; aqui a chefia lê o que voltou do '
-                .'CAMPO, no fim dela — e a tela diz isso em cima. Não há inclusão: registro de '
-                .'fiscalização nasce em rua, no aplicativo do fiscal. ⚠️ É PROTÓTIPO: não há tabela nem '
-                .'gravação. Os registros que vieram de DENÚNCIA são DERIVADOS do trâmite dela (a mesma '
-                .'vistoria descrita duas vezes divergiria), e as fiscalizações AVULSAS — operação, '
-                .'ronda, pedido de outro órgão — vêm de config/prototipo_registros_de_campo.php; as '
-                .'decisões vivem na sessão de quem navega. Pendências que isto abre: a fiscalização '
-                .'como TABELA (hoje ela só existe dentro do trâmite da denúncia e do arquivo de '
-                .'avulsas), a MODELAGEM DEFINITIVA do vínculo chefia↔área, o efeito real de "nova '
-                .'vistoria" no aplicativo do fiscal (hoje só muda o estado da fila) e o prazo de '
-                .'leitura que torna um retorno atrasado — a tela já conta os dias parados, mas ninguém '
-                .'definiu a partir de quantos ele cobra.',
+                .'considerações finais do fiscal aparecem no histórico do trâmite") e 09/09/2026 '
+                .'("pode unificar em Fiscalizações com aba a decidir, acervo e outras se '
+                .'necessário"). Entregue como PROTÓTIPO. UMA TELA, DUAS ABAS sobre o MESMO registro — '
+                .'antes eram duas telas ("Retorno de Campo", construída, e "Fiscalizações", um stub '
+                .'que prometia a consulta), o que obrigava o gestor a pular de menu para juntar as '
+                .'duas metades da mesma informação e faria as duas divergirem. (a) A DECIDIR, padrão, '
+                .'é a FILA do Chefe de Setor: tudo que a equipe da área dele concluiu em rua, com '
+                .'quando, equipe e fiscal, o ponto, o desfecho, o documento lavrado (quando houve) e '
+                .'— em coluna própria, porque é o que decide — a RECOMENDAÇÃO DO FISCAL, ao lado das '
+                .'considerações que ele escreveu. A recomendação chega como CHAVE (é o que o '
+                .'aplicativo do fiscal grava, e é o que o relatório soma) e é mostrada na redação '
+                .'EXPLÍCITA do catálogo do servidor; chave que o catálogo não conhece aparece CRUA, '
+                .'em vez de desaparecer da tela. Duas decisões da chefia, em lote e uma a uma, por '
+                .'comando FLUTUANTE que abre uma JANELA: dar CIÊNCIA (o retorno sai da fila e fica no '
+                .'acervo; observação opcional, porque o ato de ler já é a informação) ou determinar '
+                .'NOVA VISTORIA (o ponto volta à equipe, com justificativa obrigatória de 15 '
+                .'caracteres no servidor — "voltar lá" não diz à equipe o que procurar). (b) ACERVO é '
+                .'a CONSULTA, sem ação, do que a tela antiga só prometia: tudo o que passou por aqui, '
+                .'inclusive o já lido, com QUEM foi encontrado no ponto (nulo é caso previsto — "nada '
+                .'encontrado" é desfecho legítimo), o equipamento, as FOTOS, o ponto de GPS com a '
+                .'precisão, o documento que saiu na hora e o PRAZO DE RETORNO de quem foi notificado '
+                .'— a única informação da fila que continua correndo depois da ciência, contada no '
+                .'servidor a partir do prazo do documento. Consulta por ambulante, área e período pela '
+                .'BUSCA (facetas: com/sem documento, de denúncia, avulsa, com recomendação, não '
+                .'identificado, com foto, prazo vencido, prazo correndo, últimos 7 e 30 dias) — e não '
+                .'por filtros segmentados, que é o padrão de busca do projeto. NÃO há terceira aba: '
+                .'"por operação" e "por prazo vencido" não são conjuntos diferentes, são recortes que '
+                .'a busca entrega. RECORTE POR ÁREA: o Chefe de Setor vê só o que as equipes da área '
+                .'dele concluíram; o Coordenador e o administrador veem o universo, porque quem tria '
+                .'precisa saber o que aconteceu com o que encaminhou. O recorte é feito no SERVIDOR, e '
+                .'há DUAS recusas explicadas ali: quem apenas consulta não decide, e decisão sobre '
+                .'registro de outra área é recusada nominalmente — esconder da lista não é fronteira, '
+                .'e o lote é o caminho fácil para alcançar o que não se vê. O item de menu traz o '
+                .'CONTADOR da fila, recortado pela mesma regra e apenas para quem decide. O FISCAL '
+                .'entra em APENAS LEITURA (decisão do dono, 09/09/2026), com a ressalva registrada de '
+                .'que ele é usuário do APLICATIVO — o acesso dele à Retaguarda é improvável e existe '
+                .'por completude, não por fluxo; dar ciência do próprio retorno continua recusado. '
+                .'Exportação do recorte visível em PDF/XLSX/DOCX, com colunas próprias de cada aba. '
+                .'Não há inclusão: registro de fiscalização nasce em rua, no aplicativo do fiscal. O '
+                .'endereço aposentado /retaguarda/retorno-de-campo REDIRECIONA para cá, e a concessão '
+                .'do slug antigo foi migrada por migration (só UPDATE/DELETE de texto, sem DDL). É '
+                .'PROTÓTIPO: não há tabela nem gravação. Os registros que vieram de DENÚNCIA são '
+                .'DERIVADOS do trâmite dela (a mesma vistoria descrita duas vezes divergiria), e as '
+                .'fiscalizações AVULSAS — operação, ronda, pedido de outro órgão — vêm de '
+                .'config/prototipo_registros_de_campo.php; as decisões vivem na sessão de quem '
+                .'navega. Pendências que isto abre: a fiscalização como TABELA (hoje ela só existe '
+                .'dentro do trâmite da denúncia e do arquivo de avulsas), a MODELAGEM DEFINITIVA do '
+                .'vínculo chefia-área, as FOTOS de verdade (o acervo mostra o nome do arquivo e a '
+                .'contagem, porque o protótipo não guarda imagem), o efeito real de "nova vistoria" '
+                .'no aplicativo do fiscal (hoje só muda o estado da fila) e o prazo de leitura que '
+                .'torna um retorno atrasado — a tela já conta os dias parados, mas ninguém definiu a '
+                .'partir de quantos ele cobra.',
         ],
 
         /*
