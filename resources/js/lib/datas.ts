@@ -10,13 +10,22 @@
 /** Vazio na tela: um travessão, nunca "null" nem string em branco. */
 export const VAZIO = '—';
 
-/** `2026-08-25` → `25/08/2026`. Aceita data e hora ISO (corta no `T`). */
+/**
+ * `2026-08-25` → `25/08/2026`. Aceita data e hora, nas DUAS formas em que ela
+ * chega do servidor: `2026-08-25T14:30` e `2026-08-25 14:30`.
+ *
+ * ⚠️ O `replace(' ', 'T')` não é enfeite. Sem ele, a forma com ESPAÇO passava
+ * pelo corte, o `split('-')` devolvia dia = "25 14:30" e a função escrevia
+ * `25 14:30/08/2026` — uma data corrompida, e nenhum erro em lugar nenhum. Só
+ * apareceu quando uma coluna de grade trocou `dataHoraBR` (que já normalizava)
+ * por `dataBR`. Não "simplifique" de volta.
+ */
 export function dataBR(iso: string | null | undefined): string {
     if (!iso) {
         return VAZIO;
     }
 
-    const [data] = String(iso).split('T');
+    const [data] = String(iso).replace(' ', 'T').split('T');
     const [ano, mes, dia] = data.split('-');
 
     if (!ano || !mes || !dia) {
