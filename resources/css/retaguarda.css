@@ -532,22 +532,24 @@ table.data-table.enxuta td {
        recomendou mais de uma coisa) cai numa terceira linha. */
     max-height: 56px;
 }
-/* O selo é inline-FLEX no DS, e flex não deixa a frase quebrar como texto
-   corrido: vira inline-BLOCK aqui, uma caixa só com o texto quebrando dentro
-   dela. O ícone alinha pelo topo, senão a lâmpada fica no meio das duas linhas,
-   longe da primeira palavra. */
+/* Frase que ocupa a célula inteira, sem caixa em volta. É o que sobra depois de
+   medir: numa coluna de 235px úteis, o selo do DS (acolchoamento + ícone) comia
+   ~35px e empurrava as frases maiores para uma terceira linha, que o teto
+   cortava. Sem a caixa, a mesma frase cabe em duas linhas — e a cor mais fraca
+   já diz que é apoio, sem precisar de moldura. */
+.celula-frase {
+    display: block;
+    color: var(--sm-texto-corpo);
+    font-weight: 500;
+}
+/* O selo que sobrevive dentro de uma célula de duas linhas (outras colunas
+   podem usar) deixa o texto quebrar e alinha o ícone pelo topo. */
 .celula-2l .selo {
     display: inline-block;
     white-space: normal;
     text-align: left;
     max-width: 100%;
-    /* Acolchoamento vertical menor que o do selo de uma linha: com o do DS, as
-       duas linhas mais o "+2" pediam 68px e estouravam a linha da grade. */
     padding: 3px 8px;
-}
-.celula-2l .selo > svg {
-    vertical-align: -1px;
-    margin-right: 3px;
 }
 table.data-table.enxuta td.tabela-vazia,
 table.data-table.enxuta tr.linha-detalhe td {

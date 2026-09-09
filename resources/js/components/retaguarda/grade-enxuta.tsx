@@ -30,6 +30,14 @@ export interface ColunaDaGrade {
     /** Teto de largura da célula — é ele que faz as reticências aparecerem. */
     largura?: number;
     /**
+     * PISO de largura. `largura` é teto, e teto não impede o navegador de
+     * esmagar a coluna quando a tabela não cabe: medi uma coluna de 296 de teto
+     * recebendo 153px porque a vizinha levou 226. Onde o conteúdo perde o
+     * sentido ao ser estreitado (frase que quebra em duas linhas), o piso é o
+     * que garante o espaço — as vizinhas truncam, que é o desenho delas.
+     */
+    minima?: number;
+    /**
      * Quantas linhas de texto a célula pode ocupar. O padrão é 1 — e é o padrão
      * porque altura desigual é o que impede varrer a coluna.
      *
@@ -80,6 +88,9 @@ export function CabecaDaGrade<T>({
                 const acessor = acessores?.[coluna.chave];
                 const estilo: CSSProperties = {
                     width: coluna.largura,
+                    // O piso vale no cabeçalho também: é a largura da COLUNA que
+                    // o navegador negocia, e o `th` participa dessa conta.
+                    minWidth: coluna.minima,
                     textAlign: coluna.alinhar,
                 };
 
@@ -140,6 +151,7 @@ export function Celula({
             {...resto}
             style={{
                 maxWidth: coluna.largura,
+                minWidth: coluna.minima,
                 textAlign: coluna.alinhar,
                 ...style,
             }}
