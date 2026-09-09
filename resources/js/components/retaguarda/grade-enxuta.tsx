@@ -29,6 +29,18 @@ export interface ColunaDaGrade {
     alinhar?: 'left' | 'center' | 'right';
     /** Teto de largura da célula — é ele que faz as reticências aparecerem. */
     largura?: number;
+    /**
+     * Quantas linhas de texto a célula pode ocupar. O padrão é 1 — e é o padrão
+     * porque altura desigual é o que impede varrer a coluna.
+     *
+     * Declarar 2 é EXCEÇÃO, e existe para o caso em que a frase é a informação
+     * e cortá-la esconde justamente o que se foi ler (a recomendação do fiscal:
+     * "Voltar ao ponto no vencimento do prazo" cortada em "Voltar ao ponto no
+     * venci…" não diz nada). A célula então quebra a linha com a fonte um ponto
+     * menor e teto de altura — a linha da grade **não cresce**, que é o que
+     * mantém a régua de pé.
+     */
+    linhas?: number;
 }
 
 /** Uma listagem inteira: o que a tela mostra e o que o arquivo leva. */
@@ -134,7 +146,7 @@ export function Celula({
             className={className}
         >
             <span
-                className="celula-1l"
+                className={(coluna.linhas ?? 1) > 1 ? 'celula-2l' : 'celula-1l'}
                 title={dica ?? undefined}
                 aria-label={resumida && dica ? dica : undefined}
             >

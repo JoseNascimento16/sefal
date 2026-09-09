@@ -100,7 +100,15 @@ return [
                 // ser varrível.
                 ['chave' => 'area', 'titulo' => 'Área', 'largura' => 116, 'quando' => 'varias-areas'],
                 ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 224],
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal', 'largura' => 296],
+                /*
+                 * `linhas: 2` é exceção declarada à régua (ver
+                 * docs/padroes/listagem-clean.md): a frase da recomendação É a
+                 * informação que o Chefe de Setor foi ler, e cortada em
+                 * "Voltar ao ponto no venci…" ela não diz nada. Quebra em duas
+                 * linhas com a fonte um ponto menor, e a altura da linha não
+                 * muda.
+                 */
+                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal', 'largura' => 296, 'linhas' => 2],
             ],
             'detalhe' => ['protocolo', 'equipe', 'fiscal', 'documento', 'consideracoes', 'origem', 'estado'],
             'exportacao' => [
