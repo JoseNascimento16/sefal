@@ -604,16 +604,19 @@ export default function Fiscalizacoes({
         }
 
         return {
+            /*
+             * Texto corrido, sem selo e sem ícone: a frase da recomendação é
+             * longa por decisão de produto, e o selo custava dois terços do que
+             * ela precisa — o acolchoamento dele mais a lâmpada comiam ~35px da
+             * largura útil e empurravam as maiores para uma terceira linha, que
+             * o teto da célula cortava. Sem a caixa, a mesma frase cabe em duas.
+             *
+             * O "+N" fica junto das palavras, no fim da frase, pelo mesmo motivo
+             * de antes: como caixa própria, ele descia de linha sozinho.
+             */
             conteudo: (
-                /*
-                 * O "+N" mora DENTRO do selo, e não ao lado: fora dele, ele é
-                 * outra caixa na linha e — com o selo ocupando a largura toda da
-                 * célula — descia para uma terceira linha, estourando a altura
-                 * da grade. Dentro, ele flui junto das palavras e cabe nas duas
-                 * linhas que a coluna declara.
-                 */
-                <span className="selo selo-info">
-                    <Lightbulb size={11} aria-hidden /> {frases[0]}
+                <span className="celula-frase">
+                    {frases[0]}
                     {frases.length > 1 && ` (+${frases.length - 1})`}
                 </span>
             ),

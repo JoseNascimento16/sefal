@@ -93,13 +93,23 @@ return [
             'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Fiscalizacoes.tsx',
             'grade' => [
                 ['chave' => 'concluida_em', 'titulo' => 'Concluída', 'largura' => 104, 'alinhar' => 'center'],
-                ['chave' => 'ponto', 'titulo' => 'Ponto', 'largura' => 226],
+                /*
+                 * O ORÇAMENTO da linha é fixo (medido: ~798px úteis numa janela
+                 * de 1280 com a barra estendida), então largura aqui é decisão
+                 * sobre o que pode truncar. O endereço trunca sem perder o
+                 * sentido — "Avenida Otávio Mangabei…" ainda diz onde é, e a
+                 * ficha tem o resto. O DESFECHO não: cortado em "Regularizado
+                 * no l…" ele deixa de distinguir "Regularizado no local" de
+                 * "Regularizado após notificação", que são desfechos
+                 * diferentes. Por isso quem cede é o ponto.
+                 */
+                ['chave' => 'ponto', 'titulo' => 'Ponto', 'largura' => 150],
                 // A ÁREA só para quem vê mais de uma. Para o Chefe de Setor a
                 // coluna repetiria a área dele em toda linha; para o
                 // Coordenador, que responde por cinco, ela é o que faz a fila
                 // ser varrível.
-                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 116, 'quando' => 'varias-areas'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 224],
+                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 80, 'quando' => 'varias-areas'],
+                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 196],
                 /*
                  * `linhas: 2` é exceção declarada à régua (ver
                  * docs/padroes/listagem-clean.md): a frase da recomendação É a
@@ -107,8 +117,17 @@ return [
                  * "Voltar ao ponto no venci…" ela não diz nada. Quebra em duas
                  * linhas com a fonte um ponto menor, e a altura da linha não
                  * muda.
+                 *
+                 * `minima` existe por causa de uma medição: numa janela de
+                 * 1280px o navegador espremia esta coluna para 153px (dos 296
+                 * declarados como teto) e dava 226px a "Ponto" — a frase caía
+                 * para três linhas e o teto da célula cortava a terceira.
+                 * `largura` é TETO, e teto não impede o esmagamento; o piso é
+                 * que impede. As vizinhas cederam o que sobrava: "Ponto" e
+                 * "Desfecho" truncam com reticências, que é o desenho delas,
+                 * enquanto a frase não pode ser truncada sem perder o sentido.
                  */
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal', 'largura' => 296, 'linhas' => 2],
+                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal', 'largura' => 260, 'minima' => 240, 'linhas' => 2],
             ],
             'detalhe' => ['protocolo', 'equipe', 'fiscal', 'documento', 'consideracoes', 'origem', 'estado'],
             'exportacao' => [
