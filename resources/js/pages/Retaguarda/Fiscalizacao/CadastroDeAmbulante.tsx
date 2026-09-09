@@ -10,14 +10,17 @@ import {
     Undo2,
     UserRound,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
+import type { Listagens } from '@/components/retaguarda/grade-enxuta';
+import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
+import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
     Paginacao,
-    ThOrdenavel,
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
@@ -267,6 +270,7 @@ export default function CadastroDeAmbulante({
     atividades,
     situacoes,
     situacoesDeInclusao,
+    listagens,
 }: {
     ambulantes: Ambulante[];
     atividades: Atividade[];
@@ -278,6 +282,11 @@ export default function CadastroDeAmbulante({
      * validação exige.
      */
     situacoesDeInclusao: string[];
+    /**
+     * As colunas da aba "Localizar" e as do arquivo, declaradas no servidor. Ver
+     * `docs/padroes/listagem-clean.md`.
+     */
+    listagens: Listagens;
 }) {
     const [aba, setAba] = useState<Aba>('localizar');
     const [aberto, setAberto] = useState<Ambulante | null>(null);
@@ -521,6 +530,111 @@ export default function CadastroDeAmbulante({
         );
     }
 
+    /*
+     * ── A GRADE ENXUTA ───────────────────────────────────────────────────────
+     *
+     * Régua em `docs/padroes/listagem-clean.md`. Quem varre esta aba está
+     * procurando uma PESSOA, e a identidade prática de campo é foto + apelido
+     * (lei do domínio). Então o apelido ganha COLUNA própria em vez de virar a
+     * sub-linha embaixo do nome — que era justamente o empilhamento que o dono
+     * mandou tirar. O código do cadastro desceu com ela.
+     *
+     * Documento e validade da permissão são chaves de BUSCA (a barra casa o
+     * documento; "permissão vencida" é faceta), não colunas de varredura: descem
+     * para o cadastro aberto e continuam no arquivo exportado.
+     */
+    const listagem = listagens.ambulantes;
+
+    /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
+    const fraco = { color: 'var(--sm-texto-fraco)' };
+
+    /** Como ORDENAR por cada coluna. */
+    const acessores: Record<string, AcessorOrd<Ambulante> | undefined> = {
+        nome: 'nome',
+        apelido: (p) => p.apelido ?? '',
+        atividade: (p) => p.atividade ?? '',
+        // Permissionário primeiro: quem ordena por esta coluna quer ver quem TEM
+        // permissão, não a ordem alfabética de "Não".
+        permissionario: (p) => (p.permissionario ? '0' : '1'),
+        situacao: 'situacao',
+    };
+
+    /** O que cada célula desenha, com o texto inteiro para a dica. */
+    function celula(p: Ambulante, chave: string): { conteudo: ReactNode; dica?: string } {
+        if (chave === 'nome') {
+            // O retrato fica: é a identidade de campo, e caber numa linha só é
+            // questão de o texto ao lado não ter sub-linha.
+            return {
+                conteudo: (
+                    <span
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            minWidth: 0,
+                        }}
+                    >
+                        <Retrato p={p} />
+                        <strong
+                            style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {p.nome}
+                        </strong>
+                    </span>
+                ),
+                dica: `${p.nome} · ${p.codigo}`,
+            };
+        }
+
+        if (chave === 'apelido') {
+            return p.apelido
+                ? { conteudo: `“${p.apelido}”`, dica: `Apelido: ${p.apelido}` }
+                : {
+                      conteudo: <span style={fraco}>{VAZIO}</span>,
+                      dica: 'Ninguém registrou apelido para esta pessoa.',
+                  };
+        }
+
+        if (chave === 'atividade') {
+            return { conteudo: p.atividade || VAZIO, dica: p.atividade ?? undefined };
+        }
+
+        if (chave === 'permissionario') {
+            /* Sem permissão NÃO é um vazio: é a resposta, e é o caso da maioria.
+               Um traço aqui seria lido como "não sei". Vai como TEXTO, e não
+               como chip: o selo desta linha é o da situação. */
+            return {
+                conteudo: p.permissionario ? (
+                    'Permissionário'
+                ) : (
+                    <span style={fraco}>Sem permissão</span>
+                ),
+                dica: p.permissionario
+                    ? `Permissão ${p.numero_permissao ?? 'sem número anotado'}`
+                      + (p.validade_permissao
+                          ? ` · válida até ${dataBR(p.validade_permissao)}`
+                          : ' · sem validade anotada')
+                    : 'Não tem permissão da SEMOP.',
+            };
+        }
+
+        return {
+            /* Ponto de cor antes da palavra: o estado é lido de relance, e a
+               palavra confirma. */
+            conteudo: (
+                <span className={cn('selo', seloDaSituacao(p.situacao))}>
+                    <span className="selo-dot" aria-hidden />
+                    {p.situacao}
+                </span>
+            ),
+            dica: p.situacao,
+        };
+    }
+
     // Só o que uma pessoa leria fora do sistema: nada de id, caminho de arquivo
     // ou forma ISO de data.
     const linhasExportacao = ord.itens.map((p) => ({
@@ -684,28 +798,7 @@ export default function CadastroDeAmbulante({
                                         ? `Busca: "${busca.trim()}"`
                                         : 'Base completa'
                                 }
-                                colunas={[
-                                    { chave: 'codigo', titulo: 'Código' },
-                                    { chave: 'nome', titulo: 'Nome' },
-                                    { chave: 'apelido', titulo: 'Apelido' },
-                                    { chave: 'documento', titulo: 'Documento' },
-                                    { chave: 'atividade', titulo: 'Atividade' },
-                                    { chave: 'situacao', titulo: 'Situação' },
-                                    {
-                                        chave: 'permissionario',
-                                        titulo: 'Permissionário',
-                                        alinhar: 'center',
-                                    },
-                                    {
-                                        chave: 'numero_permissao',
-                                        titulo: 'Nº da permissão',
-                                    },
-                                    {
-                                        chave: 'validade_permissao',
-                                        titulo: 'Validade',
-                                        alinhar: 'center',
-                                    },
-                                ]}
+                                colunas={listagem.exportacao}
                                 linhas={linhasExportacao}
                             />
                         </div>
@@ -721,68 +814,29 @@ export default function CadastroDeAmbulante({
                         )}
 
                         <div className="table-wrap">
-                            <table className="data-table">
+                            <table className="data-table enxuta">
                                 <thead>
                                     <tr>
-                                        <ThOrdenavel campo="nome" acessor="nome" ord={ord}>
-                                            Ambulante
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="documento"
-                                            acessor={(p: Ambulante) =>
-                                                p.documento_formatado
-                                            }
+                                        {/* Cabeçalho e células saem da MESMA lista
+                                            de colunas: escritos em dois lugares,
+                                            uma coluna nova entra só num deles e a
+                                            grade mostra o valor sob o título
+                                            errado. */}
+                                        <CabecaDaGrade
+                                            grade={listagem.grade}
                                             ord={ord}
-                                        >
-                                            Documento
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="atividade"
-                                            acessor={(p: Ambulante) =>
-                                                p.atividade ?? ''
-                                            }
-                                            ord={ord}
-                                        >
-                                            Atividade
-                                        </ThOrdenavel>
-                                        {/* A coluna que o rename tornou
-                                            necessária: a grade tem os dois
-                                            públicos, e sem ela não se sabe qual
-                                            é qual — a validade em branco pode
-                                            ser "não tem permissão" ou "tem, mas
-                                            ninguém anotou a data". */}
-                                        <ThOrdenavel
-                                            campo="permissionario"
-                                            acessor={(p: Ambulante) =>
-                                                p.permissionario ? '0' : '1'
-                                            }
-                                            ord={ord}
-                                        >
-                                            Permissão
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="validade_permissao"
-                                            acessor={(p: Ambulante) =>
-                                                p.validade_permissao ?? ''
-                                            }
-                                            ord={ord}
-                                        >
-                                            Validade da permissão
-                                        </ThOrdenavel>
-                                        <ThOrdenavel
-                                            campo="situacao"
-                                            acessor={(p: Ambulante) => p.situacao}
-                                            ord={ord}
-                                        >
-                                            Situação
-                                        </ThOrdenavel>
+                                            acessores={acessores}
+                                        />
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     {pag.visiveis.length === 0 && (
                                         <tr>
-                                            <td colSpan={6} className="tabela-vazia">
+                                            <td
+                                                colSpan={listagem.grade.length}
+                                                className="tabela-vazia"
+                                            >
                                                 {ambulantes.length === 0
                                                     ? 'Nenhum ambulante cadastrado ainda. Use "Incluir" para cadastrar o primeiro — é dele que a fiscalização parte.'
                                                     : 'Ninguém casa com a busca. Limpe o campo para ver a base inteira.'}
@@ -790,10 +844,7 @@ export default function CadastroDeAmbulante({
                                         </tr>
                                     )}
 
-                                    {pag.visiveis.map((p) => {
-                                        const selo = seloDaSituacao(p.situacao);
-
-                                        return (
+                                    {pag.visiveis.map((p) => (
                                             <tr
                                                 key={p.id}
                                                 {...linhaClicavel(
@@ -809,75 +860,24 @@ export default function CadastroDeAmbulante({
                                                         'pendente',
                                                 )}
                                             >
-                                                <td>
-                                                    <div
-                                                        style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: 10,
-                                                        }}
-                                                    >
-                                                        <Retrato p={p} />
-                                                        <div>
-                                                            <strong>{p.nome}</strong>
-                                                            <div
-                                                                style={{
-                                                                    fontSize: 12,
-                                                                    color: 'var(--sm-texto-fraco)',
-                                                                }}
-                                                            >
-                                                                {p.apelido
-                                                                    ? `“${p.apelido}” · `
-                                                                    : ''}
-                                                                {p.codigo}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>{p.documento_formatado || VAZIO}</td>
-                                                <td>{p.atividade || VAZIO}</td>
-                                                <td>
-                                                    {/* Sem permissão NÃO é um
-                                                        vazio: é a resposta, e é
-                                                        o caso da maioria. Um
-                                                        traço aqui seria lido
-                                                        como "não sei". */}
-                                                    <span
-                                                        className={cn(
-                                                            'selo',
-                                                            p.permissionario
-                                                                ? 'selo-info'
-                                                                : 'selo-neutro',
-                                                        )}
-                                                    >
-                                                        <span
-                                                            className="selo-dot"
-                                                            aria-hidden
-                                                        />
-                                                        {p.permissionario
-                                                            ? 'Permissionário'
-                                                            : 'Sem permissão'}
-                                                    </span>
-                                                </td>
-                                                <td>{dataBR(p.validade_permissao)}</td>
-                                                <td>
-                                                    {/* Ponto de cor antes da
-                                                        palavra: o estado é lido de
-                                                        relance, e a palavra
-                                                        confirma. */}
-                                                    <span
-                                                        className={cn('selo', selo)}
-                                                    >
-                                                        <span
-                                                            className="selo-dot"
-                                                            aria-hidden
-                                                        />
-                                                        {p.situacao}
-                                                    </span>
-                                                </td>
+                                                {listagem.grade.map((coluna) => {
+                                                    const { conteudo, dica } = celula(
+                                                        p,
+                                                        coluna.chave,
+                                                    );
+
+                                                    return (
+                                                        <Celula
+                                                            key={coluna.chave}
+                                                            coluna={coluna}
+                                                            dica={dica}
+                                                        >
+                                                            {conteudo}
+                                                        </Celula>
+                                                    );
+                                                })}
                                             </tr>
-                                        );
-                                    })}
+                                    ))}
                                 </tbody>
                             </table>
                         </div>

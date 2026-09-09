@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
 use App\Rules\NomeDeCadastro;
+use App\Support\ListagensDaRetaguarda;
 use App\Support\Prototipo\EstruturaFicticia;
 use App\Support\Prototipo\OperacoesFicticias;
 use App\Support\Prototipo\PapelNaArea;
@@ -99,6 +100,10 @@ class OperacoesController extends Controller
             'cadastra' => PapelNaArea::decide($usuario),
             'areasDoChefe' => $areas,
             'recorteDeArea' => $comRecorte,
+            // As COLUNAS da grade e as do arquivo — ver
+            // docs/padroes/listagem-clean.md. Enxugar é da TELA: foco, região,
+            // bairros e observação descem para a ficha e seguem no arquivo.
+            'listagens' => ListagensDaRetaguarda::para('operacoes'),
             'alterada' => OperacoesFicticias::alterada(),
         ]);
     }
