@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\ListagensDaRetaguarda;
 use App\Support\Prototipo\DenunciasFicticias;
 use App\Support\Prototipo\EstruturaFicticia;
 use App\Support\Prototipo\OperacoesFicticias;
@@ -403,6 +404,14 @@ class DenunciasController extends Controller
             // para explicar que a lista não é o universo.
             'areasDoChefe' => $areasDoChefe,
             'recorteDeArea' => $comRecorte,
+            // As COLUNAS de cada aba — da grade e do arquivo. Uma listagem por
+            // aba porque a aba é uma ETAPA do fluxo, e cada etapa se decide
+            // olhando um dado diferente. Ver docs/padroes/listagem-clean.md.
+            'listagens' => ListagensDaRetaguarda::para([
+                'denuncias.triagem',
+                'denuncias.direcionamento',
+                'denuncias.todas',
+            ]),
             'alterada' => DenunciasFicticias::alterada(),
         ]);
     }
