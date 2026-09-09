@@ -309,53 +309,18 @@ return [
     ],
 
     /*
-     * As operações abertas a que o Chefe de Setor pode ANEXAR uma denúncia, em vez de
-     * direcionar avulso à equipe. É a segunda saída do direcionamento: quando já
-     * existe trabalho planejado naquela região, a denúncia entra nele em vez de
-     * gerar uma ida isolada.
+     * ⚠️ AS OPERAÇÕES SAÍRAM DAQUI (09/09/2026) para `config/prototipo_operacoes.php`.
+     *
+     * Elas nasceram neste arquivo porque o primeiro lugar que precisou delas foi o
+     * direcionamento — o Chefe de Setor anexando denúncia a uma operação já
+     * planejada. Com o Cadastro de Operação, passaram a existir DOIS interessados no
+     * mesmo catálogo, e a lei do projeto é clara: a mesma informação com dois donos
+     * sempre diverge. Uma lista aqui e outra lá, e o direcionamento ofereceria
+     * amanhã uma operação que o cadastro não conhece.
+     *
+     * Quem lê o catálogo é `App\Support\Prototipo\OperacoesFicticias`, e
+     * `DenunciasFicticias::operacoes()` delega para ela. Não recrie a chave aqui.
      */
-    'operacoes' => [
-        [
-            'id' => 1,
-            'nome' => 'Operação Verão — Orla',
-            'area' => 'Área 5',
-            'equipe' => 'C1',
-            'periodo' => 'até o fim de março',
-            'foco' => 'Orla de Itapuã a Boca do Rio, com ênfase em barracas de praia.',
-        ],
-        [
-            'id' => 2,
-            'nome' => 'Rotina Centro',
-            'area' => 'Área 1',
-            'equipe' => 'C2',
-            'periodo' => 'permanente',
-            'foco' => 'Varredura semanal do Centro Histórico, Comércio e Barris.',
-        ],
-        [
-            'id' => 3,
-            'nome' => 'Operação Feira de São Joaquim',
-            'area' => 'Área 2',
-            'equipe' => 'A1',
-            'periodo' => 'próximas duas semanas',
-            'foco' => 'Entorno da feira e acesso da Calçada.',
-        ],
-        [
-            'id' => 4,
-            'nome' => 'Operação Volta às Aulas — Cajazeiras',
-            'area' => 'Área 6',
-            'equipe' => 'B1',
-            'periodo' => 'próximos dez dias',
-            'foco' => 'Entorno de escolas em Cajazeiras, Sussuarana e Tancredo Neves.',
-        ],
-        [
-            'id' => 5,
-            'nome' => 'Operação Noturna — Corredor da Vitória',
-            'area' => 'Noturna',
-            'equipe' => 'N1',
-            'periodo' => 'sextas e sábados',
-            'foco' => 'Som alto e mesas no logradouro depois das 22h.',
-        ],
-    ],
 
     /*
      * As denúncias como elas chegaram das duas ouvidorias. Cada linha é um caso

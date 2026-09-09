@@ -4,6 +4,7 @@ use App\Models\Setor;
 use App\Models\User;
 use App\Support\Prototipo\DenunciasFicticias;
 use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Prototipo\OperacoesFicticias;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
@@ -558,10 +559,23 @@ test('lei: a operacao anexada existe no catalogo, e a equipe da denuncia e a da 
      * responsáveis na mesma denúncia, e o nome de operação escrito à mão que não
      * existe no catálogo simplesmente não casaria com nada.
      */
+    /*
+     * O catálogo vem de `OperacoesFicticias`, que é a FONTE ÚNICA das operações — e
+     * não mais da chave `prototipo_denuncias.operacoes`, de onde elas saíram em
+     * 09/09/2026 quando o Cadastro de Operação passou a existir. Ler a config
+     * antiga aqui faria este teste reprovar a lista certa por comparar com uma
+     * lista que já não existe.
+     *
+     * A operação pode juntar MAIS DE UMA equipe (a Noturna reforçando a orla no
+     * verão), e a denúncia tem uma só: quem vai ao ponto responde por ele. A dona é
+     * a PRIMEIRA da operação — a de reforço entra no trabalho, não na
+     * responsabilidade.
+     */
     $catalogo = [];
 
-    foreach ((array) config('prototipo_denuncias.operacoes', []) as $operacao) {
-        $catalogo[(string) $operacao['nome']] = (string) $operacao['equipe'];
+    foreach (OperacoesFicticias::todas() as $operacao) {
+        $equipes = array_values((array) $operacao['equipes']);
+        $catalogo[(string) $operacao['nome']] = $equipes === [] ? '' : (string) $equipes[0];
     }
 
     $problemas = [];

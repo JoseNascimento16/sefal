@@ -2127,7 +2127,17 @@ export function PainelDeDenuncias({
                                 <option value="">Escolha a operação…</option>
                                 {operacoes.map((o) => (
                                     <option key={o.id} value={o.nome}>
-                                        {o.nome} · {o.area} (Equipe {o.equipe}) — {o.periodo}
+                                        {o.nome} · {o.area} ·{' '}
+                                        {/* As equipes vêm em LISTA: operação grande
+                                            junta equipe de outra área como reforço.
+                                            Sem equipe definida é caso possível (a
+                                            operação foi planejada antes de a escala
+                                            sair), e a opção diz isso em vez de
+                                            mostrar "(Equipe )" em branco. */}
+                                        {o.equipes.length === 0
+                                            ? 'sem equipe definida'
+                                            : `${o.equipes.length === 1 ? 'Equipe' : 'Equipes'} ${o.equipes.join(', ')}`}{' '}
+                                        — {o.periodo}
                                     </option>
                                 ))}
                             </select>
