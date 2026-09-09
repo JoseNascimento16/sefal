@@ -1,21 +1,11 @@
 import { Head } from '@inertiajs/react';
-import {
-    Camera,
-    Check,
-    FileText,
-    Info,
-    Lightbulb,
-    ListChecks,
-    MapPin,
-    RotateCcw,
-    Undo2,
-    UserRound,
-} from 'lucide-react';
+import { Camera, Check, ClipboardCheck, FileText, Info, Lightbulb, ListChecks, MapPin, RotateCcw, Undo2, UserRound } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
+import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
 import {
     Paginacao,
@@ -266,6 +256,18 @@ export default function RetornoDeCampo({
 
     const selecionados = registros.filter((r) => marcados.includes(r.id));
     const podeDecidir = decide && selecionados.length > 0;
+
+    /* A janela de decisão fica fechada até o comando flutuante ser tocado. */
+    const [decidindo, setDecidindo] = useState(false);
+
+    /* Seleção esvaziada — pela ação que acabou de gravar, por troca de aba ou
+       por desmarcar a última linha — fecha a janela. Deixá-la no ar sem alvo
+       ofereceria "dar ciência" de nada. */
+    useEffect(() => {
+        if (selecionados.length === 0) {
+            setDecidindo(false);
+        }
+    }, [selecionados.length]);
 
     function alternarMarca(id: number) {
         setMarcados((atuais) =>
@@ -544,11 +546,42 @@ export default function RetornoDeCampo({
                     ]}
                 />
 
-                {/* O painel de DECISÃO só existe com seleção, e só para quem decide:
-                    oferecer o botão a quem o servidor recusa é prometer o que a tela
-                    não entrega. */}
-                {podeDecidir && (
-                    <div className="rt-escolha" style={{ marginBottom: 16 }}>
+                {/* A DECISÃO mora numa janela, aberta pelo comando flutuante.
+                    Ela só existe com seleção, e só para quem decide: oferecer o
+                    botão a quem o servidor recusa é prometer o que a tela não
+                    entrega.
+
+                    Por que janela e não painel na página: a grade é longa, e o
+                    painel embaixo dela obrigava quem marcou uma linha do meio da
+                    lista a rolar de volta para achar o que fazer com ela. Na
+                    janela, a decisão é o único assunto — e a `Sobreposicao`
+                    resolve trava de rolagem, fundo inerte e empilhamento com a
+                    confirmação que vem depois. */}
+                {podeDecidir && decidindo && (
+                  <Sobreposicao clicandoFora={ocupado ? undefined : () => setDecidindo(false)}>
+                    <div
+                        className="card-premium"
+                        style={{
+                            width: '100%',
+                            maxWidth: 860,
+                            maxHeight: 'min(92vh, 100% - 8px)',
+                            overflowY: 'auto',
+                        }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Decidir sobre os retornos selecionados"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="sobreposicao-titulo">
+                            <ClipboardCheck size={18} aria-hidden /> Decidir sobre{' '}
+                            {contar(selecionados.length, 'retorno', 'retornos')}
+                        </h2>
+                        <p className="sobreposicao-texto">
+                            Os dois caminhos da leitura: encerrar na sua fila, ou
+                            devolver o ponto à equipe dizendo o que procurar.
+                        </p>
+
+                        <div className="rt-escolha" style={{ marginBottom: 4 }}>
                         <div className="card-premium" style={{ margin: 0 }}>
                             <h3 className="card-titulo">
                                 <Check size={16} aria-hidden /> Dar ciência
@@ -630,7 +663,20 @@ export default function RetornoDeCampo({
                                 Determinar nova vistoria
                             </BotaoAcao>
                         </div>
+                        </div>
+
+                        <div className="sobreposicao-acoes">
+                            <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setDecidindo(false)}
+                                disabled={ocupado}
+                            >
+                                Voltar à lista
+                            </button>
+                        </div>
                     </div>
+                  </Sobreposicao>
                 )}
 
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 12 }}>
@@ -953,6 +999,23 @@ export default function RetornoDeCampo({
                         Reiniciar a demonstração
                     </BotaoAcao>
                 </p>
+            )}
+
+            {/* O comando FLUTUANTE: nasce com a primeira linha marcada e acompanha
+                a rolagem. Sem seleção ele não existe — botão que não tem sobre o
+                que agir é enfeite que engana. */}
+            {podeDecidir && !decidindo && (
+                <button
+                    type="button"
+                    className="rt-acao-flutuante"
+                    onClick={() => setDecidindo(true)}
+                >
+                    <ClipboardCheck size={17} aria-hidden />
+                    Decidir
+                    <span className="rt-acao-flutuante-conta">
+                        {selecionados.length}
+                    </span>
+                </button>
             )}
 
             {confirmandoVolta && (

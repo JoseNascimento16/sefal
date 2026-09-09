@@ -3455,6 +3455,68 @@ button.rt-chip-vidro:focus-visible {
     padding-top: 0;
 }
 
+/* ── Ação flutuante da seleção em lote ───────────────────────────────────────
+   Aparece SÓ com registro selecionado, e acompanha a rolagem: a grade do
+   Retorno de Campo é longa, e o painel de decisão vivia embaixo dela — quem
+   marcava uma linha no meio da lista tinha de rolar de volta para achar o que
+   fazer com ela. Preso à janela, o comando fica onde a mão está.
+
+   Não é decoração de canto: ele CARREGA a contagem, porque decidir em lote sem
+   ver quantos registros vão junto é assinar em branco. */
+.rt-acao-flutuante {
+    position: fixed;
+    z-index: 60;
+    right: 26px;
+    bottom: 26px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 20px;
+    border: none;
+    border-radius: var(--sm-raio-full);
+    background: var(--sm-acao);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 12px 30px rgba(4, 26, 58, 0.35);
+    transition: var(--sm-transicao);
+    animation: rt-acao-flutuante-entra 0.18s ease-out;
+}
+.rt-acao-flutuante:hover {
+    background: var(--sm-acao-forte, var(--sm-acao));
+    transform: translateY(-1px);
+}
+.rt-acao-flutuante:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+}
+/* A contagem em pílula clara: é o número que a pessoa confere antes de decidir. */
+.rt-acao-flutuante-conta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: var(--sm-raio-full);
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+@media (max-width: 620px) {
+    /* A barra do menu deitada flutua a 12px do pé e o miolo reserva 96px para
+       ela: o comando sobe para cima dela em vez de disputar o mesmo canto. */
+    .rt-acao-flutuante {
+        right: 14px;
+        left: 14px;
+        bottom: 108px;
+        justify-content: center;
+    }
+}
+
 /* ── A legenda ──────────────────────────────────────────────────────────────── */
 .rt-mapa-legenda {
     display: flex;
@@ -3629,6 +3691,17 @@ button.rt-chip-vidro:focus-visible {
 /* Nível raiz, nunca dentro de @layer nem de @media — ver o cabeçalho do arquivo.
    O anel expandindo do pino: some antes de fechar o ciclo, para o pulso ter
    respiro entre uma onda e a próxima. É a mesma gramática do splash. */
+@keyframes rt-acao-flutuante-entra {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes rt-pino-pulso {
     0% {
         transform: scale(0.45);
