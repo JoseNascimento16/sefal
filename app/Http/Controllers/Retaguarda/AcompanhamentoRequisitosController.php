@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Support\ListagensDaRetaguarda;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -41,6 +42,31 @@ class AcompanhamentoRequisitosController extends Controller
         $comHu = $sim + $desatualizada;
 
         return Inertia::render('Retaguarda/Sistema/AcompanhamentoDeRequisitos', [
+            /*
+             * As colunas da grade e as do arquivo, do catálogo único
+             * (`docs/padroes/listagem-clean.md`). Duas delas são condicionais, e
+             * quem resolve a condição é o servidor — pela MESMA leitura que já
+             * monta as linhas:
+             *
+             *  · `origem` só é coluna quando há mais de uma frente no mapa. Com
+             *    tudo em "Retaguarda", ela repetiria a mesma palavra em 26 linhas;
+             *  · `hus` só é coluna quando alguma linha aponta HU. Sem nenhuma, a
+             *    coluna seria um travessão em toda linha — e o selo "Sem
+             *    requisito" já diz isso uma vez, no lugar certo.
+             *
+             * Deixar essa conta para a tela criaria um segundo dono para uma
+             * resposta que já está aqui, e um dia os dois discordariam.
+             */
+            'listagens' => ListagensDaRetaguarda::para('sistema.requisitos', [
+                // O mesmo padrão que a linha mapeada usa ('Retaguarda' quando a
+                // origem não vem declarada): com `pluck` cru, linha sem origem
+                // contaria como um segundo valor e ligaria a coluna sem motivo.
+                'varias-origens' => $telas
+                    ->map(fn (array $t): string => (string) ($t['origem'] ?? 'Retaguarda'))
+                    ->unique()->count() > 1,
+                'alguma-hu' => $telas->contains(fn (array $t): bool => ((array) ($t['hus'] ?? [])) !== []),
+            ]),
+
             'telas' => $telas->map(fn (array $t): array => [
                 'modulo' => (string) ($t['modulo'] ?? ''),
                 'tela' => (string) ($t['tela'] ?? ''),

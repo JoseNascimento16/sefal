@@ -1,12 +1,15 @@
 import { Head, router } from '@inertiajs/react';
-import { ChevronDown, ChevronRight, TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Fragment, useMemo, useState } from 'react';
 import { Spinner } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
+import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
+import type { Listagens } from '@/components/retaguarda/grade-enxuta';
+import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import {
     Paginacao,
-    ThOrdenavel,
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
@@ -28,6 +31,16 @@ import { detalhe, index } from '@/routes/retaguarda/logs';
  *
  * O rastro (a pilha de chamadas) NÃO vem na listagem: ele é campo longo e custa
  * uma ida ao banco por linha. Ele é buscado quando alguém abre UMA ocorrência.
+ *
+ * ── A grade responde ao diagnóstico, não ao fluxo ───────────────────────────
+ *
+ * Quem abre esta tela procura *o que quebrou, onde e quando* — em regra o mais
+ * recente, ou o que se repete. Então a linha leva quando · código · tipo do
+ * erro · em que tela · quem estava lá, e a MENSAGEM da exceção abre no clique,
+ * junto do rastro: era ela que ocupava seis linhas de texto dentro da célula, e
+ * é justamente o que impedia varrer o resto. As colunas vêm do catálogo
+ * (`config/listagens_da_retaguarda.php`); a régua está em
+ * `docs/padroes/listagem-clean.md`.
  */
 
 interface Ocorrencia {
@@ -47,6 +60,30 @@ interface Ocorrencia {
     usuario: string | null;
 }
 
+/**
+ * O nome pelo qual as pessoas chamam a exceção — o último trecho da classe.
+ *
+ * "Illuminate\Database\QueryException" vira "QueryException": é o que alguém
+ * diz ao relatar o erro, e o pacote inteiro gastaria a coluna repetindo
+ * "Illuminate\…". O nome completo continua na dica, na ficha e no arquivo.
+ */
+function nomeCurto(classe: string): string {
+    const partes = classe.split('\\');
+
+    return partes[partes.length - 1] || classe;
+}
+
+/**
+ * O endereço da requisição que falhou, como se lê: `GET /retaguarda/logs`.
+ *
+ * O caminho é gravado SEM a barra da frente, e a barra é acrescentada aqui — com
+ * o cuidado de não dobrá-la quando o caminho já é a raiz (`/`), que é o que
+ * chega quando a falha nasceu fora de uma tela.
+ */
+function enderecoDe(log: Ocorrencia): string {
+    return `${log.metodo ?? ''} /${(log.caminho ?? '').replace(/^\/+/, '')}`.trim();
+}
+
 /** As expressões do domínio que a busca reconhece e retira do texto livre. */
 type Faceta = 'hoje' | 'sem-usuario';
 
@@ -60,15 +97,18 @@ const FACETAS = [
 
 export default function Logs({
     logs,
+    listagens,
     janela,
     limite,
     truncado,
 }: {
     logs: Ocorrencia[];
+    listagens: Listagens;
     janela: { de: string; ate: string };
     limite: number;
     truncado: boolean;
 }) {
+    const listagem = listagens['sistema.logs'];
     const [busca, setBusca] = useState('');
     const [aberta, setAberta] = useState<number | null>(null);
     const [rastros, setRastros] = useState<Record<number, string>>({});
@@ -112,6 +152,18 @@ export default function Logs({
         acessor: 'ocorridoEm',
     });
     const pag = usePaginacao(ord.itens);
+
+    /** Como ORDENAR por cada coluna da grade — a chave é a do catálogo. */
+    const acessores: Record<string, AcessorOrd<Ocorrencia> | undefined> = {
+        ocorridoEm: 'ocorridoEm',
+        requestId: 'requestId',
+        // Pelo nome CURTO, que é o que a coluna mostra: ordenado pelo nome
+        // completo, o agrupamento sairia por pacote e a coluna pareceria fora
+        // de ordem para quem olha.
+        classe: (log) => nomeCurto(log.classe),
+        caminho: 'caminho',
+        usuario: 'usuario',
+    };
 
     /**
      * Abre (ou fecha) uma ocorrência. O rastro é pedido ao servidor uma vez só e
@@ -162,6 +214,64 @@ export default function Logs({
             { ...janela, [campo]: valor },
             { preserveState: true, preserveScroll: true, replace: true },
         );
+    }
+
+    /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
+    const fraco = { color: 'var(--sm-texto-fraco)' };
+
+    /** O que cada célula desenha, com o texto inteiro para a dica. */
+    function celula(
+        log: Ocorrencia,
+        chave: string,
+    ): { conteudo: ReactNode; dica?: string; resumida?: boolean } {
+        if (chave === 'ocorridoEm') {
+            // Com a HORA, por exceção declarada no catálogo: num log a data
+            // sozinha não identifica a ocorrência — um surto põe dezenas no
+            // mesmo dia, e a pergunta da tela é "o que aconteceu agora".
+            return { conteudo: dataHoraBR(log.ocorridoEm), dica: dataHoraBR(log.ocorridoEm) };
+        }
+
+        if (chave === 'requestId') {
+            return log.requestId === null
+                ? {
+                      conteudo: <span style={fraco}>{VAZIO}</span>,
+                      dica: 'Ocorrência sem código — nasceu fora de uma requisição (tarefa agendada ou trabalho em fila).',
+                  }
+                : { conteudo: log.requestId, dica: log.requestId };
+        }
+
+        if (chave === 'classe') {
+            // O nome CURTO da classe, com o nome completo na dica: é assim que
+            // as pessoas chamam o erro ("deu QueryException"), e o pacote inteiro
+            // gastaria a coluna dizendo três vezes "Illuminate". A tela resume de
+            // verdade aqui, então a dica é obrigatória e também anunciada.
+            return {
+                conteudo: nomeCurto(log.classe),
+                dica: log.classe,
+                resumida: nomeCurto(log.classe) !== log.classe,
+            };
+        }
+
+        if (chave === 'caminho') {
+            return log.caminho === null
+                ? {
+                      conteudo: <span style={fraco}>fora de uma requisição</span>,
+                      dica: 'A falha não veio de uma tela: nasceu numa tarefa agendada ou num trabalho em fila.',
+                  }
+                : {
+                      conteudo: log.caminho,
+                      // O VERBO entra na dica, e não como um segundo selo na
+                      // célula: chip ao lado de texto volta a empilhar conteúdo.
+                      dica: enderecoDe(log),
+                  };
+        }
+
+        return log.usuario === null
+            ? {
+                  conteudo: <span style={fraco}>sem usuário</span>,
+                  dica: 'Ninguém autenticado na requisição — ou ela nem veio de uma tela.',
+              }
+            : { conteudo: log.usuario, dica: log.usuario };
     }
 
     // Só as chaves declaradas entram no arquivo, e a data sai em BR: o documento
@@ -270,79 +380,38 @@ export default function Logs({
                         contexto={`Período: ${dataBR(janela.de)} a ${dataBR(janela.ate)}${
                             busca.trim() ? ` · busca: "${busca.trim()}"` : ''
                         }`}
-                        colunas={[
-                            { chave: 'ocorridoEm', titulo: 'Quando' },
-                            { chave: 'requestId', titulo: 'Código' },
-                            { chave: 'classe', titulo: 'Tipo' },
-                            { chave: 'mensagem', titulo: 'Mensagem' },
-                            { chave: 'caminho', titulo: 'Caminho' },
-                            { chave: 'metodo', titulo: 'Verbo' },
-                            { chave: 'usuario', titulo: 'Usuário' },
-                        ]}
+                        // As colunas do ARQUIVO saem do mesmo catálogo da grade, e
+                        // continuam INTEIRAS: a mensagem e o verbo saíram da tela,
+                        // não do documento — que é o que se manda para alguém
+                        // analisar.
+                        colunas={listagem.exportacao}
                         linhas={linhasExportacao}
                     />
                 </div>
 
                 <div className="table-wrap">
-                    <table className="data-table">
+                    <table className="data-table enxuta">
                         <thead>
                             <tr>
-                                {/* Coluna do sinal de abrir/fechar: sem rótulo à
-                                    vista, mas nomeada para quem navega por leitor
-                                    de tela. */}
-                                <th
-                                    style={{ width: 34 }}
-                                    aria-label="Detalhe"
+                                {/* Cabeçalho e células saem da MESMA lista: escritos
+                                    em dois lugares, uma coluna nova entra só num
+                                    deles e a grade passa a mostrar o valor debaixo
+                                    do título errado. */}
+                                <CabecaDaGrade
+                                    grade={listagem.grade}
+                                    ord={ord}
+                                    acessores={acessores}
                                 />
-                                <ThOrdenavel
-                                    campo="ocorridoEm"
-                                    acessor="ocorridoEm"
-                                    ord={ord}
-                                >
-                                    Quando
-                                </ThOrdenavel>
-                                <ThOrdenavel
-                                    campo="requestId"
-                                    acessor="requestId"
-                                    ord={ord}
-                                >
-                                    Código
-                                </ThOrdenavel>
-                                <ThOrdenavel
-                                    campo="classe"
-                                    acessor="classe"
-                                    ord={ord}
-                                >
-                                    Tipo
-                                </ThOrdenavel>
-                                <ThOrdenavel
-                                    campo="mensagem"
-                                    acessor="mensagem"
-                                    ord={ord}
-                                >
-                                    Mensagem
-                                </ThOrdenavel>
-                                <ThOrdenavel
-                                    campo="caminho"
-                                    acessor="caminho"
-                                    ord={ord}
-                                >
-                                    Caminho
-                                </ThOrdenavel>
-                                <ThOrdenavel
-                                    campo="usuario"
-                                    acessor="usuario"
-                                    ord={ord}
-                                >
-                                    Usuário
-                                </ThOrdenavel>
                             </tr>
                         </thead>
 
                         <tbody>
                             {pag.visiveis.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="tabela-vazia">
+                                    <td
+                                        colSpan={listagem.grade.length}
+                                        className="tabela-vazia"
+                                    >
                                         {logs.length === 0
                                             ? 'Nenhuma falha registrada neste período — é o que se espera de um sistema saudável.'
                                             : 'Nenhuma ocorrência casa com a busca. Limpe o campo para ver todas as do período.'}
@@ -351,7 +420,7 @@ export default function Logs({
                             )}
 
                             {/* Cada ocorrência ocupa DUAS linhas quando aberta (a
-                                da tabela e a do rastro), e uma tabela não aceita
+                                da tabela e a da ficha), e uma tabela não aceita
                                 um <div> entre elas — daí o fragmento nomeado, que
                                 é quem carrega a chave. */}
                             {pag.visiveis.map((log) => (
@@ -359,52 +428,81 @@ export default function Logs({
                                     <tr
                                         {...linhaClicavel(
                                             () => alternar(log),
-                                            'Abrir ou fechar o rastro desta ocorrência',
+                                            'Abrir ou fechar a mensagem e o rastro desta ocorrência',
                                         )}
                                     >
-                                        <td>
-                                            {aberta === log.id ? (
-                                                <ChevronDown
-                                                    size={16}
-                                                    aria-hidden
-                                                />
-                                            ) : (
-                                                <ChevronRight
-                                                    size={16}
-                                                    aria-hidden
-                                                />
-                                            )}
-                                        </td>
-                                        <td className="cell-id">
-                                            {dataHoraBR(log.ocorridoEm)}
-                                        </td>
-                                        <td className="cell-id">
-                                            {log.requestId ?? VAZIO}
-                                        </td>
-                                        <td>{log.classe}</td>
-                                        <td>{log.mensagem}</td>
-                                        <td>
-                                            <span className="selo selo-neutro">
-                                                {log.metodo ?? VAZIO}
-                                            </span>{' '}
-                                            {log.caminho ?? VAZIO}
-                                        </td>
-                                        <td>
-                                            {log.usuario ?? (
-                                                <span
-                                                    style={{
-                                                        color: 'var(--sm-texto-fraco)',
-                                                    }}
+                                        {listagem.grade.map((coluna) => {
+                                            const { conteudo, dica, resumida } =
+                                                celula(log, coluna.chave);
+
+                                            return (
+                                                <Celula
+                                                    key={coluna.chave}
+                                                    coluna={coluna}
+                                                    dica={dica}
+                                                    resumida={resumida}
+                                                    className={
+                                                        coluna.chave ===
+                                                        'requestId'
+                                                            ? 'cell-id'
+                                                            : undefined
+                                                    }
                                                 >
-                                                    sem usuário
-                                                </span>
-                                            )}
-                                        </td>
+                                                    {conteudo}
+                                                </Celula>
+                                            );
+                                        })}
                                     </tr>
 
                                     {aberta === log.id && (
-                                        <tr>
-                                            <td colSpan={7}>
+                                        <tr className="linha-detalhe">
+                                            <td colSpan={listagem.grade.length}>
+                                                {/* O que DESCEU da grade — a
+                                                    mensagem inteira e o verbo — mais
+                                                    o rastro, que nunca esteve nela.
+                                                    É aqui que os três se leem. */}
+                                                <dl className="rt-ficha">
+                                                    <div>
+                                                        <dt>Tipo do erro</dt>
+                                                        <dd>{log.classe}</dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>
+                                                            Requisição que falhou
+                                                        </dt>
+                                                        <dd>
+                                                            {log.caminho === null
+                                                                ? 'Fora de uma requisição — tarefa agendada ou trabalho em fila.'
+                                                                : enderecoDe(log)}
+                                                        </dd>
+                                                    </div>
+                                                </dl>
+
+                                                <p
+                                                    className="card-titulo"
+                                                    style={{
+                                                        margin: '14px 0 4px',
+                                                        fontSize: 14,
+                                                    }}
+                                                >
+                                                    Mensagem
+                                                </p>
+                                                <p
+                                                    className="card-sub"
+                                                    style={{ margin: 0 }}
+                                                >
+                                                    {log.mensagem}
+                                                </p>
+
+                                                <p
+                                                    className="card-titulo"
+                                                    style={{
+                                                        margin: '14px 0 4px',
+                                                        fontSize: 14,
+                                                    }}
+                                                >
+                                                    Rastro
+                                                </p>
                                                 {buscandoRastro === log.id ? (
                                                     <p className="card-sub">
                                                         <Spinner tamanho={14} />{' '}

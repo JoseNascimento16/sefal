@@ -365,8 +365,12 @@ return [
                 .'mostra uma linha por registro, de altura fixa, com no máximo cinco colunas e nada de '
                 .'texto escrito em frase dentro da célula: o que não couber é cortado com reticências e o '
                 .'texto inteiro aparece ao passar o mouse. O restante da informação abre no clique na '
-                .'linha, e o arquivo exportado continua trazendo as colunas detalhadas. A coluna de área '
-                .'só existe para quem responde por mais de uma. Régua e justificativa em '
+                .'linha, e o arquivo exportado continua trazendo as colunas detalhadas. Coluna que mostraria '
+                .'o mesmo valor em toda linha não aparece: a de área só existe para quem responde por mais '
+                .'de uma, e as de origem e de HU do acompanhamento de requisitos só entram quando têm o que '
+                .'informar. Vale para TODAS as listagens da Retaguarda, inclusive as duas de diagnóstico '
+                .'(Logs e Acompanhamento de Requisitos), onde a escolha das colunas segue outra pergunta — '
+                .'"o que quebrou" e "o que está fora do requisito". Régua e justificativa em '
                 .'docs/padroes/listagem-clean.md; colunas declaradas em config/listagens_da_retaguarda.php.',
         ],
 
@@ -403,7 +407,10 @@ return [
             'hus' => [],
             'nota' => $origemSpec.' Consulta às falhas que o sistema capturou, achadas pelo mesmo código '
                 .'que apareceu na tela de quem estava usando o sistema. É só leitura: apagar linha daqui '
-                .'apagaria a única trilha de um defeito.',
+                .'apagaria a única trilha de um defeito. A lista mostra quando a falha aconteceu, o código, '
+                .'o tipo do erro, em que tela e quem estava usando o sistema; a mensagem completa e o rastro '
+                .'abrem ao clicar na linha, e o arquivo exportado continua trazendo tudo. A data desta tela '
+                .'leva a HORA porque um mesmo dia costuma ter várias ocorrências.',
         ],
 
         [
@@ -431,7 +438,11 @@ return [
             'hus' => [],
             'nota' => $origemSpec.' Esta própria tela: cruza cada funcionalidade entregue com o requisito '
                 .'escrito que a especifica, apontando o que não tem requisito e o que divergiu do que foi '
-                .'escrito.',
+                .'escrito. A lista mostra o módulo, a funcionalidade e a situação do requisito; a observação '
+                .'que descreve a divergência, o caminho no menu e os códigos de HU abrem ao clicar na linha, '
+                .'e o arquivo exportado continua trazendo tudo. As colunas de origem e de HU só aparecem '
+                .'quando têm o que informar — enquanto tudo é da Retaguarda e nenhuma HU está escrita, elas '
+                .'repetiriam o mesmo valor em toda linha.',
         ],
 
         [

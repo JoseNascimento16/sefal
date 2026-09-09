@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
 use App\Models\LogErro;
+use App\Support\ListagensDaRetaguarda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -84,6 +85,9 @@ class LogsController extends Controller
 
         return Inertia::render('Retaguarda/Sistema/Logs', [
             'logs' => $logs,
+            // As colunas da grade e as do arquivo, do catálogo único — a tela não
+            // escreve coluna à mão (ver `docs/padroes/listagem-clean.md`).
+            'listagens' => ListagensDaRetaguarda::para('sistema.logs'),
             'janela' => [
                 'de' => $de->toDateString(),
                 'ate' => $ate->toDateString(),

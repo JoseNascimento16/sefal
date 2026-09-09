@@ -262,6 +262,11 @@ dataset('telas com listagem', [
     'Cadastro de Operação' => ['/retaguarda/operacoes', ['operacoes']],
     'Ambulantes' => ['/retaguarda/ambulantes', ['ambulantes']],
     'Caixa de Entrada' => ['/retaguarda/caixa-de-entrada', ['caixa-de-entrada']],
+    // As duas telas de DIAGNÓSTICO. Elas não movem trabalho — respondem "o que
+    // quebrou" e "o que está fora do requisito" —, mas listagem é listagem: fora
+    // da varredura, é a que apodrece.
+    'Logs' => ['/retaguarda/logs', ['sistema.logs']],
+    'Acompanhamento de Requisitos' => ['/retaguarda/acompanhamento-de-requisitos', ['sistema.requisitos']],
 ]);
 
 it('entrega as colunas da listagem como prop da tela', function (string $url, array $ids) {
@@ -294,6 +299,72 @@ it('entrega as colunas da listagem como prop da tela', function (string $url, ar
         return $p;
     });
 })->with('telas com listagem');
+
+it('não gasta coluna do acompanhamento com o que é igual em TODA linha — e a devolve quando passa a variar', function () {
+    /*
+     * A mesma lei da coluna condicional, com a condição resolvida pelo outro
+     * lado: nas Fiscalizações quem decide é QUEM olha; aqui é o que os dados
+     * TÊM. Hoje o mapa é todo "Retaguarda" e nenhuma linha aponta HU — as duas
+     * colunas seriam a mesma palavra, ou o mesmo travessão, repetidos em toda
+     * linha; e o selo "Sem requisito" já diz isso uma vez, no lugar certo.
+     *
+     * O FLIP é a metade que importa: sem ele, uma condição travada em `false`
+     * passaria neste teste para sempre, e a coluna nunca voltaria no dia em que
+     * fizesse falta.
+     */
+    $admin = administradorDaListagem();
+
+    $this->actingAs($admin)->get('/retaguarda/acompanhamento-de-requisitos')
+        ->assertOk()
+        ->assertInertia(function ($p) {
+            $grade = chavesDaListagem($p->toArray()['props']['listagens']['sistema.requisitos']['grade']);
+
+            foreach (['origem', 'hus'] as $constante) {
+                $this->assertNotContains(
+                    $constante,
+                    $grade,
+                    "A coluna \"{$constante}\" entrou na grade do acompanhamento sem variar "
+                    .'entre as linhas do mapa — ela gastaria largura repetindo o mesmo valor.'
+                );
+            }
+
+            return $p;
+        });
+
+    // Agora com variedade no mapa: duas frentes e uma HU escrita.
+    config(['acompanhamento_requisitos.telas' => [
+        [
+            'modulo' => 'Sistema', 'tela' => 'Logs', 'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.logs.index', 'breadcrumb' => 'Sistema › Logs',
+            'hu_status' => 'sim', 'hus' => ['HU 001'], 'nota' => 'Requisito escrito e alinhado.',
+        ],
+        [
+            'modulo' => 'Campo', 'tela' => 'Registrar fiscalização', 'origem' => 'PWA',
+            'rota' => null, 'breadcrumb' => 'Aplicativo do fiscal',
+            'hu_status' => 'nao', 'hus' => [], 'nota' => 'Sem requisito escrito — origem: spec de design.',
+        ],
+    ]]);
+
+    $this->actingAs($admin)->get('/retaguarda/acompanhamento-de-requisitos')
+        ->assertOk()
+        ->assertInertia(function ($p) {
+            $grade = chavesDaListagem($p->toArray()['props']['listagens']['sistema.requisitos']['grade']);
+
+            foreach (['origem', 'hus'] as $variavel) {
+                $this->assertContains(
+                    $variavel,
+                    $grade,
+                    "A coluna \"{$variavel}\" passou a variar entre as linhas e continuou fora "
+                    .'da grade — a condição está travada, e a coluna nunca voltaria.'
+                );
+            }
+
+            // O teto vale para esta resolução como para qualquer outra.
+            $this->assertLessThanOrEqual(5, count($grade));
+
+            return $p;
+        });
+});
 
 it('não gasta coluna de ÁREA com quem responde por uma área só', function () {
     // Quem varre cinco áreas precisa da coluna para navegar a fila; para quem
