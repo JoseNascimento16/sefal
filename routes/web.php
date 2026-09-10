@@ -266,6 +266,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [FiscalizacoesController::class, 'index'])->name('index');
         Route::post('ciencia', [FiscalizacoesController::class, 'ciencia'])->name('ciencia');
         Route::post('nova-vistoria', [FiscalizacoesController::class, 'novaVistoria'])->name('nova-vistoria');
+        Route::post('devolver', [FiscalizacoesController::class, 'devolver'])->name('devolver');
         // Só existe porque é protótipo: devolve a fila ao estado de demonstração.
         Route::post('reiniciar', [FiscalizacoesController::class, 'reiniciar'])->name('reiniciar');
     });
