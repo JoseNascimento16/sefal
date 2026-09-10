@@ -18,8 +18,18 @@ class RegistroRelatorios
      * @var list<class-string<Relatorio>>
      */
     private const RELATORIOS = [
-        RelatorioUsuariosDoSistema::class,
-        RelatorioAmbulantes::class,
+        /*
+         * Os quatro que a operação pediu (dono, 10/09/2026) — os dois antigos
+         * (contas do sistema e cadastros de ambulante) saíram porque ninguém os
+         * usava: não respondiam pergunta de quem trabalha na rua.
+         *
+         * A ordem é a da pergunta que cada um responde: o que a equipe fez, o que
+         * chegou de fora, onde estamos agora e onde a coisa se concentra.
+         */
+        RelatorioFiscalizacoes::class,
+        RelatorioDenuncias::class,
+        RelatorioCidadeAgora::class,
+        RelatorioConcentracao::class,
     ];
 
     /**
