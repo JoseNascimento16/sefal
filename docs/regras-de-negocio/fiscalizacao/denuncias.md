@@ -101,7 +101,7 @@ A sugestão é **calculada na leitura**, nunca gravada junto da denúncia: a est
 editável, e uma sugestão congelada continuaria apontando para a área de antes do ajuste.
 
 **O triador vê PARA QUEM está encaminhando.** Cada opção de área traz o nome do **Chefe de Setor** que vai
-receber ("Área 5 — Lourdes Figueiredo Sales"), e o resumo do lote, antes de confirmar, lista área
+receber ("Área 5 — Gestor 1"), e o resumo do lote, antes de confirmar, lista área
 **e** Chefe de Setor. "Encaminhei para a Área 5" diz metade; a outra metade é a pessoa que passa a responder
 por aquilo. Área **sem** Chefe de Setor registrado gera aviso — a denúncia chegaria lá e ninguém seria
 avisado.
@@ -446,9 +446,9 @@ indistinguível de um nome de rua.
 |---|---|---|
 | `admin` | `prototipo123` | as **duas** etapas e **todas** as áreas — o fluxo inteiro |
 | `administrativo1` | `adm123` | só a **triagem** (papel de **Coordenador**), sobre o universo (Célia Andrade Portela) |
-| `gestor1` | `gestor123` | só o **direcionamento**, e só da **Área 5 — Boca do Rio** (Lourdes Figueiredo Sales) |
-| `gestor2` | `gestor123` | idem, **Área 1 — Centro** (Marta Nogueira Prado) |
-| `gestor3` | `gestor123` | idem, **Área 3 — Brotas** (Verônica Lins Barreto) |
+| `gestor1` | `gestor123` | só o **direcionamento**, e só da **Área 5 — Boca do Rio** (Gestor 1) |
+| `gestor2` | `gestor123` | idem, **Área 1 — Centro** (Gestor 2) |
+| `gestor3` | `gestor123` | idem, **Área 3 — Brotas** (Gestor 3) |
 | `fiscal1` | `fiscal123` | **não entra** — é levado à tela inicial com o motivo na tela |
 
 Roteiro: entre como `administrativo1`, selecione algumas denúncias em "A triar", confira as áreas

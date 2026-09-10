@@ -151,6 +151,23 @@ return [
                         ],
                     ],
                 ],
+                [
+                    'rotulo' => 'Fiscalizações',
+                    'rota' => 'retaguarda.fiscalizacoes.index',
+                    'icone' => 'fiscalizacoes',
+                    'slug' => 'fiscalizacoes',
+                    'curto' => 'REGISTROS',
+                    // A FILA, ao lado do item: é o gatilho de trabalho de quem
+                    // decide — "tenho 7 retornos esperando, começo por ali". Zero
+                    // não vira selo (ver `App\Support\ContadoresDoMenu`).
+                    'contador' => 'fiscalizacoes-a-decidir',
+                    'setores' => [
+                        'administrador',
+                        'coordenador',
+                        'chefe-de-setor',
+                        'fiscal' => ['apenas_leitura' => true],
+                    ],
+                ],
             ],
         ],
 
@@ -285,23 +302,6 @@ return [
                  * Restringir por nome seria adivinhar. Está registrado como
                  * pendência no doc de regra; até lá, a frase honesta é esta.
                  */
-                [
-                    'rotulo' => 'Fiscalizações',
-                    'rota' => 'retaguarda.fiscalizacoes.index',
-                    'icone' => 'fiscalizacoes',
-                    'slug' => 'fiscalizacoes',
-                    'curto' => 'REGISTROS',
-                    // A FILA, ao lado do item: é o gatilho de trabalho de quem
-                    // decide — "tenho 7 retornos esperando, começo por ali". Zero
-                    // não vira selo (ver `App\Support\ContadoresDoMenu`).
-                    'contador' => 'fiscalizacoes-a-decidir',
-                    'setores' => [
-                        'administrador',
-                        'coordenador',
-                        'chefe-de-setor',
-                        'fiscal' => ['apenas_leitura' => true],
-                    ],
-                ],
                 [
                     'rotulo' => 'Mapa ao Vivo',
                     'rota' => 'retaguarda.mapa.index',

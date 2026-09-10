@@ -57,11 +57,11 @@ calçada em vez de para quem decide.
 
 | Área | Chefe de Setor da área | Conta de demonstração |
 |---|---|---|
-| Área 1 · Centro | Marta Nogueira Prado | `gestor2` |
+| Área 1 · Centro | Gestor 2 | `gestor2` |
 | Área 2 · Itapagipe | Djalma Sousa Vieira | — |
-| Área 3 · Brotas | Verônica Lins Barreto | `gestor3` |
+| Área 3 · Brotas | Gestor 3 | `gestor3` |
 | Área 4 · Liberdade | Ivanildo Costa Pinheiro | — |
-| Área 5 · Boca do Rio | Lourdes Figueiredo Sales | `gestor1` |
+| Área 5 · Boca do Rio | Gestor 1 | `gestor1` |
 | Área 6 · Pau da Lima | Otacílio Ramos Cunha | — |
 | Itinerante · Avenida Sete | Bruna Cavalcanti Reis | — |
 | Noturna · Toda Salvador | Aristides Moreno Fagundes | — |
