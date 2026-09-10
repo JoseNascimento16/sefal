@@ -10,11 +10,13 @@
 #     CODECON. O SEFAL gera PDF/XLSX/DOCX pelo motor próprio de relatórios, que
 #     é PHP puro.
 #
-# ⚠️ A base (`FROM`) é a imagem que o DevOps do cliente mantém DENTRO do cluster
-# (UBI + PHP 8.4 + Node + scripts S2I). Troque `<NAMESPACE>` pelo namespace do
-# projeto do SEFAL no OKD — a tag precisa existir lá; se o Alan ainda não a
-# publicou nesse namespace, é ele quem republica ou libera o acesso.
-FROM image-registry.openshift-image-registry.svc:5000/<NAMESPACE>/php:latest
+# ⚠️ A base é a MESMA imagem do CODECON (UBI + PHP 8.4 + Node + scripts S2I),
+# e ela vive no namespace `codecon-homolog`. Puxá-la de outro namespace é
+# permitido, mas exige UMA autorização: a conta `builder` do `sefal-homolog`
+# precisa de `system:image-puller` em `codecon-homolog` (o RoleBinding está em
+# docs/deploy/okd-sefal.md, passo 0). Sem ele o build falha no `FROM` com
+# "unauthorized" — e o erro parece imagem inexistente, não falta de permissão.
+FROM image-registry.openshift-image-registry.svc:5000/codecon-homolog/php:latest
 
 # Instala pacotes como root; em runtime a imagem volta a rodar como 1001 (o Pod
 # Security do cluster é `restricted`, e nada roda como root lá).
