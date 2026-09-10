@@ -349,9 +349,13 @@ return [
         | casa documento, e "permissão vencida" é faceta), não colunas de
         | varredura. A coluna "Permissão" continua porque sem ela não se sabe
         | qual dos dois públicos é a linha.
+        |
+        | ⚠️ `detalhe` aqui é o que desce para a FICHA de leitura: a tela deixou
+        | de ser cadastro em 10/09/2026 (a base é do SGCI), e o que se abre ao
+        | clicar na linha não é mais um formulário.
         */
         'ambulantes' => [
-            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/CadastroDeAmbulante.tsx',
+            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Ambulantes.tsx',
             'grade' => [
                 ['chave' => 'nome', 'titulo' => 'Ambulante', 'largura' => 280],
                 ['chave' => 'apelido', 'titulo' => 'Apelido', 'largura' => 170],

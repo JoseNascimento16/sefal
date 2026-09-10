@@ -1775,7 +1775,7 @@ export function PainelDeDenuncias({
                         <p className="form-erro" style={{ marginBottom: 12 }}>
                             <TriangleAlert size={15} aria-hidden /> Há área sem Chefe de Setor
                             registrado na estrutura: a denúncia chega lá e ninguém é
-                            avisado. Vale registrar o Chefe de Setor em Estrutura › Áreas e
+                            avisado. Vale registrar o Chefe de Setor em Sistema › Áreas e
                             Equipes.
                         </p>
                     )}

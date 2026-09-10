@@ -418,7 +418,7 @@ export default function CadastroDeOperacao({
 
             <div className="rt-page-head">
                 <div>
-                    <p className="sobrancelha">Fiscalização</p>
+                    <p className="sobrancelha">Sistema</p>
                     <h1>Cadastro de Operação</h1>
                     <p>
                         O trabalho de rua com <strong>começo, fim e foco</strong> que
@@ -625,7 +625,7 @@ export default function CadastroDeOperacao({
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar
                                     titulo="Operações"
-                                    subtitulo="Fiscalização › Cadastro de Operação"
+                                    subtitulo="Sistema › Cadastro de Operação"
                                     contexto={[
                                         recorteDeArea
                                             ? `Áreas: ${areasDoChefe.join(' e ')}`

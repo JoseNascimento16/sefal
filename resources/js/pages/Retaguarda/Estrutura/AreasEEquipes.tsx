@@ -270,7 +270,7 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
 
             <div className="rt-page-head">
                 <div>
-                    <p className="sobrancelha">Estrutura</p>
+                    <p className="sobrancelha">Sistema</p>
                     <h1>Áreas e Equipes</h1>
                     <p>
                         Como a fiscalização se organiza para cobrir a cidade:{' '}
@@ -426,7 +426,7 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar
                                     titulo="Áreas e Equipes"
-                                    subtitulo="Estrutura › Áreas e Equipes"
+                                    subtitulo="Sistema › Áreas e Equipes"
                                     contexto={
                                         busca.trim()
                                             ? `Busca: "${busca.trim()}"`

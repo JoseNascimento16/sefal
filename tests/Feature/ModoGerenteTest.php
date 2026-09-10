@@ -676,12 +676,20 @@ test('a semente pode AJUSTAR o pacote de um setor — e o fiscal apenas CONSULTA
         ->and($fiscal->incluir)->toBeFalse()
         ->and($fiscal->excluir)->toBeFalse();
 
-    // O chefe de setor continua com o pacote inteiro: validar e corrigir cadastro de
-    // campo é o trabalho dele.
+    /*
+     * E NINGUÉM inclui nem exclui ambulante — nem o chefe de setor, nem o
+     * administrador. A base é do SGCI e chega por integração (decisão do dono,
+     * 10/09/2026): a Retaguarda é espelho de leitura, e correção se faz na
+     * origem. Prometer o botão na matriz seria prometer uma tela que não existe
+     * mais.
+     */
     $chefe = PermissaoSetor::where('setor', 'chefe-de-setor')->where('slug', 'ambulantes')->firstOrFail();
 
-    expect($chefe->incluir)->toBeTrue()
-        ->and($chefe->excluir)->toBeTrue();
+    expect($chefe->incluir)->toBeFalse()
+        ->and($chefe->excluir)->toBeFalse();
+
+    expect(PermissaoSetor::where('slug', 'ambulantes')->where(fn ($q) => $q->where('incluir', true)->orWhere('excluir', true))->count())
+        ->toBe(0, 'nenhum setor pode gravar num cadastro que vem do SGCI');
 });
 
 test('a forma curta e a forma longa da semente convivem', function () {
