@@ -86,6 +86,18 @@ class FiscalizacoesFicticias
     public const NOVA_VISTORIA = 'Nova vistoria determinada';
 
     /**
+     * A terceira saída da chefia: o caso não é dela.
+     *
+     * Devolver ao Coordenador é diferente de dar ciência (que encerra) e de
+     * mandar a equipe voltar (que gasta o trabalho dela outra vez): é dizer que
+     * o ponto não é desta área, ou que o encaminhamento veio errado — e quem
+     * redireciona é quem tria. Fecha o ciclo que o dono desenhou: a demanda
+     * entra pela Caixa de Entrada, vai à área, volta como fiscalização, e pode
+     * voltar à coordenação.
+     */
+    public const DEVOLVIDO = 'Devolvido à coordenação';
+
+    /**
      * Os estados da fila, na ordem em que ela anda — o catálogo que a tela
      * oferece e que a validação aceita.
      *
@@ -93,7 +105,7 @@ class FiscalizacoesFicticias
      */
     public static function estados(): array
     {
-        return [self::AGUARDANDO, self::CIENTE, self::NOVA_VISTORIA];
+        return [self::AGUARDANDO, self::CIENTE, self::NOVA_VISTORIA, self::DEVOLVIDO];
     }
 
     /**
@@ -194,6 +206,26 @@ class FiscalizacoesFicticias
             self::NOVA_VISTORIA,
             'Nova vistoria determinada pela chefia',
             trim($justificativa),
+        );
+    }
+
+    /**
+     * O Chefe de Setor DEVOLVE À COORDENAÇÃO, com o motivo escrito.
+     *
+     * O motivo é obrigatório (a exigência mora no controller): devolver sem
+     * dizer por que joga o caso de volta na mesa de quem tria sem nada para
+     * decidir com — e o registro voltaria a circular às cegas.
+     *
+     * @param  list<int>  $ids
+     * @return array{alterados: int, ignorados: int}
+     */
+    public static function devolverAoCoordenador(array $ids, string $motivo): array
+    {
+        return self::decidir(
+            $ids,
+            self::DEVOLVIDO,
+            'Devolvido à coordenação pela chefia da área',
+            trim($motivo),
         );
     }
 

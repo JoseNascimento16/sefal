@@ -238,6 +238,46 @@ class FiscalizacoesController extends Controller
     }
 
     /**
+     * DEVOLVER À COORDENAÇÃO — a chefia diz que o caso não é dela.
+     *
+     * Terceira saída da leitura, ao lado da ciência e da nova vistoria (ordem do
+     * dono, 10/09/2026): fecha o ciclo, porque quem redireciona é quem tria. O
+     * motivo é obrigatório no SERVIDOR — devolver calado joga o caso de volta na
+     * mesa do Coordenador sem nada com que decidir.
+     */
+    public function devolver(Request $request): RedirectResponse
+    {
+        if (($recusa = $this->exigirDecisao($request)) !== null) {
+            return $recusa;
+        }
+
+        $dados = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
+            'ids.*' => ['required', 'integer'],
+            'motivo' => ['required', 'string', 'min:15', 'max:1000'],
+        ], [
+            'ids.required' => 'Escolha ao menos um registro.',
+            'motivo.required' => 'Escreva o motivo: o Coordenador precisa saber por que o caso '
+                .'voltou para ele.',
+            'motivo.min' => 'O motivo está curto demais para o Coordenador redirecionar o caso.',
+        ]);
+
+        $ids = array_map('intval', $dados['ids']);
+
+        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+            return $recusa;
+        }
+
+        $efeito = FiscalizacoesFicticias::devolverAoCoordenador($ids, (string) $dados['motivo']);
+
+        return back()->with(...$this->recado(
+            $efeito,
+            'devolvido à coordenação',
+            'devolvidos à coordenação',
+        ));
+    }
+
+    /**
      * Devolve a fila ao estado de partida.
      *
      * Existe porque é PROTÓTIPO: quem está demonstrando precisa poder recomeçar a

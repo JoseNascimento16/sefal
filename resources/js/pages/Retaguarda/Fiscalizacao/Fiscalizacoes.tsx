@@ -37,7 +37,7 @@ import { contar, plural } from '@/lib/plural';
 import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
 import { textoDaRecomendacao, textosDasRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
-import { ciencia, index, novaVistoria, reiniciar } from '@/routes/retaguarda/fiscalizacoes';
+import { ciencia, devolver, index, novaVistoria, reiniciar } from '@/routes/retaguarda/fiscalizacoes';
 
 /**
  * Fiscalizações — TODO registro de fiscalização concluído, numa tela só.
@@ -284,6 +284,9 @@ export default function Fiscalizacoes({
     const [observacao, setObservacao] = useState('');
     const [justificativa, setJustificativa] = useState('');
     const [confirmandoVolta, setConfirmandoVolta] = useState(false);
+    /* O motivo da devolução à coordenação — obrigatório, como a justificativa da
+       nova vistoria: quem recebe o caso de volta precisa saber por quê. */
+    const [motivo, setMotivo] = useState('');
 
     /*
      * O estado da FILA, e ele vem do servidor: o catálogo chega na ordem em que a
@@ -456,6 +459,7 @@ export default function Fiscalizacoes({
         setMarcados([]);
         setObservacao('');
         setJustificativa('');
+        setMotivo('');
     }
 
     function darCiencia() {
@@ -479,6 +483,15 @@ export default function Fiscalizacoes({
                 },
                 onError: () => setConfirmandoVolta(false),
             },
+        );
+    }
+
+    function devolverAoCoordenador() {
+        enviar(
+            'devolver',
+            devolver().url,
+            { ids: marcados, motivo },
+            { onSuccess: limpar },
         );
     }
 
@@ -1035,6 +1048,50 @@ export default function Fiscalizacoes({
                                 onClick={() => setConfirmandoVolta(true)}
                             >
                                 Determinar nova vistoria
+                            </BotaoAcao>
+                        </div>
+
+                        {/* A TERCEIRA saída: o caso não é desta área. Não é ciência
+                            (que encerra) nem nova vistoria (que gasta o trabalho da
+                            equipe de novo) — é devolver a quem TRIA, que é quem
+                            redireciona. Fecha o ciclo da Caixa de Entrada. */}
+                        <div className="card-premium" style={{ margin: 0 }}>
+                            <h3 className="card-titulo">
+                                <Undo2 size={16} aria-hidden /> Devolver à coordenação
+                            </h3>
+                            <p className="card-sub">
+                                O caso volta para quem tria, para ser redirecionado.
+                            </p>
+
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="motivo">
+                                    Motivo
+                                </label>
+                                <textarea
+                                    id="motivo"
+                                    className="form-control"
+                                    rows={3}
+                                    maxLength={1000}
+                                    value={motivo}
+                                    onChange={(e) => setMotivo(e.target.value)}
+                                    placeholder="Por que este caso não é da sua área"
+                                />
+                                <p className="form-ajuda">
+                                    Obrigatório: sem o motivo, o Coordenador recebe o
+                                    caso de volta sem nada com que decidir para onde
+                                    mandá-lo.
+                                </p>
+                            </div>
+
+                            <BotaoAcao
+                                icone={<Undo2 size={16} aria-hidden />}
+                                carregando={enviando === 'devolver'}
+                                ocupado={ocupado}
+                                disabled={motivo.trim().length < 15}
+                                rotuloCarregando="Devolvendo…"
+                                onClick={devolverAoCoordenador}
+                            >
+                                Devolver à coordenação
                             </BotaoAcao>
                         </div>
                         </div>
