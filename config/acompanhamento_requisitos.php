@@ -219,11 +219,14 @@ return [
          * O conteúdo dela está incorporado abaixo.
          */
         [
-            'modulo' => 'Fiscalização',
+            // Passou de Fiscalização para Sistema em 10/09/2026 (ordem do dono):
+            // montar operação é ato de gestão sobre a estrutura, não trabalho de
+            // campo.
+            'modulo' => 'Sistema',
             'tela' => 'Cadastro de Operação',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.operacoes.index',
-            'breadcrumb' => 'Fiscalização › Cadastro de Operação',
+            'breadcrumb' => 'Sistema › Cadastro de Operação',
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => 'Sem requisito escrito — origem: decisão do dono 09/09/2026 ("faça também já o '
@@ -425,7 +428,12 @@ return [
                 .'vermelho diz o que parou e leva para onde se corrige. Vigia o ambiente (conta de '
                 .'administrador ativa, armazenamento gravável) e as listas de escolha OBRIGATÓRIAS — '
                 .'atividade do ambulante e tipo de infração. As verificações que escrevem em disco ou '
-                .'falam com serviço externo só rodam pelo botão.',
+                .'falam com serviço externo só rodam pelo botão. ⚠️ Desde 10/09/2026 a tela é SÓ DO '
+                .'ADMINISTRADOR (ordem do dono): o que ela mostra quando algo está vermelho conta como '
+                .'o sistema é montado por dentro, e isso não é decisão de operação — o Chefe de Setor '
+                .'saiu da concessão, com migration removendo a linha já gravada. E o check da atividade '
+                .'do ambulante baixou de falha para atenção, porque a justificativa do vermelho era o '
+                .'cadastro de ambulante, que deixou de existir no mesmo dia.',
         ],
 
         [
@@ -447,25 +455,39 @@ return [
 
         [
             'modulo' => 'Fiscalização',
-            'tela' => 'Cadastro de Ambulante',
+            // NÃO é mais "Cadastro de Ambulante": a tela deixou de cadastrar em
+            // 10/09/2026. Rótulo que promete o que a tela não faz é o que gera o
+            // card "não consigo editar o ambulante".
+            'tela' => 'Ambulantes (consulta)',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.ambulantes.index',
             'breadcrumb' => 'Fiscalização › Ambulantes',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemSpec.' Identidade de quem é fiscalizado, com documento OPCIONAL: em rua a '
-                .'pessoa é reconhecida pela foto e pelo apelido, e exigir CPF faria o cadastro de campo '
-                .'não acontecer. Quando informado, o documento é validado (CPF ou CNPJ, inclusive o '
-                .'alfanumérico) e não se repete. O cadastro nascido em campo fica marcado como '
-                .'"Cadastrado em campo" até alguém conferir — a tela de validação dessa fila é de '
-                .'entrega futura, e por ora o Chefe de Setor troca a situação à mão. Nome e apelido aceitam nome '
-                .'de gente, não marcação nem símbolo. O fiscal CONSULTA o cadastro pela Retaguarda: '
-                .'incluir e excluir por lá são da gestão. A entidade é o AMBULANTE, e ser '
-                .'PERMISSIONÁRIO é atributo dela (tem permissão da SEMOP, sim ou não): quem é marcado '
-                .'precisa informar o nº da permissão, a validade segue opcional (em rua o papel '
-                .'costuma não estar legível), desmarcar limpa os dois, e a situação continua sendo '
-                .'outra pergunta — sem permissão pode estar regular, e permissionário pode estar '
-                .'irregular.',
+            'nota' => 'Sem requisito escrito — origem: spec de design 2026-08-24, REVISADA pela decisão do '
+                .'dono de 10/09/2026 ("a tela de Ambulantes não será CRUD, só irá receber os registros '
+                .'do SGCI via integração"). ⚠️ A tela é CONSULTA: o cadastro-mestre dos ambulantes é do '
+                .'SGCI (o sistema do comércio informal) e chega ao SEFAL por INTEGRAÇÃO — incluir, '
+                .'alterar e excluir saíram da tela E do servidor (as rotas deixaram de existir, junto '
+                .'com a validação). Deixar a rota viva com a tela sem botão seria pior: o servidor '
+                .'aceitaria escrita de quem montasse a requisição, e a carga seguinte do SGCI desfaria '
+                .'em silêncio. A tela DIZ isso a quem abre — de onde vem o dado, que aqui é espelho de '
+                .'leitura e que a correção se faz na origem —, no selo do topo e outra vez na ficha, '
+                .'onde a dúvida nasce; sem isso a pessoa procura o botão de editar e conclui que o '
+                .'sistema está pela metade. O que ficou: listagem enxuta com busca inteligente '
+                .'(facetas de permissão, situação, com/sem documento, permissão vencida e o nome de '
+                .'cada ramo da parametrização), a FICHA do ambulante em leitura, a foto servida por '
+                .'rota autenticada (é retrato de cidadão fiscalizado; disco privado, guarda de leitura '
+                .'antes da imagem) e a exportação do recorte visível em PDF/XLSX/DOCX. A identidade '
+                .'continua sendo a de campo — foto + apelido, com as iniciais quando não há foto —, e '
+                .'ser PERMISSIONÁRIO segue sendo atributo (tem permissão da SEMOP, sim ou não), '
+                .'independente da situação: sem permissão pode estar regular, e permissionário pode '
+                .'estar irregular. ⚠️ A INTEGRAÇÃO NÃO EXISTE (PEND-001): o que a tela mostra é dado '
+                .'de exemplo, para aprovar a forma da consulta — nenhum contrato de API, cliente HTTP '
+                .'ou tabela nova foi inventado. Ficou de fora, junto com o cadastro: a validação da '
+                .'fila de quarentena (a situação "Cadastrado em campo" segue sendo mostrada, mas '
+                .'ninguém a troca por aqui) e a busca no servidor, que é pré-requisito da carga real '
+                .'(PEND-012).',
         ],
 
         [
@@ -526,11 +548,15 @@ return [
         ],
 
         [
-            'modulo' => 'Estrutura',
+            // Era o módulo 'Estrutura', que era uma seção de menu com UMA tela.
+            // A seção foi removida em 10/09/2026 e a tela passou para Sistema
+            // (ordem do dono); o módulo acompanha, senão o resumo agruparia por
+            // uma seção que ninguém acha mais no menu.
+            'modulo' => 'Sistema',
             'tela' => 'Áreas e Equipes',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.areas-e-equipes.index',
-            'breadcrumb' => 'Estrutura › Áreas e Equipes',
+            'breadcrumb' => 'Sistema › Áreas e Equipes',
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemPrototipo.' A estrutura PERMANENTE da fiscalização — Área › Equipe › '

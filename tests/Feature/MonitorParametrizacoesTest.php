@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Services\Monitoramento\CheckParametrizacao;
 use App\Services\Monitoramento\MonitorParametrizacoes;
 use App\Services\Monitoramento\ResultadoCheck;
+use App\Support\CatalogoFuncionalidades;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -130,31 +132,113 @@ test('o check do armazenamento nao escreve nada no load; a escrita real e a veri
         ->and($check->executarProfunda()->status)->toBe(ResultadoCheck::OK);
 });
 
-test('lei: a atividade do ambulante FLIPA — sem nenhuma em uso, o cadastro para e a tela acusa', function () {
+test('lei: a atividade do ambulante FLIPA, e como AVISO — ninguém cadastra por aqui desde que a base virou do SGCI', function () {
     /*
      * O caso que o monitoramento existe para pegar: inativar a última atividade
-     * não avisa ninguém, e dias depois o cadastro de ambulante simplesmente
-     * não salva — com uma recusa de campo que ninguém liga a uma decisão tomada
-     * em outra tela.
+     * não avisa ninguém, e o efeito aparece longe da tela em que a decisão foi
+     * tomada.
      *
-     * É FALHA, e não aviso: sem atividade em uso ninguém é cadastrado, e é do
-     * cadastro que a fiscalização parte.
+     * ⚠️ É AVISO, e era FALHA até 10/09/2026. A justificativa do vermelho era "o
+     * cadastro de ambulante exige a atividade, então ninguém é cadastrado", e ela
+     * morreu quando a tela de Ambulantes deixou de ser cadastro: a base vem do
+     * SGCI, por integração, e não há formulário nenhum a travar. Severidade
+     * honesta é a regra da tela (RN-16) — vermelho para fluxo que não existe
+     * ensina a ignorar o vermelho. O check FICA porque a lista é o ramo que a
+     * ficha mostra, a faceta pela qual a busca filtra e o que a integração vai
+     * ter de casar; ele volta a FALHA junto com o primeiro caminho que grave
+     * ambulante.
      */
     $check = checkDoCatalogo('parametrizacao-atividade-ativa');
 
-    // Banco vazio: não há o que escolher.
-    expect($check->executar()->status)->toBe(ResultadoCheck::FALHA);
+    // Banco vazio: não há o que reconhecer.
+    expect($check->executar()->status)->toBe(ResultadoCheck::AVISO);
 
     $atividade = AtividadeAmbulante::create(['nome' => 'Alimentos preparados', 'ativo' => true]);
 
     expect($check->executar()->status)->toBe(ResultadoCheck::OK);
 
     // Inativar a última é o caminho realista — e o check tem de acusar isso, não
-    // só a tabela vazia: "existe cadastrada" não é "pode ser escolhida".
+    // só a tabela vazia: "existe cadastrada" não é "está em circulação".
     $atividade->update(['ativo' => false]);
 
-    expect($check->executar()->status)->toBe(ResultadoCheck::FALHA)
+    expect($check->executar()->status)->toBe(ResultadoCheck::AVISO)
         ->and($check->executar()->detalhe)->toContain('fora de uso');
+});
+
+test('o Chefe de Setor NAO tem o Monitoramento na semente — a tela e do administrador', function () {
+    /*
+     * Ordem do dono (10/09/2026): "somente admin pode ver Monitoramento". Ele
+     * TINHA a concessão, e o teste guarda as duas metades da mudança: a declaração
+     * do menu (que resolve banco novo) e a migration (que tira a linha órfã do
+     * banco já semeado).
+     *
+     * A conferência é com PERFIL NÃO-ADMIN de verdade, e não pela presença do
+     * middleware: com o slug fora da matriz a guarda deixaria passar, e ver
+     * `Permissao` na lista de rotas não prova recusa nenhuma.
+     */
+    config(['retaguarda.permissao_enforce' => 'block']);
+
+    $this->seed();
+
+    expect(PermissaoSetor::where('setor', 'chefe-de-setor')->where('slug', 'monitoramento')->exists())
+        ->toBeFalse()
+        ->and(CatalogoFuncionalidades::setoresSemente('monitoramento'))
+        ->toBe(['administrador']);
+
+    $chefe = User::factory()->create(['admin' => false]);
+    $chefe->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+
+    // Barrado, e com o motivo em tela: ninguém é impedido em silêncio.
+    $this->actingAs($chefe->fresh())->get('/retaguarda/monitoramento')
+        ->assertRedirect('/retaguarda/inicio')
+        ->assertSessionHas('flash.erro');
+});
+
+test('a migration tira a concessao ORFA do Chefe de Setor sem passar por cima de decisao de gerente', function () {
+    /*
+     * A semente se aplica UMA VEZ (`firstOrCreate`, de propósito): mudar a lista do
+     * menu não apaga linha de banco já semeado. Sem a migration, o Chefe de Setor
+     * continuaria entrando no Monitoramento para sempre — a decisão do dono
+     * valeria só para quem instalasse o sistema do zero.
+     *
+     * E a remoção é CONDICIONAL: linha que alguém ajustou no Modo Gerente fica
+     * intacta. Migration que sobrescreve decisão de gente é migration que apaga
+     * trabalho.
+     */
+    $migration = require database_path(
+        'migrations/2026_09_10_090000_monitoramento_passa_a_ser_so_do_administrador.php',
+    );
+
+    $semente = [
+        'setor' => 'chefe-de-setor',
+        'slug' => 'monitoramento',
+        'visivel' => true,
+        'habilitado' => true,
+        'apenas_leitura' => false,
+        'incluir' => true,
+        'excluir' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ];
+
+    // (a) A linha como a semente a deixou: sai.
+    DB::table('permissoes_setor')->insert($semente);
+
+    $migration->up();
+    // De novo: idempotente (no OKD o `migrate` é passo manual, e quem executa à
+    // mão executa duas vezes um dia).
+    $migration->up();
+
+    expect(DB::table('permissoes_setor')->where('setor', 'chefe-de-setor')->where('slug', 'monitoramento')->exists())
+        ->toBeFalse();
+
+    // (b) A linha que alguém MEXEU na tela: fica.
+    DB::table('permissoes_setor')->insert([...$semente, 'apenas_leitura' => true, 'habilitado' => false, 'incluir' => false, 'excluir' => false]);
+
+    $migration->up();
+
+    expect(DB::table('permissoes_setor')->where('setor', 'chefe-de-setor')->where('slug', 'monitoramento')->exists())
+        ->toBeTrue();
 });
 
 test('lei: o tipo de infracao FLIPA, e como AVISO — nada esta parado hoje', function () {

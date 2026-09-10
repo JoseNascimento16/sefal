@@ -1,37 +1,35 @@
 <?php
 
-use App\Http\Controllers\Retaguarda\CadastroAmbulanteController;
+use App\Http\Controllers\Retaguarda\AmbulantesController;
 use App\Models\Ambulante;
 use App\Models\AtividadeAmbulante;
 use App\Models\Setor;
 use App\Models\User;
-use Illuminate\Database\QueryException;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /*
 |--------------------------------------------------------------------------
-| Ambulantes — quem grava o quê, e por onde a foto sai
+| Ambulantes — quem entra na consulta, e por onde a foto sai
 |--------------------------------------------------------------------------
 |
-| Duas coisas que o cadastro em si não responde, e que decidem se a quarentena
-| existe de verdade:
+| ⚠️ Este arquivo tratava de "quem GRAVA o quê". Não há mais o que gravar: em
+| 10/09/2026 a tela deixou de ser cadastro (a base é do SGCI, por integração), e
+| os testes de inclusão, alteração e exclusão saíram junto com as rotas — a lei de
+| que nenhuma mutação mora sob este caminho está em `AmbulantesConsultaTest`.
 |
-|   • o FISCAL apenas consulta. Ele cadastra em RUA, pelo aplicativo, e o que
-|     nasce em rua espera a conferência do chefe de setor. Se ele pudesse alterar pela
-|     Retaguarda, tiraria da fila o registro que ele mesmo acabou de criar — a
-|     situação é campo do mesmo formulário, então "pode alterar" e "pode
-|     validar" são a mesma coisa aqui;
+| Sobrou o que continua sendo verdade, e é o que decide se a consulta é utilizável
+| e segura:
+|
+|   • o FISCAL ABRE a tela. Barrar a consulta seria mandá-lo para a rua às cegas —
+|     chegar na calçada sem saber quem está cadastrado é trabalhar sem alvo;
+|   • a tela recebe do servidor o que a pessoa pode fazer nela, e hoje a resposta é
+|     "só consultar" para TODO MUNDO;
 |   • a FOTO é retrato de cidadão fiscalizado, exibido ao lado do documento
 |     dele. Sai por rota autenticada, nunca por URL de disco público — lá o
 |     arquivo é servido fora das guardas, e nome difícil de adivinhar não é
-|     controle de acesso.
-|
-| São sempre DUAS garantias por regra, e uma não substitui a outra: o servidor
-| barra (é a fronteira) e a tela não oferece (é o que evita descobrir a recusa
-| depois de preencher o formulário inteiro).
+|     controle de acesso;
+|   • a persistência declarada no deploy cobre a pasta onde a foto de fato mora.
 |
 */
 
@@ -60,122 +58,33 @@ function contaDoSetor(string $slug): User
     return $u->fresh();
 }
 
-/**
- * Os campos de um cadastro válido.
- *
- * @param  array<string, mixed>  $extras
- * @return array<string, mixed>
- */
-function camposDoCadastro(int $atividadeId, array $extras = []): array
-{
-    return [
-        'nome' => 'João da Silva',
-        'atividade_id' => $atividadeId,
-        'situacao' => Ambulante::SITUACAO_REGULAR,
-        // Sem permissão da SEMOP: o caso comum, e a resposta é obrigatória.
-        'permissionario' => false,
-        ...$extras,
-    ];
-}
-
-/** Um cadastro esperando a conferência do chefe de setor. */
-function cadastroEmQuarentena(int $atividadeId): Ambulante
-{
-    return Ambulante::factory()->create([
-        'atividade_id' => $atividadeId,
-        'situacao' => Ambulante::SITUACAO_CAMPO,
-    ]);
-}
-
-test('o fiscal NAO tira da quarentena o cadastro que ele mesmo fez em rua', function () {
-    /*
-     * O cenário que dá sentido a este teste: o fiscal cadastra alguém de pé na
-     * calçada, com o que a pessoa disse e sem documento conferido. O registro
-     * nasce em quarentena JUSTAMENTE para o chefe de setor conferir depois.
-     *
-     * Com a alteração liberada, ele trocava a situação para "Regular" e a
-     * conferência simplesmente não acontecia — sem nada no sistema registrando
-     * que ela foi pulada.
-     */
-    $fiscal = contaDoSetor('fiscal');
-    $p = cadastroEmQuarentena($this->atividade->id);
-
-    $this->actingAs($fiscal)->put(
-        enderecoDoAmbulante($p->id),
-        camposDoCadastro($this->atividade->id, [
-            'nome' => $p->nome,
-            'situacao' => Ambulante::SITUACAO_REGULAR,
-        ]),
-    )->assertSessionHas('flash.erro');
-
-    expect($p->fresh()->situacao)->toBe(Ambulante::SITUACAO_CAMPO);
-});
-
-test('o fiscal nao inclui nem exclui cadastro pela Retaguarda', function () {
-    $fiscal = contaDoSetor('fiscal');
-    $p = cadastroEmQuarentena($this->atividade->id);
-
-    $this->actingAs($fiscal)
-        ->post(enderecoDoAmbulante(), camposDoCadastro($this->atividade->id))
-        ->assertSessionHas('flash.erro');
-
-    $this->actingAs($fiscal)
-        ->delete(enderecoDoAmbulante($p->id))
-        ->assertSessionHas('flash.erro');
-
-    // Um só: o que já existia. Nada foi criado nem apagado.
-    expect(Ambulante::count())->toBe(1);
-});
-
 test('o fiscal ABRE a tela — barrar a consulta seria mandá-lo para a rua às cegas', function () {
     $this->actingAs(contaDoSetor('fiscal'))
         ->get(enderecoDoAmbulante())
         ->assertOk();
 });
 
-test('o chefe de setor continua fazendo tudo — a restricao e do fiscal, nao da tela', function () {
-    $chefe = contaDoSetor('chefe-de-setor');
-    $p = cadastroEmQuarentena($this->atividade->id);
-
-    $this->actingAs($chefe)->put(
-        enderecoDoAmbulante($p->id),
-        camposDoCadastro($this->atividade->id, [
-            'nome' => $p->nome,
-            'situacao' => Ambulante::SITUACAO_REGULAR,
-        ]),
-    )->assertSessionHasNoErrors();
-
-    expect($p->fresh()->situacao)->toBe(Ambulante::SITUACAO_REGULAR);
-
-    $this->actingAs($chefe)
-        ->post(enderecoDoAmbulante(), camposDoCadastro($this->atividade->id))
-        ->assertSessionHasNoErrors();
-
-    expect(Ambulante::count())->toBe(2);
-});
-
-test('a tela recebe do servidor o que a pessoa pode fazer nela', function () {
+test('a tela recebe do servidor "so consulta" para TODO MUNDO', function () {
     /*
-     * É o que impede a tela de oferecer o que o servidor recusa. Sem isto o
-     * fiscal via "Incluir", preenchia nome, apelido, atividade, situação, anexava
-     * a foto — e só então era barrado.
+     * A prop `acoes` continua descendo (é o caminho único do front para "o que eu
+     * posso fazer aqui"), e o que ela diz mudou: nem o Chefe de Setor opera, inclui
+     * ou exclui nesta tela — não porque foi restringido, mas porque não há mais o
+     * que operar. As rotas de escrita deixaram de existir em 10/09/2026, quando a
+     * base passou a vir do SGCI.
      *
-     * A resposta vem do MESMO serviço que as guardas consultam: uma segunda conta
-     * feita no navegador acabaria discordando da que barra.
+     * ⚠️ Isto é a leitura da MATRIZ, não uma decisão da tela: se a semente
+     * voltasse a conceder "Inclui" ao Chefe de Setor, o Modo Gerente passaria a
+     * exibir uma marca que não decide nada, e é isso que este teste tranca.
      */
-    $this->actingAs(contaDoSetor('fiscal'))->get(enderecoDoAmbulante())
-        ->assertInertia(fn (Assert $page) => $page
-            ->where('acoes.visivel', true)
-            ->where('acoes.apenas_leitura', true)
-            ->where('acoes.habilitado', false)
-            ->where('acoes.incluir', false)
-            ->where('acoes.excluir', false));
-
-    $this->actingAs(contaDoSetor('chefe-de-setor'))->get(enderecoDoAmbulante())
-        ->assertInertia(fn (Assert $page) => $page
-            ->where('acoes.habilitado', true)
-            ->where('acoes.incluir', true)
-            ->where('acoes.excluir', true));
+    foreach (['fiscal', 'chefe-de-setor'] as $setor) {
+        $this->actingAs(contaDoSetor($setor))->get(enderecoDoAmbulante())
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('acoes.visivel', true)
+                ->where('acoes.apenas_leitura', true)
+                ->where('acoes.habilitado', false)
+                ->where('acoes.incluir', false)
+                ->where('acoes.excluir', false));
+    }
 });
 
 test('fora do modo que barra, a tela oferece tudo — senao esconderia o que o servidor aceita', function () {
@@ -258,44 +167,6 @@ test('a grade aponta a foto para a rota, e nunca para o disco publico', function
             ->where('ambulantes.0.foto_url', "/retaguarda/ambulantes/{$p->id}/foto"));
 });
 
-test('gravacao que falha na INCLUSAO nao deixa a foto orfa no disco', function () {
-    /*
-     * O arquivo é guardado antes da linha (é ele que preenche a coluna), então a
-     * falha da gravação tem de levá-lo junto. Sem isso a imagem fica no disco sem
-     * nada apontando para ela, e nada a recolhe depois.
-     *
-     * A falha é provocada onde ela realmente acontece: a coluna do código tem
-     * índice único, e aqui ela já está ocupada pelo protocolo que este cadastro
-     * receberia.
-     */
-    Storage::fake('local');
-
-    $ocupado = Ambulante::factory()->create(['atividade_id' => $this->atividade->id]);
-
-    /*
-     * O contador volta a apontar para o código que este cadastro JÁ tem, então a
-     * próxima inclusão pede um número que o índice único vai recusar.
-     *
-     * O recuo é feito depois de criar, e não antes: a factory tira o código do
-     * mesmo gerador de protocolo (é a fonte única da numeração), então criar o
-     * registro consome o contador — semeá-lo antes seria gastar o número que se
-     * queria reservar para a colisão.
-     */
-    DB::table('protocolo_contadores')
-        ->where('prefixo', 'AMB')
-        ->update(['proximo' => (int) substr($ocupado->codigo, -3)]);
-
-    expect(fn () => $this->withoutExceptionHandling()->actingAs($this->admin)->post(
-        enderecoDoAmbulante(),
-        camposDoCadastro($this->atividade->id, [
-            'foto' => UploadedFile::fake()->image('retrato.jpg'),
-        ]),
-    ))->toThrow(QueryException::class);
-
-    // Nenhum arquivo sobrou: a pasta está como estava antes da tentativa.
-    expect(Storage::disk('local')->allFiles('ambulantes'))->toBe([]);
-});
-
 test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mora', function () {
     /*
      * A MESMA decisão tem três donos: o controller escolhe o disco, o compose de
@@ -313,7 +184,7 @@ test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mor
     $absoluto = rtrim(str_replace(
         '\\',
         '/',
-        Storage::disk(CadastroAmbulanteController::DISCO_DAS_FOTOS)->path(''),
+        Storage::disk(AmbulantesController::DISCO_DAS_FOTOS)->path(''),
     ), '/');
 
     expect($absoluto)->toStartWith($raiz.'/');
@@ -362,21 +233,27 @@ test('a persistencia declarada no deploy cobre a pasta onde a foto realmente mor
     }
 });
 
-test('razao social com virgula e E comercial e aceita — o campo aceita CNPJ', function () {
+test('razao social com virgula e E comercial e exibida inteira — a base tem pessoa juridica', function () {
     /*
-     * O documento aceita CPF **ou CNPJ**, então existe ambulante pessoa
-     * jurídica. Recusar a pontuação de razão social obrigava quem cadastrava a
-     * alterá-la para o cadastro passar — e aí o nome deixava de bater com o
-     * documento que ele representa.
+     * O documento do ambulante pode ser CPF **ou CNPJ**, então existe ambulante
+     * pessoa jurídica, e razão social é escrita com vírgula e `&` o tempo todo.
+     *
+     * ⚠️ Este teste ERA sobre a gravação (a Rule `NomeDeCadastro` recusava essa
+     * pontuação e obrigava a adulterar o nome para o cadastro passar). Sem
+     * cadastro, o que resta é o outro lado da mesma preocupação: o nome que vem do
+     * SGCI chega INTEIRO à tela, sem nada pelo caminho recortando pontuação. A
+     * regra de escrita continua coberta em `tests/Unit/NomeDeCadastroTest.php`,
+     * onde a Rule ainda serve as telas que gravam nome.
      */
-    $this->actingAs($this->admin)->post(
-        enderecoDoAmbulante(),
-        camposDoCadastro($this->atividade->id, [
-            'nome' => 'Silva & Filhos Comercio de Alimentos, ME',
-            'documento' => '11.222.333/0001-81',
-        ]),
-    )->assertSessionHasNoErrors();
+    Ambulante::factory()->create([
+        'atividade_id' => $this->atividade->id,
+        'nome' => 'Silva & Filhos Comercio de Alimentos, ME',
+        'documento' => '11222333000181',
+    ]);
 
-    expect(Ambulante::firstOrFail()->nome)
-        ->toBe('Silva & Filhos Comercio de Alimentos, ME');
+    $this->actingAs($this->admin)->get(enderecoDoAmbulante())
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('ambulantes.0.nome', 'Silva & Filhos Comercio de Alimentos, ME')
+            ->where('ambulantes.0.documento_formatado', '11.222.333/0001-81')
+            ->etc());
 });

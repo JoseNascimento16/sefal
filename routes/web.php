@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
+use App\Http\Controllers\Retaguarda\AmbulantesController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
-use App\Http\Controllers\Retaguarda\CadastroAmbulanteController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\DenunciasController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
@@ -144,29 +144,35 @@ Route::middleware(['auth'])->group(function () {
         ->name('retaguarda.acompanhamento-de-requisitos.index');
 
     /*
-     * Ambulantes — a identidade de quem é fiscalizado.
+     * Ambulantes — CONSULTA da base que o SGCI entrega.
+     *
+     * ⚠️ SÓ GET, e isso é a decisão do dono de 10/09/2026 ("a tela de Ambulantes
+     * não será CRUD, só irá receber os registros do SGCI via integração"). As
+     * rotas de inclusão (`store`), alteração (`update`) e exclusão (`destroy`)
+     * SAÍRAM daqui junto com os métodos do controller.
+     *
+     * Tirar o botão da tela e deixar a rota viva seria PIOR que não mudar nada:
+     * o servidor continuaria aceitando escrita de quem montasse a requisição, e
+     * o que fosse gravado na base espelho seria desfeito em silêncio pela
+     * próxima carga do SGCI. A base não é nossa.
      *
      * O primeiro trecho do caminho é o slug da tela (`ambulantes`), que é de
      * onde as guardas deduzem a permissão: as rotas nascem protegidas, e a rota
-     * que vier amanhã (prontuário, validação de quarentena) já chega junto.
+     * que vier amanhã (o prontuário de movimentação) já chega junto. O slug NÃO
+     * mudou com a natureza da tela — ele é identidade de acesso, e trocá-lo
+     * mataria a permissão de quem já a tem.
      *
      * O identificador vai como NÚMERO, e não o código nem o nome: o WAF da
      * Prefeitura barra assinatura de SQL na URL, e nome de gente é texto livre.
      */
     Route::prefix('retaguarda/ambulantes')->name('retaguarda.ambulantes.')->group(function () {
-        Route::get('/', [CadastroAmbulanteController::class, 'index'])->name('index');
+        Route::get('/', [AmbulantesController::class, 'index'])->name('index');
 
         // A foto sai por aqui, e não por URL de disco público: é retrato de
         // cidadão fiscalizado, e mora sob o caminho da tela justamente para a
         // guarda de leitura conferir a permissão antes de entregar a imagem.
-        Route::get('{ambulante}/foto', [CadastroAmbulanteController::class, 'foto'])
+        Route::get('{ambulante}/foto', [AmbulantesController::class, 'foto'])
             ->name('foto')->whereNumber('ambulante');
-
-        Route::post('/', [CadastroAmbulanteController::class, 'store'])->name('store');
-        Route::put('{ambulante}', [CadastroAmbulanteController::class, 'update'])
-            ->name('update')->whereNumber('ambulante');
-        Route::delete('{ambulante}', [CadastroAmbulanteController::class, 'destroy'])
-            ->name('destroy')->whereNumber('ambulante');
     });
 
     /*

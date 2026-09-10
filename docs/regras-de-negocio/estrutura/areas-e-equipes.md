@@ -1,6 +1,6 @@
 # Áreas e Equipes
 
-**Onde fica:** Menu → Estrutura → Áreas e Equipes (`/retaguarda/areas-e-equipes`).
+**Onde fica:** Menu → **Sistema** → Áreas e Equipes (`/retaguarda/areas-e-equipes`).
 **Quem usa:** administrador e Chefe de Setor. **O fiscal não entra** (ver RN-07).
 
 > ## ⚠️ ESTA TELA É UM PROTÓTIPO
@@ -175,3 +175,4 @@ algo. **No sistema real esta rota não existe:** cadastro não se reinicia.
 | 02/09/2026 | José Nascimento | Áreas e Equipes | A área ganha **gestor** (RN-01b): quem responde por ela dentro do sistema, distinto do encarregado de campo, com o papel escrito no rótulo dos dois, aviso na área sem gestor e o nome entrando na busca. | O dono decidiu que o **gestor é de uma área** e que só lhe interessa o que for direcionado a ela — então a área precisa saber quem a responde, e é desta estrutura que as telas de Denúncias derivam o recorte de cada gestor e o nome que o triador vê antes de encaminhar. |
 | 02/09/2026 | José Nascimento | Áreas e Equipes | Nasce a tela, como **protótipo**, com a estrutura real do documento de 17/04/2026: 8 áreas em cartões, a ficha de cada equipe, os fiscais, o bloco de bairros em fichas com inclusão e remoção, os três recortes (bairros / corredores / cidade por turno) e o aviso de bairro em mais de uma área. | Decisão da reunião com o cliente de 02/09/2026: Área › Equipe › bloco de bairros é estrutura permanente (a operação é evento; a equipe é organização), e é dela que sai a equipe sugerida para cada demanda da Caixa de Entrada. |
 | 04/09/2026 | José Nascimento | Áreas e Equipes | Os papéis passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`) — slug inclusive, com migration renomeando catálogo e matriz. Ver [Papéis e setores](../papeis-e-setores.md). | O vínculo pessoa↔área é o do Chefe de Setor: a chave do dado de protótipo virou `chefe_de_setor` e o rótulo da tela acompanhou. |
+| 10/09/2026 | José Nascimento | Áreas e Equipes | A tela **mudou de lugar no menu**: saiu da seção "Estrutura" (que existia só para ela e foi REMOVIDA) e passou a ser item do menu de **Sistema**. Rota, `slug` (`areas-e-equipes`), concessão e regras ficaram **intactos** — mudou o caminho até a tela, nada do que ela faz. | Ordem do dono (10/09/2026): _"crie no menu 'Sistemas' e coloque como filhos: Áreas e Equipes; Cadastro de Operação"_. A seção antiga não foi deixada vazia porque ela trazia recado de "aparece aqui quando você tiver acesso", e a casca DESENHA a seção que tem esse recado — sobraria um título órfão anunciando uma tela que mudou de lugar. |

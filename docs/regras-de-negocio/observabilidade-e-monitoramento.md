@@ -2,7 +2,7 @@
 
 **Onde fica:** Menu → Sistema → **Logs** (`/retaguarda/logs`) e Menu → Sistema → **Monitoramento**
 (`/retaguarda/monitoramento`).
-**Quem usa:** Logs, só o administrador; Monitoramento, administrador e Chefe de Setor.
+**Quem usa:** **só o administrador**, nas duas telas (o Monitoramento era também do Chefe de Setor até 10/09/2026 — ver RN-21).
 
 São **duas telas com o mesmo propósito e tempos diferentes**:
 
@@ -213,9 +213,15 @@ Inativar o último registro de uma lista obrigatória não avisa ninguém — e 
 exatamente a alteração destrutiva silenciosa que esta tela existe para pegar.
 Duas entram, com **severidades diferentes de propósito** (RN-16):
 
-- **Atividade do ambulante** → `falha`. O cadastro de ambulante exige a
-  atividade autorizada e recusa a inativada: sem nenhuma em uso, ninguém é
-  cadastrado — e é do cadastro que a fiscalização parte.
+- **Atividade do ambulante** → `atenção`. ⚠️ Era `falha`, e a justificativa era
+  "o cadastro de ambulante exige a atividade autorizada: sem nenhuma em uso,
+  ninguém é cadastrado". Essa frase morreu em 10/09/2026, quando a tela de
+  Ambulantes deixou de ser cadastro e a base passou a vir do **SGCI** por
+  integração: não há mais formulário a travar. O check FICA, porque a lista é o
+  ramo que a ficha do ambulante mostra, a faceta pela qual a busca filtra e o que
+  a integração vai ter de casar (PEND-001) — mas em amarelo, pela severidade
+  honesta (RN-16). Ele volta a `falha` junto com o primeiro caminho que GRAVE
+  ambulante: a integração do SGCI ou a fila do aplicativo do fiscal.
 - **Tipo de infração** → `atenção`. Nada está parado hoje (o enquadramento em rua
   é de entrega futura), mas lista vazia aqui é problema que se descobre na
   calçada, longe da mesa.
@@ -225,6 +231,31 @@ FORA por enquanto**: nenhuma tem consumidor nesta entrega, e check de fluxo que
 não existe é verde permanente (RN-12). Cada uma entra **junto com a tela que a
 consumir** — a regra do catálogo, e há teste-lei que reprova a entrada
 antecipada.
+
+### RN-21 — O Monitoramento é **só do administrador**
+
+A tela é controlada pela permissão `monitoramento`, semeada **apenas para
+administrador** — e "apenas" aqui quer dizer ZERO linha de matriz, porque o
+administrador não é semeado (o acesso total dele é desvio no código).
+
+O Chefe de Setor **tinha** a concessão até 10/09/2026, com a leitura de que "quem
+responde por 'o sistema está de pé?' é quem administra e quem gerencia a
+operação". Ordem do dono: _"somente admin pode ver Monitoramento"_. A razão cabe no
+dado — o que a tela mostra quando algo está vermelho (conta de administrador ativa,
+armazenamento gravável, listas obrigatórias vazias, o caminho para corrigir cada
+uma) conta como o sistema é montado por dentro, e isso não é decisão de operação.
+
+Tirar da declaração do menu **não bastou**: a lista `setores` é a SEMENTE da matriz,
+aplicada uma vez, e num banco já semeado a linha do Chefe de Setor continuaria lá.
+Quem a removeu foi a migration
+`2026_09_10_090000_monitoramento_passa_a_ser_so_do_administrador`, e ela só apaga a
+linha que **ainda está como a semente a deixou**: se alguém a ajustou no Modo
+Gerente, ela fica — decisão tomada na tela é decisão de gente.
+
+⚠️ **A matriz continua mandando.** Concedido no Modo Gerente, o Monitoramento abre
+para qualquer setor: esta regra é a concessão INICIAL, não um bloqueio de código.
+Quem é barrado é mandado para a tela inicial com o motivo escrito, como qualquer
+outra recusa de acesso.
 
 ### RN-20 — A tela de erro oferece a saída de QUEM está lendo
 
@@ -260,3 +291,4 @@ a sensação de sistema saudável justamente quando ele não está.
 | 26/08/2026 | José Nascimento | Monitoramento | Módulo novo **"Parametrização da fiscalização"** com dois checks: atividade do ambulante em uso (falha) e tipo de infração em uso (atenção) — RN-19. As outras quatro listas ficam fora, com teste-lei que reprova a entrada antecipada. | O cadastro de permissionário não salva sem atividade autorizada: inativar a última parava o fluxo em silêncio, com o painel continuando verde. É o caso que o critério de admissão descreve. |
 | 26/08/2026 | José Nascimento | Monitoramento | O selo da verificação profunda deixa de ser um parêntese grudado no título ("gravável(tem teste real)") e o resumo geral passa a dizer **"Sistema em operação"**. | Vocabulário de dentro de casa vazando para a tela, e "sistema operacional" em português é primeiro o SO da máquina — num painel de infraestrutura, a leitura errada é provável. |
 | 26/08/2026 | José Nascimento | Telas de erro | A saída oferecida passa a depender de quem está lendo (RN-20). | "Entrar no sistema" para quem já está dentro é convite a se deslogar. |
+| 10/09/2026 | José Nascimento | Monitoramento | A tela passa a ser **só do administrador** (RN-21): o Chefe de Setor sai da semente, e a linha já gravada dele é removida por migration condicional. E o check da **atividade do ambulante** baixa de `falha` para `atenção` (RN-19). | Ordem do dono: _"somente admin pode ver Monitoramento"_ — o que a tela mostra é como o sistema é montado por dentro, não estado da operação. O check baixou porque a justificativa do vermelho era o cadastro de ambulante, e ele deixou de existir no mesmo dia: a base passou a vir do SGCI por integração. Vermelho para fluxo que não existe ensina a ignorar o vermelho. |

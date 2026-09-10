@@ -181,80 +181,67 @@ return [
         /*
          * Fiscalização — o trabalho em si.
          *
-         * O fiscal entra aqui, e é o único lugar do menu em que ele entra: o
-         * cadastro é a identidade de quem ele vai fiscalizar em rua, e chegar
-         * na calçada sem saber quem está cadastrado é trabalhar às cegas.
+         * O fiscal entra aqui, e é o único lugar do menu em que ele entra: saber
+         * quem está cadastrado é o que evita chegar na calçada às cegas.
          *
-         * Mas ele entra para CONSULTAR, e só. Quem grava cadastro pela
-         * Retaguarda é a gestão: o fiscal cadastra em RUA, pelo aplicativo, e o
-         * que nasce em rua entra em quarentena até o Chefe de Setor conferir — criar
-         * direto de mesa passaria ao largo dessa conferência, e apagar cadastro
-         * fiscalizado deixaria o histórico sem alvo. Daí o ajuste na semente
-         * (ver `CatalogoFuncionalidades::acoesSemente`).
-         *
-         * ⚠️ O ajuste é `apenas_leitura`, e NÃO "incluir e excluir desligados".
-         * A diferença é a que decide se a quarentena existe de verdade: com
-         * `habilitado` ainda ligado, o fiscal ALTERAVA o cadastro — e a situação
-         * é campo do mesmo formulário, então ele tirava da fila o registro que
-         * ele mesmo tinha acabado de criar em rua, sem ninguém conferir nada.
-         * "Só consulta" derruba operar, incluir e excluir de uma vez, que é o
-         * que a frase acima sempre quis dizer.
-         *
-         * Isto é a CONCESSÃO INICIAL. Alargar ou apertar depois é ato de quem administra
-         * no Modo Gerente, e está registrado no doc de regra da tela.
+         * ⚠️ NENHUMA tela desta seção grava cadastro de ambulante — a base é do
+         * SGCI, e aqui ela é CONSULTA (ver o item "Ambulantes"). Por isso a
+         * concessão de todos os setores nesta tela é `apenas_leitura`.
          */
         [
             'rotulo' => 'Fiscalização',
             'vazio' => 'As telas da fiscalização aparecem aqui quando você tiver acesso a elas.',
             'itens' => [
+                /*
+                 * Ambulantes — CONSULTA da base do SGCI (decisão do dono,
+                 * 10/09/2026: "a tela de Ambulantes não será CRUD, só irá receber
+                 * os registros do SGCI via integração").
+                 *
+                 * Era um cadastro completo (incluir, alterar, excluir) desenhado
+                 * para o pior caso: o SEFAL sendo o mestre da base. O cliente
+                 * decidiu o contrário — o cadastro-mestre é o **SGCI**, o sistema
+                 * do comércio informal, e o SEFAL o recebe por INTEGRAÇÃO. Duas
+                 * bases da mesma pessoa divergiriam no primeiro ajuste, e a
+                 * correção feita aqui seria desfeita na próxima carga.
+                 *
+                 * Consequência na CONCESSÃO: `apenas_leitura` para TODOS os
+                 * setores, e não só para o fiscal. Não é aperto de acesso — é a
+                 * matriz parando de prometer o que a tela não faz mais: as rotas
+                 * de gravação deixaram de existir, então "inclui" e "exclui"
+                 * marcados no Modo Gerente ofereceriam a quem administra uma
+                 * decisão sem efeito nenhum.
+                 *
+                 * ⚠️ `apenas_leitura`, e NÃO "incluir e excluir desligados": é ele
+                 * que derruba OPERAR junto — e operar, aqui, era alterar o
+                 * cadastro. A distinção nasceu com o fiscal (que tirava da
+                 * quarentena o registro que ele mesmo criara em rua) e agora vale
+                 * para a tela inteira.
+                 *
+                 * A correção do dado se faz na ORIGEM, e a tela diz isso a quem
+                 * abre — impedimento nunca em silêncio.
+                 */
                 [
                     'rotulo' => 'Ambulantes',
                     'rota' => 'retaguarda.ambulantes.index',
                     'icone' => 'ambulantes',
                     'slug' => 'ambulantes',
                     'curto' => 'AMBULANTES',
-                    // O tamanho do cadastro, ao lado do item. A FILA de conferência
-                    // (quem nasceu em rua e espera validação) ganha o seu contador
-                    // quando a tela de quarentena existir — o catálogo já a tem.
+                    // O tamanho da base recebida, ao lado do item. A FILA de
+                    // conferência (quem nasceu em rua e espera validação) ganha o
+                    // seu contador quando a tela de quarentena existir — o
+                    // catálogo já a tem.
                     'contador' => 'ambulantes',
                     'setores' => [
+                        // O administrador vai SEM ajuste porque ele não é
+                        // semeado (o acesso total dele é desvio no código, não
+                        // linha de matriz): declarar `apenas_leitura` aqui seria
+                        // config morta fingindo restringir alguém.
                         'administrador',
-                        'chefe-de-setor',
+                        'chefe-de-setor' => ['apenas_leitura' => true],
                         'fiscal' => ['apenas_leitura' => true],
                     ],
                 ],
 
-                /*
-                 * Cadastro de Operação — PROTÓTIPO (09/09/2026).
-                 *
-                 * "A operação é evento; a equipe é organização": o trabalho de rua
-                 * com começo, fim e foco que a gestão monta em cima da estrutura de
-                 * áreas e equipes. Era um STUB que anunciava a Fase 2; passou a
-                 * existir junto com a unificação de Fiscalizações, porque o
-                 * direcionamento das denúncias já anexava demanda a operação e o
-                 * catálogo não tinha tela que o mantivesse.
-                 *
-                 * Concessão inicial: o Chefe de Setor CADASTRA (é ele que responde
-                 * pelo trabalho de rua da área dele) e o COORDENADOR consulta — ele
-                 * tria a entrada e precisa saber que operação existe para onde
-                 * encaminhar a demanda, mas montar a operação não é dele. A recusa
-                 * do ato dele mora no controller, dizendo o motivo.
-                 *
-                 * O FISCAL não entra: planejar operação é ato de gestão, e ele
-                 * recebe o trabalho já dirigido, pelo aplicativo.
-                 */
-                [
-                    'rotulo' => 'Cadastro de Operação',
-                    'rota' => 'retaguarda.operacoes.index',
-                    'icone' => 'operacoes',
-                    'slug' => 'operacoes',
-                    'curto' => 'OPERAÇÃO',
-                    'setores' => [
-                        'administrador',
-                        'chefe-de-setor',
-                        'coordenador' => ['apenas_leitura' => true],
-                    ],
-                ],
                 /*
                  * Caixa de Entrada do Administrativo — PROTÓTIPO (reunião com o
                  * cliente, 02/09/2026).
@@ -363,32 +350,18 @@ return [
         ],
 
         /*
-         * Estrutura — como a fiscalização se organiza para cobrir a cidade.
+         * ⚠️ A seção "Estrutura" NÃO existe mais, e a remoção é o ponto — não
+         * sobra casca (decisão do dono, 10/09/2026: "crie no menu 'Sistemas' e
+         * coloque como filhos: Áreas e Equipes; Cadastro de Operação").
          *
-         * Seção PRÓPRIA, e não um item dentro de Parametrização, por duas razões:
-         * a Parametrização inteira está oculta hoje (decisão do dono, 27/08), e
-         * Área/Equipe/bloco de bairros não é uma lista de escolha como as outras —
-         * é a organização do trabalho, e é dela que sai a derivação bairro →
-         * equipe que a Caixa de Entrada usa para sugerir o destino de cada
-         * demanda. "A operação é evento; a equipe é organização."
-         *
-         * O fiscal não entra: quem desenha a divisão da cidade e nomeia
-         * encarregado é a gestão.
+         * Ela existia para UMA tela — Áreas e Equipes —, que passou para o menu de
+         * Sistema. Deixá-la declarada e vazia não teria dado em nada apagado: a
+         * seção trazia `vazio`, e é justamente o `vazio` que faz a casca DESENHAR
+         * o título com o recado "aparece aqui quando você tiver acesso" (ver
+         * `HandleInertiaRequests::menu`). O resultado seria um título de seção
+         * eternamente órfão anunciando uma tela que mudou de lugar — pior do que
+         * não ter seção.
          */
-        [
-            'rotulo' => 'Estrutura',
-            'vazio' => 'A estrutura da fiscalização aparece aqui quando você tiver acesso a ela.',
-            'itens' => [
-                [
-                    'rotulo' => 'Áreas e Equipes',
-                    'rota' => 'retaguarda.areas-e-equipes.index',
-                    'icone' => 'areas',
-                    'slug' => 'areas-e-equipes',
-                    'curto' => 'ÁREAS',
-                    'setores' => ['administrador', 'chefe-de-setor'],
-                ],
-            ],
-        ],
 
         /*
          * Parametrização — as listas que o resto do sistema oferece para
@@ -470,6 +443,23 @@ return [
             ],
         ],
 
+        /*
+         * Sistema — o que se CONFIGURA e o que se acompanha.
+         *
+         * Desde 10/09/2026 ela abriga também os dois CADASTROS que a gestão
+         * mantém: Áreas e Equipes (que era uma seção "Estrutura" só para ela) e
+         * Cadastro de Operação (que estava em Fiscalização). Ordem do dono —
+         * "coloque como filhos: Áreas e Equipes; Cadastro de Operação".
+         *
+         * São itens DIRETOS, e não uma pasta "Cadastros" dentro de Sistema: a
+         * pasta existe para o conjunto que só faz sentido junto (os dois canais de
+         * Denúncia), e aqui seriam dois itens escondidos atrás de um clique a
+         * mais, sem nada em comum além de "não é diagnóstico".
+         *
+         * Eles vêm ANTES do bloco de diagnóstico (Relatórios, Monitoramento, Logs,
+         * Requisitos, Modo Gerente) porque a leitura desce do que se opera para o
+         * que se audita.
+         */
         [
             'rotulo' => 'Sistema',
             'itens' => [
@@ -480,6 +470,63 @@ return [
                     'curto' => 'PERFIL',
                     'setores' => [],
                 ],
+
+                /*
+                 * Áreas e Equipes — a estrutura PERMANENTE da fiscalização (Área >
+                 * Equipe > encarregado > bloco de bairros). É dela que sai a
+                 * derivação bairro → equipe que a Caixa de Entrada usa para sugerir
+                 * o destino de cada demanda. "A operação é evento; a equipe é
+                 * organização."
+                 *
+                 * O fiscal não entra: quem desenha a divisão da cidade e nomeia
+                 * encarregado é a gestão.
+                 *
+                 * ⚠️ O `slug` é o de sempre (`areas-e-equipes`), e mudar de seção
+                 * NÃO o toca: slug é a identidade da tela na matriz de permissões,
+                 * e renomeá-lo tiraria a tela do controle de acesso e mataria a
+                 * concessão de quem já a tem.
+                 */
+                [
+                    'rotulo' => 'Áreas e Equipes',
+                    'rota' => 'retaguarda.areas-e-equipes.index',
+                    'icone' => 'areas',
+                    'slug' => 'areas-e-equipes',
+                    'curto' => 'ÁREAS',
+                    'setores' => ['administrador', 'chefe-de-setor'],
+                ],
+
+                /*
+                 * Cadastro de Operação — PROTÓTIPO (09/09/2026).
+                 *
+                 * "A operação é evento; a equipe é organização": o trabalho de rua
+                 * com começo, fim e foco que a gestão monta em cima da estrutura de
+                 * áreas e equipes.
+                 *
+                 * Concessão inicial: o Chefe de Setor CADASTRA (é ele que responde
+                 * pelo trabalho de rua da área dele) e o COORDENADOR consulta — ele
+                 * tria a entrada e precisa saber que operação existe para onde
+                 * encaminhar a demanda, mas montar a operação não é dele. A recusa
+                 * do ato dele mora no controller, dizendo o motivo.
+                 *
+                 * O FISCAL não entra: planejar operação é ato de gestão, e ele
+                 * recebe o trabalho já dirigido, pelo aplicativo.
+                 *
+                 * ⚠️ Mesma ressalva do item acima: o `slug` (`operacoes`) não muda
+                 * ao trocar de seção.
+                 */
+                [
+                    'rotulo' => 'Cadastro de Operação',
+                    'rota' => 'retaguarda.operacoes.index',
+                    'icone' => 'operacoes',
+                    'slug' => 'operacoes',
+                    'curto' => 'OPERAÇÃO',
+                    'setores' => [
+                        'administrador',
+                        'chefe-de-setor',
+                        'coordenador' => ['apenas_leitura' => true],
+                    ],
+                ],
+
                 [
                     'rotulo' => 'Relatórios',
                     'rota' => 'retaguarda.relatorios.index',
@@ -495,10 +542,33 @@ return [
                     'icone' => 'monitoramento',
                     'curto' => 'MONITOR',
                     'slug' => 'monitoramento',
-                    // Diagnóstico do ambiente: quem responde por "o sistema está
-                    // de pé?" é quem administra e quem gerencia a operação. O
-                    // fiscal trabalha em rua, pelo aplicativo.
-                    'setores' => ['administrador', 'chefe-de-setor'],
+                    /*
+                     * SÓ O ADMINISTRADOR (ordem do dono, 10/09/2026: "somente
+                     * admin pode ver Monitoramento").
+                     *
+                     * O Chefe de Setor tinha a concessão — a leitura era "quem
+                     * responde por 'o sistema está de pé?' é quem administra e
+                     * quem gerencia a operação". O dono decidiu o contrário, e a
+                     * razão cabe no dado: a tela é diagnóstico do AMBIENTE
+                     * (conta de administrador ativa, armazenamento gravável,
+                     * listas obrigatórias vazias) e o que ela mostra quando algo
+                     * está vermelho conta como o sistema é montado por dentro.
+                     * Não é decisão de operação — é de quem administra.
+                     *
+                     * Declarar `['administrador']` é a forma que o projeto usa
+                     * para "só admin", e não `[]`: o administrador NÃO é semeado
+                     * (o seeder o pula, porque o acesso total dele é desvio no
+                     * código), então as duas formas geram ZERO linha de matriz —
+                     * mas esta diz em voz alta a quem a tela pertence, em vez de
+                     * deixar quem lê concluir que alguém esqueceu de preencher.
+                     * É o que Logs e Acompanhamento de Requisitos já fazem.
+                     *
+                     * ⚠️ Mudar esta lista NÃO tira concessão de banco já semeado
+                     * (a semente se aplica uma vez). Quem tira a linha órfã do
+                     * Chefe de Setor é a migration
+                     * `2026_09_10_090000_monitoramento_passa_a_ser_so_do_administrador`.
+                     */
+                    'setores' => ['administrador'],
                 ],
                 [
                     'rotulo' => 'Logs',
