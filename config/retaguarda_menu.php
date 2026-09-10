@@ -107,6 +107,54 @@ return [
         ],
 
         /*
+         * CAIXA DE ENTRADA — tudo o que CHEGA de fora, num lugar só (ordem do
+         * dono, 10/09/2026).
+         *
+         * Antes a demanda em papel morava na Fiscalização e as ouvidorias tinham
+         * seção própria: quem tria tinha de procurar em dois cantos do menu o
+         * mesmo tipo de trabalho — coisa que entrou e espera decisão. "Geral" é o
+         * que chega ao balcão (ofício, nova licença); a pasta Denúncias são os
+         * canais das ouvidorias.
+         */
+        [
+            'rotulo' => 'Caixa de Entrada',
+            'vazio' => 'O que chega de fora aparece aqui quando você tiver acesso a essas telas.',
+            'itens' => [
+                [
+                    'rotulo' => 'Geral',
+                    'rota' => 'retaguarda.caixa-de-entrada.index',
+                    'icone' => 'caixa',
+                    'slug' => 'caixa-de-entrada',
+                    'curto' => 'ENTRADA',
+                    'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                ],
+                [
+                    'rotulo' => 'Denúncias',
+                    'icone' => 'denuncias',
+                    'curto' => 'DENÚNCIA',
+                    'filhos' => [
+                        [
+                            'rotulo' => 'e-Salvador',
+                            'rota' => 'retaguarda.denuncias.e-salvador.index',
+                            'icone' => 'denuncias',
+                            'slug' => 'denuncias',
+                            'curto' => 'E-SALV',
+                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                        ],
+                        [
+                            'rotulo' => 'Fala Salvador',
+                            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+                            'icone' => 'denuncias',
+                            'slug' => 'denuncias',
+                            'curto' => 'FALA',
+                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+
+        /*
          * Denúncias — o que as ouvidorias da Prefeitura entregam por INTEGRAÇÃO.
          *
          * Vem ANTES de Fiscalização porque é o começo da cadeia: a denúncia chega
@@ -137,46 +185,6 @@ return [
          * arquivar o que não quisesse atender; a denúncia chega a ele pelo
          * aplicativo, já dirigida.
          */
-        [
-            'rotulo' => 'Denúncias',
-            'vazio' => 'As denúncias recebidas das ouvidorias aparecem aqui quando você tiver acesso a elas.',
-            'itens' => [
-                /*
-                 * Item de PASTA: ele não leva a lugar nenhum, ele ABRE — os dois
-                 * canais são os filhos (decisão do dono, 02/09/2026, depois de ver
-                 * os dois soltos no mesmo nível dos demais itens).
-                 *
-                 * Uma pasta não declara `rota`, `slug` nem `setores`: quem tem
-                 * tela, permissão e concessão são os filhos, e a pasta aparece
-                 * quando SOBRA ao menos um filho visível. Declarar `setores` aqui
-                 * criaria um segundo dono para "quem entra em denúncia" — o filho
-                 * diria uma coisa e a pasta outra.
-                 */
-                [
-                    'rotulo' => 'Denúncias',
-                    'icone' => 'denuncias',
-                    'curto' => 'DENÚNCIA',
-                    'filhos' => [
-                        [
-                            'rotulo' => 'e-Salvador',
-                            'rota' => 'retaguarda.denuncias.e-salvador.index',
-                            'icone' => 'denuncias',
-                            'slug' => 'denuncias',
-                            'curto' => 'E-SALV',
-                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
-                        ],
-                        [
-                            'rotulo' => 'Fala Salvador',
-                            'rota' => 'retaguarda.denuncias.fala-salvador.index',
-                            'icone' => 'denuncias',
-                            'slug' => 'denuncias',
-                            'curto' => 'FALA',
-                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
-                        ],
-                    ],
-                ],
-            ],
-        ],
 
         /*
          * Fiscalização — o trabalho em si.
@@ -220,27 +228,6 @@ return [
                  * A correção do dado se faz na ORIGEM, e a tela diz isso a quem
                  * abre — impedimento nunca em silêncio.
                  */
-                [
-                    'rotulo' => 'Ambulantes',
-                    'rota' => 'retaguarda.ambulantes.index',
-                    'icone' => 'ambulantes',
-                    'slug' => 'ambulantes',
-                    'curto' => 'AMBULANTES',
-                    // O tamanho da base recebida, ao lado do item. A FILA de
-                    // conferência (quem nasceu em rua e espera validação) ganha o
-                    // seu contador quando a tela de quarentena existir — o
-                    // catálogo já a tem.
-                    'contador' => 'ambulantes',
-                    'setores' => [
-                        // O administrador vai SEM ajuste porque ele não é
-                        // semeado (o acesso total dele é desvio no código, não
-                        // linha de matriz): declarar `apenas_leitura` aqui seria
-                        // config morta fingindo restringir alguém.
-                        'administrador',
-                        'chefe-de-setor' => ['apenas_leitura' => true],
-                        'fiscal' => ['apenas_leitura' => true],
-                    ],
-                ],
 
                 /*
                  * Caixa de Entrada do Administrativo — PROTÓTIPO (reunião com o
@@ -260,14 +247,6 @@ return [
                  * aplicativo, já dirigida. Dar-lhe a caixa permitiria escolher o
                  * próprio trabalho e arquivar o que não quisesse atender.
                  */
-                [
-                    'rotulo' => 'Caixa de Entrada',
-                    'rota' => 'retaguarda.caixa-de-entrada.index',
-                    'icone' => 'caixa',
-                    'slug' => 'caixa-de-entrada',
-                    'curto' => 'ENTRADA',
-                    'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
-                ],
                 /*
                  * Fiscalizações — TUDO o que a equipe concluiu em rua, numa tela
                  * só (PROTÓTIPO, decisão do dono 09/09/2026).
@@ -476,6 +455,27 @@ return [
                     'icone' => 'monitoramento',
                     'curto' => 'SISTEMA',
                     'filhos' => [
+                        [
+                            'rotulo' => 'Ambulantes',
+                            'rota' => 'retaguarda.ambulantes.index',
+                            'icone' => 'ambulantes',
+                            'slug' => 'ambulantes',
+                            'curto' => 'AMBULANTES',
+                            // O tamanho da base recebida, ao lado do item. A FILA de
+                            // conferência (quem nasceu em rua e espera validação) ganha o
+                            // seu contador quando a tela de quarentena existir — o
+                            // catálogo já a tem.
+                            'contador' => 'ambulantes',
+                            'setores' => [
+                                // O administrador vai SEM ajuste porque ele não é
+                                // semeado (o acesso total dele é desvio no código, não
+                                // linha de matriz): declarar `apenas_leitura` aqui seria
+                                // config morta fingindo restringir alguém.
+                                'administrador',
+                                'chefe-de-setor' => ['apenas_leitura' => true],
+                                'fiscal' => ['apenas_leitura' => true],
+                            ],
+                        ],
                         [
                             'rotulo' => 'Áreas e Equipes',
                             'rota' => 'retaguarda.areas-e-equipes.index',
