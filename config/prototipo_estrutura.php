@@ -90,7 +90,7 @@ return [
             // Quem responde pela ÁREA dentro do sistema — não é o encarregado de
             // campo. `matricula` liga o Chefe de Setor à conta; null = área sem
             // conta de demonstração (ver o cabeçalho).
-            'chefe_de_setor' => ['nome' => 'Marta Nogueira Prado', 'matricula' => 'gestor2'],
+            'chefe_de_setor' => ['nome' => 'Gestor 2', 'matricula' => 'gestor2'],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -138,7 +138,7 @@ return [
             'regiao' => 'Brotas',
             'equipe' => 'A2',
             'encarregado' => 'Nonato Silva',
-            'chefe_de_setor' => ['nome' => 'Verônica Lins Barreto', 'matricula' => 'gestor3'],
+            'chefe_de_setor' => ['nome' => 'Gestor 3', 'matricula' => 'gestor3'],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [
@@ -187,7 +187,7 @@ return [
             'regiao' => 'Boca do Rio',
             'equipe' => 'C1',
             'encarregado' => 'César Amaral',
-            'chefe_de_setor' => ['nome' => 'Lourdes Figueiredo Sales', 'matricula' => 'gestor1'],
+            'chefe_de_setor' => ['nome' => 'Gestor 1', 'matricula' => 'gestor1'],
             'recorte' => 'bairros',
             'turno' => 'Diurno',
             'fiscais' => [

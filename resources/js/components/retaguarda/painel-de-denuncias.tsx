@@ -1,5 +1,4 @@
 import {
-    Antenna,
     ArrowRightCircle,
     CornerUpLeft,
     FileText,
@@ -1109,22 +1108,11 @@ export function PainelDeDenuncias({
                 ou devolver vale só nesta sessão do navegador.
             </SeloPrototipo>
 
-            {/* O aviso que separa este módulo da Caixa de Entrada. Ele fica em
-                cima, e não numa coluna da grade, porque é a natureza da tela
-                inteira: aqui ninguém digita nada. */}
-            <div className="rt-sugestao" style={{ marginBottom: 18 }}>
-                <Antenna size={16} aria-hidden />
-                <div>
-                    <strong>Recebido de fora, por integração — nada é digitado aqui.</strong>
-                    <div>
-                        {canal.como_chega} Cada denúncia carrega o número que o
-                        canal lhe deu ({canal.prefixo_origem}-…) e a hora em que a
-                        integração a entregou. Por isso esta tela não tem botão de
-                        cadastrar: o que chega em papel ao balcão é assunto da{' '}
-                        <strong>Caixa de Entrada</strong>.
-                    </div>
-                </div>
-            </div>
+            {/* De ONDE a denúncia veio (integração, papel, balcão) não interessa a
+                quem trabalha aqui: para o Chefe de Setor tudo chega igual, pelo
+                DIRECIONAMENTO do Coordenador — ordem do dono, 10/09/2026. O aviso
+                antigo explicava a integração e virava ruído. Quem tria vê a
+                origem na própria ficha da denúncia. */}
 
             {/* A lista do Chefe de Setor NÃO é o universo, e a tela diz isso. Sem o aviso,
                 ele contaria as denúncias, acharia o número baixo e concluiria que o
