@@ -471,6 +471,34 @@ return [
                     'setores' => [],
                 ],
 
+                [
+                    'rotulo' => 'Sistema',
+                    'icone' => 'monitoramento',
+                    'curto' => 'SISTEMA',
+                    'filhos' => [
+                        [
+                            'rotulo' => 'Áreas e Equipes',
+                            'rota' => 'retaguarda.areas-e-equipes.index',
+                            'icone' => 'areas',
+                            'slug' => 'areas-e-equipes',
+                            'curto' => 'ÁREAS',
+                            'setores' => ['administrador', 'chefe-de-setor'],
+                        ],
+                        [
+                            'rotulo' => 'Cadastro de Operação',
+                            'rota' => 'retaguarda.operacoes.index',
+                            'icone' => 'operacoes',
+                            'slug' => 'operacoes',
+                            'curto' => 'OPERAÇÃO',
+                            'setores' => [
+                                'administrador',
+                                'chefe-de-setor',
+                                'coordenador' => ['apenas_leitura' => true],
+                            ],
+                        ],
+                    ],
+                ],
+
                 /*
                  * Áreas e Equipes — a estrutura PERMANENTE da fiscalização (Área >
                  * Equipe > encarregado > bloco de bairros). É dela que sai a
@@ -486,14 +514,6 @@ return [
                  * e renomeá-lo tiraria a tela do controle de acesso e mataria a
                  * concessão de quem já a tem.
                  */
-                [
-                    'rotulo' => 'Áreas e Equipes',
-                    'rota' => 'retaguarda.areas-e-equipes.index',
-                    'icone' => 'areas',
-                    'slug' => 'areas-e-equipes',
-                    'curto' => 'ÁREAS',
-                    'setores' => ['administrador', 'chefe-de-setor'],
-                ],
 
                 /*
                  * Cadastro de Operação — PROTÓTIPO (09/09/2026).
@@ -514,18 +534,6 @@ return [
                  * ⚠️ Mesma ressalva do item acima: o `slug` (`operacoes`) não muda
                  * ao trocar de seção.
                  */
-                [
-                    'rotulo' => 'Cadastro de Operação',
-                    'rota' => 'retaguarda.operacoes.index',
-                    'icone' => 'operacoes',
-                    'slug' => 'operacoes',
-                    'curto' => 'OPERAÇÃO',
-                    'setores' => [
-                        'administrador',
-                        'chefe-de-setor',
-                        'coordenador' => ['apenas_leitura' => true],
-                    ],
-                ],
 
                 [
                     'rotulo' => 'Relatórios',
