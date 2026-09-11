@@ -19,12 +19,12 @@ use Inertia\Response;
 /**
  * Denúncias das ouvidorias — PROTÓTIPO.
  *
- * Duas telas, uma por canal (`e-Salvador` e `Fala Salvador`), com a MESMA
+ * Duas telas, uma por canal (`e-Salvador` e `Salvador Digital`), com a MESMA
  * mecânica: as denúncias chegam por integração, o coordenador tria e
  * encaminha à área, e o Chefe de Setor da área direciona à equipe ou anexa a uma
  * operação. O que muda entre elas é a origem e o que o formato do canal
  * carrega — o e-Salvador vem com requerente identificado, endereço estruturado
- * e anexos; o Fala Salvador pode ser anônimo e traz a transcrição do
+ * e anexos; o Salvador Digital pode ser anônimo e traz a transcrição do
  * atendimento telefônico, às vezes sem número nem ponto de referência.
  *
  * ── Por que UM controller e UMA tela para os dois canais ─────────────────────
@@ -85,9 +85,9 @@ class DenunciasController extends Controller
         return $this->tela($request, 'e-salvador', 'ESalvador');
     }
 
-    public function falaSalvador(Request $request): Response
+    public function salvadorDigital(Request $request): Response
     {
-        return $this->tela($request, 'fala-salvador', 'FalaSalvador');
+        return $this->tela($request, 'salvador-digital', 'SalvadorDigital');
     }
 
     /**

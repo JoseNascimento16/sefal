@@ -20,7 +20,7 @@
 > nasce `hu_status => 'nao'` declarando essa origem.
 
 O sistema não é uma ilha: **ele recebe demanda de fora**. Hoje ela chega em **papel** — o
-e-Salvador e o Fala Salvador (Disque 156) entregam documento impresso ao coordenador, e o pedido
+e-Salvador e o Salvador Digital entregam documento impresso ao coordenador, e o pedido
 de nova licença chega como processo. Esta tela é a porta por onde isso entra, e de onde sai
 **trabalho dirigido** para as equipes de campo.
 
@@ -39,7 +39,7 @@ o que chega na mão dele.
 
 ### RN-02 — Quatro origens, lista fechada
 
-`e-Salvador`, `Fala Salvador`, `Nova licença` e `Ofício`. É de onde o documento veio, não texto
+`e-Salvador`, `Salvador Digital`, `Nova licença` e `Ofício`. É de onde o documento veio, não texto
 livre — e é essa distinção que um dia separa o que chega por integração do que é interno.
 
 O catálogo vem do **servidor**, que é quem valida a escolha. Escrito também na tela, um dia os dois
@@ -47,7 +47,7 @@ discordariam e a tela ofereceria uma opção que o servidor recusa.
 
 ### RN-03 — Denúncia pode ser ANÔNIMA, e ser anônima é escolha explícita
 
-É a realidade do 156 e do e-Salvador: muita denúncia chega sem quem a fez. Então o requerente é
+É a realidade do Salvador Digital e do e-Salvador: muita denúncia chega sem quem a fez. Então o requerente é
 opcional — **mas só quando a demanda é marcada como anônima**. Sem a marca, o nome é obrigatório.
 
 A marca existe justamente para que "anônima" nunca seja o resultado de um campo esquecido: na
@@ -118,7 +118,7 @@ depois disso quem concede e quem tira é o Modo Gerente.
 
 Uma barra só, ampla, acento-insensível, com exemplos clicáveis. Ela interpreta a frase em facetas do
 domínio (situação, origem, anônima, prazo vencido, recebidas hoje) mais termos livres — *"denúncias
-anônimas do 156 com prazo vencido"* funciona.
+anônimas do Salvador Digital com prazo vencido"* funciona.
 
 Os números do cabeçalho (na caixa · a triar · encaminhadas · retornadas) são o **resumo da mesma
 lista** que a grade desenha, e clicados **escrevem a faceta na busca**. Não são um segundo filtro:
@@ -167,5 +167,5 @@ sistema real esta rota não existe:** caixa de entrada não se reinicia.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 09/09/2026 | José Nascimento | Caixa de Entrada | **A grade ficou enxuta** (padrão [`docs/padroes/listagem-clean.md`](../../padroes/listagem-clean.md)): de 9 colunas para **Protocolo · Recebida · Bairro · Situação · Prazo**. O **assunto** (texto livre) saiu da célula, e com ele origem, nº do documento de origem, requerente e equipe — os cinco já apareciam por inteiro na ficha do clique, e todos seguem no arquivo exportado. "Vencido" virou cor no texto, não um segundo chip. ⚠️ **Só a apresentação mudou:** o fluxo, os dados de `config/prototipo_caixa_entrada.php`, as ações e as abas ficaram como estavam. | Ordem do dono (09/09/2026): _"as listagens estão muito poluídas, muita informação quebrando linha de forma irregular… deixe a informação detalhada para quando o usuário clicar"_. A régua e o porquê de cada item ficam em [`docs/padroes/listagem-clean.md`](../../padroes/listagem-clean.md) — este doc aponta para lá em vez de repetir a régua. |
-| 02/09/2026 | José Nascimento | Caixa de Entrada | Nasce o módulo, como **protótipo**: grade com busca inteligente e exportação, cadastro da demanda com as duas saídas (encaminhar / devolver-arquivar), sugestão de equipe pelo bairro com o caso do bairro compartilhado, e o trâmite de cada demanda. | Decisão da reunião com o cliente de 02/09/2026: o sistema recebe demanda de fora (e-Salvador, Fala Salvador, pedido de nova licença) e o administrativo precisa de onde registrar, triar e recusar com justificativa. Entregue como protótipo para o dono aprovar a forma antes de virar tabela e regra. |
+| 02/09/2026 | José Nascimento | Caixa de Entrada | Nasce o módulo, como **protótipo**: grade com busca inteligente e exportação, cadastro da demanda com as duas saídas (encaminhar / devolver-arquivar), sugestão de equipe pelo bairro com o caso do bairro compartilhado, e o trâmite de cada demanda. | Decisão da reunião com o cliente de 02/09/2026: o sistema recebe demanda de fora (e-Salvador, Salvador Digital, pedido de nova licença) e o administrativo precisa de onde registrar, triar e recusar com justificativa. Entregue como protótipo para o dono aprovar a forma antes de virar tabela e regra. |
 | 04/09/2026 | José Nascimento | Caixa de Entrada | Os papéis passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`) — slug inclusive, com migration renomeando catálogo e matriz. Ver [Papéis e setores](../papeis-e-setores.md). | A tela é o trabalho do papel que tria: o rótulo dele aparece no texto de abertura, no aviso das duas saídas e na concessão da matriz. |

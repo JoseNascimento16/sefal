@@ -12,7 +12,7 @@
 |
 | ── De onde a demanda vem (reunião com o cliente, 02/09/2026) ───────────────
 |
-| Hoje ela chega em PAPEL: o e-Salvador e o Fala Salvador (Disque 156) entregam
+| Hoje ela chega em PAPEL: o e-Salvador e o Salvador Digital entregam
 | documento impresso ao coordenador, que digita, decide o destino e encaminha
 | à equipe da ÁREA do bairro. O cadastro manual é requisito, não gambiarra — a
 | adaptação para API vem depois, e o papel não desaparece por decreto.
@@ -42,7 +42,7 @@ return [
      */
     'origens' => [
         'e-Salvador',
-        'Fala Salvador',
+        'Salvador Digital',
         'Nova licença',
         'Ofício',
     ],
@@ -96,7 +96,7 @@ return [
         [
             'id' => 1,
             'protocolo' => 'CXE-0001',
-            'origem' => 'Fala Salvador',
+            'origem' => 'Salvador Digital',
             'documento_origem' => '156-2026-884120',
             'dias_atras' => 1,
             'prazo_em_dias' => 9,
@@ -188,7 +188,7 @@ return [
         [
             'id' => 5,
             'protocolo' => 'CXE-0005',
-            'origem' => 'Fala Salvador',
+            'origem' => 'Salvador Digital',
             'documento_origem' => '156-2026-880913',
             'dias_atras' => 9,
             'prazo_em_dias' => 1,
@@ -204,7 +204,7 @@ return [
             'situacao' => 'Devolvida',
             'equipe' => null,
             'motivo' => 'Endereço insuficiente para localizar o ponto',
-            'justificativa' => 'O registro do 156 não traz rua nem ponto de referência que permita à equipe '
+            'justificativa' => 'O registro do Salvador Digital não traz rua nem ponto de referência que permita à equipe '
                 .'chegar ao local. Devolvido ao canal de origem para complementar o endereço.',
             'destino' => 'Devolvida ao remetente',
         ],
@@ -282,7 +282,7 @@ return [
         [
             'id' => 9,
             'protocolo' => 'CXE-0009',
-            'origem' => 'Fala Salvador',
+            'origem' => 'Salvador Digital',
             'documento_origem' => '156-2026-885201',
             'dias_atras' => 0,
             'prazo_em_dias' => 10,

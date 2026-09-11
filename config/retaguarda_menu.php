@@ -142,8 +142,8 @@ return [
                             'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
                         ],
                         [
-                            'rotulo' => 'Fala Salvador',
-                            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+                            'rotulo' => 'Salvador Digital',
+                            'rota' => 'retaguarda.denuncias.salvador-digital.index',
                             'icone' => 'denuncias',
                             'slug' => 'denuncias',
                             'curto' => 'FALA',
@@ -191,7 +191,7 @@ return [
          * Elas moram sob o mesmo primeiro trecho do caminho
          * (`/retaguarda/denuncias/…`), que é de onde as guardas deduzem a tela: a
          * permissão é UMA, para o módulo, e aparece no Modo Gerente com o nome da
-         * seção. Separar a permissão do e-Salvador da do Fala Salvador seria uma
+         * seção. Separar a permissão do e-Salvador da do Salvador Digital seria uma
          * decisão que ninguém precisa tomar — quem cuida de denúncia cuida das
          * duas origens.
          *
@@ -251,7 +251,7 @@ return [
                  * cliente, 02/09/2026).
                  *
                  * Vem ANTES de "Fiscalizações" porque é o começo da cadeia: a
-                 * demanda de fora (e-Salvador, Fala Salvador, pedido de nova
+                 * demanda de fora (e-Salvador, Salvador Digital, pedido de nova
                  * licença, ofício) entra por aqui, é triada e só então vira
                  * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
                  *

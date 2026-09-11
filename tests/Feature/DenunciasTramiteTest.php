@@ -259,7 +259,7 @@ test('as consideracoes e as recomendacoes chegam a tela dentro do passo do trami
      * servidor e chegam ao passo, declarados em TODO passo (nulo e vazio nos que
      * não os produziram) para a tela não precisar de leitura defensiva.
      */
-    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'fala-salvador');
+    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'salvador-digital');
     $vencida = collect($servidas)->firstWhere('id', 30);
 
     expect($vencida)->not->toBeNull();
@@ -761,7 +761,7 @@ test('cada chefe de setor com conta de demonstracao tem caso avancado nos dois c
 
         expect($areas)->not->toBe([], "{$matricula} não é chefe de setor de área nenhuma");
 
-        foreach (['e-salvador', 'fala-salvador'] as $canal) {
+        foreach (['e-salvador', 'salvador-digital'] as $canal) {
             $avancadas = array_filter(
                 DenunciasFicticias::doCanal($canal),
                 static fn (array $d): bool => in_array($d['area'] ?? null, $areas, true)
@@ -819,7 +819,7 @@ test('o chefe de setor de outra area nao recebe nem a linha nem o conteudo do tr
 });
 
 test('quem tria ve o universo, com os casos avancados de todas as areas', function () {
-    $ids = array_column(denunciasServidas(coordenadorDoFluxo(), 'fala-salvador'), 'id');
+    $ids = array_column(denunciasServidas(coordenadorDoFluxo(), 'salvador-digital'), 'id');
 
     // 27 é da Área 4, que não tem chefe de setor com conta: só o coordenador e o
     // administrador a enxergam, e é isso que faz dela a prova do recorte.

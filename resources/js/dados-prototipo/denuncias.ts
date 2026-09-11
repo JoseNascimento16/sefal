@@ -187,9 +187,9 @@ export interface Denuncia {
 
     assunto: string;
     relato: string;
-    /** A categoria que o atendente do 156 escolheu (só no Fala Salvador). */
+    /** A categoria que o atendente do Salvador Digital escolheu (só no Salvador Digital). */
     categoria: string | null;
-    /** Quem atendeu a ligação (só no Fala Salvador). */
+    /** Quem atendeu a ligação (só no Salvador Digital). */
     atendente: string | null;
 
     logradouro: string;

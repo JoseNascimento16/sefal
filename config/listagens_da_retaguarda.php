@@ -193,7 +193,7 @@ return [
 
         /*
         |----------------------------------------------------------------------
-        | Denúncias › e-Salvador / Fala Salvador — aba "A triar"
+        | Denúncias › e-Salvador / Salvador Digital — aba "A triar"
         |----------------------------------------------------------------------
         |
         | Quem varre: o Coordenador, decidindo a ÁREA a partir do BAIRRO. Só
