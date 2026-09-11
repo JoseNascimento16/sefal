@@ -36,7 +36,7 @@
      ─────────────────────  ──────────────────────────────────────────────
      protocolo              `DEN-%04d` do `id` (calculado, não escrito)
      documentoOrigem        protocolo_origem   (ESL-… / 156-…)
-     origem                 canal              (`e-salvador` / `fala-salvador`)
+     origem                 canal              (`e-salvador` / `salvador-digital`)
      requerente             requerente         (null quando anônima)
      assunto                assunto
      detalhe                relato
@@ -106,7 +106,7 @@ import { EQUIPE } from './sessao';
  * Os dois canais das ouvidorias — e eles não são o mesmo formulário.
  *
  * No e-Salvador o cidadão está autenticado no portal, então o requerente vem
- * sempre identificado e pode haver anexo. No Fala Salvador (Disque 156) o
+ * sempre identificado e pode haver anexo. No Salvador Digital o
  * relato é a transcrição do que o atendente ouviu, e a denúncia pode ser
  * anônima. A lista é fechada e é a mesma de `prototipo_denuncias.canais`.
  */
@@ -124,11 +124,11 @@ export const ORIGENS: Record<
             'Denúncia aberta no portal do município. Quem abre está autenticado, então o requerente vem identificado.',
     },
     fala156: {
-        rotulo: 'Fala Salvador',
+        rotulo: 'Salvador Digital',
         curto: 'Fala 156',
         emoji: '📞',
         explica:
-            'Denúncia recebida por telefone (Disque 156). O relato é a transcrição do atendimento, e pode ser anônima.',
+            'Denúncia recebida por telefone (Salvador Digital). O relato é a transcrição do atendimento, e pode ser anônima.',
     },
 };
 
