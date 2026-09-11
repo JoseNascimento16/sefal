@@ -40,6 +40,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // O cookie de tema fica em texto claro porque a página precisa lê-lo no
         // servidor para pintar o fundo certo já na primeira renderização (sem ele,
         // quem usa o tema escuro vê um lampejo branco a cada visita).
+        /*
+         * Atrás de um proxy que ENCERRA o TLS (a Route do OKD com `edge`, o
+         * proxy do Render, o WAF do cliente), a aplicação recebe a requisição em
+         * HTTP puro. Sem confiar nos cabeçalhos de encaminhamento ela gera os
+         * endereços de CSS/JS com "http://" numa página servida em "https://" —
+         * o navegador bloqueia como CONTEÚDO MISTO, sem erro visível, e a tela
+         * fica EM BRANCO (o React nunca monta).
+         *
+         * Já aconteceu DUAS vezes: no Render (02/09/2026) e na primeira subida ao
+         * OKD do cliente (10/09/2026), porque a correção do Render ficou só na
+         * branch de demonstração e não voltou para cá. Por isso ela mora AQUI, na
+         * linha de desenvolvimento: no ambiente local é inócua (não há proxy), e
+         * assim nenhum ambiente novo repete o sintoma.
+         */
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance']);
 
         // Para onde vai quem JÁ está autenticado e abre uma tela de visitante

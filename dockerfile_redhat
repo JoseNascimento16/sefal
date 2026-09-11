@@ -1,84 +1,77 @@
-# =================================================================================================
-# Imagem de HOMOLOGAÇÃO/PRODUÇÃO no OKD (OpenShift) do cliente — formato S2I, 1 container.
+# SEFAL no OKD do cliente (COGEL) — formato S2I, 1 container (Apache + mod_php na 8080).
 #
-# ⚠️ NÃO ATIVO (24/08/2026): o ambiente ainda não existe (sem namespace e sem banco). Este arquivo
-#    é a receita pronta, transplantada de um deploy que já roda nesse mesmo cluster. Nunca foi
-#    construído aqui — ao subir o ambiente pela primeira vez, siga docs/deploy/okd.md e espere
-#    ajustar a imagem base e as versões abaixo.
+# Copiado da estrutura já provada no CODECON (ver a skill `deploy-gitlab-okd` e
+# `docs/deploy/okd-deploy.md` no ferramental), com o que é DESTE projeto e sem o
+# que é do outro:
 #
-# É este arquivo que o BuildConfig aponta (`dockerfilePath: dockerfile_redhat`). O build roda DENTRO
-# do cluster, a partir do GitLab interno do cliente. O container final é um só: Apache + PHP da
-# imagem S2I, na porta 8080 (não há nginx sidecar, não há php-fpm separado, não há initContainer).
-# =================================================================================================
+#   • oci8 + Oracle Instant Client — ENTRA: a produção do SEFAL é Oracle, e o
+#     `composer.json` fixa `ext-oci8` na plataforma.
+#   • LibreOffice — FICA FORA: são ~800 MB para converter Office→PDF, coisa do
+#     CODECON. O SEFAL gera PDF/XLSX/DOCX pelo motor próprio de relatórios, que
+#     é PHP puro.
+#
+# ⚠️ A base é a MESMA imagem do CODECON (UBI + PHP 8.4 + Node + scripts S2I),
+# e ela vive no namespace `codecon-homolog`. Puxá-la de outro namespace é
+# permitido, mas exige UMA autorização: a conta `builder` do `sefal-homolog`
+# precisa de `system:image-puller` em `codecon-homolog` (o RoleBinding está em
+# docs/deploy/okd-sefal.md, passo 0). Sem ele o build falha no `FROM` com
+# "unauthorized" — e o erro parece imagem inexistente, não falta de permissão.
+FROM image-registry.openshift-image-registry.svc:5000/codecon-homolog/php:latest
 
-# Imagem base: construída no próprio cluster por um BuildConfig do DevOps do cliente (UBI + PHP 8.4
-# + Node). Ao replicar em outro namespace, troque o caminho. Requisitos da base, sem os quais o
-# build falha: PHP 8.3+, Node (o `npm run build` do Vite roda aqui dentro) e os scripts S2I
-# (`/usr/libexec/s2i/assemble` e `/usr/libexec/s2i/run`).
-FROM image-registry.openshift-image-registry.svc:5000/fiscalizacao-homolog/php:latest
+# Instala pacotes como root; em runtime a imagem volta a rodar como 1001 (o Pod
+# Security do cluster é `restricted`, e nada roda como root lá).
 USER 0
-
-# -------------------------------------------------------------------------------------------------
-# Dependências de SISTEMA primeiro (não dependem do código). Ficam ANTES do `ADD . /tmp/src` para
-# virarem camadas de cache estáveis: não re-executam a cada commit, só quando este arquivo muda.
-# -------------------------------------------------------------------------------------------------
-
-# Oracle: oci8 + Instant Client (o app fala com o Oracle do cliente).
-RUN yum install -y php-pear php-devel && \
-    yum install -y https://download.oracle.com/otn_software/linux/instantclient/2350000/oracle-instantclient-basic-23.5.0.24.07-1.el9.x86_64.rpm && \
-    yum install -y https://download.oracle.com/otn_software/linux/instantclient/2350000/oracle-instantclient-devel-23.5.0.24.07-1.el9.x86_64.rpm && \
-    rm -f *.rpm && \
-    yum clean all
-RUN pecl install oci8
-RUN echo "extension=oci8.so" > /etc/php.d/50-oci8.ini
-
-# ---- Limites de upload e erros do PHP ----
-# SEM isto o pod herda os defaults do PHP (upload_max_filesize 2M / post_max_size 8M) e o envio de
-# foto de vistoria estoura SÓ neste ambiente, com o warning cru vazando na tela. `/etc/php.d` é o
-# conf.d desta imagem (o mesmo do 50-oci8.ini acima); o prefixo `zz` faz ser o último aplicado, para
-# vencer o php.ini da base. Preferido a `oc set env PHP_UPLOAD_MAX_FILESIZE=...` no Deployment porque
-# fica VERSIONADO — sobrevive à recriação do Deployment.
-RUN { \
-      echo "post_max_size = 48M"; \
-      echo "upload_max_filesize = 20M"; \
-      echo "memory_limit = 256M"; \
-      echo "display_errors = Off"; \
-      echo "display_startup_errors = Off"; \
-      echo "log_errors = On"; \
-      echo "zend.exception_ignore_args = On"; \
-    } > /etc/php.d/60-fiscalizacao-uploads.ini
-# Sobre `zend.exception_ignore_args = On` (última linha acima): sem ele o PHP guarda os ARGUMENTOS
-# de cada chamada no rastro da exceção — e desligado é o default fora do `php.ini-production`. Numa
-# falha durante o login, a senha digitada entraria em texto claro no arquivo de log do pod.
-# O rastro que o sistema grava em banco já nasce sem argumentos por construção
-# (`App\Models\LogErro::rastroDe`); esta linha é a SEGUNDA camada, e cobre o que o próprio PHP e o
-# framework escrevem — que não passa pelo nosso código.
-
-# ---- LibreOffice headless (Writer + Calc) — converte Office -> PDF nos relatórios ----
-# Removido dos repositórios do RHEL 10/UBI 10 -> instala os RPMs oficiais da The Document Foundation.
-# O LibreOffice já traz as fontes Liberation embutidas (NÃO instalar fontes do sistema: o pacote
-# `liberation-fonts` não existe no UBI e derruba o build).
-# ⚠️ O download.documentfoundation.org REDIRECIONA para um espelho "próximo" a cada build (loteria);
-#    um espelho com DNS instável derruba o build. O --retry re-tenta, re-sorteando o espelho.
-ARG LO_VER=25.8.7
-RUN set -eux; \
-    curl -fsSL --retry 5 --retry-delay 4 --retry-all-errors \
-      "https://download.documentfoundation.org/libreoffice/stable/${LO_VER}/rpm/x86_64/LibreOffice_${LO_VER}_Linux_x86-64_rpm.tar.gz" -o /tmp/lo.tar.gz; \
-    mkdir -p /tmp/lo && tar -xzf /tmp/lo.tar.gz -C /tmp/lo --strip-components=1; \
-    dnf install -y /tmp/lo/RPMS/*.rpm; \
-    ln -sf /opt/libreoffice*/program/soffice /usr/local/bin/soffice; \
-    rm -rf /tmp/lo /tmp/lo.tar.gz && yum clean all
-
-# -------------------------------------------------------------------------------------------------
-# Código da aplicação: muda a cada commit -> invalida daqui para baixo (os installs acima ficam
-# cacheados). O `assemble` do S2I lê de /tmp/src e move para /opt/app-root/src.
-# -------------------------------------------------------------------------------------------------
 ADD . /tmp/src
 RUN chown -R 1001:0 /tmp/src
 
+# ── Oracle: oci8 + Instant Client ───────────────────────────────────────────
+# Sem isto o app sobe e morre na primeira consulta: a conexão de produção é
+# Oracle (schema próprio LRV_ do SEFAL, usuário USR_SEFAL).
+RUN yum install -y php-pear php-devel && \
+    yum install -y https://download.oracle.com/otn_software/linux/instantclient/2350000/oracle-instantclient-basic-23.5.0.24.07-1.el9.x86_64.rpm && \
+    yum install -y https://download.oracle.com/otn_software/linux/instantclient/2350000/oracle-instantclient-devel-23.5.0.24.07-1.el9.x86_64.rpm && \
+    rm -f *.rpm && yum clean all
+RUN pecl install oci8
+RUN echo "extension=oci8.so" > /etc/php.d/50-oci8.ini
+
+# ── Limites do PHP ──────────────────────────────────────────────────────────
+# Gravados no conf.d da imagem, e não como variável de ambiente no Deployment:
+# a base é customizada e não há garantia de que ela honre as `PHP_*` do S2I —
+# um rollout "verde" poderia não mudar limite nenhum. No CODECON esse foi um
+# defeito real: o anexo grande falhava SÓ em homologação, porque o pod herdava
+# os defaults (upload 2M / post 8M). O SEFAL recebe FOTO de fiscalização, então
+# o limite importa aqui pelo mesmo motivo.
+RUN { \
+        echo 'upload_max_filesize = 20M'; \
+        echo 'post_max_size = 48M'; \
+        echo 'memory_limit = 256M'; \
+        echo 'max_file_uploads = 30'; \
+        echo 'display_errors = Off'; \
+        echo 'log_errors = On'; \
+    } > /etc/php.d/zz-sefal.ini
+
 USER 1001
+
+# `assemble` do S2I = composer install. Depois os assets do Vite.
 RUN /usr/libexec/s2i/assemble
-# `npm ci` (não `npm install`): instala exatamente o que o package-lock.json fixa.
-RUN npm ci
-RUN npm run build
+
+# ⚠️ O `npm run build` do SEFAL BOOTA a aplicação (o plugin do Wayfinder chama
+# `php artisan wayfinder:generate`), e no build não existe banco nem APP_KEY.
+# Por isso o .env descartável e o `DB_DRIVER=sqlite`: sem eles o build morre no
+# timeout de conexão do Oracle — e o erro não parece de build, parece de rede.
+# O arquivo é apagado no fim: o .env que vale em runtime é o Secret montado pelo
+# Deployment.
+RUN cp .env.example .env \
+    && php artisan key:generate --force --no-interaction --no-ansi \
+    && DB_DRIVER=sqlite php artisan wayfinder:generate --with-form --no-ansi \
+    && npm ci \
+    && DB_DRIVER=sqlite npm run build \
+    && rm -f .env
+
+# Carimbo de versão para o rodapé: `getenv OPENSHIFT_BUILD_*` não chega ao
+# contexto web, então a hora do build fica gravada em arquivo.
+RUN date -u -d '3 hours ago' +'v-%Y%m%d%H%M' > /opt/app-root/src/version.txt
+
+# Sobe Apache + PHP na 8080. O `DOCUMENTROOT=/public` vem do Deployment — sem
+# ele o Apache serve a raiz do repositório e o `.env` fica exposto na web.
 CMD /usr/libexec/s2i/run
