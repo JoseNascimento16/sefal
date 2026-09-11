@@ -96,7 +96,7 @@ export function TelaPerfil() {
                     )}
 
                     <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 12.5 }}>
-                        {EQUIPE.recorteExplicacao} As demandas do e-Salvador, do Fala Salvador, de
+                        {EQUIPE.recorteExplicacao} As demandas do e-Salvador, do Salvador Digital, de
                         licença nova e de ofício caem na equipe da área onde fica o endereço.
                     </p>
                 </div>
