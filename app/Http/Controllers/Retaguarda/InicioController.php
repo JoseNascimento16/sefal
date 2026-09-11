@@ -101,10 +101,10 @@ class InicioController extends Controller
             'slug' => 'denuncias',
         ],
         [
-            'chave' => 'denuncias-fala-salvador',
-            'titulo' => 'Denúncias do Fala Salvador',
-            'descricao' => 'O que chega do Disque 156, inclusive anônimo: triar e dirigir o trabalho.',
-            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+            'chave' => 'denuncias-salvador-digital',
+            'titulo' => 'Denúncias do Salvador Digital',
+            'descricao' => 'O que chega do Salvador Digital, inclusive anônimo: triar e dirigir o trabalho.',
+            'rota' => 'retaguarda.denuncias.salvador-digital.index',
             'slug' => 'denuncias',
         ],
         [

@@ -61,7 +61,7 @@ import {
 /**
  * Denúncias das ouvidorias — PROTÓTIPO. O miolo das DUAS telas do módulo.
  *
- * As telas de canal (`e-Salvador` e `Fala Salvador`) são cascas de vinte linhas
+ * As telas de canal (`e-Salvador` e `Salvador Digital`) são cascas de vinte linhas
  * que só declaram título e trilha: a mecânica é a mesma, e escrevê-la duas vezes
  * daria dois donos à mesma regra — um dia só uma das telas ganharia o campo
  * novo. O que varia entre os canais é declarado no servidor
@@ -984,7 +984,7 @@ export function PainelDeDenuncias({
                     <h1>{canal.nome}</h1>
                     <p>
                         {/* O artigo vem do CANAL, não escrito aqui: "o portal
-                            e-Salvador" e "a central Fala Salvador" não aceitam o
+                            e-Salvador" e "a central Salvador Digital" não aceitam o
                             mesmo artigo, e um fixo erraria em um dos dois. */}
                         Denúncias que {canal.artigo}{' '}
                         <strong>{canal.sistema}</strong> entrega ao SEFAL por

@@ -116,7 +116,7 @@ $fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o COO
     .'avançados (vistoria, desfecho, documento) são SEMEADOS: quando o aplicativo do fiscal receber a '
     .'denúncia dirigida de verdade, é ele que acrescenta esses passos, e a leitura da tela continua a '
     .'mesma. Pendências que '
-    .'isto abre: contrato das APIs do e-Salvador e do 156, prazo real de cada canal, canal de devolução, '
+    .'isto abre: contrato das APIs do e-Salvador e do Salvador Digital, prazo real de cada canal, canal de devolução, '
     .'a MODELAGEM DEFINITIVA do vínculo chefia↔área (em produção é tabela usuário↔área, não arquivo de '
     .'configuração), a numeração definitiva do protocolo, a numeração dos blocos de documento (hoje as '
     .'faixas do papel do cliente, escritas à mão; no sistema saem do estoque reservado por aparelho), a '
@@ -533,13 +533,13 @@ return [
 
         [
             'modulo' => 'Denúncias',
-            'tela' => 'Denúncias do Fala Salvador',
+            'tela' => 'Denúncias do Salvador Digital',
             'origem' => 'Retaguarda',
-            'rota' => 'retaguarda.denuncias.fala-salvador.index',
-            'breadcrumb' => 'Denúncias › Fala Salvador',
+            'rota' => 'retaguarda.denuncias.salvador-digital.index',
+            'breadcrumb' => 'Denúncias › Salvador Digital',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemDenuncias.' As denúncias que a central telefônica Fala Salvador (Disque '
+            'nota' => $origemDenuncias.' As denúncias que a central telefônica Salvador Digital (Disque '
                 .'156) entrega ao SEFAL por INTEGRAÇÃO — mesma mecânica da tela do e-Salvador, com o que '
                 .'o telefone muda no dado: a denúncia pode ser ANÔNIMA, o relato é a transcrição do que '
                 .'o atendente ouviu (às vezes sem número nem ponto de referência, e a tela marca isso '

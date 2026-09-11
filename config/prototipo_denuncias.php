@@ -25,7 +25,7 @@
 |                    o requerente vem SEMPRE identificado (nome, CPF, e-mail e
 |                    telefone), o endereço vem estruturado (logradouro, número,
 |                    referência) e o cidadão pode anexar foto e documento.
-|   Fala Salvador  — atendimento por telefone (Disque 156). Pode ser ANÔNIMA, o
+|   Salvador Digital  — atendimento por telefone (Salvador Digital). Pode ser ANÔNIMA, o
 |                    relato é a transcrição do que o atendente ouviu (texto mais
 |                    solto, às vezes sem número nem ponto de referência), a
 |                    categoria é a que o atendente escolheu, e não há anexo:
@@ -125,10 +125,10 @@ return [
                 .'O cidadão abre a denúncia autenticado, então nome, CPF e contato vêm do canal.',
         ],
 
-        'fala-salvador' => [
-            'slug' => 'fala-salvador',
-            'nome' => 'Fala Salvador',
-            'sistema' => 'Central de atendimento Fala Salvador — Disque 156',
+        'salvador-digital' => [
+            'slug' => 'salvador-digital',
+            'nome' => 'Salvador Digital',
+            'sistema' => 'Central de atendimento Salvador Digital',
             'artigo' => 'a',
             'prefixo_origem' => '156',
             'admite_anonima' => true,
@@ -924,11 +924,11 @@ return [
             ],
         ],
 
-        // ── Fala Salvador (156) ─────────────────────────────────────────────
+        // ── Salvador Digital ─────────────────────────────────────────────
 
         [
             'id' => 15,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-889034',
             'recebida_ha_horas' => 2,
             'prazo_em_dias' => 10,
@@ -954,7 +954,7 @@ return [
 
         [
             'id' => 16,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-889011',
             'recebida_ha_horas' => 5,
             'prazo_em_dias' => 10,
@@ -982,7 +982,7 @@ return [
 
         [
             'id' => 17,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888970',
             'recebida_ha_horas' => 11,
             'prazo_em_dias' => 9,
@@ -1008,7 +1008,7 @@ return [
 
         [
             'id' => 18,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888944',
             'recebida_ha_horas' => 20,
             'prazo_em_dias' => 9,
@@ -1033,7 +1033,7 @@ return [
 
         [
             'id' => 19,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888901',
             'recebida_ha_horas' => 29,
             'prazo_em_dias' => 8,
@@ -1058,7 +1058,7 @@ return [
 
         [
             'id' => 20,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888860',
             'recebida_ha_horas' => 44,
             'prazo_em_dias' => 7,
@@ -1083,7 +1083,7 @@ return [
 
         [
             'id' => 21,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888812',
             'recebida_ha_horas' => 62,
             'prazo_em_dias' => -1,
@@ -1111,7 +1111,7 @@ return [
 
         [
             'id' => 22,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888744',
             'recebida_ha_horas' => 90,
             'prazo_em_dias' => 5,
@@ -1137,7 +1137,7 @@ return [
 
         [
             'id' => 23,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888702',
             'recebida_ha_horas' => 118,
             'prazo_em_dias' => 4,
@@ -1162,7 +1162,7 @@ return [
 
         [
             'id' => 24,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888655',
             'recebida_ha_horas' => 142,
             'prazo_em_dias' => 3,
@@ -1230,7 +1230,7 @@ return [
 
         [
             'id' => 25,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888590',
             'recebida_ha_horas' => 190,
             'prazo_em_dias' => 2,
@@ -1259,7 +1259,7 @@ return [
 
         [
             'id' => 26,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888511',
             'recebida_ha_horas' => 238,
             'prazo_em_dias' => -3,
@@ -1318,7 +1318,7 @@ return [
 
         [
             'id' => 27,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888470',
             'recebida_ha_horas' => 286,
             'prazo_em_dias' => -5,
@@ -1422,7 +1422,7 @@ return [
 
         [
             'id' => 28,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888402',
             'recebida_ha_horas' => 334,
             'prazo_em_dias' => -6,
@@ -1644,7 +1644,7 @@ return [
 
         [
             'id' => 30,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-889120',
             'recebida_ha_horas' => 340,
             'prazo_em_dias' => -4,
@@ -1886,7 +1886,7 @@ return [
 
         [
             'id' => 32,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888820',
             'recebida_ha_horas' => 400,
             'prazo_em_dias' => -9,
@@ -2034,7 +2034,7 @@ return [
 
         [
             'id' => 33,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-889090',
             'recebida_ha_horas' => 150,
             'prazo_em_dias' => 3,
@@ -2340,7 +2340,7 @@ return [
 
         [
             'id' => 35,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-889210',
             'recebida_ha_horas' => 40,
             'prazo_em_dias' => 8,
@@ -2478,7 +2478,7 @@ return [
 
         [
             'id' => 36,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-889055',
             'recebida_ha_horas' => 200,
             'prazo_em_dias' => 2,
@@ -2682,7 +2682,7 @@ return [
 
         [
             'id' => 38,
-            'canal' => 'fala-salvador',
+            'canal' => 'salvador-digital',
             'protocolo_origem' => '156-2026-888975',
             'recebida_ha_horas' => 310,
             'prazo_em_dias' => -3,

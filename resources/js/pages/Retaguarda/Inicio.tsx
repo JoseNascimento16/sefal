@@ -42,7 +42,7 @@ const ICONES: Record<string, LucideIcon> = {
     // chave: o cartão e o item da barra têm de ser reconhecíveis como a mesma
     // coisa, e as duas telas são a mesma coisa vinda de origens diferentes.
     'denuncias-e-salvador': Megaphone,
-    'denuncias-fala-salvador': Megaphone,
+    'denuncias-salvador-digital': Megaphone,
     caixa: Inbox,
     areas: MapIcon,
     fiscalizacoes: ClipboardCheck,

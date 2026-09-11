@@ -17,7 +17,7 @@ use Inertia\Response;
  * Caixa de Entrada do Coordenador — PROTÓTIPO.
  *
  * É a porta por onde a demanda de fora entra no sistema. Hoje ela chega em
- * PAPEL: o e-Salvador e o Fala Salvador (Disque 156) entregam documento impresso
+ * PAPEL: o e-Salvador e o Salvador Digital entregam documento impresso
  * ao coordenador, que digita, decide e encaminha. O cadastro manual é
  * requisito, não gambiarra — quando a API chegar, ele continua existindo.
  *
@@ -92,7 +92,7 @@ class CaixaDeEntradaController extends Controller
             'recebida_em' => ['required', 'date'],
             'prazo' => ['nullable', 'date', 'after_or_equal:recebida_em'],
 
-            // Denúncia PODE ser anônima — é a realidade do 156 e do e-Salvador.
+            // Denúncia PODE ser anônima — é a realidade do Salvador Digital e do e-Salvador.
             // Quando não é, o nome passa a ser obrigatório: "anônima" tem de ser
             // uma escolha explícita, nunca o resultado de um campo esquecido.
             'anonima' => ['required', 'boolean'],
