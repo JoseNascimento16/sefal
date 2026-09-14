@@ -1,11 +1,10 @@
 <?php
 
-use App\Models\Ambulante;
-use App\Models\AtividadeAmbulante;
 use App\Models\PermissaoSetor;
 use App\Models\Setor;
 use App\Models\User;
 use App\Support\CatalogoFuncionalidades;
+use Database\Seeders\DemonstracaoSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -21,7 +20,15 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 |
 */
 
-beforeEach(fn () => $this->seed());
+beforeEach(function () {
+    $this->seed();
+    /*
+     * Os relatórios agora leem do BANCO. Sem o dado de demonstração eles
+     * gerariam arquivos vazios e os testes passariam pelo motivo errado —
+     * provando que ninguém vê nada, em vez de provar o recorte.
+     */
+    $this->seed(DemonstracaoSeeder::class);
+});
 
 function usuarioComSetor(string $slug): User
 {
@@ -37,18 +44,25 @@ test('a tela lista o catalogo com filtros e modos de cada relatorio', function (
         ->assertOk()
         ->assertInertia(function (Assert $page) {
             $page->component('Retaguarda/Sistema/Relatorios')
-                ->has('relatorios', 2)
-                ->where('relatorios.0.chave', 'usuarios-do-sistema')
+                /*
+                 * QUATRO, e os quatro respondem pergunta de operação: o que a
+                 * equipe fez, o que as ouvidorias mandaram, onde a cidade está
+                 * agora e onde a ocorrência se concentra. Os dois anteriores
+                 * (usuários do sistema e ambulantes cadastrados) saíram porque
+                 * ninguém decidia nada com eles.
+                 */
+                ->has('relatorios', 4)
+                ->where('relatorios.0.chave', 'fiscalizacoes')
+                ->where('relatorios.0.grupo', 'Fiscalização')
                 ->where('relatorios.0.formatos', ['pdf', 'xlsx', 'docx'])
                 // A tela desenha o formulário a partir daqui: sem os filtros
                 // descritos, ela teria de conhecer cada relatório por dentro.
-                ->has('relatorios.0.filtros', 4)
-                // Os dois convivem, e são coisas diferentes: um é sobre quem USA
-                // o sistema, o outro sobre quem É FISCALIZADO.
-                ->where('relatorios.1.chave', 'ambulantes')
-                ->where('relatorios.1.grupo', 'Fiscalização')
-                // Cinco: período (dois), situação, atividade e permissão da SEMOP.
-                ->has('relatorios.1.filtros', 5);
+                ->has('relatorios.0.filtros', 3)
+                ->where('relatorios.1.chave', 'denuncias')
+                // Origem, os dois extremos do período e a situação.
+                ->has('relatorios.1.filtros', 4)
+                ->where('relatorios.2.chave', 'cidade-agora')
+                ->where('relatorios.3.chave', 'concentracao');
         });
 });
 
@@ -57,7 +71,7 @@ test('emite o relatorio nos tres formatos', function () {
 
     foreach ($esperado as $formato => $tipo) {
         $r = $this->actingAs(User::factory()->create(['admin' => true]))->post(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'usuarios-do-sistema',
+            'chave' => 'fiscalizacoes',
             'formato' => $formato,
             'modo' => 'analitico',
             'filtros' => [],
@@ -69,15 +83,14 @@ test('emite o relatorio nos tres formatos', function () {
     }
 });
 
-test('o documento traz o recorte, a data em BR e as contas do periodo', function () {
+test('o documento traz o recorte por escrito, e o filtro filtra de verdade', function () {
     $admin = User::factory()->create(['name' => 'Ana Admin', 'admin' => true]);
-    usuarioComSetor('fiscal');
 
     $r = $this->actingAs($admin)->post(route('retaguarda.relatorios.gerar'), [
-        'chave' => 'usuarios-do-sistema',
+        'chave' => 'fiscalizacoes',
         'formato' => 'xlsx',
         'modo' => 'analitico',
-        'filtros' => ['setor' => 'fiscal'],
+        'filtros' => ['area' => 'Área 5'],
     ]);
 
     $r->assertOk();
@@ -88,28 +101,31 @@ test('o documento traz o recorte, a data em BR e as contas do periodo', function
     );
 
     expect($texto)
-        ->toContain('USUÁRIOS DO SISTEMA')
-        ->toContain('Setor: Fiscal')      // o recorte por escrito
-        // A concordância feita, e a forma preguiçosa dita AUSENTE. A segunda
-        // asserção é a que discrimina: "1 conta" sozinho é substring de
-        // "1 conta(s)" e passaria com o defeito de volta.
-        ->toContain('1 conta ')
-        ->not->toContain('conta(s)')
-        ->toContain('Fiscal')
+        ->toContain('FISCALIZAÇÕES CONCLUÍDAS')
+        /*
+         * O RECORTE por escrito, na faixa do topo. Sem ele, quem recebe a
+         * planilha por e-mail não sabe de que universo ela fala — e a lê como se
+         * fosse tudo. (Ele já saiu faltando uma vez: o relatório declarava
+         * `recorte` e o exportador lia `filtros_resumo`.)
+         */
+        ->toContain('Área 5')
         // Data SEMPRE em BR: forma ISO em documento gerado é inaceitável.
         ->toContain(now()->format('d/m/Y'))
         ->not->toContain(now()->format('Y-m-d'));
 
-    // O filtro filtra de verdade: o administrador não é do setor fiscal.
-    expect($texto)->not->toContain('Ana Admin');
+    /*
+     * E o filtro FILTRA: recorte sem efeito é a pior falha possível aqui — a
+     * planilha afirma um universo e traz outro, e ninguém confere linha a linha
+     * um arquivo de mil linhas.
+     */
+    expect($texto)->not->toContain('Área 1');
 });
-
 test('periodo invertido nao gera documento vazio, e a recusa diz o porque', function () {
     // Sem esta guarda o documento sai VAZIO, e quem pediu lê "não houve
     // movimento" em vez de "você trocou as datas".
     $this->actingAs(User::factory()->create(['admin' => true]))
         ->post(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'usuarios-do-sistema',
+            'chave' => 'fiscalizacoes',
             'formato' => 'pdf',
             'filtros' => ['data_inicial' => '2026-08-20', 'data_final' => '2026-08-01'],
         ])
@@ -126,7 +142,7 @@ test('a recusa chega em JSON para quem baixa pela tela', function () {
      */
     $r = $this->actingAs(User::factory()->create(['admin' => true]))
         ->postJson(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'usuarios-do-sistema',
+            'chave' => 'fiscalizacoes',
             'formato' => 'pdf',
             'filtros' => ['data_inicial' => '2026-08-20', 'data_final' => '2026-08-01'],
         ]);
@@ -147,7 +163,7 @@ test('o modo gerencial troca a relacao nominal pelo quadro de totais', function 
     $admin = User::factory()->create(['name' => 'Ana Admin', 'admin' => true]);
 
     $r = $this->actingAs($admin)->post(route('retaguarda.relatorios.gerar'), [
-        'chave' => 'usuarios-do-sistema',
+        'chave' => 'fiscalizacoes',
         'formato' => 'xlsx',
         'modo' => 'gerencial',
         'filtros' => [],
@@ -159,13 +175,19 @@ test('o modo gerencial troca a relacao nominal pelo quadro de totais', function 
             ->getActiveSheet(),
     );
 
-    // No gerencial a pergunta é "quanto": a lista nominal afogaria o número.
-    expect($texto)->toContain('Contas por setor')->not->toContain('Ana Admin');
+    /*
+     * No gerencial a pergunta é "QUANTO": o quadro de totais fica, e a relação
+     * nominal sai. Com a lista de registros junto, o número que a chefia
+     * procura afoga numa página de protocolos.
+     */
+    expect($texto)
+        ->toContain('Como os casos terminaram')
+        ->not->toContain('Fiscalizações do recorte');
 });
 
 test('exige autenticacao para abrir e para emitir', function () {
     $this->get(route('retaguarda.relatorios.index'))->assertRedirect(route('login'));
-    $this->post(route('retaguarda.relatorios.gerar'), ['chave' => 'usuarios-do-sistema', 'formato' => 'pdf'])
+    $this->post(route('retaguarda.relatorios.gerar'), ['chave' => 'fiscalizacoes', 'formato' => 'pdf'])
         ->assertRedirect(route('login'));
 });
 
@@ -187,7 +209,7 @@ test('quem so consulta a tela ainda consegue emitir o documento', function () {
     $this->actingAs($chefe)->get(route('retaguarda.relatorios.index'))->assertOk();
 
     $this->actingAs($chefe)->post(route('retaguarda.relatorios.gerar'), [
-        'chave' => 'usuarios-do-sistema',
+        'chave' => 'fiscalizacoes',
         'formato' => 'pdf',
         'filtros' => [],
     ])->assertOk();
@@ -200,7 +222,7 @@ test('quem nao tem a tela nao emite o documento, e sabe por que', function () {
     $this->actingAs(usuarioComSetor('fiscal'))
         ->from(route('retaguarda.inicio'))
         ->post(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'usuarios-do-sistema',
+            'chave' => 'fiscalizacoes',
             'formato' => 'pdf',
             'filtros' => [],
         ])
@@ -218,30 +240,10 @@ test('a tela de relatorios entra no controle de acesso', function () {
     expect(route('retaguarda.relatorios.index', absolute: false))->toStartWith('/retaguarda/relatorios');
 });
 
-test('o relatorio de ambulantes traz o recorte, o documento legivel e a fila de conferencia', function () {
-    /*
-     * O relatório de quem é FISCALIZADO. Duas coisas o tornam confiável e são
-     * fáceis de perder: o documento tem de sair legível (e "sem documento" é o
-     * caso normal aqui, não um defeito), e a contagem por situação tem de
-     * mostrar a QUARENTENA mesmo zerada — linha ausente vira "não sei".
-     */
-    $atividade = AtividadeAmbulante::firstOrFail();
-
-    Ambulante::factory()->comDocumento('12345678909')->create([
-        'nome' => 'Joana Vendedora',
-        'atividade_id' => $atividade->id,
-        'validade_permissao' => '2027-03-09',
-    ]);
-
-    Ambulante::factory()->emQuarentena()->create([
-        'nome' => 'Sem Documento da Silva',
-        'documento' => null,
-        'atividade_id' => $atividade->id,
-    ]);
-
+test('o relatorio de denuncias traz o recorte, o documento legivel e o que esta vencido', function () {
     $r = $this->actingAs(User::factory()->create(['admin' => true]))
         ->post(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'ambulantes',
+            'chave' => 'denuncias',
             'formato' => 'xlsx',
             'modo' => 'analitico',
             'filtros' => [],
@@ -256,35 +258,24 @@ test('o relatorio de ambulantes traz o recorte, o documento legivel e a fila de 
     );
 
     expect($texto)
-        ->toContain('AMBULANTES CADASTRADOS')
-        ->toContain('2 cadastros ')
-        ->not->toContain('cadastro(s)')
-        ->toContain('Joana Vendedora')
-        // Documento como uma pessoa lê, nunca a forma crua da coluna.
-        ->toContain('123.456.789-09')
-        ->not->toContain('12345678909')
+        ->toContain('DENÚNCIAS RECEBIDAS')
+        // O RECORTE em palavras: sem ele, quem recebe a planilha não sabe de que
+        // universo ela fala — e a lê como se fosse tudo.
+        ->toContain('todas as origens')
+        // O canal como uma pessoa o lê, nunca a chave da coluna.
+        ->toContain('e-Salvador')
+        ->not->toContain('e-salvador')
         // Data SEMPRE em BR.
-        ->toContain('09/03/2027')
-        ->not->toContain('2027-03-09')
-        // A fila que espera conferência é a informação de gestão do quadro.
-        ->toContain('Cadastrado em campo');
+        ->toMatch('/\d{2}\/\d{2}\/\d{4}/');
 });
 
-test('o filtro por situacao do relatorio de ambulantes filtra de verdade', function () {
-    $atividade = AtividadeAmbulante::firstOrFail();
-
-    Ambulante::factory()->create(['nome' => 'Regular Certinho', 'atividade_id' => $atividade->id]);
-    Ambulante::factory()->emQuarentena()->create([
-        'nome' => 'Recem Cadastrado',
-        'atividade_id' => $atividade->id,
-    ]);
-
+test('o filtro por origem do relatorio de denuncias filtra de verdade', function () {
     $r = $this->actingAs(User::factory()->create(['admin' => true]))
         ->post(route('retaguarda.relatorios.gerar'), [
-            'chave' => 'ambulantes',
+            'chave' => 'denuncias',
             'formato' => 'xlsx',
             'modo' => 'analitico',
-            'filtros' => ['situacao' => 'Cadastrado em campo'],
+            'filtros' => ['canal' => 'salvador-digital'],
         ]);
 
     $texto = textoDaAba(
@@ -293,10 +284,36 @@ test('o filtro por situacao do relatorio de ambulantes filtra de verdade', funct
             ->getActiveSheet(),
     );
 
+    /*
+     * O filtro tem de aparecer no RECORTE e tem de valer nas linhas: recorte sem
+     * efeito é a pior falha possível aqui — a planilha diz que fala de um canal
+     * e traz os dois, e ninguém confere linha a linha um arquivo de mil linhas.
+     */
     expect($texto)
-        ->toContain('Situação: Cadastrado em campo')
-        ->toContain('Recem Cadastrado')
-        ->toContain('1 cadastro ')
-        ->not->toContain('cadastro(s)')
-        ->not->toContain('Regular Certinho');
+        ->toContain('Salvador Digital')
+        ->not->toContain('e-Salvador');
+});
+
+test('o relatorio de fiscalizacoes conta o que a equipe fez, com o desfecho', function () {
+    $r = $this->actingAs(User::factory()->create(['admin' => true]))
+        ->post(route('retaguarda.relatorios.gerar'), [
+            'chave' => 'fiscalizacoes',
+            'formato' => 'xlsx',
+            'modo' => 'analitico',
+            'filtros' => [],
+        ]);
+
+    $r->assertOk();
+
+    $texto = textoDaAba(
+        IOFactory::createReader('Xlsx')
+            ->load(arquivoTemporarioXlsx($r->streamedContent()))
+            ->getActiveSheet(),
+    );
+
+    expect($texto)
+        ->toContain('FISCALIZAÇÕES')
+        // O desfecho é a coluna que responde "o que deu" — sem ela o relatório
+        // conta idas, e não resultado.
+        ->toContain('Regularizado no local');
 });

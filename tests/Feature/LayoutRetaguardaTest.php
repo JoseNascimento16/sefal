@@ -68,15 +68,32 @@ test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () 
         ->assertInertia(function ($p) {
             $menu = collect($p->toArray()['props']['menu']);
 
-            $rotulos = $menu->pluck('itens')->flatten(1)->pluck('rotulo');
+            $itens = $menu->pluck('itens')->flatten(1);
+            $rotulos = $itens->pluck('rotulo');
+
             expect($rotulos)
                 ->toContain('Início')
-                ->toContain('Meu Perfil')
-                ->toContain('Ambulantes');
+                ->toContain('Meu Perfil');
 
-            $fiscalizacao = $menu->firstWhere('rotulo', 'Fiscalização');
-            expect($fiscalizacao)->not->toBeNull();
-            expect(collect($fiscalizacao['itens'])->pluck('rotulo'))->toContain('Ambulantes');
+            /*
+             * ⚠️ AMBULANTES MUDOU DE LUGAR. Ele era item de primeiro nível da
+             * seção Fiscalização; hoje é FILHO da pasta "Sistema", junto com
+             * Áreas e Equipes e Cadastro de Operação (decisão do dono, 10/09).
+             *
+             * O teste procura no lugar certo em vez de achatar tudo: achatar
+             * passaria a valer para qualquer posição do menu, e o dia em que o
+             * item voltasse ao primeiro nível por acidente ninguém saberia.
+             */
+            $filhos = $itens->pluck('filhos')->filter()->flatten(1)->pluck('rotulo');
+
+            expect($filhos)->toContain('Ambulantes');
+
+            $sistema = $menu->firstWhere('rotulo', 'Sistema');
+            expect($sistema)->not->toBeNull();
+
+            $pasta = collect($sistema['itens'])->firstWhere('rotulo', 'Sistema');
+            expect($pasta)->not->toBeNull()
+                ->and(collect($pasta['filhos'])->pluck('rotulo'))->toContain('Ambulantes');
         });
 });
 

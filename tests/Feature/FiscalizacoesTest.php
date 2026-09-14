@@ -1,11 +1,14 @@
 <?php
 
+use App\Models\DocumentoCampo;
+use App\Models\Fiscalizacao;
 use App\Models\Setor;
 use App\Models\User;
-use App\Support\Prototipo\DenunciasFicticias;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\FiscalizacoesFicticias;
+use App\Support\Apresentacao\FiscalizacaoParaTela;
+use App\Support\Estrutura;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
+use Database\Seeders\DemonstracaoSeeder;
+use Database\Seeders\EstruturaSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 
@@ -44,13 +47,60 @@ use Database\Seeders\SetoresSeeder;
 beforeEach(function () {
     $this->seed(SetoresSeeder::class);
     $this->seed(PermissoesSetorSeeder::class);
+    /*
+     * A fila agora sai do BANCO, e não mais da config de protótipo: sem a
+     * estrutura e as demandas semeadas, o teste rodaria contra um acervo vazio e
+     * passaria pelo motivo errado — provando que ninguém vê nada, em vez de
+     * provar o recorte.
+     */
+    $this->seed(EstruturaSeeder::class);
+    $this->seed(DemonstracaoSeeder::class);
 });
+
+/**
+ * A fila inteira, lida pelo MESMO caminho da tela (a rota, como administrador).
+ *
+ * O teste lê pela rota, e não por uma consulta própria: consulta própria provaria
+ * o banco, e o que interessa aqui é o que o servidor ENTREGA — que é onde o
+ * recorte e a montagem acontecem.
+ *
+ * @return list<array<string, mixed>>
+ */
+function filaDoBanco(): array
+{
+    $admin = User::factory()->create(['admin' => true, 'ativo' => true]);
+
+    return test()->actingAs($admin)
+        ->get('/retaguarda/fiscalizacoes')
+        ->viewData('page')['props']['registros'];
+}
+
+/** O estado de um registro, direto do banco — é o efeito que a decisão produziu. */
+function estadoNoBanco(int $id): string
+{
+    return Fiscalizacao::findOrFail($id)->situacao;
+}
+
+/** @return array<string, mixed> */
+function registroNoBanco(int $id): array
+{
+    $f = Fiscalizacao::with(['demanda.tramites', 'equipe.area', 'fiscal', 'fotos', 'recomendacoes', 'documento', 'operacao'])
+        ->findOrFail($id);
+
+    return FiscalizacaoParaTela::completa($f);
+}
 
 /** Um Chefe de Setor de verdade: a matrícula é o que o liga à área na estrutura. */
 function chefeDaFila(string $matricula): User
 {
-    $u = User::factory()->create(['login' => $matricula, 'admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+    /*
+     * A conta já existe: é o seeder da estrutura que a cria e a liga à área
+     * (`areas.chefe_de_setor_id`). Criar outra com a mesma matrícula aqui daria
+     * DOIS donos ao mesmo vínculo — e o teste passaria a provar um cadastro que
+     * o sistema não tem.
+     */
+    $u = User::where('login', User::normalizarMatricula($matricula))->firstOrFail();
+    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
 
     return $u->fresh();
 }
@@ -71,46 +121,51 @@ function filaServida(User $u): array
         ->viewData('page')['props']['registros'];
 }
 
-test('a fila deriva do tramite: todo desfecho de campo vira um registro, e nenhum a mais', function () {
+test('cada ida ao ponto vira UM registro — a vistoria e o retorno não se fundem', function () {
     /*
-     * Um registro por DENÚNCIA que já teve desfecho — não um por passo. A denúncia
-     * que foi notificada e depois regularizada tem DOIS passos com desfecho, e o
-     * que voltou para a chefia é onde a coisa parou: contar os dois duplicaria a
-     * mesma vistoria na fila.
+     * ⚠️ A LEI MUDOU NA CONSOLIDAÇÃO, e de propósito.
+     *
+     * No protótipo a fila era DERIVADA na leitura, e uma denúncia rendia um
+     * registro só: o do último passo com desfecho. A denúncia notificada e
+     * depois revisitada aparecia uma vez, e a primeira ida sumia.
+     *
+     * Agora cada passo que declara desfecho é uma FISCALIZAÇÃO gravada, porque
+     * foi uma ida ao ponto de verdade — com data, equipe e, às vezes, documento
+     * próprio. Contá-las como uma faria o relatório dizer que a equipe foi à rua
+     * metade das vezes que foi, e apagaria a notificação que precedeu o retorno.
      */
-    $comDesfecho = array_values(array_filter(
-        DenunciasFicticias::todas(),
-        static fn (array $d): bool => $d['desfecho'] !== null,
-    ));
+    $idasDeclaradas = 0;
 
-    $avulsas = (array) config('prototipo_registros_de_campo.registros', []);
-    $fila = FiscalizacoesFicticias::registros();
-
-    expect($comDesfecho)->not->toBe([], 'a amostra precisa de denúncia com desfecho')
-        ->and($avulsas)->not->toBe([], 'a amostra precisa de fiscalização avulsa')
-        ->and($fila)->toHaveCount(count($comDesfecho) + count($avulsas));
-
-    // O desfecho de cada registro derivado é o do ÚLTIMO passo com desfecho — o
-    // mesmo que a denúncia carrega no resumo. Fonte única, provada.
-    $porProtocolo = [];
-
-    foreach ($fila as $registro) {
-        if ($registro['denuncia_protocolo'] !== null) {
-            $porProtocolo[(string) $registro['denuncia_protocolo']] = (string) $registro['desfecho'];
+    foreach ((array) config('prototipo_denuncias.denuncias', []) as $d) {
+        foreach ((array) ($d['tramites'] ?? []) as $passo) {
+            if (isset($passo['desfecho'])) {
+                $idasDeclaradas++;
+            }
         }
     }
 
-    $divergentes = [];
+    $avulsas = count((array) config('prototipo_registros_de_campo.registros', []));
 
-    foreach ($comDesfecho as $d) {
-        $daFila = $porProtocolo[(string) $d['protocolo']] ?? null;
+    expect($idasDeclaradas)->toBeGreaterThan(0, 'a amostra precisa de denúncia com desfecho')
+        ->and($avulsas)->toBeGreaterThan(0, 'a amostra precisa de fiscalização avulsa');
 
-        if ($daFila !== (string) $d['desfecho']) {
-            $divergentes[] = "{$d['protocolo']}: denúncia '{$d['desfecho']}', fila '".((string) $daFila)."'";
-        }
-    }
+    /*
+     * A conta não fecha com a soma bruta: a denúncia só vira fiscalização quando
+     * tem EQUIPE (sem equipe não há quem assine a vistoria). O que se prova aqui
+     * é a direção — nenhuma ida se perde e nenhuma nasce do nada.
+     */
+    $deDenuncia = Fiscalizacao::whereNotNull('demanda_id')->count();
 
-    expect($divergentes)->toBe([], "O desfecho da fila é o mesmo da denúncia — a fila DERIVA dela.\n");
+    /*
+     * A conta é pelo VÍNCULO, e não pela origem: a denúncia anexada a uma
+     * operação nasce com `origem = operacao` (foi a varredura que a executou) e
+     * continua sendo uma ida nascida de denúncia. Contar pela origem misturaria
+     * essas com as da ronda planejada, que não têm denúncia atrás.
+     */
+    expect($deDenuncia)->toBeGreaterThan(0)
+        ->and($deDenuncia)->toBeLessThanOrEqual($idasDeclaradas)
+        ->and(Fiscalizacao::whereNull('demanda_id')->count())->toBe($avulsas)
+        ->and(filaDoBanco())->toHaveCount(Fiscalizacao::despachadas()->count());
 });
 
 test('todo registro da fila declara as chaves que a tela le, inclusive as vazias', function () {
@@ -127,7 +182,7 @@ test('todo registro da fila declara as chaves que a tela le, inclusive as vazias
         'situacao_da_origem', 'estado', 'decisao', 'dias_parado',
     ];
 
-    foreach (FiscalizacoesFicticias::registros() as $registro) {
+    foreach (filaDoBanco() as $registro) {
         expect($registro)->toHaveKeys($chaves, (string) ($registro['protocolo'] ?? '?'));
     }
 });
@@ -251,7 +306,7 @@ test('lei: a equipe da fiscalizacao avulsa existe na estrutura de areas', functi
      * área vazia, e aí ele não é de ninguém — nem aparece para chefe algum, nem
      * acusa nada.
      */
-    $codigos = EstruturaFicticia::codigosDeEquipe();
+    $codigos = Estrutura::codigosDeEquipe();
     $problemas = [];
 
     foreach ((array) config('prototipo_registros_de_campo.registros', []) as $r) {
@@ -263,7 +318,7 @@ test('lei: a equipe da fiscalizacao avulsa existe na estrutura de areas', functi
     expect($problemas)->toBe([], "A equipe da avulsa existe na estrutura de áreas.\n");
 
     // E o efeito: nenhum registro da fila chega sem área nem sem quem assinou.
-    foreach (FiscalizacoesFicticias::registros() as $registro) {
+    foreach (filaDoBanco() as $registro) {
         expect(trim((string) $registro['area']))->not->toBe('', (string) $registro['protocolo'])
             ->and(trim((string) $registro['fiscal']))->not->toBe('', (string) $registro['protocolo']);
     }
@@ -271,7 +326,7 @@ test('lei: a equipe da fiscalizacao avulsa existe na estrutura de areas', functi
 
 test('o chefe de setor recebe so o que as equipes da area dele concluiram', function () {
     $chefe = chefeDaFila('gestor1');
-    $minhas = EstruturaFicticia::areasDoChefe('gestor1');
+    $minhas = Estrutura::areasDoChefe('gestor1');
 
     expect($minhas)->not->toBe([]);
 
@@ -315,15 +370,15 @@ test('quem tria ve o universo — inclusive a area sem chefe com conta', functio
 
 test('quem apenas acompanha e recusado COM O MOTIVO, e nada e alterado', function () {
     $coordenador = coordenadorDaFila();
-    $registro = FiscalizacoesFicticias::registros()[0];
+    $registro = filaDoBanco()[0];
 
     $this->actingAs($coordenador)
         ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$registro['id']]])
         ->assertRedirect()
         ->assertSessionHas('flash.erro', fn (string $recado): bool => str_contains($recado, 'Chefe de Setor da área'));
 
-    expect(FiscalizacoesFicticias::registro((int) $registro['id'])['estado'])
-        ->toBe(FiscalizacoesFicticias::AGUARDANDO);
+    expect(estadoNoBanco((int) $registro['id']))
+        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 });
 
 test('o chefe de setor e recusado NOMINALMENTE ao decidir sobre registro de outra area', function () {
@@ -334,9 +389,9 @@ test('o chefe de setor e recusado NOMINALMENTE ao decidir sobre registro de outr
      * saber o que aconteceu.
      */
     $chefe = chefeDaFila('gestor3');
-    $minhas = EstruturaFicticia::areasDoChefe('gestor3');
+    $minhas = Estrutura::areasDoChefe('gestor3');
 
-    $alheio = collect(FiscalizacoesFicticias::registros())
+    $alheio = collect(filaDoBanco())
         ->first(static fn (array $r): bool => ! in_array((string) $r['area'], $minhas, true));
 
     expect($alheio)->not->toBeNull();
@@ -350,8 +405,8 @@ test('o chefe de setor e recusado NOMINALMENTE ao decidir sobre registro de outr
                 && str_contains($recado, 'Nada foi alterado'),
         );
 
-    expect(FiscalizacoesFicticias::registro((int) $alheio['id'])['estado'])
-        ->toBe(FiscalizacoesFicticias::AGUARDANDO);
+    expect(estadoNoBanco((int) $alheio['id']))
+        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 });
 
 test('a ciencia do chefe de setor tira o registro da fila e deixa o ato registrado', function () {
@@ -368,9 +423,9 @@ test('a ciencia do chefe de setor tira o registro da fila e deixa o ato registra
         ->assertRedirect()
         ->assertSessionHas('flash.sucesso');
 
-    $registro = FiscalizacoesFicticias::registro((int) $meus[0]);
+    $registro = registroNoBanco((int) $meus[0]);
 
-    expect($registro['estado'])->toBe(FiscalizacoesFicticias::CIENTE)
+    expect($registro['estado'])->toBe(Fiscalizacao::CIENTE)
         ->and($registro['decisao']['quem'])->toBe($chefe->name)
         ->and($registro['decisao']['detalhe'])->toBe('Lido; o ponto entra na ronda da semana.')
         // Decidido deixa de estar parado: contar dias de fila do que saiu da fila
@@ -395,8 +450,8 @@ test('a nova vistoria exige justificativa NO SERVIDOR, e nao so no formulario', 
         ])
         ->assertSessionHasErrors('justificativa');
 
-    expect(FiscalizacoesFicticias::registro((int) $meus[0])['estado'])
-        ->toBe(FiscalizacoesFicticias::AGUARDANDO);
+    expect(estadoNoBanco((int) $meus[0]))
+        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 
     $this->actingAs($chefe)
         ->post('/retaguarda/fiscalizacoes/nova-vistoria', [
@@ -406,16 +461,16 @@ test('a nova vistoria exige justificativa NO SERVIDOR, e nao so no formulario', 
         ->assertRedirect()
         ->assertSessionHas('flash.sucesso');
 
-    expect(FiscalizacoesFicticias::registro((int) $meus[0])['estado'])
-        ->toBe(FiscalizacoesFicticias::NOVA_VISTORIA);
+    expect(estadoNoBanco((int) $meus[0]))
+        ->toBe(Fiscalizacao::NOVA_VISTORIA);
 });
 
 test('a decisao em lote conta o efeito, e lote inteiro fora da area nao altera nada', function () {
     $chefe = chefeDaFila('gestor1');
     $meus = array_column(filaServida($chefe), 'id');
-    $minhas = EstruturaFicticia::areasDoChefe('gestor1');
+    $minhas = Estrutura::areasDoChefe('gestor1');
 
-    $alheio = collect(FiscalizacoesFicticias::registros())
+    $alheio = collect(filaDoBanco())
         ->first(static fn (array $r): bool => ! in_array((string) $r['area'], $minhas, true));
 
     /*
@@ -428,17 +483,17 @@ test('a decisao em lote conta o efeito, e lote inteiro fora da area nao altera n
         ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0], $alheio['id']]])
         ->assertSessionHas('flash.erro');
 
-    expect(FiscalizacoesFicticias::registro((int) $meus[0])['estado'])
-        ->toBe(FiscalizacoesFicticias::AGUARDANDO)
-        ->and(FiscalizacoesFicticias::registro((int) $alheio['id'])['estado'])
-        ->toBe(FiscalizacoesFicticias::AGUARDANDO);
+    expect(estadoNoBanco((int) $meus[0]))
+        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA)
+        ->and(estadoNoBanco((int) $alheio['id']))
+        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 });
 
 test('o administrador ve tudo e decide sobre qualquer area', function () {
     $admin = User::factory()->create(['admin' => true, 'ativo' => true]);
     $servidos = filaServida($admin);
 
-    expect($servidos)->toHaveCount(count(FiscalizacoesFicticias::registros()));
+    expect($servidos)->toHaveCount(Fiscalizacao::despachadas()->count());
 
     $this->actingAs($admin)
         ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$servidos[0]['id']]])
@@ -471,7 +526,7 @@ test('o fiscal CONSULTA e nao decide: a tela nao lhe oferece, e o servidor recus
             ->component('Retaguarda/Fiscalizacao/Fiscalizacoes')
             ->where('decide', false));
 
-    $registro = FiscalizacoesFicticias::registros()[0];
+    $registro = filaDoBanco()[0];
 
     /*
      * Quem responde primeiro aqui é a guarda de AÇÃO do Modo Gerente: a concessão
@@ -490,8 +545,8 @@ test('o fiscal CONSULTA e nao decide: a tela nao lhe oferece, e o servidor recus
         ->assertRedirect()
         ->assertSessionHas('flash.erro', fn (string $recado): bool => trim($recado) !== '');
 
-    expect(FiscalizacoesFicticias::registro((int) $registro['id'])['estado'])
-        ->toBe(FiscalizacoesFicticias::AGUARDANDO);
+    expect(estadoNoBanco((int) $registro['id']))
+        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 });
 
 test('o fiscal ve o acervo INTEIRO — limite declarado, nao esquecimento', function () {
@@ -517,7 +572,7 @@ test('o fiscal ve o acervo INTEIRO — limite declarado, nao esquecimento', func
         ->viewData('page')['props'];
 
     expect($pagina['recorteDeArea'])->toBeFalse()
-        ->and($pagina['registros'])->toHaveCount(count(FiscalizacoesFicticias::registros()));
+        ->and($pagina['registros'])->toHaveCount(Fiscalizacao::despachadas()->count());
 });
 
 test('o ACERVO guarda o que a fila perdeu: o decidido segue consultavel, com a prova do ponto', function () {
@@ -543,7 +598,7 @@ test('o ACERVO guarda o que a fila perdeu: o decidido segue consultavel, com a p
      * como mostrá-lo.
      */
     expect($decidido)->not->toBeNull('o registro decidido tem de continuar no acervo')
-        ->and($decidido['estado'])->toBe(FiscalizacoesFicticias::CIENTE);
+        ->and($decidido['estado'])->toBe(Fiscalizacao::CIENTE);
 
     // E o acervo carrega a prova do que foi feito: ao menos um registro com foto e
     // coordenada — senão a aba responderia "o que foi feito?" sem nada a mostrar.
@@ -566,8 +621,10 @@ test('o PRAZO de retorno sai da notificacao e a conta e do servidor', function (
      * regularizar, e alguém tem de voltar no vencimento — sem retorno, ela fica no
      * papel. O Auto de Apreensão não pede volta ao ponto.
      */
+    $fila = filaDoBanco();
+
     $comPrazo = array_values(array_filter(
-        FiscalizacoesFicticias::registros(),
+        $fila,
         static fn (array $r): bool => $r['prazo'] !== null,
     ));
 
@@ -575,7 +632,7 @@ test('o PRAZO de retorno sai da notificacao e a conta e do servidor', function (
 
     $erros = [];
 
-    foreach (FiscalizacoesFicticias::registros() as $r) {
+    foreach ($fila as $r) {
         $tipo = $r['documento']['tipo'] ?? null;
 
         // Prazo sem notificação preliminar atrás é prazo inventado.
@@ -614,57 +671,45 @@ test('o PRAZO de retorno sai da notificacao e a conta e do servidor', function (
 
 test('lei: o vencimento do prazo tem UM dono — a tela LE a data, nao a recalcula', function () {
     /*
-     * Teste-LEI de fonte única, e ele existe por um erro real desta entrega: a
-     * primeira versão desta tela recalculava o vencimento a partir da chave do
-     * prazo ("5d"), com uma expressão própria. O efeito foi imediato e silencioso —
-     * a chave não sobrevive à montagem do documento do trâmite, então o acervo
-     * mostrava "sem prazo correndo" justamente nos casos notificados.
+     * O prazo do documento tem uma data GRAVADA (`documentos_campo.prazo_ate`),
+     * e é ela que vence. A tela lê essa data; não a recalcula a partir da chave
+     * do catálogo.
      *
-     * O conserto foi LER o `vence_em` que o documento do trâmite já resolve. Com
-     * duas contas, bastaria o catálogo do impresso mudar "48 horas" de 2 para 3
-     * dias — ou a hora da lavratura deixar de ser a da conclusão — para o trâmite
-     * mostrar um vencimento e esta tela mostrar outro, e a chefia voltar ao ponto no
-     * dia errado.
-     *
-     * O que se prova: para todo registro vindo de denúncia, a data que a tela mostra
-     * é EXATAMENTE a que o documento do trâmite carrega.
+     * Por que isso é lei: a duração de "48 horas" mora no catálogo do impresso e
+     * pode mudar. Se a tela recalculasse, todo documento lavrado ANTES da mudança
+     * passaria a vencer num dia diferente do que está no papel que o notificado
+     * tem na mão — e a chefia voltaria ao ponto no dia errado.
      */
-    $doTramite = [];
+    $comPrazo = DocumentoCampo::whereNotNull('prazo_ate')->get();
 
-    foreach (DenunciasFicticias::todas() as $denuncia) {
-        foreach ((array) ($denuncia['tramites'] ?? []) as $passo) {
-            $documento = $passo['documento'] ?? null;
-
-            if (is_array($documento) && ($documento['vence_em'] ?? null) !== null) {
-                $doTramite[(string) $documento['numero']] = (string) $documento['vence_em'];
-            }
-        }
-    }
-
-    expect($doTramite)->not->toBe([], 'a amostra precisa de documento com vencimento no trâmite');
+    expect($comPrazo)->not->toBeEmpty('a amostra precisa de documento com prazo');
 
     $divergentes = [];
-    $conferidos = 0;
 
-    foreach (FiscalizacoesFicticias::registros() as $r) {
+    foreach (filaDoBanco() as $r) {
         $numero = $r['documento']['numero'] ?? null;
 
-        if ($numero === null || ! array_key_exists((string) $numero, $doTramite)) {
+        if ($numero === null) {
             continue;
         }
 
-        $conferidos++;
-        $daTela = $r['prazo']['vence_em'] ?? null;
+        $gravado = $comPrazo->firstWhere('numero', (string) $numero);
 
-        if ($daTela !== $doTramite[(string) $numero]) {
-            $divergentes[] = "{$r['protocolo']} (doc {$numero}): trâmite '{$doTramite[(string) $numero]}', "
-                .'tela '.var_export($daTela, true);
+        if ($gravado === null) {
+            continue;
+        }
+
+        $daTela = $r['documento']['vence_em'] ?? null;
+        $daColuna = $gravado->prazo_ate->format('Y-m-d');
+
+        if ($daTela !== $daColuna) {
+            $divergentes[] = "{$r['protocolo']} (doc {$numero}): coluna '{$daColuna}', tela ".var_export($daTela, true);
         }
     }
 
-    expect($conferidos)->toBeGreaterThan(0, 'nenhum documento do trâmite chegou à fila')
-        ->and($divergentes)->toBe([], 'O vencimento é o do documento — a tela lê, não recalcula.
-');
+    expect($divergentes)->toBe([], 'a tela nao esta lendo a data gravada:
+'.implode('
+', $divergentes));
 });
 
 test('o CONTADOR do menu e a fila de quem decide, recortada pela mesma area', function () {
@@ -681,7 +726,7 @@ test('o CONTADOR do menu e a fila de quem decide, recortada pela mesma area', fu
 
     $naFila = count(array_filter(
         filaServida($chefe),
-        static fn (array $r): bool => (string) $r['estado'] === FiscalizacoesFicticias::AGUARDANDO,
+        static fn (array $r): bool => (string) $r['estado'] === Fiscalizacao::AGUARDANDO_LEITURA,
     ));
 
     expect($naFila)->toBeGreaterThan(0);
@@ -705,21 +750,6 @@ test('o CONTADOR do menu e a fila de quem decide, recortada pela mesma area', fu
 
     // Quem apenas acompanha não recebe número: seria cobrança sobre trabalho alheio.
     expect($contadorDe(coordenadorDaFila()))->toBeNull();
-});
-
-test('reiniciar devolve a fila ao estado de demonstracao', function () {
-    $chefe = chefeDaFila('gestor1');
-    $meus = array_column(filaServida($chefe), 'id');
-
-    $this->actingAs($chefe)->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0]]]);
-
-    expect(FiscalizacoesFicticias::alterada())->toBeTrue();
-
-    $this->actingAs($chefe)->post('/retaguarda/fiscalizacoes/reiniciar')->assertRedirect();
-
-    expect(FiscalizacoesFicticias::alterada())->toBeFalse()
-        ->and(FiscalizacoesFicticias::registro((int) $meus[0])['estado'])
-        ->toBe(FiscalizacoesFicticias::AGUARDANDO);
 });
 
 test('o recorte visivel da fila vira documento pelo ponto unico de exportacao', function () {

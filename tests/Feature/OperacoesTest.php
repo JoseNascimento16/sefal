@@ -1,10 +1,13 @@
 <?php
 
+use App\Models\Demanda;
+use App\Models\Operacao;
 use App\Models\Setor;
 use App\Models\User;
-use App\Support\Prototipo\DenunciasFicticias;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\OperacoesFicticias;
+use App\Support\Apresentacao\OperacaoParaTela;
+use App\Support\Estrutura;
+use Database\Seeders\DemonstracaoSeeder;
+use Database\Seeders\EstruturaSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 
@@ -42,13 +45,20 @@ use Database\Seeders\SetoresSeeder;
 beforeEach(function () {
     $this->seed(SetoresSeeder::class);
     $this->seed(PermissoesSetorSeeder::class);
+    /*
+     * A estrutura e as operações saem do BANCO desde a consolidação. Sem elas o
+     * teste rodaria contra um cadastro vazio e passaria pelo motivo errado.
+     */
+    $this->seed(EstruturaSeeder::class);
+    $this->seed(DemonstracaoSeeder::class);
 });
 
 /** Um Chefe de Setor de verdade: a matrícula é o que o liga à área na estrutura. */
 function chefeDeOperacao(string $matricula): User
 {
-    $u = User::factory()->create(['login' => $matricula, 'admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+    // A conta já existe: é o seeder da estrutura que a cria e a liga à área.
+    $u = User::where('login', User::normalizarMatricula($matricula))->firstOrFail();
+    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
 
     return $u->fresh();
 }
@@ -80,7 +90,7 @@ function operacaoValida(array $trocas = []): array
         'bairros' => ['Costa Azul'],
         'inicio' => now()->format('Y-m-d'),
         'fim' => now()->addDays(10)->format('Y-m-d'),
-        'situacao' => OperacoesFicticias::EM_ANDAMENTO,
+        'situacao' => Operacao::EM_ANDAMENTO,
         'foco' => 'Barracas de praia avançando sobre a faixa de areia liberada.',
         'observacao' => '',
         ...$trocas,
@@ -94,8 +104,8 @@ test('a tela abre e entrega o catalogo que a validacao exige', function () {
 
     // Os catálogos vêm do SERVIDOR: escritos também na tela, um dia discordariam —
     // e a tela ofereceria uma opção que o servidor recusa.
-    expect($pagina['situacoes'])->toBe(OperacoesFicticias::situacoes())
-        ->and($pagina['areas'])->toBe(EstruturaFicticia::nomesDeArea())
+    expect($pagina['situacoes'])->toBe(Operacao::SITUACOES)
+        ->and($pagina['areas'])->toBe(Estrutura::nomesDeArea())
         ->and($pagina['operacoes'])->not->toBe([])
         ->and($pagina['cadastra'])->toBeTrue();
 });
@@ -110,8 +120,8 @@ test('lei: o cadastro e o direcionamento leem o MESMO catalogo de operacoes', fu
      * aparece lá na mesma sessão. Sem (b), duas listas alimentadas pela mesma
      * config passariam neste teste e divergiriam na primeira gravação.
      */
-    $doCadastro = array_column(OperacoesFicticias::todas(), 'nome');
-    $doDirecionamento = DenunciasFicticias::nomesDeOperacao();
+    $doCadastro = Operacao::pluck('nome')->all();
+    $doDirecionamento = Operacao::abertas()->pluck('nome')->all();
 
     expect($doDirecionamento)->not->toBe([])
         ->and(array_diff($doDirecionamento, $doCadastro))
@@ -119,7 +129,7 @@ test('lei: o cadastro e o direcionamento leem o MESMO catalogo de operacoes', fu
 
     // A encerrada existe no cadastro e NÃO no direcionamento — é o subconjunto.
     $encerradas = array_column(array_filter(
-        OperacoesFicticias::todas(),
+        Operacao::with(['area', 'equipes', 'bairros'])->get()->map(OperacaoParaTela::completa(...))->all(),
         static fn (array $o): bool => $o['encerrada'] === true,
     ), 'nome');
 
@@ -136,7 +146,7 @@ test('lei: o cadastro e o direcionamento leem o MESMO catalogo de operacoes', fu
         ->assertRedirect()
         ->assertSessionHas('flash.sucesso');
 
-    expect(DenunciasFicticias::nomesDeOperacao())->toContain('Operação Teste da Orla');
+    expect(Operacao::abertas()->pluck('nome')->all())->toContain('Operação Teste da Orla');
 });
 
 test('o direcionamento recebe a operacao com as chaves que a tela dele LE', function () {
@@ -171,7 +181,7 @@ test('o direcionamento recebe a operacao com as chaves que a tela dele LE', func
         }
 
         // A encerrada não chega: oferecê-la seria convidar para a recusa da RN-05.
-        if (($o['situacao'] ?? null) === OperacoesFicticias::ENCERRADA) {
+        if (($o['situacao'] ?? null) === Operacao::ENCERRADA) {
             $problemas[] = "{$o['nome']}: encerrada oferecida ao direcionamento";
         }
 
@@ -196,23 +206,31 @@ test('a operacao ENCERRADA nao recebe denuncia nova, e a recusa diz o porque', f
      * no controller, o POST abaixo passaria (a `Rule::in` diria só "seleção
      * inválida" quando passasse, o que não explica nada a quem escolheu).
      */
-    $encerrada = collect(OperacoesFicticias::todas())->firstWhere('encerrada', true);
+    $encerrada = Operacao::with(['area', 'equipes', 'bairros'])->get()
+        ->map(OperacaoParaTela::completa(...))
+        ->firstWhere('encerrada', true);
 
     expect($encerrada)->not->toBeNull();
 
     $chefe = chefeDeOperacao('gestor1');
 
     // Uma denúncia da área dele que esteja esperando direcionamento.
-    $daArea = collect(DenunciasFicticias::todas())->first(
-        static fn (array $d): bool => (string) ($d['area'] ?? '') === 'Área 5'
-            && in_array((string) $d['situacao'], DenunciasFicticias::AGUARDANDO_DIRECIONAMENTO, true),
-    );
+    /*
+     * A demanda é POSTA no estado que o teste quer provar, em vez de procurada
+     * na amostra: depender do que o seeder por acaso deixou faz o teste passar a
+     * falhar quando alguém acrescenta um caso — e a falha não fala do defeito.
+     */
+    $daArea = Demanda::with('area')
+        ->whereHas('area', static fn ($q) => $q->where('nome', 'Área 5'))
+        ->first();
+
+    $daArea?->update(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'operacao_id' => null]);
 
     expect($daArea)->not->toBeNull('a amostra precisa de denúncia da Área 5 aguardando direcionamento');
 
     $this->actingAs($chefe)
         ->post('/retaguarda/denuncias/operacao', [
-            'ids' => [$daArea['id']],
+            'ids' => [$daArea->id],
             'nova' => false,
             'operacao' => $encerrada['nome'],
         ])
@@ -224,7 +242,7 @@ test('a operacao ENCERRADA nao recebe denuncia nova, e a recusa diz o porque', f
         );
 
     // E nada foi alterado: a denúncia continua esperando o direcionamento.
-    $depois = collect(DenunciasFicticias::todas())->firstWhere('id', $daArea['id']);
+    $depois = Demanda::findOrFail($daArea->id);
 
     expect((string) $depois['situacao'])->toBe((string) $daArea['situacao'])
         ->and($depois['operacao'])->toBeNull();
@@ -245,7 +263,7 @@ test('o periodo com FIM antes do inicio e recusado, dizendo o efeito', function 
         ]))
         ->assertSessionHasErrors('fim');
 
-    expect(OperacoesFicticias::nomeEmUso('Operação Teste da Orla'))->toBeFalse();
+    expect(Operacao::where('nome', 'Operação Teste da Orla')->exists())->toBeFalse();
 
     // Um dia só PASSA: a interdição de um evento começa e termina no mesmo dia, e
     // exigir fim posterior obrigaria a chefia a mentir a data para poder salvar.
@@ -275,7 +293,7 @@ test('a AREA e obrigatoria, e area inventada e recusada', function () {
         ->post('/retaguarda/operacoes', operacaoValida(['area' => 'Área 99']))
         ->assertSessionHasErrors('area');
 
-    expect(OperacoesFicticias::nomeEmUso('Operação Teste da Orla'))->toBeFalse();
+    expect(Operacao::where('nome', 'Operação Teste da Orla')->exists())->toBeFalse();
 });
 
 test('nome repetido e recusado, aqui e no direcionamento', function () {
@@ -284,7 +302,7 @@ test('nome repetido e recusado, aqui e no direcionamento', function () {
      * na linha ao ser anexada. Duas com o mesmo nome fazem a anexação apontar para
      * qualquer uma das duas, e ninguém sabe qual.
      */
-    $existente = OperacoesFicticias::todas()[0]['nome'];
+    $existente = Operacao::firstOrFail()->nome;
     $chefe = chefeDeOperacao('gestor1');
 
     $this->actingAs($chefe)
@@ -294,14 +312,20 @@ test('nome repetido e recusado, aqui e no direcionamento', function () {
     // A mesma régua na criação a partir do direcionamento — o outro caminho de
     // nascimento de operação. Ele não é um segundo cadastro: se a regra valesse só
     // aqui, o nome duplicado entraria por lá.
-    $daArea = collect(DenunciasFicticias::todas())->first(
-        static fn (array $d): bool => (string) ($d['area'] ?? '') === 'Área 5'
-            && in_array((string) $d['situacao'], DenunciasFicticias::AGUARDANDO_DIRECIONAMENTO, true),
-    );
+    /*
+     * A demanda é POSTA no estado que o teste quer provar, em vez de procurada
+     * na amostra: depender do que o seeder por acaso deixou faz o teste passar a
+     * falhar quando alguém acrescenta um caso — e a falha não fala do defeito.
+     */
+    $daArea = Demanda::with('area')
+        ->whereHas('area', static fn ($q) => $q->where('nome', 'Área 5'))
+        ->first();
+
+    $daArea?->update(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'operacao_id' => null]);
 
     $this->actingAs($chefe)
         ->post('/retaguarda/denuncias/operacao', [
-            'ids' => [$daArea['id']],
+            'ids' => [$daArea->id],
             'nova' => true,
             'nome' => $existente,
             'area' => 'Área 5',
@@ -313,7 +337,7 @@ test('nome repetido e recusado, aqui e no direcionamento', function () {
 
 test('o chefe de setor recebe so as operacoes da area dele', function () {
     $chefe = chefeDeOperacao('gestor1');
-    $minhas = EstruturaFicticia::areasDoChefe('gestor1');
+    $minhas = Estrutura::areasDoChefe('gestor1');
 
     expect($minhas)->not->toBe([]);
 
@@ -374,7 +398,7 @@ test('quem apenas consulta nao cadastra: a tela nao oferece e o servidor recusa'
         ->assertRedirect()
         ->assertSessionHas('flash.erro', fn (string $r): bool => trim($r) !== '');
 
-    expect(OperacoesFicticias::nomeEmUso('Operação Teste da Orla'))->toBeFalse();
+    expect(Operacao::where('nome', 'Operação Teste da Orla')->exists())->toBeFalse();
 });
 
 test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area', function () {
@@ -384,11 +408,13 @@ test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area'
      * para ela saber o que aconteceu.
      */
     $chefe = chefeDeOperacao('gestor1');
-    $minhas = EstruturaFicticia::areasDoChefe('gestor1');
+    $minhas = Estrutura::areasDoChefe('gestor1');
 
-    $alheia = collect(OperacoesFicticias::todas())->first(
-        static fn (array $o): bool => ! in_array((string) $o['area'], $minhas, true),
-    );
+    $alheia = Operacao::with(['area', 'equipes', 'bairros'])->get()
+        ->map(OperacaoParaTela::completa(...))
+        ->first(
+            static fn (array $o): bool => ! in_array((string) $o['area'], $minhas, true),
+        );
 
     expect($alheia)->not->toBeNull();
 
@@ -406,7 +432,7 @@ test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area'
             fn (string $r): bool => str_contains($r, $minhas[0]) && str_contains($r, (string) $alheia['area']),
         );
 
-    expect(OperacoesFicticias::nomeEmUso('Operação Fora da Minha Área'))->toBeFalse();
+    expect(Operacao::where('nome', 'Operação Fora da Minha Área')->exists())->toBeFalse();
 
     // (b) ALTERAR a operação de outro — inclusive tentando trazê-la para a própria
     // área, que é o caminho fácil se só a área de destino fosse conferida.
@@ -418,7 +444,7 @@ test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area'
         ->assertRedirect()
         ->assertSessionHas('flash.erro');
 
-    expect(OperacoesFicticias::porId((int) $alheia['id'])['nome'])->toBe((string) $alheia['nome']);
+    expect(Operacao::findOrFail((int) $alheia['id'])->nome)->toBe((string) $alheia['nome']);
 
     // (c) EXCLUIR a operação de outro.
     $this->actingAs($chefe)
@@ -426,7 +452,7 @@ test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area'
         ->assertRedirect()
         ->assertSessionHas('flash.erro');
 
-    expect(OperacoesFicticias::porId((int) $alheia['id']))->not->toBeNull();
+    expect(Operacao::find((int) $alheia['id']))->not->toBeNull();
 });
 
 test('o chefe de setor cria, altera e exclui na propria area', function () {
@@ -436,7 +462,9 @@ test('o chefe de setor cria, altera e exclui na propria area', function () {
         ->assertSessionHasNoErrors()
         ->assertSessionHas('flash.sucesso');
 
-    $criada = OperacoesFicticias::porNome('Operação Teste da Orla');
+    $criada = OperacaoParaTela::completa(
+        Operacao::with(['area', 'equipes', 'bairros'])->where('nome', 'Operação Teste da Orla')->firstOrFail(),
+    );
 
     expect($criada)->not->toBeNull()
         ->and($criada['area'])->toBe('Área 5')
@@ -446,19 +474,19 @@ test('o chefe de setor cria, altera e exclui na propria area', function () {
 
     $this->actingAs($chefe)
         ->put("/retaguarda/operacoes/{$criada['id']}", operacaoValida([
-            'situacao' => OperacoesFicticias::ENCERRADA,
+            'situacao' => Operacao::ENCERRADA,
         ]))
         ->assertSessionHas('flash.sucesso');
 
     // Encerrada: continua no cadastro e sai da escolha do direcionamento.
-    expect(OperacoesFicticias::porNome('Operação Teste da Orla')['encerrada'])->toBeTrue()
-        ->and(DenunciasFicticias::nomesDeOperacao())->not->toContain('Operação Teste da Orla');
+    expect(Operacao::where('nome', 'Operação Teste da Orla')->firstOrFail()->situacao)->toBe(Operacao::ENCERRADA)
+        ->and(Operacao::abertas()->pluck('nome')->all())->not->toContain('Operação Teste da Orla');
 
     $this->actingAs($chefe)
         ->delete("/retaguarda/operacoes/{$criada['id']}")
         ->assertSessionHas('flash.sucesso');
 
-    expect(OperacoesFicticias::porNome('Operação Teste da Orla'))->toBeNull();
+    expect(Operacao::where('nome', 'Operação Teste da Orla')->exists())->toBeFalse();
 });
 
 test('operacao sem data de fim e rotina PERMANENTE, e a etiqueta diz isso', function () {
@@ -472,23 +500,12 @@ test('operacao sem data de fim e rotina PERMANENTE, e a etiqueta diz isso', func
         ->post('/retaguarda/operacoes', operacaoValida(['nome' => 'Rotina Permanente da Orla', 'fim' => null]))
         ->assertSessionHasNoErrors();
 
-    $criada = OperacoesFicticias::porNome('Rotina Permanente da Orla');
+    $criada = OperacaoParaTela::completa(
+        Operacao::with(['area', 'equipes', 'bairros'])->where('nome', 'Rotina Permanente da Orla')->firstOrFail(),
+    );
 
     expect($criada['fim'])->toBeNull()
         ->and($criada['periodo'])->toStartWith('a partir de ');
-});
-
-test('reiniciar devolve o catalogo ao estado de demonstracao', function () {
-    $chefe = chefeDeOperacao('gestor1');
-
-    $this->actingAs($chefe)->post('/retaguarda/operacoes', operacaoValida());
-
-    expect(OperacoesFicticias::alterada())->toBeTrue();
-
-    $this->actingAs($chefe)->post('/retaguarda/operacoes/reiniciar')->assertRedirect();
-
-    expect(OperacoesFicticias::alterada())->toBeFalse()
-        ->and(OperacoesFicticias::porNome('Operação Teste da Orla'))->toBeNull();
 });
 
 test('o fiscal nao entra no cadastro de operacao: e barrado dizendo o porque', function () {
