@@ -3,13 +3,19 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\Operacao;
+use App\Models\OperacaoBairro;
 use App\Rules\NomeDeCadastro;
+use App\Support\Apresentacao\OperacaoParaTela;
+use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\OperacoesFicticias;
-use App\Support\Prototipo\PapelNaArea;
+use App\Support\PapelNaArea;
+use App\Support\Protocolo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -81,20 +87,15 @@ class OperacoesController extends Controller
             // O recorte é do SERVIDOR: a operação carrega foco e observação da
             // gestão, e a lista inteira não tem por que viajar até o navegador de
             // quem responde por uma área só.
-            'operacoes' => $comRecorte
-                ? array_values(array_filter(
-                    OperacoesFicticias::todas(),
-                    static fn (array $o): bool => in_array((string) $o['area'], $areas, true),
-                ))
-                : OperacoesFicticias::todas(),
+            'operacoes' => $this->listar($comRecorte ? $areas : null),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
             // uma opção que o servidor recusa.
-            'situacoes' => OperacoesFicticias::situacoes(),
-            'areas' => $comRecorte ? $areas : EstruturaFicticia::nomesDeArea(),
-            'equipes' => EstruturaFicticia::equipes(),
-            'bairros' => EstruturaFicticia::bairros(),
-            'chefias' => EstruturaFicticia::chefiasPorArea(),
+            'situacoes' => Operacao::SITUACOES,
+            'areas' => $comRecorte ? $areas : Estrutura::nomesDeArea(),
+            'equipes' => Estrutura::equipes(),
+            'bairros' => Estrutura::bairros(),
+            'chefias' => Estrutura::chefiasPorArea(),
             // O que esta pessoa exerce aqui, e sobre o que. A MESMA resposta
             // governa a recusa no servidor: a tela não oferece o que ele recusa.
             'cadastra' => PapelNaArea::decide($usuario),
@@ -104,7 +105,8 @@ class OperacoesController extends Controller
             // docs/padroes/listagem-clean.md. Enxugar é da TELA: foco, região,
             // bairros e observação descem para a ficha e seguem no arquivo.
             'listagens' => ListagensDaRetaguarda::para('operacoes'),
-            'alterada' => OperacoesFicticias::alterada(),
+            // Resíduo do protótipo: ligava o botão de reiniciar, que não existe mais.
+            'alterada' => false,
         ]);
     }
 
@@ -120,15 +122,16 @@ class OperacoesController extends Controller
             return $recusa;
         }
 
-        if (OperacoesFicticias::nomeEmUso((string) $dados['nome'])) {
+        if (Operacao::where('nome', (string) $dados['nome'])->exists()) {
             return $this->recusarNomeRepetido();
         }
 
-        $operacao = OperacoesFicticias::salvar($dados);
+        $operacao = $this->gravar(new Operacao, $dados);
+        $paraTela = OperacaoParaTela::completa($operacao);
 
         return back()->with(
             'flash.sucesso',
-            "{$operacao['nome']} criada — {$operacao['area']}, {$operacao['periodo']}.",
+            "{$operacao->nome} criada — {$paraTela['area']}, {$paraTela['periodo']}.",
         );
     }
 
@@ -138,7 +141,7 @@ class OperacoesController extends Controller
             return $recusa;
         }
 
-        $existente = OperacoesFicticias::porId($operacao);
+        $existente = Operacao::with('area')->find($operacao);
 
         if ($existente === null) {
             return back()->with('flash.erro', 'Essa operação não existe mais. Recarregue a tela.');
@@ -152,17 +155,21 @@ class OperacoesController extends Controller
          * Área 1 desde que a movesse para a dele; sem a segunda, ele empurraria a
          * própria operação para a área de outro.
          */
-        foreach ([(string) $existente['area'], (string) $dados['area']] as $area) {
+        foreach ([(string) ($existente->area?->nome ?? ''), (string) $dados['area']] as $area) {
             if (($recusa = $this->exigirArea($request, $area)) !== null) {
                 return $recusa;
             }
         }
 
-        if (OperacoesFicticias::nomeEmUso((string) $dados['nome'], exceto: $operacao)) {
+        $repetido = Operacao::where('nome', (string) $dados['nome'])
+            ->whereKeyNot($existente->getKey())
+            ->exists();
+
+        if ($repetido) {
             return $this->recusarNomeRepetido();
         }
 
-        OperacoesFicticias::salvar([...$dados, 'id' => $operacao]);
+        $this->gravar($existente, $dados);
 
         return back()->with('flash.sucesso', 'Alterações salvas.');
     }
@@ -173,32 +180,34 @@ class OperacoesController extends Controller
             return $recusa;
         }
 
-        $existente = OperacoesFicticias::porId($operacao);
+        $existente = Operacao::with('area')->find($operacao);
 
         if ($existente === null) {
             return back()->with('flash.erro', 'Essa operação não existe mais. Recarregue a tela.');
         }
 
-        if (($recusa = $this->exigirArea($request, (string) $existente['area'])) !== null) {
+        if (($recusa = $this->exigirArea($request, (string) ($existente->area?->nome ?? ''))) !== null) {
             return $recusa;
         }
 
-        OperacoesFicticias::excluir($operacao);
+        /*
+         * Operação com demanda anexada NÃO se exclui: o caso perderia a ligação
+         * com o trabalho que o resolveu, e o histórico da denúncia passaria a
+         * apontar para o nada. Quem quer parar uma operação a CANCELA — e o
+         * cancelamento diz quem e por quê, que é o que a exclusão apagaria.
+         */
+        $anexadas = $existente->demandas()->count();
 
-        return back()->with('flash.sucesso', "{$existente['nome']} excluída.");
-    }
+        if ($anexadas > 0) {
+            return back()->with('flash.erro', $anexadas === 1
+                ? 'Há 1 demanda anexada a esta operação. Cancele a operação em vez de excluí-la — a demanda perderia a ligação com o trabalho.'
+                : "Há {$anexadas} demandas anexadas a esta operação. Cancele a operação em vez de excluí-la — elas perderiam a ligação com o trabalho.");
+        }
 
-    /**
-     * Devolve o catálogo ao estado de partida.
-     *
-     * Existe porque é PROTÓTIPO: quem demonstra precisa recomeçar a cena. No
-     * sistema real a operação é cadastro, e cadastro não se reinicia.
-     */
-    public function reiniciar(): RedirectResponse
-    {
-        OperacoesFicticias::reiniciar();
+        $nome = $existente->nome;
+        $existente->delete();
 
-        return back()->with('flash.sucesso', 'Operações devolvidas ao estado de demonstração.');
+        return back()->with('flash.sucesso', "{$nome} excluída.");
     }
 
     /**
@@ -206,6 +215,116 @@ class OperacoesController extends Controller
      *
      * @return array<string, mixed>
      */
+    // ── O acesso ao banco ───────────────────────────────────────────────────
+
+    /**
+     * As operações que esta pessoa vê, já na forma da tela.
+     *
+     * O recorte é do SERVIDOR: a operação carrega foco e observação da gestão, e
+     * a lista inteira não tem por que viajar até o navegador de quem responde por
+     * uma área só. `$areas` nulo significa "sem recorte".
+     *
+     * A SITUAÇÃO é sincronizada na leitura: ela é derivada do período, e uma
+     * operação que terminou ontem tem de aparecer encerrada hoje mesmo que
+     * nenhum comando agendado tenha rodado. Sem isto, a tela mostraria "em
+     * andamento" para trabalho que acabou — e o Chefe de Setor anexaria denúncia
+     * a ela.
+     *
+     * @param  list<string>|null  $areas
+     * @return list<array<string, mixed>>
+     */
+    private function listar(?array $areas): array
+    {
+        $consulta = Operacao::with(['area', 'equipes', 'bairros', 'coordenador'])
+            ->orderByDesc('inicio')
+            ->orderBy('nome');
+
+        if ($areas !== null) {
+            $consulta->whereHas('area', static fn ($q) => $q->whereIn('nome', $areas));
+        }
+
+        return $consulta->get()
+            ->each(static fn (Operacao $o) => $o->sincronizarSituacao())
+            ->map(OperacaoParaTela::completa(...))
+            ->all();
+    }
+
+    /**
+     * Grava a operação — criação e alteração pelo mesmo caminho.
+     *
+     * Os vínculos (equipes e bairros) são SINCRONIZADOS, não acrescentados: a
+     * tela manda a lista inteira, e quem tirou uma equipe do formulário espera
+     * que ela saia. Acrescentar deixaria a equipe removida executando a operação
+     * para sempre.
+     *
+     * @param  array<string, mixed>  $dados
+     */
+    private function gravar(Operacao $operacao, array $dados): Operacao
+    {
+        $area = Area::where('nome', (string) $dados['area'])->firstOrFail();
+
+        $operacao->fill([
+            'codigo' => $operacao->codigo ?? Protocolo::proximo('OP', modelClass: Operacao::class, coluna: 'codigo'),
+            'nome' => (string) $dados['nome'],
+            'area_id' => $area->id,
+            'coordenador_id' => $operacao->coordenador_id ?? $area->chefe_de_setor_id,
+            'regiao' => $dados['regiao'] ?? null,
+            'foco' => $dados['foco'] ?? null,
+            'observacao' => $dados['observacao'] ?? null,
+            'inicio' => $dados['inicio'],
+            'fim' => $dados['fim'] ?? null,
+            'criada_por_id' => $operacao->criada_por_id ?? $this->autor(),
+        ]);
+
+        /*
+         * ENCERRAR CEDO é um ATO com data, não um rótulo digitado.
+         *
+         * A situação continua derivada — dono único, {@see Operacao::situacaoPeloPeriodo}.
+         * O que o formulário faz ao escolher "Encerrada" é registrar o FATO de que
+         * a operação acabou hoje (`encerrada_em`), e a derivação passa a ler esse
+         * fato junto com o calendário.
+         *
+         * A alternativa — gravar a situação escolhida — daria dois donos à mesma
+         * verdade, e no dia seguinte o período e o rótulo discordariam sem que
+         * nada acusasse.
+         */
+        $operacao->encerrada_em = ($dados['situacao'] ?? null) === Operacao::ENCERRADA
+            ? ($operacao->encerrada_em ?? Date::now())
+            // Reabrir também é ato: quem tira o rótulo de encerrada apaga a data.
+            : null;
+
+        $operacao->situacao = $operacao->situacaoPeloPeriodo();
+        $operacao->save();
+
+        $ids = [];
+
+        foreach ((array) ($dados['equipes'] ?? []) as $codigo) {
+            $equipe = Estrutura::equipeModel((string) $codigo);
+
+            if ($equipe !== null) {
+                $ids[] = $equipe->id;
+            }
+        }
+
+        $operacao->equipes()->sync($ids);
+
+        $bairros = array_values(array_unique(array_map('strval', (array) ($dados['bairros'] ?? []))));
+
+        $operacao->bairros()->whereNotIn('bairro', $bairros)->delete();
+
+        foreach ($bairros as $bairro) {
+            OperacaoBairro::firstOrCreate(['operacao_id' => $operacao->id, 'bairro' => $bairro]);
+        }
+
+        return $operacao->fresh(['area', 'equipes', 'bairros', 'coordenador']);
+    }
+
+    /** O identificador de quem está gravando — nulo fora de uma requisição. */
+    private function autor(): ?int
+    {
+        return Auth::id();
+    }
+
     private function validados(Request $request): array
     {
         $dados = $request->validate([
@@ -213,12 +332,12 @@ class OperacoesController extends Controller
             // ÁREA é obrigatória, e tem de existir: é ela que decide quem vê a
             // operação e quem a executa. Área inventada deixaria a operação órfã,
             // sem aparecer para chefe nenhum.
-            'area' => ['required', Rule::in(EstruturaFicticia::nomesDeArea())],
+            'area' => ['required', Rule::in(Estrutura::nomesDeArea())],
             'regiao' => ['nullable', 'string', 'max:120'],
             // As equipes que executam. Lista, porque operação grande junta equipe
             // de mais de uma área — a Noturna reforçando a orla no verão.
             'equipes' => ['array'],
-            'equipes.*' => [Rule::in(EstruturaFicticia::codigosDeEquipe())],
+            'equipes.*' => [Rule::in(Estrutura::codigosDeEquipe())],
             // Os bairros alcançados DENTRO da área. Vazio significa "a área
             // inteira", e não "nenhum" — daí não ser obrigatório.
             'bairros' => ['array'],
@@ -228,7 +347,7 @@ class OperacoesController extends Controller
             // (o réveillon, a interdição de um evento), e exigir fim posterior
             // obrigaria a chefia a mentir a data para conseguir salvar.
             'fim' => ['nullable', 'date', 'after_or_equal:inicio'],
-            'situacao' => ['required', Rule::in(OperacoesFicticias::situacoes())],
+            'situacao' => ['required', Rule::in(Operacao::SITUACOES)],
             'foco' => ['nullable', 'string', 'max:300'],
             'observacao' => ['nullable', 'string', 'max:600'],
         ], [

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
-use App\Support\Prototipo\MapasFicticios;
+use App\Support\Apresentacao\MapaDaCidade;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,16 +31,23 @@ use Inertia\Response;
  *
  * Só GET: é tela de leitura. Quem grava fiscalização é o aplicativo, em rua.
  *
- * ⚠️ PROTÓTIPO: nada vem do banco. Os pontos são inventados por
- * {@see MapasFicticios} (com coordenadas reais de Salvador e a estrutura de
- * equipes real, tirada de `EstruturaFicticia`) e não há tempo real — a tela diz o
- * instante que está mostrando. A guarda de acesso deduz a tela do primeiro trecho
- * do caminho (`/retaguarda/mapa`).
+ * ── O mapa desenha o que EXISTE, e o vazio é resposta ──────────────────────
+ *
+ * Cada pino é um `ambulante` com trilha ({@see MapaDaCidade}), que se pode abrir
+ * e fiscalizar. "Registros de hoje" é a contagem real do dia — zero quando
+ * nenhuma equipe registrou nada —, e "fiscais em campo" traz quem está com
+ * vistoria ABERTA agora, não a escala do dia.
+ *
+ * Não há tempo real: a tela é uma fotografia e diz o instante que mostra.
+ * Esconder isso faria a chefia ler um dado de dez minutos atrás como "agora".
+ *
+ * A guarda de acesso deduz a tela do primeiro trecho do caminho
+ * (`/retaguarda/mapa`).
  */
 class MapaAoVivoController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('Retaguarda/Fiscalizacao/MapaAoVivo', MapasFicticios::aoVivo());
+        return Inertia::render('Retaguarda/Fiscalizacao/MapaAoVivo', MapaDaCidade::aoVivo());
     }
 }

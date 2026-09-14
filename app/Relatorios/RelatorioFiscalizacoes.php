@@ -2,12 +2,13 @@
 
 namespace App\Relatorios;
 
+use App\Models\Fiscalizacao;
 use App\Relatorios\Contracts\Relatorio;
 use App\Relatorios\Suporte\ContextoRelatorio;
 use App\Relatorios\Suporte\FiltroDef;
 use App\Relatorios\Suporte\ResultadoRelatorio;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\FiscalizacoesFicticias;
+use App\Support\Apresentacao\FiscalizacaoParaTela;
+use App\Support\Estrutura;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 
@@ -21,7 +22,8 @@ use Illuminate\Support\Facades\Date;
  * e essa proporção é a pergunta política do serviço, não um detalhe.
  *
  * ⚠️ PROTÓTIPO: os registros são os mesmos que a tela de Fiscalizações mostra
- * ({@see FiscalizacoesFicticias}), então relatório e tela nunca discordam. Quando
+ * (a mesma montagem de {@see FiscalizacaoParaTela}), então relatório e tela nunca
+ * discordam — e é por isso que o relatório NÃO faz consulta própria. Quando
  * a fiscalização virar tabela, muda a fonte aqui — o formato do documento fica.
  */
 class RelatorioFiscalizacoes implements Relatorio
@@ -50,7 +52,7 @@ class RelatorioFiscalizacoes implements Relatorio
     {
         $areas = [['valor' => '', 'rotulo' => 'Todas as áreas']];
 
-        foreach (EstruturaFicticia::nomesDeArea() as $area) {
+        foreach (Estrutura::nomesDeArea() as $area) {
             $areas[] = ['valor' => $area, 'rotulo' => $area];
         }
 
@@ -66,6 +68,28 @@ class RelatorioFiscalizacoes implements Relatorio
         return [ContextoRelatorio::MODO_ANALITICO, ContextoRelatorio::MODO_SINTETICO];
     }
 
+    /**
+     * Os registros despachados, na MESMA forma que a tela de Fiscalizações lê.
+     *
+     * O relatório não monta consulta própria de propósito: duas montagens da
+     * mesma lista divergiriam no primeiro ajuste, e o documento assinado passaria
+     * a contar diferente da tela que a chefia olhou.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function registros(): array
+    {
+        return Fiscalizacao::despachadas()
+            ->with([
+                'demanda', 'operacao', 'equipe.area', 'fiscal',
+                'ambulante', 'fotos', 'recomendacoes', 'documento',
+            ])
+            ->orderByDesc('concluida_em')
+            ->get()
+            ->map(FiscalizacaoParaTela::completa(...))
+            ->all();
+    }
+
     public function gerar(ContextoRelatorio $contexto): ResultadoRelatorio
     {
         $de = $this->data($contexto->filtro('data_inicial'));
@@ -73,7 +97,7 @@ class RelatorioFiscalizacoes implements Relatorio
         $area = trim((string) $contexto->filtro('area', ''));
 
         $registros = array_values(array_filter(
-            FiscalizacoesFicticias::registros(),
+            self::registros(),
             function (array $r) use ($de, $ate, $area): bool {
                 $quando = Date::parse((string) $r['concluida_em'])->startOfDay();
 

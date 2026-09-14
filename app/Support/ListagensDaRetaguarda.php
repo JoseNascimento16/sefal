@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Support\Prototipo\PapelNaArea;
 use InvalidArgumentException;
 
 /**

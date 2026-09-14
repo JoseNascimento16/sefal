@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Models\Fiscalizacao;
+use App\Support\Apresentacao\FiscalizacaoParaTela;
+use App\Support\DecisaoDaChefia;
+use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\FiscalizacoesFicticias;
-use App\Support\Prototipo\PapelNaArea;
+use App\Support\PapelNaArea;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -114,17 +116,17 @@ class FiscalizacoesController extends Controller
             // protege, e o acervo inteiro teria viajado até o navegador de quem não
             // deve vê-lo — com o relato do fiscal, as fotos e o número do documento
             // dentro.
-            'registros' => $comRecorte
-                ? array_values(array_filter(
-                    FiscalizacoesFicticias::registros(),
-                    static fn (array $r): bool => in_array((string) $r['area'], $areas, true),
-                ))
-                : FiscalizacoesFicticias::registros(),
+            'registros' => $this->registros($comRecorte ? $areas : null),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige e
             // que a busca reconhece como faceta. Escritos também na tela, um dia
             // discordariam — e a tela ofereceria um estado que o servidor recusa.
-            'estados' => FiscalizacoesFicticias::estados(),
-            'desfechos' => array_values((array) config('prototipo_denuncias.desfechos', [])),
+            'estados' => [
+                Fiscalizacao::AGUARDANDO_LEITURA,
+                Fiscalizacao::CIENTE,
+                Fiscalizacao::NOVA_VISTORIA,
+                Fiscalizacao::DEVOLVIDA,
+            ],
+            'desfechos' => Fiscalizacao::DESFECHOS,
             // O catálogo de recomendações na redação EXPLÍCITA — o registro traz
             // a CHAVE (`retorno`, `sgci`…), que é o que o aplicativo do fiscal
             // grava, e a chefia lê a frase inteira. A pílula curta é do celular;
@@ -133,10 +135,12 @@ class FiscalizacoesController extends Controller
             // porque a tela também precisa da lista inteira: recomendação é
             // faceta da busca, e a exportação leva a frase, não a chave.
             'recomendacoesDoFiscal' => RecomendacoesDoFiscal::explicitos(),
-            'origens' => array_values((array) config('prototipo_registros_de_campo.origens', [])),
+            // As origens EM PALAVRAS, derivadas das chaves gravadas: é assim que
+            // a busca reconhece "ronda" e "operação" como faceta.
+            'origens' => ['Denúncia direcionada', 'Operação planejada', 'Ronda da equipe'],
             // Quem responde por cada área — é o que o Coordenador precisa ver ao
             // acompanhar: "é da Área 5" só diz metade; a outra metade é de quem.
-            'chefias' => EstruturaFicticia::chefiasPorArea(),
+            'chefias' => Estrutura::chefiasPorArea(),
             // O que esta pessoa exerce nesta tela, e sobre o que. A tela usa para
             // dizer qual é a sua área no selo e para explicar que a lista não é o
             // universo — e a MESMA resposta governa a recusa no servidor.
@@ -155,7 +159,8 @@ class FiscalizacoesController extends Controller
                 ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo'],
                 ['varias-areas' => ! $comRecorte || count($areas) > 1],
             ),
-            'alterada' => FiscalizacoesFicticias::alterada(),
+            // Resíduo do protótipo: ligava o botão de reiniciar, que não existe mais.
+            'alterada' => false,
         ]);
     }
 
@@ -187,7 +192,7 @@ class FiscalizacoesController extends Controller
             return $recusa;
         }
 
-        $efeito = FiscalizacoesFicticias::darCiencia($ids, $dados['observacao'] ?? null);
+        $efeito = (new DecisaoDaChefia($request->user()))->darCiencia($ids, $dados['observacao'] ?? null);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -228,7 +233,7 @@ class FiscalizacoesController extends Controller
             return $recusa;
         }
 
-        $efeito = FiscalizacoesFicticias::pedirNovaVistoria($ids, (string) $dados['justificativa']);
+        $efeito = (new DecisaoDaChefia($request->user()))->pedirNovaVistoria($ids, (string) $dados['justificativa']);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -268,7 +273,7 @@ class FiscalizacoesController extends Controller
             return $recusa;
         }
 
-        $efeito = FiscalizacoesFicticias::devolverAoCoordenador($ids, (string) $dados['motivo']);
+        $efeito = (new DecisaoDaChefia($request->user()))->devolverAoCoordenador($ids, (string) $dados['motivo']);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -278,16 +283,35 @@ class FiscalizacoesController extends Controller
     }
 
     /**
-     * Devolve a fila ao estado de partida.
+     * A fila do retorno de campo, já na forma que a tela lê.
      *
-     * Existe porque é PROTÓTIPO: quem está demonstrando precisa poder recomeçar a
-     * cena. No sistema real esta rota não existe — ciência dada não se desfaz.
+     * Só o que foi DESPACHADO pelo fiscal entra: o que ainda está em campo é
+     * rascunho no aparelho dele, e mostrá-lo aqui faria a chefia decidir sobre
+     * vistoria que não terminou.
+     *
+     * O recorte por área é feito AQUI, e não na tela: filtro de front esconde,
+     * não protege, e o acervo inteiro teria viajado até o navegador de quem não
+     * deve vê-lo — com o relato do fiscal, as fotos e o número do documento
+     * dentro. `$areas` nulo significa "sem recorte".
+     *
+     * @param  list<string>|null  $areas
+     * @return list<array<string, mixed>>
      */
-    public function reiniciar(): RedirectResponse
+    private function registros(?array $areas): array
     {
-        FiscalizacoesFicticias::reiniciar();
+        $consulta = Fiscalizacao::despachadas()
+            ->with([
+                'demanda.tramites', 'operacao', 'equipe.area', 'fiscal',
+                'ambulante', 'fotos', 'recomendacoes', 'documento',
+            ])
+            ->orderByDesc('concluida_em')
+            ->orderByDesc('id');
 
-        return back()->with('flash.sucesso', 'Fila devolvida ao estado de demonstração.');
+        if ($areas !== null) {
+            $consulta->whereHas('equipe.area', static fn ($q) => $q->whereIn('nome', $areas));
+        }
+
+        return $consulta->get()->map(FiscalizacaoParaTela::completa(...))->all();
     }
 
     /**
@@ -351,11 +375,11 @@ class FiscalizacoesController extends Controller
         $deFora = [];
 
         foreach ($ids as $id) {
-            $registro = FiscalizacoesFicticias::registro($id);
-            $area = $registro === null ? null : (string) $registro['area'];
+            $registro = Fiscalizacao::with('equipe.area')->find($id);
+            $area = $registro?->equipe?->area?->nome;
 
             if ($area === null || ! in_array($area, $minhas, true)) {
-                $deFora[] = $registro['protocolo'] ?? "#{$id}";
+                $deFora[] = $registro->protocolo ?? "#{$id}";
             }
         }
 

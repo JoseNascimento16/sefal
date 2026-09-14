@@ -3,8 +3,7 @@
 namespace App\Support;
 
 use App\Models\Ambulante;
-use App\Support\Prototipo\FiscalizacoesFicticias;
-use App\Support\Prototipo\PapelNaArea;
+use App\Models\Fiscalizacao;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
 
@@ -97,11 +96,20 @@ class ContadoresDoMenu
                     $areas = PapelNaArea::areas($usuario);
                     $recorta = PapelNaArea::recorta($usuario);
 
-                    return count(array_filter(
-                        FiscalizacoesFicticias::registros(),
-                        static fn (array $r): bool => (string) $r['estado'] === FiscalizacoesFicticias::AGUARDANDO
-                            && (! $recorta || in_array((string) $r['area'], $areas, true)),
-                    ));
+                    /*
+                     * UMA contagem, sem carregar linha: o menu é montado em toda
+                     * requisição da Retaguarda, e trazer os registros para contar
+                     * em memória pagaria o preço em todas as telas.
+                     */
+                    $consulta = Fiscalizacao::query()
+                        ->where('situacao', Fiscalizacao::AGUARDANDO_LEITURA)
+                        ->whereNotNull('despachada_em');
+
+                    if ($recorta) {
+                        $consulta->whereHas('equipe.area', static fn ($q) => $q->whereIn('nome', $areas));
+                    }
+
+                    return $consulta->count();
                 },
             ],
         ];
