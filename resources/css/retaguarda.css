@@ -3899,6 +3899,58 @@ button.rt-chip-vidro:focus-visible {
     align-items: center;
 }
 
+/*
+ * A FILA da leva crua. Mesma gramática da lista de propostas (mesma linha,
+ * mesmo `rt-pretriagem-lado`), sem a barra lateral: aqui não há uma principal à
+ * esquerda da qual os itens pendem — são registros soltos esperando leitura.
+ */
+.rt-pretriagem-fila {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rt-pretriagem-fila > li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--sm-borda);
+}
+
+.rt-pretriagem-fila > li:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+/*
+ * O vazio DIZ o que significa. "Nada aqui" num painel que o coordenador abre
+ * todo dia é ambíguo: pode ser fila limpa ou integração quebrada.
+ */
+.rt-pretriagem-vazio {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    padding: 26px 16px;
+    color: var(--sm-texto-fraco);
+    text-align: center;
+}
+
+.rt-pretriagem-vazio strong {
+    color: var(--sm-texto);
+    font-size: 14px;
+}
+
+.rt-pretriagem-vazio p {
+    max-width: 62ch;
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
 @media (max-width: 720px) {
     .rt-pretriagem-acoes {
         width: 100%;

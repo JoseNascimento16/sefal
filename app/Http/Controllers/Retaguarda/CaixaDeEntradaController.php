@@ -62,22 +62,50 @@ class CaixaDeEntradaController extends Controller
 {
     public function index(): Response
     {
-        $demandas = Demanda::deBalcao()
+        $comTudo = [
+            'tramites.fiscalizacao.recomendacoes',
+            'tramites.fiscalizacao.fotos',
+            'tramites.fiscalizacao.documento',
+            'anexos', 'area', 'equipe', 'operacao', 'agregadas',
+        ];
+
+        /*
+         * A CAIXA — o que já é caso entendido.
+         *
+         * Inclui o que o coordenador digitou (que nunca esteve em pré-triagem) e
+         * o que veio por integração e já foi liberado. A partir daqui a origem
+         * não muda a decisão: as duas passam pelo mesmo crivo de encaminhar ou
+         * devolver, e separá-las em duas filas faria a mesma escolha ser tomada
+         * em dois lugares — com duas regras, um dia.
+         */
+        $demandas = Demanda::triadas()
             ->deTrabalho()
-            ->with([
-                'tramites.fiscalizacao.recomendacoes',
-                'tramites.fiscalizacao.fotos',
-                'tramites.fiscalizacao.documento',
-                'anexos', 'area', 'equipe', 'operacao', 'agregadas',
-            ])
+            ->with($comTudo)
             ->orderByDesc('recebida_em')
             ->orderByDesc('id')
             ->get()
             ->map(DemandaParaTela::completa(...))
             ->all();
 
+        /*
+         * A PRÉ-TRIAGEM — a leva crua do e-Salvador, antes de ser entendida.
+         *
+         * Vem em ordem CRESCENTE, ao contrário da Caixa: aqui a mais antiga é a
+         * que tende a ser a principal de um grupo (a varredura agrega na mais
+         * velha), e o coordenador lê na ordem em que os fatos chegaram.
+         */
+        $preTriagem = Demanda::emPreTriagem()
+            ->deTrabalho()
+            ->with($comTudo)
+            ->orderBy('recebida_em')
+            ->orderBy('id')
+            ->get()
+            ->map(DemandaParaTela::completa(...))
+            ->all();
+
         return Inertia::render('Retaguarda/Fiscalizacao/CaixaDeEntrada', [
             'demandas' => $demandas,
+            'preTriagem' => $preTriagem,
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
             // uma opção que o servidor recusa.

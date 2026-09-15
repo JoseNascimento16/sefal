@@ -136,7 +136,10 @@ class DenunciasRepetidasSeeder extends Seeder
                 'bairro' => $bairro,
                 'latitude' => $lat,
                 'longitude' => $lng,
-                'situacao' => Demanda::RECEBIDA,
+                // Chega EM PRÉ-TRIAGEM: é a leva crua, e é exatamente o estado
+                // em que o coordenador precisa encontrá-la para decidir quantos
+                // fatos ela contém.
+                'situacao' => Demanda::EM_PRE_TRIAGEM,
                 'area_id' => $areaId,
             ],
         );
@@ -149,8 +152,8 @@ class DenunciasRepetidasSeeder extends Seeder
                 'papel' => DemandaTramite::PAPEL_INTEGRACAO,
                 'acao' => 'Recebida por integração',
                 'detalhe' => 'Entrou pelo canal com o número '.$demanda->numero_origem
-                    .'. Nenhum dado foi digitado no SEFAL.',
-                'situacao' => Demanda::RECEBIDA,
+                    .'. Nenhum dado foi digitado no SEFAL. Aguarda a pré-triagem.',
+                'situacao' => Demanda::EM_PRE_TRIAGEM,
             ]);
         }
     }

@@ -18,7 +18,6 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
-import { PreTriagem, type SugestaoDeAgrupamento } from '@/components/retaguarda/pre-triagem';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
@@ -119,16 +118,6 @@ interface Props {
      * Ver `docs/padroes/listagem-clean.md`.
      */
     listagens: Listagens;
-    /**
-     * As propostas de agrupamento que esperam decisão — a PRÉ-TRIAGEM.
-     *
-     * O e-Salvador repete o mesmo fato em vários protocolos, e juntá-los ANTES
-     * de mandar alguém à rua é o que evita dez idas ao mesmo ponto. A máquina
-     * propõe; quem agrupa é o coordenador.
-     */
-    sugestoesDeAgrupamento: SugestaoDeAgrupamento[];
-    /** O caminho base das ações de agrupamento — muda entre os dois módulos. */
-    baseDoAgrupamento?: string;
 }
 
 type Aba = 'triagem' | 'direcionamento' | 'todas' | 'detalhe';
@@ -354,8 +343,6 @@ export function PainelDeDenuncias({
     areasDoChefe,
     recorteDeArea,
     listagens,
-    sugestoesDeAgrupamento,
-    baseDoAgrupamento = '/retaguarda/denuncias',
 }: Props) {
     const { enviando, ocupado, enviar } = useEnvio();
 
@@ -1205,26 +1192,17 @@ export function PainelDeDenuncias({
                 {aba !== 'detalhe' && (
                     <>
                         {/*
-                          * A PRÉ-TRIAGEM vem ANTES da busca, e só na aba de
-                          * triagem: ela é a primeira pergunta do dia ("algum
-                          * destes casos é o mesmo?"), e responder isso depois de
-                          * já ter encaminhado seria encaminhar duas vezes o
-                          * mesmo ponto.
+                          * A PRÉ-TRIAGEM não mora aqui — ela é a etapa ANTERIOR
+                          * a esta tela, e vive na aba própria da Caixa de
+                          * Entrada. Quando a denúncia chega nesta lista, a
+                          * pergunta "isto é o mesmo fato que aquilo?" já foi
+                          * respondida; a pergunta daqui é outra: o que se faz
+                          * com este fato.
                           *
-                          * Quem apenas acompanha vê o painel só quando HÁ o que
-                          * decidir; quem tria vê sempre, mesmo vazio — é dentro
-                          * dele que mora o botão que roda a varredura, e
-                          * escondê-lo na ausência de propostas tornaria a
-                          * funcionalidade inalcançável a partir do estado limpo.
+                          * Tê-la nos dois lugares criaria duas mesas para a
+                          * mesma decisão — e um dia elas discordariam sobre o
+                          * que já foi consolidado.
                           */}
-                        {aba === 'triagem' && (sugestoesDeAgrupamento.length > 0 || tria) && (
-                            <PreTriagem
-                                sugestoes={sugestoesDeAgrupamento}
-                                base={baseDoAgrupamento}
-                                podeDecidir={tria}
-                            />
-                        )}
-
                         <BuscaInteligente
                             busca={busca}
                             setBusca={setBusca}

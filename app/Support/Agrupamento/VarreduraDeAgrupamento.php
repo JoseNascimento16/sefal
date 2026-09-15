@@ -82,6 +82,23 @@ class VarreduraDeAgrupamento
                     continue;
                 }
 
+                /*
+                 * Só se PROPÕE agregar quem ainda está em pré-triagem.
+                 *
+                 * Depois dessa etapa a denúncia já foi entendida, encaminhada,
+                 * às vezes já tem equipe a caminho — e passar a ser respondida
+                 * por outra mudaria o que o cidadão recebe sem que ninguém
+                 * estivesse olhando aquela mesa. A PRINCIPAL, essa sim, pode ser
+                 * um caso já triado: quando a leva nova repete o que já está em
+                 * campo, é a que está em campo que responde pelas novas.
+                 *
+                 * Agrupar à mão continua valendo em qualquer estado — lá é gente
+                 * decidindo, com motivo escrito.
+                 */
+                if ($membro->situacao !== Demanda::EM_PRE_TRIAGEM) {
+                    continue;
+                }
+
                 $chave = $this->chaveDoPar($membro->id, $principal->id);
 
                 if (isset($decididos[$chave])) {

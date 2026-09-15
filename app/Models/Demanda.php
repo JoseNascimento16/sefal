@@ -92,6 +92,24 @@ class Demanda extends Model
 
     // ── Onde ela está ───────────────────────────────────────────────────────
 
+    /**
+     * Chegou por INTEGRAÇÃO e ainda não foi entendida.
+     *
+     * O e-Salvador não entrega casos organizados: entrega o que cada cidadão
+     * escreveu. Dez relatos podem ser um fato só, e mandar os dez para a mesa do
+     * coordenador como dez casos faria a triagem decidir dez vezes sobre o mesmo
+     * ponto — e a equipe ir dez vezes ao mesmo lugar.
+     *
+     * Por isso a integração cai ANTES da Caixa, numa etapa própria: a
+     * PRÉ-TRIAGEM, onde o que é repetição vira um registro só. Só depois disso a
+     * demanda passa ao crivo do coordenador (encaminhar ou devolver).
+     *
+     * ⚠️ O que o coordenador DIGITA (balcão) não passa por aqui: ele já leu o
+     * papel e sabe o que é. Fazê-lo consolidar o que acabou de cadastrar seria
+     * pedir que ele confira a si mesmo.
+     */
+    public const EM_PRE_TRIAGEM = 'Em pré-triagem';
+
     public const RECEBIDA = 'Recebida';
 
     public const ENCAMINHADA_A_AREA = 'Encaminhada à área';
@@ -124,6 +142,15 @@ class Demanda extends Model
     public const AGRUPADA = 'Agrupada';
 
     /**
+     * A chave, no trâmite do agrupamento, que guarda a etapa deixada para trás.
+     *
+     * É constante e não texto solto porque duas pontas a leem: quem agrupa
+     * escreve, quem desagrupa lê — e um erro de digitação num dos lados devolveria
+     * a denúncia à etapa errada sem nada parecer quebrado.
+     */
+    public const CAMPO_ETAPA_DEIXADA = 'Etapa em que estava';
+
+    /**
      * O catálogo, na ordem do fluxo.
      *
      * ⚠️ A Caixa de Entrada dizia "Aguardando triagem" para o que aqui é
@@ -134,6 +161,7 @@ class Demanda extends Model
      * @var list<string>
      */
     public const SITUACOES = [
+        self::EM_PRE_TRIAGEM,
         self::RECEBIDA,
         self::ENCAMINHADA_A_AREA,
         self::DIRECIONADA_A_EQUIPE,
@@ -150,6 +178,7 @@ class Demanda extends Model
     /** As que ainda esperam alguma decisão — o que "está aberto" significa. */
     /** @var list<string> */
     public const ABERTAS = [
+        self::EM_PRE_TRIAGEM,
         self::RECEBIDA,
         self::ENCAMINHADA_A_AREA,
         self::DIRECIONADA_A_EQUIPE,
@@ -367,6 +396,10 @@ class Demanda extends Model
             campos: [
                 'Registro que leva o caso a campo' => $principal->protocolo,
                 'Assunto do registro' => $principal->assunto,
+                // A etapa que ela deixou. É o que desagrupar lê para devolvê-la
+                // ao lugar de onde saiu — gravado no ato que a tirou de lá, e
+                // não numa coluna à parte que um dia discordaria do trâmite.
+                self::CAMPO_ETAPA_DEIXADA => $this->situacao,
             ],
             mudancas: ['agrupada_em_id' => $principal->id, 'agrupada_em' => Date::now()],
         );
@@ -404,7 +437,11 @@ class Demanda extends Model
 
         $this->registrar(
             acao: 'Desagrupada',
-            situacao: self::RECEBIDA,
+            // Volta para a etapa em que ESTAVA quando foi agrupada, e não para
+            // um estado fixo. Uma denúncia agrupada durante a pré-triagem ainda
+            // não foi entendida por ninguém: devolvê-la direto à Caixa a faria
+            // pular a etapa e chegar à mesa do coordenador como caso pronto.
+            situacao: $this->situacaoAntesDoAgrupamento(),
             papel: DemandaTramite::PAPEL_COORDENADOR,
             autor: $quem,
             detalhe: $motivo,
@@ -420,6 +457,24 @@ class Demanda extends Model
             detalhe: $motivo,
             campos: ['Denúncia retirada' => $this->protocolo],
         );
+    }
+
+    /**
+     * Onde ela estava quando foi agrupada.
+     *
+     * Lê o trâmite anterior ao do agrupamento — a memória do processo já guarda
+     * isso, e guardá-lo uma segunda vez numa coluna daria dois donos à mesma
+     * informação. Só as duas etapas de espera são aceitas de volta: nada mais
+     * teria sido agrupado, e restaurar cegamente devolveria a denúncia a um
+     * estado que ninguém consegue justificar.
+     */
+    private function situacaoAntesDoAgrupamento(): string
+    {
+        $anterior = $this->ultimoTramite()?->campos[self::CAMPO_ETAPA_DEIXADA] ?? null;
+
+        return in_array($anterior, [self::EM_PRE_TRIAGEM, self::RECEBIDA], true)
+            ? $anterior
+            : self::RECEBIDA;
     }
 
     /**
@@ -504,6 +559,34 @@ class Demanda extends Model
     public function scopeDeBalcao(Builder $query): void
     {
         $query->where('entrada', self::ENTRADA_BALCAO);
+    }
+
+    /**
+     * O que chegou por integração e AINDA NÃO FOI ENTENDIDO.
+     *
+     * É a fila da Pré-Triagem: a leva crua do e-Salvador, antes de alguém dizer
+     * quantos fatos distintos ela contém. Ver {@see self::EM_PRE_TRIAGEM}.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeEmPreTriagem(Builder $query): void
+    {
+        $query->where('situacao', self::EM_PRE_TRIAGEM);
+    }
+
+    /**
+     * O que já passou da pré-triagem — a fila da Caixa.
+     *
+     * Inclui o que o coordenador digitou (que nunca esteve em pré-triagem) e o
+     * que veio por integração e já foi liberado. O crivo de encaminhar ou
+     * devolver é o mesmo para os dois: a partir daqui, a origem não muda a
+     * decisão.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeTriadas(Builder $query): void
+    {
+        $query->where('situacao', '!=', self::EM_PRE_TRIAGEM);
     }
 
     /**

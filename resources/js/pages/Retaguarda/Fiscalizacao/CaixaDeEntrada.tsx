@@ -5,6 +5,7 @@ import {
     FileText,
     Inbox,
     Info,
+    Layers,
     Paperclip,
     Plus,
     Send,
@@ -16,7 +17,11 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
-import { PreTriagem, type SugestaoDeAgrupamento } from '@/components/retaguarda/pre-triagem';
+import {
+    FilaDePreTriagem,
+    PreTriagem,
+    type SugestaoDeAgrupamento,
+} from '@/components/retaguarda/pre-triagem';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
@@ -74,6 +79,12 @@ import {
 
 interface Props {
     demandas: Demanda[];
+    /**
+     * A leva crua do e-Salvador — o que chegou por integração e ainda não foi
+     * entendido. Fila separada, e não uma faceta da busca: enquanto está aqui a
+     * pergunta é "quantos fatos isto é?", e não "o que se faz com este fato?".
+     */
+    preTriagem: Demanda[];
     origens: string[];
     situacoes: string[];
     motivos: string[];
@@ -98,12 +109,12 @@ interface Props {
     sugestoesDeAgrupamento: SugestaoDeAgrupamento[];
 }
 
-type Aba = 'caixa' | 'registro' | 'detalhe';
+type Aba = 'pre-triagem' | 'caixa' | 'registro' | 'detalhe';
 type Destino = 'encaminhar' | 'devolver';
 
 /** O que a busca reconhece além das palavras soltas. */
 type Faceta =
-    | { tipo: 'situacao'; valor: string }
+    | { tipo: 'situacao'; valores: string[] }
     | { tipo: 'origem'; valor: string }
     | { tipo: 'anonima' }
     | { tipo: 'prazo-vencido' }
@@ -117,11 +128,17 @@ type Faceta =
 const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
     {
         expressao: /\baguardando triagem\b|\btriagem\b|\bsem triagem\b|\bnao triad\w*\b/,
-        valor: { tipo: 'situacao', valor: 'Aguardando triagem' },
+        valor: { tipo: 'situacao', valores: ['Recebida'] },
     },
-    { expressao: /\bencaminhad\w*\b/, valor: { tipo: 'situacao', valor: 'Encaminhada' } },
-    { expressao: /\bdevolvid\w*\b/, valor: { tipo: 'situacao', valor: 'Devolvida' } },
-    { expressao: /\barquivad\w*\b/, valor: { tipo: 'situacao', valor: 'Arquivada' } },
+    {
+        // "Encaminhada" é UMA palavra para DOIS estados do mundo: o coordenador
+        // que escolheu só a área e o que escolheu a equipe. Quem digita a palavra
+        // quer os dois; quem precisa distinguir lê a coluna.
+        expressao: /\bencaminhad\w*\b|\bdirecionad\w*\b/,
+        valor: { tipo: 'situacao', valores: ['Encaminhada à área', 'Direcionada à equipe'] },
+    },
+    { expressao: /\bdevolvid\w*\b/, valor: { tipo: 'situacao', valores: ['Devolvida'] } },
+    { expressao: /\barquivad\w*\b/, valor: { tipo: 'situacao', valores: ['Arquivada'] } },
     { expressao: /\banonim\w*\b|\bsem requerente\b/, valor: { tipo: 'anonima' } },
     {
         expressao: /\bprazo vencido\b|\bvencid\w*\b|\batrasad\w*\b/,
@@ -141,6 +158,7 @@ function quemPediu(demanda: Demanda): string {
 
 export default function CaixaDeEntrada({
     demandas,
+    preTriagem,
     origens,
     situacoes,
     motivos,
@@ -155,7 +173,12 @@ export default function CaixaDeEntrada({
     const acoes = useAcoes();
     const { enviando, ocupado, enviar } = useEnvio();
 
-    const [aba, setAba] = useState<Aba>('caixa');
+    /*
+     * Abre na PRÉ-TRIAGEM quando há leva esperando. É a ordem do trabalho: o que
+     * chegou cru vem antes do que já foi entendido, e abrir na Caixa faria o
+     * coordenador encaminhar casos que ainda podem ser um só.
+     */
+    const [aba, setAba] = useState<Aba>(preTriagem.length > 0 ? 'pre-triagem' : 'caixa');
     const [busca, setBusca] = useState('');
     const [abertaId, setAbertaId] = useState<number | null>(null);
 
@@ -170,7 +193,7 @@ export default function CaixaDeEntrada({
 
         return demandas.filter((d) => {
             for (const faceta of facetas) {
-                if (faceta.tipo === 'situacao' && d.situacao !== faceta.valor) {
+                if (faceta.tipo === 'situacao' && !faceta.valores.includes(d.situacao)) {
                     return false;
                 }
 
@@ -220,13 +243,19 @@ export default function CaixaDeEntrada({
     const numeros = useMemo(
         () => ({
             total: demandas.length,
-            triagem: demandas.filter((d) => d.situacao === 'Aguardando triagem').length,
-            encaminhadas: demandas.filter((d) => d.situacao === 'Encaminhada').length,
+            // Os nomes são os do MODEL (`Demanda::SITUACOES`). A tela já chamou
+            // `Recebida` de "Aguardando triagem" e `Encaminhada à área` de
+            // "Encaminhada" — e os contadores, presos aos nomes antigos, ficavam
+            // zerados sem que nada parecesse quebrado.
+            triagem: demandas.filter((d) => d.situacao === 'Recebida').length,
+            encaminhadas: demandas.filter((d) =>
+                ['Encaminhada à área', 'Direcionada à equipe'].includes(d.situacao),
+            ).length,
             retornadas: demandas.filter((d) =>
                 ['Devolvida', 'Arquivada'].includes(d.situacao),
             ).length,
             vencidas: demandas.filter(
-                (d) => d.prazo < hoje && d.situacao === 'Aguardando triagem',
+                (d) => d.prazo < hoje && d.situacao === 'Recebida',
             ).length,
         }),
         [demandas, hoje],
@@ -528,15 +557,41 @@ export default function CaixaDeEntrada({
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando a tela saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco.
+              * O que continua sendo de mentira são as DEMANDAS, e é disso que o
+              * cliente precisa ser avisado antes de tirar conclusão dos números.
+              */}
             <SeloPrototipo>
-                Esta tela é a proposta do módulo, para conferência da forma antes
-                de virar sistema. As demandas são de exemplo e{' '}
-                <strong>nada é gravado</strong>: o que você registrar, encaminhar
-                ou devolver vale só nesta sessão do navegador.
+                Ambiente de demonstração: as demandas, os ambulantes e as
+                fiscalizações são <strong>exemplos</strong>, não casos reais. O
+                que você registrar, encaminhar ou devolver{' '}
+                <strong>é gravado de verdade</strong> e fica no histórico da
+                demanda.
             </SeloPrototipo>
 
             <div className="card-premium">
                 <div className="abas" role="tablist" aria-label="Caixa de Entrada">
+                    {/*
+                      * A PRÉ-TRIAGEM vem PRIMEIRO porque é a etapa anterior: o
+                      * que chega por integração cai aqui, cru, e só passa à
+                      * Caixa depois que alguém disse quantos fatos aquilo é.
+                      */}
+                    <button
+                        type="button"
+                        role="tab"
+                        className="aba"
+                        aria-selected={aba === 'pre-triagem'}
+                        onClick={() => setAba('pre-triagem')}
+                    >
+                        <Layers size={16} aria-hidden />
+                        <span className="aba-rotulo">
+                            Pré-Triagem
+                            {preTriagem.length > 0 && ` (${preTriagem.length})`}
+                        </span>
+                    </button>
+
                     <button
                         type="button"
                         role="tab"
@@ -575,22 +630,34 @@ export default function CaixaDeEntrada({
                     )}
                 </div>
 
-                {aba === 'caixa' && (
+                {aba === 'pre-triagem' && (
                     <>
                         {/*
-                          * A PRÉ-TRIAGEM vem ANTES da busca: é a primeira
-                          * pergunta do dia ("algum destes papéis é o mesmo
-                          * caso?"), e respondê-la depois de já ter encaminhado
-                          * seria encaminhar duas vezes o mesmo ponto.
+                          * As PROPOSTAS antes da FILA: a primeira pergunta do dia
+                          * é "algum destes relatos é o mesmo caso?", e respondê-la
+                          * depois de já ter liberado tudo seria encaminhar duas
+                          * vezes o mesmo ponto.
+                          *
+                          * O painel aparece mesmo sem proposta nenhuma porque o
+                          * botão que roda a varredura mora dentro dele — sem isso,
+                          * num banco limpo a funcionalidade fica inalcançável.
                           */}
-                        {(sugestoesDeAgrupamento.length > 0 || acoes.habilitado) && (
-                            <PreTriagem
-                                sugestoes={sugestoesDeAgrupamento}
-                                base="/retaguarda/caixa-de-entrada"
-                                podeDecidir={acoes.habilitado}
-                            />
-                        )}
+                        <PreTriagem
+                            sugestoes={sugestoesDeAgrupamento}
+                            base="/retaguarda/caixa-de-entrada"
+                            podeDecidir={acoes.habilitado}
+                        />
 
+                        <FilaDePreTriagem
+                            demandas={preTriagem}
+                            base="/retaguarda/caixa-de-entrada"
+                            podeDecidir={acoes.habilitado}
+                        />
+                    </>
+                )}
+
+                {aba === 'caixa' && (
+                    <>
                         <BuscaInteligente
                             busca={busca}
                             setBusca={setBusca}

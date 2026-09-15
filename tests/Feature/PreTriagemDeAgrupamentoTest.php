@@ -62,7 +62,11 @@ function relato(string $assunto, string $numero, int $horasAtras, array $extra =
         'logradouro' => 'Rua Rio Grande do Sul',
         'numero' => $numero,
         'bairro' => 'Pituba',
-        'situacao' => Demanda::RECEBIDA,
+        // EM PRÉ-TRIAGEM: é o estado em que a varredura propõe. Depois dessa
+        // etapa a denúncia já foi entendida e encaminhada, e passar a ser
+        // respondida por outra mudaria o que o cidadão recebe sem que ninguém
+        // estivesse olhando aquela mesa.
+        'situacao' => Demanda::EM_PRE_TRIAGEM,
     ], $extra));
 }
 
@@ -89,7 +93,7 @@ it('propõe agrupar o que é o mesmo fato, e a proposta não muda nada sozinha',
         ->and($sugestao->motivo)->toContain('mesmo logradouro')
         // E NADA foi agrupado: a máquina propôs, ninguém decidiu.
         ->and($nova->fresh()->agrupada_em_id)->toBeNull()
-        ->and($nova->fresh()->situacao)->toBe(Demanda::RECEBIDA);
+        ->and($nova->fresh()->situacao)->toBe(Demanda::EM_PRE_TRIAGEM);
 });
 
 it('não compara bairros diferentes, por mais parecido que seja o assunto', function () {
@@ -222,7 +226,9 @@ it('desagrupar devolve a denúncia à triagem, porque a associação pode estar 
         ->assertSessionHas('flash.sucesso');
 
     expect($nova->fresh()->agrupada_em_id)->toBeNull()
-        ->and($nova->fresh()->situacao)->toBe(Demanda::RECEBIDA)
+        // Volta para a PRÉ-TRIAGEM, de onde saiu: ninguém a entendeu ainda, e
+        // devolvê-la à Caixa a faria pular a etapa.
+        ->and($nova->fresh()->situacao)->toBe(Demanda::EM_PRE_TRIAGEM)
         ->and(Demanda::deTrabalho()->count())->toBe(2);
 });
 
@@ -282,8 +288,11 @@ it('a tela entrega as propostas com os dois lados inteiros', function () {
     relato('Cadeiras impedindo a passagem', '214', 10);
     varrer();
 
+    // Na CAIXA DE ENTRADA, aba Pré-Triagem: é a etapa anterior à tela de
+    // Denúncias, e servir as propostas nos dois lugares criaria duas mesas para
+    // a mesma decisão.
     $this->actingAs(User::factory()->create(['admin' => true]))
-        ->get(route('retaguarda.denuncias.e-salvador.index'))
+        ->get(route('retaguarda.caixa-de-entrada.index'))
         ->assertOk()
         ->assertInertia(fn ($p) => $p
             ->has('sugestoesDeAgrupamento', 1)
@@ -295,4 +304,28 @@ it('a tela entrega as propostas com os dois lados inteiros', function () {
             ->has('sugestoesDeAgrupamento.0.motivo')
             ->has('sugestoesDeAgrupamento.0.confianca_pct'),
         );
+});
+
+it('não propõe agregar o que já saiu da pré-triagem — mas aceita que a principal seja um caso já triado', function () {
+    // A mais antiga já foi entendida e encaminhada: é ela que está em campo.
+    $emCampo = relato('Mesas e cadeiras ocupando a calçada', '212', 90);
+    $emCampo->update(['situacao' => Demanda::ENCAMINHADA_A_AREA]);
+
+    // Uma chegou agora, ainda crua; a outra também já foi triada.
+    $crua = relato('Cadeiras impedindo a passagem', '214', 20);
+    $jaTriada = relato('Bar ocupando o passeio', '216', 50);
+    $jaTriada->update(['situacao' => Demanda::DIRECIONADA_A_EQUIPE]);
+
+    varrer();
+
+    $pendentes = SugestaoAgrupamento::pendentes()->get();
+
+    // Só a CRUA é proposta, e ela é proposta PARA a que está em campo: quando a
+    // leva nova repete o que a equipe já foi ver, é o caso em campo que responde
+    // pelas novas. O contrário — pendurar numa denúncia já encaminhada uma
+    // decisão nova — mudaria o que o cidadão recebe sem ninguém olhando a mesa.
+    expect($pendentes)->toHaveCount(1)
+        ->and($pendentes->first()->demanda_id)->toBe($crua->id)
+        ->and($pendentes->first()->principal_id)->toBe($emCampo->id)
+        ->and($jaTriada->fresh()->situacao)->toBe(Demanda::DIRECIONADA_A_EQUIPE);
 });

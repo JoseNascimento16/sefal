@@ -7,11 +7,9 @@ use App\Models\Area;
 use App\Models\Demanda;
 use App\Models\Fiscalizacao;
 use App\Models\Operacao;
-use App\Models\SugestaoAgrupamento;
 use App\Models\User;
 use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\OperacaoParaTela;
-use App\Support\Apresentacao\SugestaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use App\Support\PapelNaArea;
@@ -388,19 +386,13 @@ class DenunciasController extends Controller
             // quem.
             'chefias' => Estrutura::chefiasPorArea(),
             /*
-             * A PRÉ-TRIAGEM: as propostas de agrupamento que esperam decisão.
-             * É aqui que ela mais importa — o e-Salvador é o canal que repete o
-             * mesmo fato em dez protocolos.
+             * A PRÉ-TRIAGEM não é servida aqui.
              *
-             * Vêm com os dois lados inteiros porque aceitar junta casos de
-             * cidadãos diferentes: ninguém deve decidir isso lendo dois
-             * protocolos e um número de confiança.
+             * Ela é a etapa ANTERIOR a esta tela e mora na aba própria da Caixa
+             * de Entrada: quando a denúncia chega a esta lista, "isto é o mesmo
+             * fato que aquilo?" já foi respondido. Servir as propostas nos dois
+             * lugares criaria duas mesas para a mesma decisão.
              */
-            'sugestoesDeAgrupamento' => SugestaoAgrupamento::pendentes()
-                ->with(['demanda', 'principal'])
-                ->get()
-                ->map(SugestaoParaTela::completa(...))
-                ->all(),
             'operacoes' => Operacao::abertas()->with(['area', 'equipes', 'bairros'])
                 ->orderBy('nome')->get()->map(OperacaoParaTela::completa(...))->all(),
             // A etapa de quem entrou — é ela que decide o que a tela oferece, e a

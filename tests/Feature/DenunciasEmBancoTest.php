@@ -81,7 +81,11 @@ it('a tela do canal lista o que está em banco, com os catálogos do servidor', 
             // Só o canal desta tela.
             ->has('denuncias', 1)
             ->where('canal.nome', 'e-Salvador')
-            ->where('situacoes.0', Demanda::RECEBIDA)
+            // O catálogo é o do MODEL, inteiro e na ordem do fluxo — e não um
+            // primeiro item específico: fixar a posição fazia o teste quebrar
+            // quando uma etapa NOVA nascia antes das outras, que é exatamente o
+            // que a pré-triagem é.
+            ->where('situacoes', Demanda::SITUACOES)
             ->has('chefias')
             ->has('operacoes'),
         );
