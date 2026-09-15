@@ -62,9 +62,24 @@ class AgrupamentoDeDemandasController extends Controller
     {
         $usuario = $request->user();
 
+        $recortada = PapelNaArea::recorta($usuario);
+
         $efeito = (new VarreduraDeAgrupamento(new AnalisadorPorRegra))->executar(
-            PapelNaArea::recorta($usuario) ? PapelNaArea::areas($usuario) : null,
+            $recortada ? PapelNaArea::areas($usuario) : null,
         );
+
+        /*
+         * O RECORTE é dito na frase, e não deduzido por quem lê.
+         *
+         * Para o Chefe de Setor a varredura só olha a área dele. Sem essa
+         * ressalva, "nenhuma repetição entre as denúncias abertas" parece falar
+         * do universo — e ele conclui que a funcionalidade não faz nada, quando
+         * ela fez exatamente o que devia e não achou nada NA ÁREA DELE.
+         */
+        $areas = $recortada ? PapelNaArea::areas($usuario) : [];
+        $ondeOlhou = $areas === []
+            ? ''
+            : ' (só '.(count($areas) === 1 ? 'a área' : 'as áreas').' '.implode(', ', $areas).')';
 
         if ($efeito['propostas'] === 0) {
             /*
@@ -73,14 +88,14 @@ class AgrupamentoDeDemandasController extends Controller
              * não ficar esperando uma lista que não vem.
              */
             return back()->with('flash.sucesso', $efeito['ja_decididas'] > 0
-                ? "Nenhuma denúncia repetida nova entre as {$efeito['analisadas']} abertas. "
+                ? "Nenhuma denúncia repetida nova entre as {$efeito['analisadas']} abertas{$ondeOlhou}. "
                     ."{$efeito['ja_decididas']} já tinham sido decididas antes."
-                : "Nenhuma denúncia repetida entre as {$efeito['analisadas']} abertas.");
+                : "Nenhuma denúncia repetida entre as {$efeito['analisadas']} abertas{$ondeOlhou}.");
         }
 
         return back()->with('flash.sucesso', $efeito['propostas'] === 1
-            ? "1 possível repetição encontrada entre as {$efeito['analisadas']} denúncias abertas. Confira antes de agrupar."
-            : "{$efeito['propostas']} possíveis repetições encontradas entre as {$efeito['analisadas']} denúncias abertas. Confira antes de agrupar.");
+            ? "1 possível repetição encontrada entre as {$efeito['analisadas']} denúncias abertas{$ondeOlhou}. Confira antes de agrupar."
+            : "{$efeito['propostas']} possíveis repetições encontradas entre as {$efeito['analisadas']} denúncias abertas{$ondeOlhou}. Confira antes de agrupar.");
     }
 
     /**

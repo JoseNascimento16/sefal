@@ -12,6 +12,7 @@ use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\SugestaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
+use App\Support\PapelNaArea;
 use App\Support\Protocolo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,8 +61,10 @@ use Inertia\Response;
  */
 class CaixaDeEntradaController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $usuario = $request->user();
+
         $comTudo = [
             'tramites.fiscalizacao.recomendacoes',
             'tramites.fiscalizacao.fotos',
@@ -97,6 +100,23 @@ class CaixaDeEntradaController extends Controller
         $preTriagem = Demanda::emPreTriagem()
             ->deTrabalho()
             ->with($comTudo)
+            ->when(
+                /*
+                 * O MESMO recorte que a varredura usa.
+                 *
+                 * O Chefe de Setor vê a fila da área dele; a varredura já era
+                 * recortada assim, e a fila não era — o que fazia a tela se
+                 * contradizer na mesma dobra: "7 denúncias aguardam pré-triagem"
+                 * logo acima de "nenhuma repetição entre as denúncias abertas".
+                 * Quem lê não tem como saber se a funcionalidade quebrou ou se a
+                 * área dele simplesmente não tem repetição.
+                 */
+                PapelNaArea::recorta($usuario),
+                fn ($consulta) => $consulta->whereHas(
+                    'area',
+                    fn ($q) => $q->whereIn('nome', PapelNaArea::areas($usuario)),
+                ),
+            )
             ->orderBy('recebida_em')
             ->orderBy('id')
             ->get()

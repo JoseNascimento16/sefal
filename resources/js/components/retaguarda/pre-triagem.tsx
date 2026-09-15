@@ -427,6 +427,7 @@ export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
                                 )}
                             </div>
                             <span>{demanda.assunto}</span>
+                            <QuemFoiDenunciado lado={demanda} />
                             <small>
                                 {demanda.endereco || demanda.bairro} · recebida em{' '}
                                 {dataBR(demanda.recebida_em)} ·{' '}
