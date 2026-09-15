@@ -53,9 +53,21 @@ As três credenciais vêm de lugares **diferentes**:
 | `password` (secret key) | equipe do e-Salvador (SEMGE) | não |
 | `token` | gerado por uma **pessoa** no e-Salvador: Ajuda → Integração Token | **não**, e **não fica guardado lá** — perdeu, gera outro e o antigo morre na hora |
 
-> ⚠️ **O IP da nossa aplicação precisa ser liberado junto à SEMGE.** Está escrito
-> na documentação como pré-requisito das credenciais. Sem isso o próprio `/login`
-> responde 401, e o sintoma é indistinguível de senha errada.
+> ⚠️ **O IP da nossa aplicação é cadastrado junto com as credenciais.** A
+> documentação menciona isso uma única vez, e o que ela diz é só isto:
+>
+> > "As credenciais de acesso nome e password, **bem como o endereço de IP da
+> > aplicação que vai acessar a API**, devem ser previamente configuradas junto à
+> > equipe de desenvolvimento do eSalvador - SEMGE."
+>
+> **O que a documentação NÃO diz:** se uma chamada vinda de IP não cadastrado é
+> recusada, nem com qual código. Pode ser allowlist com bloqueio efetivo, pode ser
+> só registro cadastral do provisionamento. Não assuma nenhum dos dois — **teste**
+> assim que houver credencial, e anote aqui o que de fato aconteceu.
+>
+> A distinção importa na prática: se for bloqueio, o IP de saída da nossa
+> aplicação tem de ser estável e conhecido (no OKD, o IP de egress do cluster;
+> em máquina de dev, o da VPN da Prefeitura), e isso muda a conversa com a SEMGE.
 
 O JWT dura 1 hora; guardamos por 3300s (`ESALVADOR_TOKEN_VALIDO_POR`) para nunca
 apresentar um token que expira no meio do caminho.
@@ -196,7 +208,7 @@ Três caminhos, e eles não são excludentes:
 
 | O que falta | Com quem |
 |---|---|
-| Liberação do **IP** da aplicação | equipe do e-Salvador (SEMGE) |
+| Cadastro do **IP** da aplicação (e saber se ele bloqueia) | equipe do e-Salvador (SEMGE) |
 | `nome` + `password` (secret key) | equipe do e-Salvador (SEMGE) |
 | `token` de integração gerado por um servidor | SEMOP, dentro do e-Salvador |
 | Id da **unidade** (a caixa) e do **órgão** da SEMOP | SEMOP / `GET /orgaos`, `GET /unidades/{orgao}` |
@@ -208,5 +220,9 @@ Enquanto isso, `ESALVADOR_LIGADA=false`: nada sai daqui para a rede.
 ## Códigos de resposta
 
 `200` ok · `201` criado · `400` dados ausentes ou errados · `401` não autenticado
-(**inclui IP não liberado**) · `403` uso indevido do recurso · `404` não
-encontrado · `500` erro deles.
+· `403` uso indevido do recurso · `404` não encontrado · `500` erro deles.
+
+> A documentação não relaciona nenhum desses códigos ao IP não cadastrado — a
+> lista é genérica. Quando o primeiro teste real acontecer, registre aqui o
+> código e a mensagem que vierem: é a única forma de o próximo a depurar não
+> refazer a adivinhação.
