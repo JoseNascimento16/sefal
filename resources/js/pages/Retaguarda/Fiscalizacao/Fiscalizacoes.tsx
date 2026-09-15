@@ -37,7 +37,7 @@ import { contar, plural } from '@/lib/plural';
 import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
 import { textoDaRecomendacao, textosDasRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
-import { ciencia, devolver, index, novaVistoria, reiniciar } from '@/routes/retaguarda/fiscalizacoes';
+import { ciencia, devolver, index, novaVistoria } from '@/routes/retaguarda/fiscalizacoes';
 
 /**
  * Fiscalizações — TODO registro de fiscalização concluído, numa tela só.
@@ -249,7 +249,6 @@ export default function Fiscalizacoes({
     areasDoChefe,
     recorteDeArea,
     listagens,
-    alterada,
 }: {
     registros: Registro[];
     estados: string[];
@@ -273,7 +272,6 @@ export default function Fiscalizacoes({
      * `docs/padroes/listagem-clean.md`.
      */
     listagens: Listagens;
-    alterada: boolean;
 }) {
     const { enviando, ocupado, enviar } = useEnvio();
 
@@ -1477,22 +1475,6 @@ export default function Fiscalizacoes({
                 <Paginacao {...pag.props} />
             </div>
 
-            {/* Reiniciar existe porque é PROTÓTIPO: quem demonstra precisa poder
-                recomeçar a cena. Só aparece depois de a sessão ter decidido algo. */}
-            {alterada && (
-                <p className="form-ajuda" style={{ marginTop: 14 }}>
-                    <BotaoAcao
-                        className="btn btn-secondary btn-sm"
-                        icone={<RotateCcw size={15} aria-hidden />}
-                        carregando={enviando === 'reiniciar'}
-                        ocupado={ocupado}
-                        rotuloCarregando="Reiniciando…"
-                        onClick={() => enviar('reiniciar', reiniciar().url, {}, { onSuccess: limpar })}
-                    >
-                        Reiniciar a demonstração
-                    </BotaoAcao>
-                </p>
-            )}
 
             {/* O comando FLUTUANTE: nasce com a primeira linha marcada e acompanha
                 a rolagem. Sem seleção ele não existe — botão que não tem sobre o

@@ -159,8 +159,6 @@ class FiscalizacoesController extends Controller
                 ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo'],
                 ['varias-areas' => ! $comRecorte || count($areas) > 1],
             ),
-            // Resíduo do protótipo: ligava o botão de reiniciar, que não existe mais.
-            'alterada' => false,
         ]);
     }
 

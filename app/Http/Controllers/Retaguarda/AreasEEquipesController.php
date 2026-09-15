@@ -59,7 +59,6 @@ class AreasEEquipesController extends Controller
             'bairros' => Estrutura::bairros(),
             // Resíduo do protótipo: ligava o botão de reiniciar, que não existe
             // mais — estrutura é cadastro, e cadastro não se reinicia.
-            'alterada' => false,
         ]);
     }
 

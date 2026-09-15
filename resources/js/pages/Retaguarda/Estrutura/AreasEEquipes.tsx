@@ -7,7 +7,6 @@ import {
     Moon,
     Pencil,
     Plus,
-    RotateCcw,
     Route as RouteIcon,
     Trash2,
     Undo2,
@@ -31,7 +30,6 @@ import {
     bairros as rotaBairros,
     destroy,
     index,
-    reiniciar as rotaReiniciar,
     store,
     update,
 } from '@/routes/retaguarda/areas-e-equipes';
@@ -62,8 +60,6 @@ interface Props {
     areas: Area[];
     turnos: string[];
     bairros: string[];
-    /** A sessão já mexeu na estrutura de demonstração? */
-    alterada: boolean;
 }
 
 type Aba = 'areas' | 'area';
@@ -92,7 +88,7 @@ function IconeDoRecorte({ recorte }: { recorte: Recorte }) {
     return <MapPinned size={16} aria-hidden />;
 }
 
-export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Props) {
+export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
     const acoes = useAcoes();
     const { enviando, ocupado, enviar, guardar } = useEnvio();
 
@@ -410,18 +406,6 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                                 </BotaoAcao>
                             )}
 
-                            {alterada && acoes.habilitado && (
-                                <BotaoAcao
-                                    className="btn btn-secondary btn-sm"
-                                    icone={<RotateCcw size={16} aria-hidden />}
-                                    carregando={enviando === 'reiniciar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Reiniciando…"
-                                    onClick={() => enviar('reiniciar', rotaReiniciar().url)}
-                                >
-                                    Reiniciar demonstração
-                                </BotaoAcao>
-                            )}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar

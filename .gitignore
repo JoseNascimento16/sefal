@@ -15,6 +15,9 @@
 .env
 .env.backup
 .env.production
+# Ambientes locais de conveniência (ex.: `.env.demolocal`, para subir o servidor
+# de demonstração contra o SQLite sem tocar no `.env` que aponta o Oracle).
+.env.*local
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

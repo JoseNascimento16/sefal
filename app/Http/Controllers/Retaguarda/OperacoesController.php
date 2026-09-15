@@ -105,8 +105,6 @@ class OperacoesController extends Controller
             // docs/padroes/listagem-clean.md. Enxugar é da TELA: foco, região,
             // bairros e observação descem para a ficha e seguem no arquivo.
             'listagens' => ListagensDaRetaguarda::para('operacoes'),
-            // Resíduo do protótipo: ligava o botão de reiniciar, que não existe mais.
-            'alterada' => false,
         ]);
     }
 
