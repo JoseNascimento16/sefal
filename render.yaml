@@ -34,8 +34,15 @@ services:
 
       - key: APP_NAME
         value: SEFAL
+      # NAO e' 'production', e isso e' deliberado.
+      #
+      # O seeder de demonstracao planta cadastro inventado e se RECUSA a rodar em
+      # producao — guarda que existe para impedir que alguem, num pod do cliente,
+      # misture 79 ambulantes ficticios ao cadastro real. Rotular este ambiente de
+      # producao desligava exatamente a guarda que faz esta demo existir: o boot
+      # subia com o banco vazio e a tela abria integra, sem um unico registro.
       - key: APP_ENV
-        value: production
+        value: demonstracao
       # Mantenha true no primeiro deploy para diagnosticar; troque para false depois.
       - key: APP_DEBUG
         value: "true"
