@@ -148,3 +148,32 @@ it('liberar a agregada descarta a proposta, que ninguém mais poderia decidir', 
     // seria uma decisão que o coordenador não tem como tomar.
     expect($sugestao->fresh()->estado)->toBe(App\Models\SugestaoAgrupamento::RECUSADA);
 });
+
+it('a fila da pré-triagem segue o mesmo recorte de área da varredura', function () {
+    $pituba = App\Models\Area::create(['nome' => 'Área 1', 'regiao' => 'Orla']);
+    $outra = App\Models\Area::create(['nome' => 'Área 9', 'regiao' => 'Miolo']);
+
+    chegadaCrua('DEN-9030')->update(['area_id' => $pituba->id]);
+    chegadaCrua('DEN-9031')->update(['area_id' => $outra->id]);
+
+    // Um Chefe de Setor responde por UMA área.
+    $chefe = User::factory()->create(['admin' => false, 'ativo' => true]);
+    $chefe->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
+    $pituba->update(['chefe_de_setor_id' => $chefe->id]);
+
+    // A estrutura vive em memória dentro do container; sem esquecê-la, a
+    // consulta enxergaria a árvore anterior ao vínculo que acabou de nascer.
+    App\Support\Estrutura::esquecer();
+
+    $this->actingAs($chefe)
+        ->get(route('retaguarda.caixa-de-entrada.index'))
+        ->assertOk()
+        ->assertInertia(fn ($p) => $p
+            // Só a área dele. A fila mostrar o universo enquanto a varredura
+            // olha só a área fazia a tela se contradizer na mesma dobra:
+            // "N denúncias aguardam pré-triagem" logo acima de "nenhuma
+            // repetição entre as abertas".
+            ->has('preTriagem', 1)
+            ->where('preTriagem.0.protocolo', 'DEN-9030'),
+        );
+});
