@@ -204,6 +204,121 @@ Três caminhos, e eles não são excludentes:
 
 ---
 
+---
+
+## Reconhecimento contra a API REAL — 15/09/2026
+
+> Feito **somente com GET** (mais o `POST /login`, que é autenticação e não cria
+> nem altera recurso). Nenhum `PUT`, nenhum `DELETE`, nenhum POST de escrita — em
+> particular **não** se chamou `PUT /seleciona-caixa`. É API de **produção**, e
+> não existe ambiente de homologação.
+
+### O que ficou provado
+
+**1. A autenticação funciona daqui.** `POST /login` → **HTTP 200**, com
+`access_token` de 371 caracteres. Isso encerra a dúvida do IP: do ponto de rede
+desta máquina (VPN da Prefeitura), a credencial passa. Continua sem resposta o
+que acontece a partir de um IP diferente — o do egress do OKD, por exemplo.
+
+**2. A documentação tem um erro de grafia.** O endpoint publicado como
+`/subsassuntos/{id}` responde **404**. O real é **`/subassuntos/{id}`** (sem o
+primeiro "s"), que responde 200.
+
+**3. Para nós a classificação tem DOIS níveis, não três.** Todos os assuntos de
+interesse responderam com **zero subassuntos**. `ESALVADOR_SUBASSUNTOS` fica
+vazio por não haver o que pôr.
+
+**4. ⚠️ O CONTEÚDO só é legível para processo que está NA CAIXA DO USUÁRIO.**
+
+`GET /consulta-ultimo-tramite/{n}/{ano}` — que é onde moram o relato e os
+requerentes — respondeu, para todo processo testado:
+
+```json
+{"error":"Unauthorized","msg":"O processo não está na caixa do usuário."}
+```
+
+Enquanto `GET /consulta/{n}/{ano}` (metadados: classificação, unidades, datas,
+`codigo`, `identificador`) responde 200 para qualquer processo.
+
+E `GET /caixa-processos`, chamado sem `seleciona-caixa`, devolveu uma caixa que
+**não é a da SEMOP**: veio com processos de PGMS/SECOB, SEFAZ/DRM, grupos
+ADMINISTRATIVO FISCAL e POLITICAS PUBLICAS. Ou seja, o usuário da nossa
+credencial está hoje apontado para outra caixa.
+
+**Consequência direta: sem apontar a caixa para a unidade da SEFAL, a integração
+lê metadados e não lê denúncia nenhuma.** E apontar é `PUT /seleciona-caixa` —
+escrita, proibida nesta fase. Ver "O que precisa ser resolvido", abaixo.
+
+### Os ids, descobertos e confirmados com dado real
+
+| O quê | Id | Nome no catálogo deles |
+|---|---|---|
+| **Órgão** | **5369** | SEMOP — Secretaria Municipal de Ordem Pública |
+| **Unidade — a nossa** | **5382** | **SEFAL — Setor de Fiscalização de Atividades em Logradouros Públicos** |
+| Unidade — onde o público entrega | 5423 | SEATE — Setor de Atendimento ao Público |
+| Unidade — licenciamento | 5381 | SEALP — Setor de Autorização para o Exercício de Atividades em Logradouros Públicos |
+| Unidade — apreensão | 5383 | SEABE — Setor de Apreensão de Bens em Logradouros Públicos |
+| Unidade — guarda do apreendido | 5379 | SEGUB — Setor de Guarda de Bens Apreendidos |
+| **Grupo** | **10** | ORDEM PUBLICA |
+| Grupo (ouvidoria da cidade) | 11 | OUVIDORIA |
+
+Assuntos do grupo 10 que nos interessam:
+
+| Id | Assunto | O que parece ser |
+|---|---|---|
+| **215** | COMERCIO INFORMAL E ESPACO PUBLICO - **FISCALIZACAO** | **a denúncia** — é o que mais chega à caixa da SEFAL |
+| 222 | COMERCIO INFORMAL E ESPACO PUBLICO - CADASTRO | cadastro de ambulante |
+| 216 | COMERCIO INFORMAL E ESPACO PUBLICO - LICENCA AMBULANTE | o canal "nova licença" |
+| 217 / 218 / 219 / 221 | LICENCA BAIANA DE ACARAJE / KIT PRAIA / USO DO SOLO / OUTRAS | outras licenças |
+| 223 | COMERCIO INFORMAL E ESPACO PUBLICO - OUTROS | resto |
+| 232 | FISCALIZACAO | genérico, e de vários órgãos — **não** é só nosso |
+
+E, no grupo 11: 235 DENUNCIA, 234 CENTRAL DE ATENDIMENTO - 156, 237 FALA
+SALVADOR.
+
+### O volume real (últimos 89 dias, consultado em 15/09/2026)
+
+| Recorte | Processos |
+|---|---|
+| grupo 10 · assunto 215 (todos os órgãos) | **53** |
+| grupo 10 · assunto 216 — licença ambulante | 66 |
+| grupo 10 · assunto 232 — fiscalização genérica | 26 |
+| grupo 11 · assunto 235 — denúncia (cidade inteira) | 254 |
+| **unidade 5382 — a caixa da SEFAL** | **38** |
+| unidade 5381 — SEALP | 5 |
+| unidade 5423 — SEATE | 868 |
+
+Duas leituras que importam:
+
+- **a caixa da SEFAL recebe ~38 processos por trimestre**, quase todos
+  `COMERCIO INFORMAL E ESPACO PUBLICO - FISCALIZACAO`. É um volume de dezenas por
+  trimestre, não de milhares — o que muda a expectativa sobre a pré-triagem: ela
+  vai tratar poucos casos por dia, e o ganho está em não mandar equipe duas vezes,
+  não em volume;
+- **`OUVIDORIA / DENUNCIA` (235) NÃO é nosso**: os processos que apareceram são
+  de SMED/OUV (Educação). É a ouvidoria da cidade toda. Filtrar por esse assunto
+  importaria denúncia de escola.
+
+### O identificador tem estrutura
+
+`"identificador": "215.5423.207495/2026"` = `{assunto}.{unidade_origem}.{numero}/{ano}`.
+
+Serve de conferência barata: dá para validar a classificação sem uma segunda
+chamada.
+
+### O que precisa ser resolvido antes de ligar
+
+| Bloqueio | Natureza | Com quem |
+|---|---|---|
+| **A caixa do nosso usuário aponta para outra unidade** | precisa de `PUT /seleciona-caixa` (escrita) **ou** de a SEMGE/SEMOP apontá-la do lado deles | SEMOP + SEMGE |
+| Confirmar que **215** é o assunto da denúncia de ambulante | conferir um caso real com quem opera | SEMOP |
+| Saber se o endereço do fato vem no texto | só dá para ver lendo um relato — e ler depende do item 1 | SEMOP |
+| Se o IP bloqueia, e qual será o IP de saída em produção | daqui passa; do OKD, desconhecido | SEMGE |
+
+> A ordem importa: **enquanto a caixa não apontar para a SEFAL, nada do conteúdo
+> é legível**, e a pergunta sobre o endereço — que é a que decide o desenho da
+> pré-triagem — continua sem resposta.
+
 ## Pendências antes de ligar
 
 | O que falta | Com quem |
