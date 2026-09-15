@@ -6,8 +6,8 @@ use App\Relatorios\Contracts\Relatorio;
 use App\Relatorios\Suporte\ContextoRelatorio;
 use App\Relatorios\Suporte\FiltroDef;
 use App\Relatorios\Suporte\ResultadoRelatorio;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\MapasFicticios;
+use App\Support\Apresentacao\MapaDaCidade;
+use App\Support\Estrutura;
 
 /**
  * A cidade agora, em papel — o Mapa ao Vivo traduzido em relatório.
@@ -19,7 +19,7 @@ use App\Support\Prototipo\MapasFicticios;
  * ordem de atraso** — no mapa eles pulsam, mas ninguém consegue ditar um pino
  * por telefone.
  *
- * ⚠️ PROTÓTIPO: mesma fonte do mapa ({@see MapasFicticios::aoVivo()}), então o
+ * ⚠️ PROTÓTIPO: mesma fonte do mapa ({@see MapaDaCidade::aoVivo()}), então o
  * documento e a tela mostram o mesmo instante. Não há tempo real — o relatório
  * diz de que momento está falando.
  */
@@ -49,13 +49,13 @@ class RelatorioCidadeAgora implements Relatorio
     {
         $areas = [['valor' => '', 'rotulo' => 'Toda a cidade']];
 
-        foreach (EstruturaFicticia::nomesDeArea() as $area) {
+        foreach (Estrutura::nomesDeArea() as $area) {
             $areas[] = ['valor' => $area, 'rotulo' => $area];
         }
 
         $equipes = [['valor' => '', 'rotulo' => 'Todas as equipes']];
 
-        foreach (EstruturaFicticia::codigosDeEquipe() as $codigo) {
+        foreach (Estrutura::codigosDeEquipe() as $codigo) {
             $equipes[] = ['valor' => $codigo, 'rotulo' => 'Equipe '.$codigo];
         }
 
@@ -75,7 +75,7 @@ class RelatorioCidadeAgora implements Relatorio
         $area = trim((string) $contexto->filtro('area', ''));
         $equipe = trim((string) $contexto->filtro('equipe', ''));
 
-        $vivo = MapasFicticios::aoVivo();
+        $vivo = MapaDaCidade::aoVivo();
 
         $noRecorte = static fn (array $item): bool => ($area === '' || (string) ($item['area'] ?? '') === $area)
             && ($equipe === '' || (string) ($item['equipe'] ?? '') === $equipe);

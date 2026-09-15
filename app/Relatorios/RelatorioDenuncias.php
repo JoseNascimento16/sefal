@@ -2,11 +2,12 @@
 
 namespace App\Relatorios;
 
+use App\Models\Demanda;
 use App\Relatorios\Contracts\Relatorio;
 use App\Relatorios\Suporte\ContextoRelatorio;
 use App\Relatorios\Suporte\FiltroDef;
 use App\Relatorios\Suporte\ResultadoRelatorio;
-use App\Support\Prototipo\DenunciasFicticias;
+use App\Support\Apresentacao\DemandaParaTela;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Date;
  * mesa é o que o cidadão sente, e é o que o e-Salvador e o Salvador Digital
  * perguntam.
  *
- * ⚠️ PROTÓTIPO: mesma fonte das telas de Denúncias ({@see DenunciasFicticias}),
+ * Mesma fonte das telas de Denúncias (a montagem de {@see DemandaParaTela}),
  * para relatório e tela não contarem números diferentes.
  */
 class RelatorioDenuncias implements Relatorio
@@ -74,6 +75,27 @@ class RelatorioDenuncias implements Relatorio
         return [ContextoRelatorio::MODO_ANALITICO, ContextoRelatorio::MODO_SINTETICO];
     }
 
+    /**
+     * As denúncias, na MESMA forma que as telas dos canais leem.
+     *
+     * Só os REGISTROS DE TRABALHO: a denúncia agregada a outra não é um caso
+     * próprio, e contá-la aqui inflaria o número que a coordenação leva para a
+     * reunião com as ouvidorias — que é exatamente o que o agrupamento existe
+     * para corrigir.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function denuncias(): array
+    {
+        return Demanda::deIntegracao()
+            ->deTrabalho()
+            ->with(['tramites.fiscalizacao.documento', 'area', 'equipe', 'operacao', 'agregadas'])
+            ->orderByDesc('recebida_em')
+            ->get()
+            ->map(DemandaParaTela::completa(...))
+            ->all();
+    }
+
     public function gerar(ContextoRelatorio $contexto): ResultadoRelatorio
     {
         $canal = trim((string) $contexto->filtro('canal', ''));
@@ -82,7 +104,7 @@ class RelatorioDenuncias implements Relatorio
         $ate = $this->data($contexto->filtro('data_final'));
 
         $denuncias = array_values(array_filter(
-            DenunciasFicticias::todas(),
+            self::denuncias(),
             function (array $d) use ($canal, $situacao, $de, $ate): bool {
                 $quando = Date::parse((string) $d['recebida_em'])->startOfDay();
 
@@ -115,7 +137,7 @@ class RelatorioDenuncias implements Relatorio
             $sit = (string) $d['situacao'];
             $porSituacao[$sit] = ($porSituacao[$sit] ?? 0) + 1;
 
-            if ((int) ($d['prazo']['dias'] ?? 0) < 0) {
+            if (($d['prazo_dias'] ?? null) !== null && (int) $d['prazo_dias'] < 0) {
                 $vencidas++;
             }
 
@@ -153,7 +175,8 @@ class RelatorioDenuncias implements Relatorio
         foreach ($porSituacao as $sit => $quantos) {
             $vencidasNaSituacao = count(array_filter(
                 $denuncias,
-                static fn (array $d): bool => (string) $d['situacao'] === $sit && (int) ($d['prazo']['dias'] ?? 0) < 0,
+                static fn (array $d): bool => (string) $d['situacao'] === $sit
+                    && ($d['prazo_dias'] ?? null) !== null && (int) $d['prazo_dias'] < 0,
             ));
 
             $estados->linha([
@@ -198,7 +221,7 @@ class RelatorioDenuncias implements Relatorio
                 'bairro' => (string) $d['bairro'],
                 'area' => (string) ($d['area'] ?? '—'),
                 'situacao' => (string) $d['situacao'],
-                'prazo' => (string) ($d['prazo']['texto'] ?? '—'),
+                'prazo' => $d['prazo'] === null ? '—' : Date::parse((string) $d['prazo'])->format('d/m/Y'),
             ]);
         }
 

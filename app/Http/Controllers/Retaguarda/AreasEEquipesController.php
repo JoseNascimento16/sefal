@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\AreaBairro;
+use App\Models\Equipe;
 use App\Rules\NomeDeCadastro;
-use App\Support\Prototipo\EstruturaFicticia;
+use App\Support\Estrutura;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -33,9 +36,13 @@ use Inertia\Response;
  * A tela mostra isso como aviso informativo — marcar como pendência mandaria a
  * chefia "corrigir" um dado que está certo.
  *
- * ⚠️ PROTÓTIPO: nada é gravado em banco. A estrutura de partida é a transcrição
- * do documento do cliente em `config/prototipo_estrutura.php`, e o que a pessoa
- * mexe fica na sessão dela (ver `App\Support\Prototipo\EstruturaFicticia`).
+ * A estrutura vive no BANCO (`areas`, `area_bairros`, `equipes`, `equipe_fiscais`)
+ * e é lida por `App\Support\Estrutura`. Ela nasceu da transcrição do documento do
+ * cliente, semeada por `EstruturaSeeder` — e o que se mexe aqui é cadastro, que
+ * sobrevive ao logout.
+ *
+ * Área com demanda ou operação pendurada NÃO se exclui: o histórico apontaria
+ * para o nada. O caminho de "não usar mais" é INATIVAR.
  *
  * A guarda de acesso deduz a tela do primeiro trecho do caminho
  * (`/retaguarda/areas-e-equipes/…`).
@@ -45,19 +52,20 @@ class AreasEEquipesController extends Controller
     public function index(): Response
     {
         return Inertia::render('Retaguarda/Estrutura/AreasEEquipes', [
-            'areas' => EstruturaFicticia::areas(),
-            'turnos' => array_values((array) config('prototipo_estrutura.turnos', [])),
+            'areas' => Estrutura::areas(),
+            'turnos' => array_values((array) config('estrutura.turnos', [])),
             // Todo bairro conhecido: alimenta a inclusão no bloco de uma área,
             // oferecendo o que já existe em vez de convidar a redigitar.
-            'bairros' => EstruturaFicticia::bairros(),
-            'alterada' => EstruturaFicticia::alterada(),
+            'bairros' => Estrutura::bairros(),
+            // Resíduo do protótipo: ligava o botão de reiniciar, que não existe
+            // mais — estrutura é cadastro, e cadastro não se reinicia.
         ]);
     }
 
     /** Cria uma área/equipe nova. */
     public function store(Request $request): RedirectResponse
     {
-        EstruturaFicticia::salvarArea($this->validados($request));
+        $this->gravar(new Area, $this->validados($request));
 
         return back()->with('flash.sucesso', 'Área criada.');
     }
@@ -65,22 +73,46 @@ class AreasEEquipesController extends Controller
     /** Altera a área — nome, região, equipe, encarregado, recorte e turno. */
     public function update(Request $request, int $area): RedirectResponse
     {
-        if (! $this->existe($area)) {
+        $existente = Area::find($area);
+
+        if ($existente === null) {
             return back()->with('flash.erro', 'Essa área não existe mais. Recarregue a tela.');
         }
 
-        EstruturaFicticia::salvarArea([...$this->validados($request), 'id' => $area]);
+        $this->gravar($existente, $this->validados($request));
 
         return back()->with('flash.sucesso', 'Alterações salvas.');
     }
 
     public function destroy(int $area): RedirectResponse
     {
-        if (! $this->existe($area)) {
+        $existente = Area::find($area);
+
+        if ($existente === null) {
             return back()->with('flash.erro', 'Essa área não existe mais. Recarregue a tela.');
         }
 
-        EstruturaFicticia::excluirArea($area);
+        /*
+         * Área com trabalho pendurado NÃO se exclui.
+         *
+         * A demanda encaminhada a ela e a operação planejada nela apontam para
+         * esta linha. Apagá-la deixaria o histórico apontando para o nada — e a
+         * denúncia de dois meses atrás perderia o registro de para onde foi. Quem
+         * quer parar de usar uma área a INATIVA: some dos formulários e continua
+         * legível no que já aconteceu.
+         */
+        $pendurado = $existente->demandas()->count() + $existente->operacoes()->count();
+
+        if ($pendurado > 0) {
+            return back()->with('flash.erro', $pendurado === 1
+                ? 'Há 1 registro vinculado a esta área. Inative-a em vez de excluí-la — o histórico apontaria para o nada.'
+                : "Há {$pendurado} registros vinculados a esta área. Inative-a em vez de excluí-la — o histórico apontaria para o nada.");
+        }
+
+        $existente->equipes()->delete();
+        $existente->bairros()->delete();
+        $existente->delete();
+        Estrutura::esquecer();
 
         return back()->with('flash.sucesso', 'Área excluída.');
     }
@@ -101,32 +133,21 @@ class AreasEEquipesController extends Controller
             'bairro.required' => 'Informe o bairro.',
         ]);
 
-        if (! $this->existe($area)) {
+        if (! Area::whereKey($area)->exists()) {
             return back()->with('flash.erro', 'Essa área não existe mais. Recarregue a tela.');
         }
 
         if ($dados['acao'] === 'adicionar') {
-            EstruturaFicticia::adicionarBairro($area, $dados['bairro']);
+            AreaBairro::firstOrCreate(['area_id' => $area, 'bairro' => $dados['bairro']]);
+            Estrutura::esquecer();
 
             return back()->with('flash.sucesso', "{$dados['bairro']} entrou no bloco desta área.");
         }
 
-        EstruturaFicticia::removerBairro($area, $dados['bairro']);
+        AreaBairro::where('area_id', $area)->where('bairro', $dados['bairro'])->delete();
+        Estrutura::esquecer();
 
         return back()->with('flash.sucesso', "{$dados['bairro']} saiu do bloco desta área.");
-    }
-
-    /**
-     * Devolve a estrutura ao documento do cliente.
-     *
-     * Existe porque é PROTÓTIPO: quem demonstra precisa recomeçar a cena. No
-     * sistema real a estrutura é cadastro, e cadastro não se reinicia.
-     */
-    public function reiniciar(): RedirectResponse
-    {
-        EstruturaFicticia::reiniciar();
-
-        return back()->with('flash.sucesso', 'Estrutura devolvida ao documento de 17/04/2026.');
     }
 
     /**
@@ -144,7 +165,7 @@ class AreasEEquipesController extends Controller
             'equipe' => ['required', 'string', 'max:6'],
             'encarregado' => ['required', 'string', 'max:120', new NomeDeCadastro],
             'recorte' => ['required', Rule::in(['bairros', 'corredores', 'cidade'])],
-            'turno' => ['required', Rule::in((array) config('prototipo_estrutura.turnos', []))],
+            'turno' => ['required', Rule::in((array) config('estrutura.turnos', []))],
         ], [
             'nome.required' => 'Informe o nome da área.',
             'regiao.required' => 'Informe a região que a área cobre.',
@@ -154,14 +175,49 @@ class AreasEEquipesController extends Controller
         ]);
     }
 
-    private function existe(int $area): bool
+    /**
+     * Grava a área e a equipe dela — criação e alteração pelo mesmo caminho.
+     *
+     * A tela trata área e equipe como UMA coisa (é assim que o cliente trabalha:
+     * uma área, uma equipe), e por isso o formulário traz o código e o
+     * encarregado junto. O banco já aceita várias equipes por área; quando isso
+     * mudar, é a tela que ganha a lista — o modelo não muda.
+     *
+     * @param  array<string, mixed>  $dados
+     */
+    private function gravar(Area $area, array $dados): Area
     {
-        foreach (EstruturaFicticia::areas() as $existente) {
-            if ((int) $existente['id'] === $area) {
-                return true;
-            }
-        }
+        $area->fill([
+            'nome' => (string) $dados['nome'],
+            'regiao' => (string) $dados['regiao'],
+            'recorte' => (string) $dados['recorte'],
+            'turno' => (string) $dados['turno'],
+        ]);
 
-        return false;
+        $area->save();
+
+        $codigo = mb_strtoupper(trim((string) $dados['equipe']));
+
+        /*
+         * A equipe é procurada pelo CÓDIGO, e não pela área: o código é a
+         * identidade dela em rua, e renomear a área não pode criar uma segunda
+         * equipe com a mesma sigla — o fiscal não saberia em qual está.
+         */
+        $equipe = Equipe::firstOrNew(['codigo' => $codigo]);
+
+        $equipe->fill([
+            'nome' => 'Equipe '.$codigo,
+            'area_id' => $area->id,
+            'encarregado' => (string) $dados['encarregado'],
+            'turno' => (string) $dados['turno'],
+            'ativa' => true,
+        ]);
+
+        $equipe->save();
+
+        // A estrutura mudou: a memória da requisição não pode servir o estado antigo.
+        Estrutura::esquecer();
+
+        return $area;
     }
 }

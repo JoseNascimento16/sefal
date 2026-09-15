@@ -7,7 +7,6 @@ import {
     ListChecks,
     MapPinOff,
     Paperclip,
-    RotateCcw,
     Send,
     Siren,
     TriangleAlert,
@@ -19,6 +18,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
+import { PreTriagem, type SugestaoDeAgrupamento } from '@/components/retaguarda/pre-triagem';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
@@ -55,7 +55,6 @@ import {
     direcionar as rotaDirecionar,
     encaminhar as rotaEncaminhar,
     operacao as rotaOperacao,
-    reiniciar as rotaReiniciar,
 } from '@/routes/retaguarda/denuncias';
 
 /**
@@ -120,8 +119,16 @@ interface Props {
      * Ver `docs/padroes/listagem-clean.md`.
      */
     listagens: Listagens;
-    /** A sessão já decidiu algo sobre a demonstração? */
-    alterada: boolean;
+    /**
+     * As propostas de agrupamento que esperam decisão — a PRÉ-TRIAGEM.
+     *
+     * O e-Salvador repete o mesmo fato em vários protocolos, e juntá-los ANTES
+     * de mandar alguém à rua é o que evita dez idas ao mesmo ponto. A máquina
+     * propõe; quem agrupa é o coordenador.
+     */
+    sugestoesDeAgrupamento: SugestaoDeAgrupamento[];
+    /** O caminho base das ações de agrupamento — muda entre os dois módulos. */
+    baseDoAgrupamento?: string;
 }
 
 type Aba = 'triagem' | 'direcionamento' | 'todas' | 'detalhe';
@@ -347,7 +354,8 @@ export function PainelDeDenuncias({
     areasDoChefe,
     recorteDeArea,
     listagens,
-    alterada,
+    sugestoesDeAgrupamento,
+    baseDoAgrupamento = '/retaguarda/denuncias',
 }: Props) {
     const { enviando, ocupado, enviar } = useEnvio();
 
@@ -1196,6 +1204,24 @@ export function PainelDeDenuncias({
 
                 {aba !== 'detalhe' && (
                     <>
+                        {/*
+                          * A PRÉ-TRIAGEM vem ANTES da busca, e só na aba de
+                          * triagem: ela é a primeira pergunta do dia ("algum
+                          * destes casos é o mesmo?"), e responder isso depois de
+                          * já ter encaminhado seria encaminhar duas vezes o
+                          * mesmo ponto.
+                          *
+                          * Quem apenas acompanha vê o painel e não decide — a
+                          * mesma resposta governa a recusa no servidor.
+                          */}
+                        {aba === 'triagem' && sugestoesDeAgrupamento.length > 0 && (
+                            <PreTriagem
+                                sugestoes={sugestoesDeAgrupamento}
+                                base={baseDoAgrupamento}
+                                podeDecidir={tria}
+                            />
+                        )}
+
                         <BuscaInteligente
                             busca={busca}
                             setBusca={setBusca}
@@ -1280,20 +1306,6 @@ export function PainelDeDenuncias({
                                 </>
                             )}
 
-                            {/* Só aparece depois de a sessão decidir algo: num
-                                protótipo intocado não há o que reiniciar. */}
-                            {alterada && (
-                                <BotaoAcao
-                                    className="btn btn-secondary btn-sm"
-                                    icone={<RotateCcw size={16} aria-hidden />}
-                                    carregando={enviando === 'reiniciar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Reiniciando…"
-                                    onClick={() => enviar('reiniciar', rotaReiniciar().url)}
-                                >
-                                    Reiniciar demonstração
-                                </BotaoAcao>
-                            )}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar

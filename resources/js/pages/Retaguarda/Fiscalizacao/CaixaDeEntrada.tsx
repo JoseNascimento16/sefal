@@ -7,7 +7,6 @@ import {
     Info,
     Paperclip,
     Plus,
-    RotateCcw,
     Send,
     TriangleAlert,
     UserRound,
@@ -17,6 +16,7 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
+import { PreTriagem, type SugestaoDeAgrupamento } from '@/components/retaguarda/pre-triagem';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
@@ -45,7 +45,6 @@ import {
     devolver as rotaDevolver,
     encaminhar as rotaEncaminhar,
     index,
-    reiniciar as rotaReiniciar,
     store,
 } from '@/routes/retaguarda/caixa-de-entrada';
 
@@ -89,8 +88,14 @@ interface Props {
      * `docs/padroes/listagem-clean.md`.
      */
     listagens: Listagens;
-    /** A sessão já mexeu na caixa de demonstração? */
-    alterada: boolean;
+    /**
+     * As propostas de agrupamento que esperam decisão — a PRÉ-TRIAGEM.
+     *
+     * O mesmo fato chega em vários papéis, e juntá-los ANTES de encaminhar é o
+     * que evita mandar a equipe duas vezes ao mesmo ponto. A máquina propõe;
+     * quem agrupa é o coordenador.
+     */
+    sugestoesDeAgrupamento: SugestaoDeAgrupamento[];
 }
 
 type Aba = 'caixa' | 'registro' | 'detalhe';
@@ -145,7 +150,7 @@ export default function CaixaDeEntrada({
     bairros,
     sugestoes,
     listagens,
-    alterada,
+    sugestoesDeAgrupamento,
 }: Props) {
     const acoes = useAcoes();
     const { enviando, ocupado, enviar } = useEnvio();
@@ -572,6 +577,20 @@ export default function CaixaDeEntrada({
 
                 {aba === 'caixa' && (
                     <>
+                        {/*
+                          * A PRÉ-TRIAGEM vem ANTES da busca: é a primeira
+                          * pergunta do dia ("algum destes papéis é o mesmo
+                          * caso?"), e respondê-la depois de já ter encaminhado
+                          * seria encaminhar duas vezes o mesmo ponto.
+                          */}
+                        {sugestoesDeAgrupamento.length > 0 && (
+                            <PreTriagem
+                                sugestoes={sugestoesDeAgrupamento}
+                                base="/retaguarda/caixa-de-entrada"
+                                podeDecidir={acoes.habilitado}
+                            />
+                        )}
+
                         <BuscaInteligente
                             busca={busca}
                             setBusca={setBusca}
@@ -612,20 +631,6 @@ export default function CaixaDeEntrada({
                                 </BotaoAcao>
                             )}
 
-                            {/* Só aparece depois de a sessão mexer em algo: num
-                                protótipo intocado não há o que reiniciar. */}
-                            {alterada && acoes.habilitado && (
-                                <BotaoAcao
-                                    className="btn btn-secondary btn-sm"
-                                    icone={<RotateCcw size={16} aria-hidden />}
-                                    carregando={enviando === 'reiniciar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Reiniciando…"
-                                    onClick={() => enviar('reiniciar', rotaReiniciar().url)}
-                                >
-                                    Reiniciar demonstração
-                                </BotaoAcao>
-                            )}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar

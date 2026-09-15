@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
+use App\Http\Controllers\Retaguarda\AgrupamentoDeDemandasController;
 use App\Http\Controllers\Retaguarda\AmbulantesController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
@@ -197,8 +198,27 @@ Route::middleware(['auth'])->group(function () {
             ->name('encaminhar')->whereNumber('demanda');
         Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
             ->name('devolver')->whereNumber('demanda');
-        // Só existe porque é protótipo: devolve a caixa ao estado de demonstração.
-        Route::post('reiniciar', [CaixaDeEntradaController::class, 'reiniciar'])->name('reiniciar');
+
+        /*
+         * A PRÉ-TRIAGEM: dez denúncias que são um fato.
+         *
+         * As mesmas quatro ações existem sob os dois caminhos (aqui e em
+         * `denuncias`), apontando para o MESMO controller. É de propósito: a
+         * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
+         * porta herda a permissão da tela onde o coordenador já está — em vez de
+         * a pré-triagem virar uma terceira tela, com uma terceira concessão para
+         * alguém esquecer de dar.
+         */
+        Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
+            ->name('agrupamento.varrer');
+        Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
+            ->name('agrupamento.aceitar')->whereNumber('sugestao');
+        Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])
+            ->name('agrupamento.recusar')->whereNumber('sugestao');
+        Route::post('agrupamento/{demanda}/agrupar', [AgrupamentoDeDemandasController::class, 'agrupar'])
+            ->name('agrupamento.agrupar')->whereNumber('demanda');
+        Route::post('agrupamento/{demanda}/desagrupar', [AgrupamentoDeDemandasController::class, 'desagrupar'])
+            ->name('agrupamento.desagrupar')->whereNumber('demanda');
     });
 
     /*
@@ -229,8 +249,28 @@ Route::middleware(['auth'])->group(function () {
         Route::post('devolver', [DenunciasController::class, 'devolver'])->name('devolver');
         Route::post('direcionar', [DenunciasController::class, 'direcionar'])->name('direcionar');
         Route::post('operacao', [DenunciasController::class, 'operacao'])->name('operacao');
-        // Só existe porque é protótipo: devolve o módulo ao estado da demonstração.
-        Route::post('reiniciar', [DenunciasController::class, 'reiniciar'])->name('reiniciar');
+
+        /*
+         * A PRÉ-TRIAGEM: dez denúncias que são um fato.
+         *
+         * As mesmas quatro ações existem sob os dois caminhos (aqui e em
+         * `denuncias`), apontando para o MESMO controller. É de propósito: a
+         * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
+         * porta herda a permissão da tela onde o coordenador já está — em vez de
+         * a pré-triagem virar uma terceira tela, com uma terceira concessão para
+         * alguém esquecer de dar.
+         */
+        Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
+            ->name('agrupamento.varrer');
+        Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
+            ->name('agrupamento.aceitar')->whereNumber('sugestao');
+        Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])
+            ->name('agrupamento.recusar')->whereNumber('sugestao');
+        Route::post('agrupamento/{demanda}/agrupar', [AgrupamentoDeDemandasController::class, 'agrupar'])
+            ->name('agrupamento.agrupar')->whereNumber('demanda');
+        Route::post('agrupamento/{demanda}/desagrupar', [AgrupamentoDeDemandasController::class, 'desagrupar'])
+            ->name('agrupamento.desagrupar')->whereNumber('demanda');
+
     });
 
     /*
@@ -268,7 +308,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('nova-vistoria', [FiscalizacoesController::class, 'novaVistoria'])->name('nova-vistoria');
         Route::post('devolver', [FiscalizacoesController::class, 'devolver'])->name('devolver');
         // Só existe porque é protótipo: devolve a fila ao estado de demonstração.
-        Route::post('reiniciar', [FiscalizacoesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*
@@ -294,7 +333,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('{operacao}', [OperacoesController::class, 'destroy'])
             ->name('destroy')->whereNumber('operacao');
         // Só existe porque é protótipo: devolve o catálogo ao estado de demonstração.
-        Route::post('reiniciar', [OperacoesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*
@@ -314,7 +352,6 @@ Route::middleware(['auth'])->group(function () {
             ->name('destroy')->whereNumber('area');
         Route::post('{area}/bairros', [AreasEEquipesController::class, 'bairros'])
             ->name('bairros')->whereNumber('area');
-        Route::post('reiniciar', [AreasEEquipesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*

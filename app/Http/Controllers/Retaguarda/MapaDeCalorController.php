@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
-use App\Support\Prototipo\MapasFicticios;
+use App\Support\Apresentacao\MapaDaCidade;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,7 +34,9 @@ use Inertia\Response;
  * Só GET: é tela de leitura. A recomendação de operação LEVA ao Cadastro de
  * Operação — quem cria a operação é aquela tela, não esta.
  *
- * ⚠️ PROTÓTIPO: nada vem do banco (ver {@see MapasFicticios}). A guarda de acesso
+ * O relevo sai das FISCALIZAÇÕES com GPS dos últimos 180 dias (ver
+ * {@see MapaDaCidade}) — não de peso arbitrado. Bairro sem coordenada fica de
+ * fora: existe na estrutura, mas não há onde desenhá-lo. A guarda de acesso
  * deduz a tela do primeiro trecho do caminho (`/retaguarda/mapa-de-calor`), e a
  * concessão inicial exclui o fiscal: concentração histórica serve para PLANEJAR,
  * e planejar é ato de gestão.
@@ -43,6 +45,6 @@ class MapaDeCalorController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('Retaguarda/Fiscalizacao/MapaDeCalor', MapasFicticios::calor());
+        return Inertia::render('Retaguarda/Fiscalizacao/MapaDeCalor', MapaDaCidade::calor());
     }
 }

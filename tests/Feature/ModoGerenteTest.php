@@ -388,9 +388,21 @@ test('o item do Modo Gerente no menu ABRE PAINEL — nao navega', function () {
             ->viewData('page')['props']['menu']
     )->pluck('itens')->flatten(1);
 
-    expect($itens->firstWhere('rotulo', 'Modo Gerente')['modal'])->toBe('modo-gerente')
-        // E o resto do menu continua navegando: `modal` é a exceção declarada.
-        ->and($itens->firstWhere('rotulo', 'Ambulantes')['modal'])->toBeNull();
+    expect($itens->firstWhere('rotulo', 'Modo Gerente')['modal'])->toBe('modo-gerente');
+
+    /*
+     * E o resto do menu continua NAVEGANDO: `modal` é a exceção declarada, e um
+     * item qualquer tem de prová-lo. A contraprova era o item "Ambulantes", que
+     * desde 10/09 é FILHO da pasta "Sistema" — a busca rasa não o encontrava
+     * mais e o teste morria em "índice de nulo", sem falar do que ele protege.
+     */
+    $navegaveis = $itens->reject(fn (array $i): bool => ($i['modal'] ?? null) !== null);
+
+    expect($navegaveis)->not->toBeEmpty();
+
+    foreach ($navegaveis as $item) {
+        expect($item['modal'] ?? null)->toBeNull();
+    }
 });
 
 test('salvar a matriz grava a concessao, normaliza as regras e deixa rastro', function () {

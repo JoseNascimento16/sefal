@@ -6,8 +6,8 @@ use App\Relatorios\Contracts\Relatorio;
 use App\Relatorios\Suporte\ContextoRelatorio;
 use App\Relatorios\Suporte\FiltroDef;
 use App\Relatorios\Suporte\ResultadoRelatorio;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\MapasFicticios;
+use App\Support\Apresentacao\MapaDaCidade;
+use App\Support\Estrutura;
 
 /**
  * Onde a ocorrência se concentra — o Mapa de Calor traduzido em relatório.
@@ -23,7 +23,7 @@ use App\Support\Prototipo\MapasFicticios;
  * fonte carrega 180 dias mesmo quando se pede 90: sem o período anterior, a
  * coluna de variação seria invenção.
  *
- * ⚠️ PROTÓTIPO: mesma fonte do mapa ({@see MapasFicticios::calor()}), então o
+ * ⚠️ PROTÓTIPO: mesma fonte do mapa ({@see MapaDaCidade::calor()}), então o
  * ranking do documento é o ranking da tela.
  */
 class RelatorioConcentracao implements Relatorio
@@ -58,7 +58,7 @@ class RelatorioConcentracao implements Relatorio
     {
         $areas = [['valor' => '', 'rotulo' => 'Toda a cidade']];
 
-        foreach (EstruturaFicticia::nomesDeArea() as $area) {
+        foreach (Estrutura::nomesDeArea() as $area) {
             $areas[] = ['valor' => $area, 'rotulo' => $area];
         }
 
@@ -85,7 +85,7 @@ class RelatorioConcentracao implements Relatorio
         $janela = in_array($janela, self::JANELAS, true) ? $janela : 30;
         $area = trim((string) $contexto->filtro('area', ''));
 
-        $calor = MapasFicticios::calor();
+        $calor = MapaDaCidade::calor();
         $bairros = $calor['bairros'];
 
         /*

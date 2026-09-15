@@ -1,11 +1,15 @@
 <?php
 
+use App\Models\Demanda;
 use App\Models\Setor;
 use App\Models\User;
+use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Prototipo\DenunciasFicticias;
 use App\Support\Prototipo\EstruturaFicticia;
 use App\Support\Prototipo\OperacoesFicticias;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
+use Database\Seeders\DemonstracaoSeeder;
+use Database\Seeders\EstruturaSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 
@@ -41,6 +45,13 @@ use Database\Seeders\SetoresSeeder;
 beforeEach(function () {
     $this->seed(SetoresSeeder::class);
     $this->seed(PermissoesSetorSeeder::class);
+    /*
+     * O trâmite sai do BANCO desde a consolidação — e o conteúdo da ida a campo
+     * é lido da fiscalização ligada ao passo. Sem os quatro seeders o teste
+     * rodaria contra um histórico vazio e passaria pelo motivo errado.
+     */
+    $this->seed(EstruturaSeeder::class);
+    $this->seed(DemonstracaoSeeder::class);
 });
 
 /** As denúncias do arquivo de dados que declaram o trâmite passo a passo. */
@@ -55,8 +66,9 @@ function denunciasComTramiteDeclarado(): array
 /** Um chefe de setor de verdade: a matrícula é o que o liga à área na estrutura. */
 function chefeDeArea(string $matricula): User
 {
-    $u = User::factory()->create(['login' => $matricula, 'admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+    // A conta já existe: é o seeder da estrutura que a cria e a liga à área.
+    $u = User::where('login', User::normalizarMatricula($matricula))->firstOrFail();
+    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
 
     return $u->fresh();
 }
@@ -302,16 +314,26 @@ test('a linha de tramite criada por uma decisao nasce com TODAS as chaves do pas
         ])
         ->assertRedirect();
 
-    $ultimo = collect(DenunciasFicticias::denuncia(1)['tramites'])->last();
+    $ultimo = collect(DemandaParaTela::tramites(
+        Demanda::with(['tramites.fiscalizacao.recomendacoes', 'tramites.fiscalizacao.fotos', 'tramites.fiscalizacao.documento'])->findOrFail(1),
+    ))->last();
 
     expect($ultimo['o_que'])->toBe('Triada e encaminhada à área')
         ->and($ultimo)->toHaveKeys([
             'em', 'quem', 'o_que', 'detalhe', 'situacao', 'desfecho',
-            'consideracoes', 'recomendacoes', 'campos', 'campo', 'documento',
+            'consideracoes', 'recomendacoes', 'campos', 'fiscalizacao', 'documento',
         ])
         ->and($ultimo['documento'])->toBeNull()
         ->and($ultimo['campo'])->toBeNull()
-        ->and($ultimo['campos'])->toBe([])
+        /*
+         * ⚠️ MUDOU NA CONSOLIDAÇÃO: no protótipo o passo criado por uma decisão
+         * nascia sem `campos`. Agora ele carrega os campos ESTRUTURADOS daquela
+         * decisão — o bairro que sugeriu a área, a área escolhida e o Chefe de
+         * Setor que a recebeu. É o que faltava para quem lê o histórico saber
+         * POR QUE o caso foi para lá, em vez de só que foi.
+         */
+        ->and($ultimo['campos'])->not->toBe([])
+        ->and(array_column($ultimo['campos'], 'rotulo'))->toContain('Área de destino')
         ->and($ultimo['recomendacoes'])->toBe([])
         // E o passo novo carrega a situação em que a denúncia entrou: sem ela, o
         // único passo do percurso sem selo seria justamente o que acabou de

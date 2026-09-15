@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support\Prototipo;
+namespace App\Support;
 
 use App\Models\User;
 
@@ -24,11 +24,9 @@ use App\Models\User;
  * (Esta classe nasceu justamente disso: `DenunciasController` e a fila do retorno
  * de campo tinham cópias literais de `areasDoChefe` e `temRecorteDeArea`.)
  *
- * ⚠️ PROTÓTIPO no vínculo, não na regra: hoje a ligação pessoa ↔ área mora em
- * `config/prototipo_estrutura.php` e casa pela MATRÍCULA
- * ({@see EstruturaFicticia::areasDoChefe}). Em produção isso é tabela, entre
- * USUÁRIO e área. Quem chama aqui já trata LISTA de áreas, então a modelagem
- * definitiva não obriga a mexer em quem lê.
+ * O vínculo pessoa ↔ área é a coluna `areas.chefe_de_setor_id`, lida por
+ * {@see Estrutura::areasDoChefe}. Quem chama aqui trata LISTA de áreas porque uma
+ * pessoa responde por mais de uma (férias, acumulação, área recém-criada).
  *
  * ⚠️ E isto NÃO é permissão de tela. A permissão (Modo Gerente) diz quem ENTRA;
  * isto diz sobre O QUE cada um decide, dentro da tela em que já entrou. As duas
@@ -53,7 +51,7 @@ class PapelNaArea
      */
     public static function areas(?User $usuario): array
     {
-        return $usuario === null ? [] : EstruturaFicticia::areasDoChefe($usuario->login);
+        return $usuario === null ? [] : Estrutura::areasDoChefe($usuario->login);
     }
 
     /**

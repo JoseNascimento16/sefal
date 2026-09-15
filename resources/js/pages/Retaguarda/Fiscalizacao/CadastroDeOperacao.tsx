@@ -7,7 +7,6 @@ import {
     MapPinned,
     Pencil,
     Plus,
-    RotateCcw,
     Target,
     Trash2,
 } from 'lucide-react';
@@ -30,7 +29,6 @@ import { cn } from '@/lib/utils';
 import {
     destroy,
     index,
-    reiniciar as rotaReiniciar,
     store,
     update,
 } from '@/routes/retaguarda/operacoes';
@@ -107,7 +105,6 @@ interface Props {
      * `docs/padroes/listagem-clean.md`.
      */
     listagens: Listagens;
-    alterada: boolean;
 }
 
 type Aba = 'operacoes' | 'operacao';
@@ -147,7 +144,6 @@ export default function CadastroDeOperacao({
     areasDoChefe,
     recorteDeArea,
     listagens,
-    alterada,
 }: Props) {
     const acoes = useAcoes();
     const { enviando, ocupado, enviar, guardar } = useEnvio();
@@ -609,18 +605,6 @@ export default function CadastroDeOperacao({
                                 </BotaoAcao>
                             )}
 
-                            {alterada && cadastra && acoes.habilitado && (
-                                <BotaoAcao
-                                    className="btn btn-secondary btn-sm"
-                                    icone={<RotateCcw size={16} aria-hidden />}
-                                    carregando={enviando === 'reiniciar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Reiniciando…"
-                                    onClick={() => enviar('reiniciar', rotaReiniciar().url)}
-                                >
-                                    Reiniciar demonstração
-                                </BotaoAcao>
-                            )}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar

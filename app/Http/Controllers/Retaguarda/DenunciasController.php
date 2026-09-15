@@ -3,21 +3,31 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\Demanda;
+use App\Models\Fiscalizacao;
+use App\Models\Operacao;
+use App\Models\SugestaoAgrupamento;
 use App\Models\User;
+use App\Support\Apresentacao\DemandaParaTela;
+use App\Support\Apresentacao\OperacaoParaTela;
+use App\Support\Apresentacao\SugestaoParaTela;
+use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\Prototipo\DenunciasFicticias;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\OperacoesFicticias;
-use App\Support\Prototipo\PapelNaArea;
+use App\Support\PapelNaArea;
+use App\Support\Protocolo;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
+use App\Support\TriagemDeDemandas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Denúncias das ouvidorias — PROTÓTIPO.
+ * Denúncias das ouvidorias.
  *
  * Duas telas, uma por canal (`e-Salvador` e `Salvador Digital`), com a MESMA
  * mecânica: as denúncias chegam por integração, o coordenador tria e
@@ -33,7 +43,7 @@ use Inertia\Response;
  * bairro → área e a exigência de justificativa não mudam com o canal. Dois
  * controllers seriam a mesma regra com dois donos, e um dia só um deles
  * receberia a validação nova. O que varia é declarado em
- * `config/prototipo_denuncias.php` → `canais`, e a tela lê de lá.
+ * `config/demandas.php` → `canais`, e a tela lê de lá.
  *
  * ── Nada é digitado aqui ────────────────────────────────────────────────────
  *
@@ -64,11 +74,13 @@ use Inertia\Response;
  * O administrador continua vendo tudo — é o dono do sistema. O coordenador
  * também, porque quem tria precisa saber o que aconteceu com o que encaminhou.
  *
- * ⚠️ PROTÓTIPO: nada é gravado em banco. As denúncias de partida vêm da config
- * e as decisões ficam na sessão de quem está navegando (ver
- * `App\Support\Prototipo\DenunciasFicticias`). A tela diz isso de forma
- * visível — protótipo que se disfarça de sistema pronto vira decisão tomada por
- * engano.
+ * ── O que mudou ao sair do protótipo ───────────────────────────────────────
+ *
+ * As denúncias são linhas de `demandas` — a MESMA tabela da Caixa de Entrada,
+ * separada pela coluna `entrada` (ver o cabeçalho do model). Cada decisão vira
+ * passo de trâmite gravado, e não mais um item de sessão que sumia no logout.
+ *
+ * Não há mais "reiniciar": denúncia recebida não se desfaz.
  *
  * A guarda de acesso deduz a tela do primeiro trecho do caminho
  * (`/retaguarda/denuncias/…`), então as rotas dos dois canais e todas as
@@ -108,7 +120,7 @@ class DenunciasController extends Controller
         $dados = $request->validate([
             'destinos' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'destinos.*.id' => ['required', 'integer'],
-            'destinos.*.area' => ['required', Rule::in(EstruturaFicticia::nomesDeArea())],
+            'destinos.*.area' => ['required', Rule::in(Estrutura::nomesDeArea())],
             'observacao' => ['nullable', 'string', 'max:500'],
         ], [
             'destinos.required' => 'Escolha ao menos uma denúncia para encaminhar.',
@@ -122,7 +134,7 @@ class DenunciasController extends Controller
             $areasPorId[(int) $destino['id']] = (string) $destino['area'];
         }
 
-        $efeito = DenunciasFicticias::encaminharAArea($areasPorId, $dados['observacao'] ?? null);
+        $efeito = $this->triagem($request)->encaminharAArea($areasPorId, $dados['observacao'] ?? null);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -147,9 +159,9 @@ class DenunciasController extends Controller
         $dados = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'ids.*' => ['required', 'integer'],
-            'motivo' => ['required', Rule::in((array) config('prototipo_denuncias.motivos_de_devolucao', []))],
+            'motivo' => ['required', Rule::in((array) config('demandas.motivos_de_devolucao', []))],
             'justificativa' => ['required', 'string', 'min:15', 'max:1000'],
-            'destino' => ['required', Rule::in((array) config('prototipo_denuncias.destinos_de_retorno', []))],
+            'destino' => ['required', Rule::in((array) config('demandas.destinos_de_retorno', []))],
         ], [
             'ids.required' => 'Escolha ao menos uma denúncia.',
             'motivo.required' => 'Escolha o motivo da devolução.',
@@ -158,7 +170,7 @@ class DenunciasController extends Controller
             'destino.required' => 'Diga se a denúncia volta ao canal de origem ou é arquivada.',
         ]);
 
-        $efeito = DenunciasFicticias::devolver(
+        $efeito = $this->triagem($request)->devolver(
             array_map('intval', $dados['ids']),
             $dados['motivo'],
             $dados['justificativa'],
@@ -190,7 +202,7 @@ class DenunciasController extends Controller
         $dados = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'ids.*' => ['required', 'integer'],
-            'equipe' => ['required', Rule::in(EstruturaFicticia::codigosDeEquipe())],
+            'equipe' => ['required', Rule::in(Estrutura::codigosDeEquipe())],
             'justificativa' => ['nullable', 'string', 'max:1000'],
         ], [
             'ids.required' => 'Escolha ao menos uma denúncia.',
@@ -214,7 +226,7 @@ class DenunciasController extends Controller
             ]);
         }
 
-        $efeito = DenunciasFicticias::direcionarAEquipe($ids, $equipe, $justificativa === '' ? null : $justificativa);
+        $efeito = $this->triagem($request)->direcionarAEquipe($ids, $equipe, $justificativa === '' ? null : $justificativa);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -250,9 +262,9 @@ class DenunciasController extends Controller
          * campo. É a pior falha possível aqui, porque não parece falha nenhuma.
          */
         if (! $nova) {
-            $escolhida = OperacoesFicticias::porNome((string) $request->input('operacao'));
+            $escolhida = Operacao::where('nome', (string) $request->input('operacao'))->first();
 
-            if ($escolhida !== null && $escolhida['encerrada'] === true) {
+            if ($escolhida !== null && ! in_array($escolhida->situacao, Operacao::ABERTAS, true)) {
                 /*
                  * Recado por `flash.erro`, e não por erro de campo: esta tela não
                  * renderiza o saco de erros de validação, e uma recusa que não
@@ -261,7 +273,7 @@ class DenunciasController extends Controller
                  */
                 return back()->with(
                     'flash.erro',
-                    "A {$escolhida['nome']} está encerrada e não recebe denúncia nova. Escolha uma "
+                    "A {$escolhida->nome} está encerrada e não recebe denúncia nova. Escolha uma "
                     .'operação em andamento, abra uma nova aqui mesmo, ou direcione a denúncia à '
                     .'equipe.',
                 );
@@ -280,12 +292,12 @@ class DenunciasController extends Controller
              * inválida": quem escolheu uma operação que existe na tela de cadastro
              * merece ouvir que ela foi encerrada, não que ela não existe.
              */
-            'operacao' => ['exclude_if:nova,true', 'required', Rule::in(DenunciasFicticias::nomesDeOperacao())],
+            'operacao' => ['exclude_if:nova,true', 'required', Rule::in(Operacao::abertas()->pluck('nome')->all())],
 
             // Operação nova: o mínimo para ela ser reconhecível depois.
             'nome' => ['exclude_unless:nova,true', 'required', 'string', 'min:5', 'max:120'],
-            'area' => ['exclude_unless:nova,true', 'required', Rule::in(EstruturaFicticia::nomesDeArea())],
-            'equipe' => ['exclude_unless:nova,true', 'required', Rule::in(EstruturaFicticia::codigosDeEquipe())],
+            'area' => ['exclude_unless:nova,true', 'required', Rule::in(Estrutura::nomesDeArea())],
+            'equipe' => ['exclude_unless:nova,true', 'required', Rule::in(Estrutura::codigosDeEquipe())],
             'periodo' => ['exclude_unless:nova,true', 'nullable', 'string', 'max:80'],
             'foco' => ['exclude_unless:nova,true', 'nullable', 'string', 'max:300'],
         ], [
@@ -307,7 +319,7 @@ class DenunciasController extends Controller
          * operação em rua, e é ele que a denúncia grava na linha. Com duas do mesmo
          * nome, a anexação aponta para qualquer uma das duas e ninguém sabe qual.
          */
-        if ($nova && OperacoesFicticias::nomeEmUso((string) $dados['nome'])) {
+        if ($nova && Operacao::where('nome', (string) $dados['nome'])->exists()) {
             return back()->with(
                 'flash.erro',
                 'Já existe uma operação com esse nome. Escolha outro nome, ou anexe a denúncia à '
@@ -316,30 +328,16 @@ class DenunciasController extends Controller
         }
 
         $operacao = $nova
-            ? DenunciasFicticias::criarOperacao($dados)['nome']
-            : (string) $dados['operacao'];
+            ? $this->abrirOperacao($dados)
+            : Operacao::where('nome', (string) $dados['operacao'])->firstOrFail();
 
-        $efeito = DenunciasFicticias::anexarAOperacao($ids, $operacao);
+        $efeito = $this->triagem($request)->anexarAOperacao($ids, $operacao);
 
         return back()->with(...$this->recado(
             $efeito,
-            "incluída na {$operacao}",
-            "incluídas na {$operacao}",
+            "incluída na {$operacao->nome}",
+            "incluídas na {$operacao->nome}",
         ));
-    }
-
-    /**
-     * Devolve o módulo ao estado de partida.
-     *
-     * Existe porque é PROTÓTIPO: quem está demonstrando precisa poder recomeçar a
-     * cena com os dois papéis. No sistema real esta rota não existe — denúncia
-     * recebida não se desfaz.
-     */
-    public function reiniciar(): RedirectResponse
-    {
-        DenunciasFicticias::reiniciar();
-
-        return back()->with('flash.sucesso', 'Denúncias devolvidas ao estado de demonstração.');
     }
 
     /**
@@ -354,7 +352,7 @@ class DenunciasController extends Controller
     private function tela(Request $request, string $canal, string $pagina): Response
     {
         /** @var array<string, mixed> $configuracao */
-        $configuracao = (array) config("prototipo_denuncias.canais.{$canal}", []);
+        $configuracao = ['slug' => $canal, ...(array) config("demandas.canais.{$canal}", [])];
 
         $usuario = $request->user();
         $areasDoChefe = self::areasDoChefe($usuario);
@@ -365,37 +363,46 @@ class DenunciasController extends Controller
             // O Chefe de Setor recebe SÓ o que é da área dele — o recorte é feito aqui, e
             // não na tela: filtro de front esconde, não protege, e a lista inteira
             // teria viajado até o navegador de quem não deve vê-la.
-            'denuncias' => $comRecorte
-                ? array_values(array_filter(
-                    DenunciasFicticias::doCanal($canal),
-                    static fn (array $d): bool => is_string($d['area'] ?? null)
-                        && in_array($d['area'], $areasDoChefe, true),
-                ))
-                : DenunciasFicticias::doCanal($canal),
+            'denuncias' => $this->doCanal($canal, $comRecorte ? $areasDoChefe : null),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
             // uma opção que o servidor recusa.
-            'situacoes' => array_values((array) config('prototipo_denuncias.situacoes', [])),
+            'situacoes' => Demanda::SITUACOES,
             // Os desfechos de vistoria — a tela usa para a busca reconhecer
             // "regularizado no local" e "nada encontrado" como faceta. Vem do
             // servidor pela mesma razão dos outros catálogos: escrito na tela,
             // um dia reconheceria um desfecho que já não existe.
-            'desfechos' => array_values((array) config('prototipo_denuncias.desfechos', [])),
+            'desfechos' => Fiscalizacao::DESFECHOS,
             // O catálogo de recomendações na redação EXPLÍCITA. O passo do
             // trâmite traz a CHAVE (é ela que o aplicativo do fiscal grava), e
             // quem decide lê a frase inteira: a pílula curta é do celular, onde
             // não cabe frase; aqui "Sugerir retorno da equipe" não diz QUANDO
             // voltar, e "Voltar ao ponto no vencimento do prazo" diz.
             'recomendacoesDoFiscal' => RecomendacoesDoFiscal::explicitos(),
-            'motivos' => array_values((array) config('prototipo_denuncias.motivos_de_devolucao', [])),
-            'destinos' => array_values((array) config('prototipo_denuncias.destinos_de_retorno', [])),
-            'equipes' => EstruturaFicticia::equipes(),
-            'areas' => EstruturaFicticia::nomesDeArea(),
+            'motivos' => array_values((array) config('demandas.motivos_de_devolucao', [])),
+            'destinos' => array_values((array) config('demandas.destinos_de_retorno', [])),
+            'equipes' => Estrutura::equipes(),
+            'areas' => Estrutura::nomesDeArea(),
             // Quem responde por cada área. É o que o triador precisa ver ANTES de
             // encaminhar: "vai para a Área 5" só diz metade; a outra metade é para
             // quem.
-            'chefias' => EstruturaFicticia::chefiasPorArea(),
-            'operacoes' => DenunciasFicticias::operacoes(),
+            'chefias' => Estrutura::chefiasPorArea(),
+            /*
+             * A PRÉ-TRIAGEM: as propostas de agrupamento que esperam decisão.
+             * É aqui que ela mais importa — o e-Salvador é o canal que repete o
+             * mesmo fato em dez protocolos.
+             *
+             * Vêm com os dois lados inteiros porque aceitar junta casos de
+             * cidadãos diferentes: ninguém deve decidir isso lendo dois
+             * protocolos e um número de confiança.
+             */
+            'sugestoesDeAgrupamento' => SugestaoAgrupamento::pendentes()
+                ->with(['demanda', 'principal'])
+                ->get()
+                ->map(SugestaoParaTela::completa(...))
+                ->all(),
+            'operacoes' => Operacao::abertas()->with(['area', 'equipes', 'bairros'])
+                ->orderBy('nome')->get()->map(OperacaoParaTela::completa(...))->all(),
             // A etapa de quem entrou — é ela que decide o que a tela oferece, e a
             // mesma resposta governa a recusa no servidor.
             'etapas' => self::etapas($usuario),
@@ -412,7 +419,6 @@ class DenunciasController extends Controller
                 'denuncias.direcionamento',
                 'denuncias.todas',
             ]),
-            'alterada' => DenunciasFicticias::alterada(),
         ]);
     }
 
@@ -544,11 +550,11 @@ class DenunciasController extends Controller
         $deFora = [];
 
         foreach ($ids as $id) {
-            $denuncia = DenunciasFicticias::denuncia($id);
-            $area = $denuncia === null ? null : ($denuncia['area'] ?? null);
+            $denuncia = Demanda::with('area')->find($id);
+            $area = $denuncia?->area?->nome;
 
             if (! is_string($area) || ! in_array($area, $minhas, true)) {
-                $deFora[] = $denuncia['protocolo'] ?? "#{$id}";
+                $deFora[] = $denuncia->protocolo ?? "#{$id}";
             }
         }
 
@@ -578,13 +584,13 @@ class DenunciasController extends Controller
     {
         $equipeDaArea = [];
 
-        foreach (EstruturaFicticia::equipes() as $registro) {
+        foreach (Estrutura::equipes() as $registro) {
             $equipeDaArea[(string) $registro['area']] = (string) $registro['equipe'];
         }
 
         foreach ($ids as $id) {
-            $denuncia = DenunciasFicticias::denuncia($id);
-            $area = $denuncia === null ? null : ($denuncia['area'] ?? null);
+            $denuncia = Demanda::with('area')->find($id);
+            $area = $denuncia?->area?->nome;
 
             if (! is_string($area) || ! isset($equipeDaArea[$area])) {
                 continue;
@@ -596,6 +602,93 @@ class DenunciasController extends Controller
         }
 
         return false;
+    }
+
+    // ── O acesso ao banco ───────────────────────────────────────────────────
+
+    /** O serviço que aplica as decisões em lote, assinando com quem está logado. */
+    private function triagem(Request $request): TriagemDeDemandas
+    {
+        return new TriagemDeDemandas($request->user());
+    }
+
+    /**
+     * As denúncias de um canal, já na forma que a tela lê.
+     *
+     * O recorte por área é feito AQUI, e não na tela: filtro de front esconde,
+     * não protege, e a lista inteira teria viajado até o navegador de quem não
+     * deve vê-la. `$areas` nulo significa "sem recorte" — é o caso do
+     * administrador e do coordenador, que precisam do universo.
+     *
+     * As AGREGADAS ficam de fora: quem leva o caso a campo é o registro de
+     * trabalho, e mostrar as dez faria a fila cobrar dez vezes o mesmo fato. Elas
+     * aparecem dentro do registro que as agrupou.
+     *
+     * @param  list<string>|null  $areas
+     * @return list<array<string, mixed>>
+     */
+    private function doCanal(string $canal, ?array $areas): array
+    {
+        $consulta = Demanda::where('canal', $canal)
+            ->deTrabalho()
+            ->with([
+                'tramites.fiscalizacao.recomendacoes',
+                'tramites.fiscalizacao.fotos',
+                'tramites.fiscalizacao.documento',
+                'anexos', 'area', 'equipe', 'operacao', 'agregadas',
+            ])
+            ->orderByDesc('recebida_em')
+            ->orderByDesc('id');
+
+        if ($areas !== null) {
+            /*
+             * Sem área ainda (recém-recebida) não é da área de ninguém — e some
+             * da lista do Chefe de Setor por isso, não por engano: ela está na
+             * mesa do Coordenador, esperando triagem.
+             */
+            $consulta->whereHas('area', static fn ($q) => $q->whereIn('nome', $areas));
+        }
+
+        return $consulta->get()->map(DemandaParaTela::completa(...))->all();
+    }
+
+    /**
+     * Abre a operação que o Chefe de Setor criou no próprio direcionamento.
+     *
+     * É o caso de não haver trabalho planejado para aquela região ainda. Nasce
+     * `Em andamento` porque começa hoje — e a situação é recalculada pela regra
+     * do período como qualquer outra, nunca digitada.
+     *
+     * @param  array<string, mixed>  $dados
+     */
+    private function abrirOperacao(array $dados): Operacao
+    {
+        $area = Area::where('nome', (string) $dados['area'])->firstOrFail();
+        $equipe = Estrutura::equipeModel((string) $dados['equipe']);
+
+        $operacao = Operacao::create([
+            'codigo' => Protocolo::proximo('OP', modelClass: Operacao::class, coluna: 'codigo'),
+            'nome' => (string) $dados['nome'],
+            'area_id' => $area->id,
+            'coordenador_id' => $area->chefe_de_setor_id,
+            'regiao' => $area->regiao,
+            'foco' => $dados['foco'] ?? null,
+            'inicio' => Date::now()->startOfDay(),
+            // Sem data de encerramento: quem a abriu no direcionamento não sabe
+            // quando ela acaba, e inventar um fim faria a tela mostrar prazo onde
+            // não há.
+            'fim' => null,
+            'criada_por_id' => Auth::id(),
+        ]);
+
+        $operacao->situacao = $operacao->situacaoPeloPeriodo();
+        $operacao->save();
+
+        if ($equipe !== null) {
+            $operacao->equipes()->attach($equipe->id);
+        }
+
+        return $operacao->load(['area', 'equipes', 'bairros']);
     }
 
     /**
