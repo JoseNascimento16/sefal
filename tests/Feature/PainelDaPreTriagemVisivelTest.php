@@ -1,16 +1,18 @@
 <?php
 
+use App\Models\Demanda;
 use App\Models\Setor;
 use App\Models\User;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Date;
 
 uses(RefreshDatabase::class);
 
 /*
 |--------------------------------------------------------------------------
-| LEI — quem tria alcança a pré-triagem mesmo sem nenhuma proposta na mesa
+| LEI — a Pré-Triagem é alcançável, mesmo com a mesa vazia
 |--------------------------------------------------------------------------
 |
 | Reproduz um defeito real: o painel só era renderizado quando JÁ HAVIA
@@ -19,8 +21,9 @@ uses(RefreshDatabase::class);
 | funcionalidade ficava inalcançável: sem propostas não havia painel, sem painel
 | não havia botão, e sem botão nunca haveria propostas.
 |
-| O teste olha o PROP que a tela recebe (é ele que decide o que o React
-| renderiza) e a etapa de quem entrou — as duas coisas que a condição usa.
+| O teste olha os PROPS que a tela recebe, porque são eles que decidem o que o
+| React renderiza, e olha onde cada fila vive: a leva crua na pré-triagem, o que
+| já foi entendido na Caixa.
 |
 */
 
@@ -29,27 +32,119 @@ beforeEach(function () {
     $this->seed(PermissoesSetorSeeder::class);
 });
 
-it('entrega o prop da pré-triagem mesmo quando não há nenhuma proposta', function () {
+/** Uma denúncia que chegou por integração e ainda não foi entendida. */
+function chegadaCrua(string $protocolo, string $situacao = Demanda::EM_PRE_TRIAGEM): Demanda
+{
+    return Demanda::create([
+        'protocolo' => $protocolo,
+        'canal' => Demanda::CANAL_E_SALVADOR,
+        'entrada' => Demanda::ENTRADA_INTEGRACAO,
+        'numero_origem' => 'ESL-'.$protocolo,
+        'recebida_em' => Date::now()->subHours(6),
+        'prazo_em' => Date::now()->addDays(10),
+        'assunto' => 'Mesas e cadeiras ocupando a calçada',
+        'relato' => 'O bar botou mesa na calçada inteira e ninguém passa.',
+        'logradouro' => 'Rua Rio Grande do Sul',
+        'numero' => '210',
+        'bairro' => 'Pituba',
+        'situacao' => $situacao,
+    ]);
+}
+
+it('entrega os props da pré-triagem mesmo quando não há nenhuma proposta', function () {
     $coordenador = User::factory()->create(['admin' => false, 'ativo' => true]);
     $coordenador->setores()->syncWithoutDetaching([Setor::where('slug', 'coordenador')->firstOrFail()->id]);
 
     $this->actingAs($coordenador)
-        ->get(route('retaguarda.denuncias.e-salvador.index'))
+        ->get(route('retaguarda.caixa-de-entrada.index'))
         ->assertOk()
         ->assertInertia(fn ($p) => $p
-            // Vazio, e presente: é a ausência da CHAVE que quebraria a tela, e é
-            // o valor vazio que ela precisa saber desenhar.
+            // Vazios, e PRESENTES: é a ausência da chave que quebraria a tela, e
+            // é o valor vazio que ela precisa saber desenhar.
             ->where('sugestoesDeAgrupamento', [])
-            // E quem entrou exerce a triagem — é o que libera o botão da varredura.
-            ->where('etapas', ['triagem']),
+            ->where('preTriagem', []),
         );
 });
 
-it('a Caixa de Entrada também recebe o prop, pelo mesmo motivo', function () {
-    $coordenador = User::factory()->create(['admin' => true, 'ativo' => true]);
+it('separa as duas filas: a leva crua na pré-triagem, o resto na caixa', function () {
+    chegadaCrua('DEN-9001');
+    chegadaCrua('DEN-9002', Demanda::RECEBIDA);
 
-    $this->actingAs($coordenador)
+    $this->actingAs(User::factory()->create(['admin' => true, 'ativo' => true]))
         ->get(route('retaguarda.caixa-de-entrada.index'))
         ->assertOk()
-        ->assertInertia(fn ($p) => $p->where('sugestoesDeAgrupamento', []));
+        ->assertInertia(fn ($p) => $p
+            ->has('preTriagem', 1)
+            ->where('preTriagem.0.protocolo', 'DEN-9001')
+            // A que já foi entendida está na CAIXA, à espera do crivo do
+            // coordenador — e não aparece duas vezes.
+            ->has('demandas', 1)
+            ->where('demandas.0.protocolo', 'DEN-9002'),
+        );
+});
+
+it('liberar passa a denúncia para a caixa e deixa o passo registrado', function () {
+    $crua = chegadaCrua('DEN-9003');
+
+    $this->actingAs(User::factory()->create(['admin' => true, 'ativo' => true]))
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.liberar'), ['demandas' => [$crua->id]])
+        ->assertSessionHas('flash.sucesso');
+
+    expect($crua->fresh()->situacao)->toBe(Demanda::RECEBIDA)
+        // O passo existe: mudar a etapa sem deixar rastro apagaria a memória de
+        // que alguém, em algum momento, olhou aquela leva.
+        ->and($crua->tramites()->where('acao', 'Pré-triagem concluída')->count())->toBe(1);
+});
+
+it('liberar recusa o que não está em pré-triagem', function () {
+    $jaTriada = chegadaCrua('DEN-9004', Demanda::ENCAMINHADA_A_AREA);
+
+    $this->actingAs(User::factory()->create(['admin' => true, 'ativo' => true]))
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.liberar'), ['demandas' => [$jaTriada->id]])
+        ->assertSessionHas('flash.erro');
+
+    // Nada mudou: a etapa dela já passou, e "liberar" de novo a devolveria à
+    // triagem desfazendo um encaminhamento que ninguém pediu para desfazer.
+    expect($jaTriada->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_A_AREA);
+});
+
+it('liberar a principal não apaga as propostas do grupo', function () {
+    // O caso que a varredura elegeu como principal, e uma denúncia proposta a ele.
+    $principal = chegadaCrua('DEN-9010');
+    $agregada = chegadaCrua('DEN-9011');
+
+    $sugestao = App\Models\SugestaoAgrupamento::create([
+        'demanda_id' => $agregada->id,
+        'principal_id' => $principal->id,
+        'confianca' => 0.9,
+        'motivo' => 'mesmo bairro (Pituba); o mesmo logradouro (Rua Rio Grande do Sul)',
+    ]);
+
+    $this->actingAs(User::factory()->create(['admin' => true, 'ativo' => true]))
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.liberar'), ['demandas' => [$principal->id]])
+        ->assertSessionHas('flash.sucesso');
+
+    // A proposta SOBREVIVE: quando a leva nova repete o que já saiu para a rua,
+    // é o caso que saiu que responde pelas novas. Descartar os dois lados fazia
+    // liberar a principal apagar o grupo inteiro da mesa do coordenador.
+    expect($sugestao->fresh()->estado)->toBe(App\Models\SugestaoAgrupamento::SUGERIDA);
+});
+
+it('liberar a agregada descarta a proposta, que ninguém mais poderia decidir', function () {
+    $principal = chegadaCrua('DEN-9020');
+    $agregada = chegadaCrua('DEN-9021');
+
+    $sugestao = App\Models\SugestaoAgrupamento::create([
+        'demanda_id' => $agregada->id,
+        'principal_id' => $principal->id,
+        'confianca' => 0.9,
+        'motivo' => 'mesmo bairro (Pituba); o mesmo logradouro (Rua Rio Grande do Sul)',
+    ]);
+
+    $this->actingAs(User::factory()->create(['admin' => true, 'ativo' => true]))
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.liberar'), ['demandas' => [$agregada->id]]);
+
+    // Agregar só vale para quem ainda está em pré-triagem: mantida, a proposta
+    // seria uma decisão que o coordenador não tem como tomar.
+    expect($sugestao->fresh()->estado)->toBe(App\Models\SugestaoAgrupamento::RECUSADA);
 });

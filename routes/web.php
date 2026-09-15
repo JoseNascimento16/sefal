@@ -211,6 +211,8 @@ Route::middleware(['auth'])->group(function () {
          */
         Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
             ->name('agrupamento.varrer');
+        Route::post('agrupamento/liberar', [AgrupamentoDeDemandasController::class, 'liberar'])
+            ->name('agrupamento.liberar');
         Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
             ->name('agrupamento.aceitar')->whereNumber('sugestao');
         Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])
@@ -262,6 +264,8 @@ Route::middleware(['auth'])->group(function () {
          */
         Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
             ->name('agrupamento.varrer');
+        Route::post('agrupamento/liberar', [AgrupamentoDeDemandasController::class, 'liberar'])
+            ->name('agrupamento.liberar');
         Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
             ->name('agrupamento.aceitar')->whereNumber('sugestao');
         Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])

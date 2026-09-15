@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layers, Search, X } from 'lucide-react';
+import { Check, Inbox, Layers, Search, X } from 'lucide-react';
 
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
@@ -256,6 +256,148 @@ export function PreTriagem({ sugestoes, base, podeDecidir }: Props) {
                 </Sobreposicao>
             )}
 
+        </section>
+    );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * A FILA da pré-triagem — o que chegou e ainda não foi entendido.
+ *
+ * O painel acima responde "estes dois são o mesmo fato?". Esta lista responde
+ * a pergunta anterior: "o que chegou?". Ela existe porque o coordenador precisa
+ * ver a leva crua inteira — inclusive o que a varredura não ligou a ninguém —
+ * antes de dizer que olhou.
+ *
+ * ── Por que LIBERAR é um ato, e não consequência ────────────────────────────
+ *
+ * Seria fácil mandar para a Caixa tudo que a máquina não agrupou. Mas "a regra
+ * não achou repetição" não é o mesmo que "alguém olhou": a varredura só enxerga
+ * o que a regra alcança, e quem conhece a rua é o coordenador. O botão é ele
+ * dizendo que leu.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Uma denúncia como esta fila precisa dela. */
+export interface DemandaEmPreTriagem {
+    id: number;
+    protocolo: string;
+    origem: string;
+    documento_origem: string;
+    assunto: string;
+    descricao: string;
+    endereco: string;
+    bairro: string;
+    recebida_em: string;
+    anonima: boolean;
+    requerente: string | null;
+    agregadas?: { id: number; protocolo: string; assunto: string; requerente: string | null }[];
+}
+
+interface PropsDaFila {
+    demandas: DemandaEmPreTriagem[];
+    base: string;
+    podeDecidir: boolean;
+}
+
+export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
+    const { enviando, ocupado, enviar } = useEnvio();
+
+    function liberar(chave: string, ids: number[]) {
+        enviar(chave, `${base}/agrupamento/liberar`, { demandas: ids });
+    }
+
+    if (demandas.length === 0) {
+        return (
+            <section className="rt-pretriagem">
+                <div className="rt-pretriagem-vazio">
+                    <Inbox size={22} aria-hidden />
+                    <strong>Nada esperando pré-triagem</strong>
+                    <p>
+                        Quando o e-Salvador entregar uma leva nova, ela aparece aqui — crua, do jeito
+                        que os cidadãos escreveram — para você dizer quantos fatos ela contém.
+                    </p>
+                </div>
+            </section>
+        );
+    }
+
+    return (
+        <section className="rt-pretriagem">
+            <header className="rt-pretriagem-topo">
+                <div>
+                    <h2>
+                        <Inbox size={17} aria-hidden /> Chegaram por integração
+                    </h2>
+                    <p>
+                        {demandas.length === 1
+                            ? '1 denúncia aguarda pré-triagem.'
+                            : `${demandas.length} denúncias aguardam pré-triagem.`}{' '}
+                        Junte o que for o mesmo fato e depois libere para a Caixa — é lá que elas
+                        passam pelo seu crivo de encaminhar ou devolver.
+                    </p>
+                </div>
+
+                {podeDecidir && (
+                    <BotaoAcao
+                        icone={<Check size={16} aria-hidden />}
+                        carregando={enviando === 'liberar-todas'}
+                        ocupado={ocupado}
+                        rotuloCarregando="Liberando…"
+                        onClick={() => liberar('liberar-todas', demandas.map((d) => d.id))}
+                    >
+                        Liberar todas para a Caixa
+                    </BotaoAcao>
+                )}
+            </header>
+
+            <ul className="rt-pretriagem-fila">
+                {demandas.map((demanda) => (
+                    <li key={demanda.id}>
+                        <div className="rt-pretriagem-lado">
+                            <div className="rt-pretriagem-cabeca">
+                                <strong>{demanda.protocolo}</strong>
+                                <span className="selo selo-neutro">{demanda.origem}</span>
+                                {demanda.documento_origem && (
+                                    <span className="rt-pretriagem-confianca">
+                                        nº de origem {demanda.documento_origem}
+                                    </span>
+                                )}
+                            </div>
+                            <span>{demanda.assunto}</span>
+                            <small>
+                                {demanda.endereco || demanda.bairro} · recebida em{' '}
+                                {dataBR(demanda.recebida_em)} ·{' '}
+                                {demanda.anonima ? 'Anônima' : demanda.requerente}
+                            </small>
+                            <p className="rt-pretriagem-relato">{demanda.descricao}</p>
+
+                            {/*
+                              * O resultado da consolidação aparece NA PRÓPRIA linha: é o
+                              * que muda o peso da decisão de liberar — este registro não
+                              * vai mais responder por um cidadão, e sim por vários.
+                              */}
+                            {(demanda.agregadas?.length ?? 0) > 0 && (
+                                <p className="rt-pretriagem-motivo">
+                                    Responde também por{' '}
+                                    {demanda.agregadas!.map((a) => a.protocolo).join(', ')}.
+                                </p>
+                            )}
+                        </div>
+
+                        {podeDecidir && (
+                            <div className="rt-pretriagem-acoes">
+                                <BotaoAcao
+                                    carregando={enviando === `liberar-${demanda.id}`}
+                                    ocupado={ocupado}
+                                    rotuloCarregando="Liberando…"
+                                    onClick={() => liberar(`liberar-${demanda.id}`, [demanda.id])}
+                                >
+                                    Liberar para a Caixa
+                                </BotaoAcao>
+                            </div>
+                        )}
+                    </li>
+                ))}
+            </ul>
         </section>
     );
 }

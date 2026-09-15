@@ -55,6 +55,13 @@ export interface Demanda {
     justificativa: string | null;
     destino: string | null;
     tramites: Tramite[];
+    /**
+     * As denúncias que este registro passou a responder.
+     *
+     * Só vem preenchida depois da pré-triagem: é o resultado dela. Quando tem
+     * conteúdo, a resposta da fiscalização vale para todas elas.
+     */
+    agregadas?: { id: number; protocolo: string; assunto: string; requerente: string | null }[];
 }
 
 /** Uma equipe como a Caixa de Entrada precisa dela para escolher o destino. */

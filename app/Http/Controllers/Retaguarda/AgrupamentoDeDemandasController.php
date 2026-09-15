@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
 use App\Models\Demanda;
+use App\Models\DemandaTramite;
 use App\Models\SugestaoAgrupamento;
 use App\Support\Agrupamento\AnalisadorPorRegra;
 use App\Support\Agrupamento\VarreduraDeAgrupamento;
@@ -220,6 +221,81 @@ class AgrupamentoDeDemandasController extends Controller
             'flash.sucesso',
             "{$demanda->protocolo} voltou para a triagem, com o motivo registrado.",
         );
+    }
+
+    /**
+     * LIBERA a denúncia da pré-triagem: ela passa a ser um caso entendido.
+     *
+     * É o fim da etapa, e o começo da outra. Enquanto está em pré-triagem, a
+     * pergunta é "quantos fatos isto é?"; depois dela, a pergunta é "o que se faz
+     * com este fato?" — e essa é a da Caixa, onde o coordenador encaminha ou
+     * devolve. São duas decisões diferentes, e misturá-las foi o que fez a leva
+     * crua do e-Salvador chegar à mesa como dez casos.
+     *
+     * ── Por que o ato é explícito, e não automático ─────────────────────────
+     *
+     * Nada impediria o sistema de mandar para a Caixa tudo que a varredura não
+     * ligou a ninguém. Mas "a máquina não achou repetição" não é o mesmo que
+     * "alguém olhou": a varredura só enxerga o que a regra alcança, e é o
+     * coordenador que conhece a rua. Liberar é ele dizendo que olhou.
+     *
+     * ── Liberar NÃO desfaz agrupamento ──────────────────────────────────────
+     *
+     * As agregadas seguem penduradas na principal e vão junto com ela — não
+     * ganham vida própria ao passar. Por isso o filtro é `emPreTriagem`, que já
+     * exclui quem virou agregada (ela está em `Agrupada`).
+     */
+    public function liberar(Request $request): RedirectResponse
+    {
+        $dados = $request->validate([
+            'demandas' => ['required', 'array', 'min:1'],
+            'demandas.*' => ['integer'],
+        ], [
+            'demandas.required' => 'Escolha ao menos uma denúncia para liberar.',
+        ]);
+
+        $demandas = Demanda::emPreTriagem()
+            ->whereIn('id', $dados['demandas'])
+            ->get();
+
+        if ($demandas->isEmpty()) {
+            return back()->with('flash.erro', 'Nenhuma dessas denúncias está em pré-triagem. Recarregue a tela.');
+        }
+
+        foreach ($demandas as $demanda) {
+            $demanda->registrar(
+                acao: 'Pré-triagem concluída',
+                situacao: Demanda::RECEBIDA,
+                papel: DemandaTramite::PAPEL_COORDENADOR,
+                autor: $request->user(),
+                detalhe: $demanda->agregadas()->count() > 0
+                    ? 'Caso consolidado: responde também pelas denúncias agregadas a ele.'
+                    : 'Sem repetição a consolidar. Segue para a triagem do coordenador.',
+            );
+        }
+
+        /*
+         * Só caem as propostas em que a liberada era a AGREGADA.
+         *
+         * Ela não pode mais ser agrupada — agregar só vale para quem ainda está
+         * em pré-triagem —, então a proposta virou uma decisão que ninguém pode
+         * tomar. Já as propostas em que ela é a PRINCIPAL continuam de pé, e é
+         * assim que tem de ser: quando a leva nova repete o que já está em campo,
+         * é o caso em campo que responde pelas novas. Descartar os dois lados
+         * fazia liberar a principal apagar o grupo inteiro — o coordenador
+         * clicava em "liberar" e as seis propostas sumiam da mesa dele.
+         */
+        SugestaoAgrupamento::where('estado', SugestaoAgrupamento::SUGERIDA)
+            ->whereIn('demanda_id', $demandas->pluck('id'))
+            ->update([
+                'estado' => SugestaoAgrupamento::RECUSADA,
+                'observacao' => 'Descartada: a denúncia saiu da pré-triagem sem ser agrupada.',
+                'decidida_em' => now(),
+            ]);
+
+        return back()->with('flash.sucesso', $demandas->count() === 1
+            ? "{$demandas->first()->protocolo} passou para a Caixa, à espera do encaminhamento."
+            : "{$demandas->count()} denúncias passaram para a Caixa, à espera do encaminhamento.");
     }
 
     /**
