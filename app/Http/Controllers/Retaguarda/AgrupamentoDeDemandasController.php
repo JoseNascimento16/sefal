@@ -174,6 +174,93 @@ class AgrupamentoDeDemandasController extends Controller
     }
 
     /**
+     * JUNTA à mão as que o coordenador escolheu — o caminho para o que a regra
+     * não achou.
+     *
+     * ## Por que ele precisa existir
+     *
+     * A varredura enxerga o que a regra alcança: mesmo bairro, mesma rua,
+     * palavras em comum, o nome da fachada. Ela não enxerga "é aquele camelô da
+     * banca azul que todo mundo descreve de um jeito diferente", nem o caso em
+     * que um cidadão escreveu o nome da rua errado. Sem uma porta manual, esses
+     * casos ficam sem saída nenhuma: o coordenador vê que são o mesmo fato e não
+     * tem o que clicar — e acaba mandando a equipe duas vezes ao mesmo ponto,
+     * que é exatamente o que a pré-triagem existe para evitar.
+     *
+     * A régua aqui é mais baixa que a da máquina, e de propósito: quem conhece a
+     * rua é ele. O que o sistema exige em troca é o MOTIVO por escrito, porque é
+     * o texto que o cidadão encontra no trâmite do protocolo dele.
+     *
+     * ## Por que N de uma vez, e não uma a uma
+     *
+     * Dez relatos do mesmo ponto é o caso comum, não a exceção. Juntar um por um
+     * faria o coordenador escrever o mesmo motivo dez vezes — e, na décima, ele
+     * escreveria "idem".
+     */
+    public function juntar(Request $request): RedirectResponse
+    {
+        $dados = $request->validate([
+            'demandas' => ['required', 'array', 'min:2'],
+            'demandas.*' => ['integer'],
+            'principal_id' => ['required', 'integer'],
+            'motivo' => ['required', 'string', 'min:10', 'max:500'],
+        ], [
+            'demandas.min' => 'Escolha ao menos duas denúncias para juntar.',
+            'principal_id.required' => 'Escolha o registro que vai levar o caso a campo.',
+            'motivo.required' => 'Escreva por que são o mesmo caso: é o que o cidadão vai ler no trâmite da denúncia dele.',
+            'motivo.min' => 'O motivo está curto demais para explicar o agrupamento a quem ler depois.',
+        ]);
+
+        /*
+         * A principal tem de estar ENTRE as escolhidas. Sem essa checagem daria
+         * para pendurar a leva num registro que o coordenador não estava olhando
+         * — e ele não teria como perceber.
+         */
+        if (! in_array($dados['principal_id'], $dados['demandas'], true)) {
+            return back()->with('flash.erro', 'O registro que vai a campo precisa estar entre as denúncias escolhidas.');
+        }
+
+        $principal = Demanda::find($dados['principal_id']);
+
+        if ($principal === null) {
+            return back()->with('flash.erro', 'O registro escolhido não existe mais. Recarregue a tela.');
+        }
+
+        $agregadas = Demanda::whereIn('id', $dados['demandas'])
+            ->where('id', '!=', $principal->id)
+            ->get();
+
+        $juntadas = 0;
+        $recusadas = [];
+
+        foreach ($agregadas as $agregada) {
+            try {
+                $agregada->agruparEm($principal, $request->user(), $dados['motivo']);
+                $this->descartarPendentesDe($agregada);
+                $juntadas++;
+            } catch (InvalidArgumentException $e) {
+                // A recusa do model vem com o motivo escrito. Guardada e dita no
+                // fim: parar na primeira deixaria o coordenador sem saber quais
+                // das dez entraram.
+                $recusadas[] = $agregada->protocolo.' — '.$e->getMessage();
+            }
+        }
+
+        if ($juntadas === 0) {
+            return back()->with('flash.erro', 'Nenhuma denúncia foi juntada. '.implode(' ', $recusadas));
+        }
+
+        $frase = $juntadas === 1
+            ? "1 denúncia passou a ser respondida por {$principal->protocolo}."
+            : "{$juntadas} denúncias passaram a ser respondidas por {$principal->protocolo}.";
+
+        return back()->with(
+            'flash.sucesso',
+            $recusadas === [] ? $frase : $frase.' Ficaram de fora: '.implode(' ', $recusadas),
+        );
+    }
+
+    /**
      * AGRUPA à mão — o coordenador conhece a rua melhor que qualquer regra.
      */
     public function agrupar(Request $request, Demanda $demanda): RedirectResponse

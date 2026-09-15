@@ -4005,6 +4005,67 @@ button.rt-chip-vidro:focus-visible {
     color: var(--sm-texto);
 }
 
+/*
+ * A barra de seleção da junção à mão. Fica no topo da fila, colada no cabeçalho,
+ * porque é onde o olho volta depois de marcar — e some quando não há seleção,
+ * para não ocupar espaço prometendo uma ação indisponível.
+ */
+.rt-pretriagem-selecao {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--sm-borda-forte);
+    border-radius: 8px;
+    background: var(--sm-fundo-suave, rgb(0 0 0 / 3%));
+    font-size: 12.5px;
+}
+
+.rt-pretriagem-marca {
+    display: inline-flex;
+    align-items: center;
+}
+
+.rt-pretriagem-marca input {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+/* A escolha de QUAL vai a campo: cada opção mostra o que distingue uma da outra. */
+.rt-pretriagem-escolha {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rt-pretriagem-escolha > li > label {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sm-borda);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.rt-pretriagem-escolha > li:last-child > label {
+    border-bottom: 0;
+}
+
+.rt-pretriagem-escolha input {
+    margin-top: 3px;
+}
+
+.rt-pretriagem-escolha small {
+    display: block;
+    color: var(--sm-texto-fraco);
+    font-size: 12px;
+}
+
 @media (max-width: 720px) {
     .rt-pretriagem-acoes {
         width: 100%;
