@@ -58,6 +58,16 @@ class DemandaParaTela
 
             // O que foi relatado.
             'assunto' => $demanda->assunto,
+            /*
+             * QUEM foi denunciado. Vai junto do assunto porque é a informação
+             * que decide a pré-triagem: dois relatos de "mesas na calçada" na
+             * mesma rua podem ser o mesmo bar ou dois estabelecimentos a
+             * cinquenta metros um do outro, e o que separa os casos é o nome na
+             * fachada — não o assunto, que é sempre o mesmo.
+             */
+            'estabelecimento' => (string) ($demanda->estabelecimento ?? ''),
+            'denunciado' => (string) ($demanda->denunciado ?? ''),
+            'documento_denunciado' => $demanda->documento_denunciado,
             'relato' => (string) ($demanda->relato ?? ''),
             'descricao' => (string) ($demanda->relato ?? ''),
 

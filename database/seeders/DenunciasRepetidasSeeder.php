@@ -44,38 +44,45 @@ class DenunciasRepetidasSeeder extends Seeder
     /**
      * O mesmo bar, visto por seis pessoas.
      *
-     * @var list<array{0: string, 1: string, 2: string, 3: string, 4: int, 5: bool}>
+     * ── Por que o nome de FACHADA varia entre os relatos ────────────────────
+     *
+     * Cinco escrevem "Bar do Zeca" e um escreve "Bar do Zéca" — porque é assim
+     * que chega: cada cidadão escreve o que leu, de memória, sem conferir grafia.
+     * A demonstração seria fácil demais se todos digitassem igual, e a régua do
+     * agrupamento precisa ser julgada pelo caso real.
+     *
+     * @var list<array{0: string, 1: string, 2: string, 3: string, 4: int, 5: bool, 6: string, 7: string}>
      */
     private const RELATOS = [
         [
             'e-salvador', 'Mesas e cadeiras ocupando a calçada',
             'O bar do térreo espalhou mesas por toda a largura da calçada. Quem passa com carrinho de bebê tem de descer para a rua.',
-            '212', 9, false,
+            '212', 9, false, 'Bar do Zeca', 'José Carlos Andrade Lima',
         ],
         [
             'salvador-digital', 'Bar ocupando o passeio público',
             'Munícipe informa que o estabelecimento coloca mesas e cadeiras no passeio todas as noites, de quinta a domingo, e que já reclamou no local sem sucesso.',
-            '214', 26, true,
+            '214', 26, true, 'Bar do Zeca', '',
         ],
         [
             'e-salvador', 'Cadeiras impedindo a passagem de pedestres',
             'Não sobra espaço para andar na calçada por causa das cadeiras do bar. À noite fica pior, com gente em pé ocupando o resto.',
-            '218', 41, false,
+            '218', 41, false, 'Bar do Zéca', '',
         ],
         [
             'salvador-digital', 'Mesas na calçada atrapalhando quem anda',
             'Denunciante relata mesas na calçada em frente ao bar, obrigando pedestres a caminhar pela via, em rua de movimento.',
-            '212', 58, true,
+            '212', 58, true, 'Bar do Zeca', '',
         ],
         [
             'e-salvador', 'Ocupação irregular da calçada por estabelecimento',
             'O bar avançou com mesas sobre a calçada e sobre a faixa de estacionamento. Cadeirante não consegue passar.',
-            '210', 73, false,
+            '210', 73, false, 'Bar do Zeca', 'José Carlos Andrade Lima',
         ],
         [
             'e-salvador', 'Mesas do bar bloqueando a calçada',
             'Todo fim de semana as mesas tomam a calçada inteira. Já vi idoso descendo para a rua para conseguir passar.',
-            '216', 95, false,
+            '216', 95, false, 'Bar do Zeca', 'José Carlos Andrade Lima',
         ],
     ];
 
@@ -89,7 +96,7 @@ class DenunciasRepetidasSeeder extends Seeder
     private const ARMADILHA = [
         'e-salvador', 'Mesas na calçada em frente ao restaurante',
         'O restaurante da esquina põe mesas na calçada no horário do almoço e não sobra passagem.',
-        '640', 33, false,
+        '640', 33, false, 'Restaurante Maré Alta', 'Maré Alta Refeições Ltda.',
     ];
 
     public function run(): void
@@ -114,7 +121,7 @@ class DenunciasRepetidasSeeder extends Seeder
      */
     private function criar(array $relato, string $rua, string $bairro, ?int $areaId, int $sequencia, float $lat, float $lng): void
     {
-        [$canal, $assunto, $texto, $numero, $horas, $anonima] = $relato;
+        [$canal, $assunto, $texto, $numero, $horas, $anonima, $estabelecimento, $denunciado] = $relato;
 
         $recebida = Date::now()->subHours($horas);
         $prefixo = $canal === Demanda::CANAL_E_SALVADOR ? 'ESL' : '156';
@@ -131,6 +138,10 @@ class DenunciasRepetidasSeeder extends Seeder
                 'requerente' => $anonima ? null : $this->nome($sequencia),
                 'assunto' => $assunto,
                 'relato' => $texto,
+                // O nome da FACHADA é o que o cidadão escreve porque é o que ele
+                // leu na rua; o responsável, quase sempre, ninguém sabe.
+                'estabelecimento' => $estabelecimento,
+                'denunciado' => $denunciado === '' ? null : $denunciado,
                 'logradouro' => $rua,
                 'numero' => $numero,
                 'bairro' => $bairro,

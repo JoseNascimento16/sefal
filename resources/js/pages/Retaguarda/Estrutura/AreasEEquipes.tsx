@@ -308,13 +308,19 @@ export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando o módulo saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco, e
+              * com trâmite. O que continua de mentira são os DADOS, e é disso que
+              * quem avalia precisa ser avisado antes de tirar conclusão deles.
+              */}
             <SeloPrototipo>
                 A estrutura vem transcrita do documento{' '}
                 <strong>"Áreas das equipes — 17/04/2026"</strong>: as áreas, as
-                equipes, os encarregados e os blocos de bairros são os REAIS. A
-                lista de fiscais de cada equipe é de exemplo, e{' '}
-                <strong>nada é gravado</strong>: o que você alterar vale só nesta
-                sessão do navegador.
+                equipes, os encarregados e os blocos de bairros são os{' '}
+                <strong>REAIS</strong>. Só a lista de fiscais de cada equipe é de
+                exemplo. O que você alterar{' '}
+                <strong>é gravado de verdade</strong>.
             </SeloPrototipo>
 
             <div className="card-premium">

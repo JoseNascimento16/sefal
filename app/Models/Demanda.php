@@ -42,6 +42,9 @@ use InvalidArgumentException;
  * @property string|null $telefone
  * @property string $assunto
  * @property string|null $relato
+ * @property string|null $estabelecimento
+ * @property string|null $denunciado
+ * @property string|null $documento_denunciado
  * @property string|null $logradouro
  * @property string|null $numero
  * @property string|null $referencia
@@ -57,7 +60,7 @@ use InvalidArgumentException;
 #[Fillable([
     'protocolo', 'canal', 'entrada', 'numero_origem', 'recebida_em', 'prazo_em',
     'anonima', 'requerente', 'documento', 'email', 'telefone',
-    'assunto', 'relato',
+    'assunto', 'relato', 'estabelecimento', 'denunciado', 'documento_denunciado',
     'logradouro', 'numero', 'referencia', 'bairro', 'endereco_impreciso', 'latitude', 'longitude',
     'situacao', 'area_id', 'equipe_id', 'operacao_id', 'criada_por_id', 'concluida_em',
     'agrupada_em_id', 'agrupada_em',
@@ -215,6 +218,19 @@ class Demanda extends Model
     {
         $normalizado = Documento::normalizar($valor);
         $this->attributes['documento'] = $normalizado === '' ? null : $normalizado;
+    }
+
+    /**
+     * Documento de QUEM FOI DENUNCIADO, pela mesma porta do requerente.
+     *
+     * Duas colunas com o mesmo significado precisam do mesmo tratamento: se só
+     * uma normaliza, o mesmo CNPJ vira dois registros conforme quem digitou usou
+     * máscara — e a busca por documento deixa de achar metade dos casos.
+     */
+    protected function setDocumentoDenunciadoAttribute(?string $valor): void
+    {
+        $normalizado = Documento::normalizar($valor);
+        $this->attributes['documento_denunciado'] = $normalizado === '' ? null : $normalizado;
     }
 
     // ── Relações ────────────────────────────────────────────────────────────

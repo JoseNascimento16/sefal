@@ -810,11 +810,17 @@ export default function Fiscalizacoes({
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando o módulo saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco, e
+              * com trâmite. O que continua de mentira são os DADOS, e é disso que
+              * quem avalia precisa ser avisado antes de tirar conclusão deles.
+              */}
             <SeloPrototipo>
-                Esta tela é a proposta das duas abas, para conferência da forma antes
-                de virar sistema. Os registros são de exemplo e{' '}
-                <strong>nada é gravado</strong>: a ciência e o pedido de nova
-                vistoria valem só nesta sessão do navegador.
+                Ambiente de demonstração: as fiscalizações já registradas são{' '}
+                <strong>exemplos</strong>, não vistorias reais. A ciência e o pedido
+                de nova vistoria que você registrar{' '}
+                <strong>são gravados de verdade</strong> e ficam no histórico.
             </SeloPrototipo>
 
             {/* O aviso que separa esta tela das duas portas de ENTRADA. Fica em

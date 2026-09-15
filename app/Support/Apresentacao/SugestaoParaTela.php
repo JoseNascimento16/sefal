@@ -53,6 +53,12 @@ class SugestaoParaTela
             'numero_origem' => (string) ($demanda->numero_origem ?? ''),
             'canal' => DemandaParaTela::rotuloDoCanal($demanda->canal),
             'assunto' => $demanda->assunto,
+            // QUEM foi denunciado: é o que separa "o mesmo bar" de "dois
+            // estabelecimentos na mesma rua", e é a pergunta que a pré-triagem
+            // responde. Sem isso o coordenador decide pelo endereço, que o
+            // cidadão escreve de memória.
+            'estabelecimento' => (string) ($demanda->estabelecimento ?? ''),
+            'denunciado' => (string) ($demanda->denunciado ?? ''),
             'relato' => (string) ($demanda->relato ?? ''),
             'endereco' => trim(((string) $demanda->logradouro).' '.((string) $demanda->numero)),
             'referencia' => (string) ($demanda->referencia ?? ''),

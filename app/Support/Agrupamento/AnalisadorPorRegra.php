@@ -5,6 +5,7 @@ namespace App\Support\Agrupamento;
 use App\Models\Area;
 use App\Models\Demanda;
 use App\Models\SugestaoAgrupamento;
+use App\Support\Documento;
 use App\Support\Texto;
 use Illuminate\Support\Collection;
 
@@ -148,6 +149,35 @@ class AnalisadorPorRegra implements Analisador
             if ($numeroA > 0 && $numeroB > 0 && abs($numeroA - $numeroB) <= 50) {
                 $confianca += 0.10;
                 $razoes[] = 'números a poucos metros ('.$a->numero.' e '.$b->numero.')';
+            }
+        }
+
+        /*
+         * ── Quem foi denunciado ──────────────────────────────────────────────
+         *
+         * O sinal MAIS FORTE que existe aqui, e de longe. Endereço o cidadão
+         * escreve de memória e assunto o comércio de rua repete a cidade
+         * inteira; o nome da fachada, não — quando duas pessoas escrevem "Bar do
+         * Zeca", é o mesmo bar. Por isso pesa mais que o logradouro: é ele que
+         * separa o mesmo estabelecimento de dois vizinhos na mesma rua, que é
+         * exatamente o erro que a pré-triagem existe para não cometer.
+         *
+         * O documento, quando os dois lados o têm, é melhor ainda: é identidade,
+         * não semelhança. Aí a confiança vai ao teto e a frase diz por quê.
+         */
+        $docA = (string) $a->documento_denunciado;
+        $docB = (string) $b->documento_denunciado;
+
+        if ($docA !== '' && $docA === $docB) {
+            $confianca += 0.60;
+            $razoes[] = 'o MESMO documento do denunciado ('.Documento::formatar($docA).')';
+        } else {
+            $fachadaA = Texto::chave((string) $a->estabelecimento);
+            $fachadaB = Texto::chave((string) $b->estabelecimento);
+
+            if ($fachadaA !== '' && $fachadaA === $fachadaB) {
+                $confianca += 0.45;
+                $razoes[] = 'o mesmo estabelecimento ('.$a->estabelecimento.')';
             }
         }
 

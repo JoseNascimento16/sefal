@@ -329,3 +329,46 @@ it('não propõe agregar o que já saiu da pré-triagem — mas aceita que a pri
         ->and($pendentes->first()->principal_id)->toBe($emCampo->id)
         ->and($jaTriada->fresh()->situacao)->toBe(Demanda::DIRECIONADA_A_EQUIPE);
 });
+
+it('o mesmo estabelecimento pesa mais que a mesma rua, e o documento pesa mais ainda', function () {
+    // Mesma rua, mesmo assunto — e o nome da FACHADA diferente.
+    $bar = relato('Mesas na calçada', '212', 40, ['estabelecimento' => 'Bar do Zeca']);
+    relato('Mesas na calçada', '640', 10, ['estabelecimento' => 'Restaurante Maré Alta']);
+
+    // E uma terceira, do mesmo bar, mas com o número do imóvel bem distante.
+    $mesmoBar = relato('Cadeiras na via', '980', 5, ['estabelecimento' => 'Bar do Zeca']);
+
+    varrer();
+
+    $doMesmoBar = SugestaoAgrupamento::where('demanda_id', $mesmoBar->id)->first();
+
+    // O nome da fachada é o sinal mais forte: o endereço o cidadão escreve de
+    // memória e o assunto o comércio de rua repete a cidade inteira.
+    expect($doMesmoBar)->not->toBeNull()
+        ->and($doMesmoBar->principal_id)->toBe($bar->id)
+        ->and($doMesmoBar->motivo)->toContain('o mesmo estabelecimento (Bar do Zeca)');
+});
+
+it('o documento do denunciado é identidade, e a frase diz isso', function () {
+    $antiga = relato('Mesas na calçada', '212', 40, [
+        'estabelecimento' => 'Bar do Zeca',
+        'documento_denunciado' => '11.222.333/0001-81',
+    ]);
+
+    // Nome de fachada escrito de outro jeito — mas o MESMO documento.
+    $nova = relato('Cadeiras atrapalhando', '900', 5, [
+        'estabelecimento' => 'Zeca Bar e Petiscaria',
+        'documento_denunciado' => '11222333000181',
+    ]);
+
+    varrer();
+
+    $sugestao = SugestaoAgrupamento::where('demanda_id', $nova->id)->firstOrFail();
+
+    // Documento é identidade, não semelhança — e é guardado normalizado dos dois
+    // lados, senão a mesma empresa vira dois registros conforme quem digitou usou
+    // máscara.
+    expect($sugestao->principal_id)->toBe($antiga->id)
+        ->and($sugestao->motivo)->toContain('o MESMO documento do denunciado')
+        ->and($sugestao->confianca)->toBe(1.0);
+});

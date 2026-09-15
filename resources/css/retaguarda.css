@@ -3951,6 +3951,60 @@ button.rt-chip-vidro:focus-visible {
     line-height: 1.5;
 }
 
+/*
+ * QUEM foi denunciado. Ganha linha própria e um ícone porque é o dado que decide
+ * a pré-triagem — perdido dentro do relato, o coordenador acaba decidindo pelo
+ * endereço, que o cidadão escreve de memória.
+ */
+.rt-pretriagem-alvo {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 2px;
+    color: var(--sm-texto);
+    font-size: 12.5px;
+}
+
+.rt-pretriagem-alvo strong {
+    font-weight: 600;
+}
+
+/* A AUSÊNCIA também informa: decidir sem saber quem é já é uma escolha. */
+.rt-pretriagem-sem-alvo {
+    margin-top: 2px;
+    color: var(--sm-texto-fraco);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* As denúncias que este registro passou a responder — e a porta de volta. */
+.rt-pretriagem-agregadas {
+    margin-top: 8px;
+    padding-left: 12px;
+    border-left: 2px solid var(--sm-borda-forte);
+}
+
+.rt-pretriagem-agregadas ul {
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rt-pretriagem-agregadas > ul > li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    color: var(--sm-texto-fraco);
+    font-size: 12.5px;
+}
+
+.rt-pretriagem-agregadas > ul > li strong {
+    color: var(--sm-texto);
+}
+
 @media (max-width: 720px) {
     .rt-pretriagem-acoes {
         width: 100%;
