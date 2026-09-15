@@ -1095,12 +1095,18 @@ export function PainelDeDenuncias({
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando o módulo saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco, e
+              * com trâmite. O que continua de mentira são os DADOS, e é disso que
+              * quem avalia precisa ser avisado antes de tirar conclusão deles.
+              */}
             <SeloPrototipo>
-                Esta tela é a proposta do módulo, para conferência da forma antes
-                de virar sistema. As denúncias são de exemplo, a integração{' '}
-                <strong>não existe ainda</strong> e{' '}
-                <strong>nada é gravado</strong>: o que você encaminhar, direcionar
-                ou devolver vale só nesta sessão do navegador.
+                Ambiente de demonstração: as denúncias são <strong>exemplos</strong>,
+                não casos reais, e a integração com o canal{' '}
+                <strong>não existe ainda</strong> — nada entra sozinho. O que você
+                encaminhar, direcionar ou devolver{' '}
+                <strong>é gravado de verdade</strong> e fica no trâmite da denúncia.
             </SeloPrototipo>
 
             {/* De ONDE a denúncia veio (integração, papel, balcão) não interessa a

@@ -3,9 +3,12 @@
 namespace App\Console\Commands;
 
 use App\Models\Demanda;
+use App\Models\Setor;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemonstracaoSeeder;
+use Database\Seeders\EstruturaSeeder;
+use Database\Seeders\SetoresSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
@@ -37,7 +40,7 @@ use Illuminate\Support\Facades\Artisan;
 class PrepararDemonstracao extends Command
 {
     protected $signature = 'sefal:preparar-demonstracao
-                            {--senha= : Senha do administrador de demonstração (padrão: sefal123)}';
+                            {--senha= : Só para uma conta SEM senha; nunca troca a de quem já tem}';
 
     protected $description = 'Semeia sistema e demonstração num banco vazio, sem apagar nada do que já existe.';
 
@@ -49,9 +52,30 @@ class PrepararDemonstracao extends Command
             return self::FAILURE;
         }
 
-        // O sistema é semeado SEMPRE: setores, permissões, listas de escolha e a
-        // estrutura de áreas e equipes são idempotentes e é o que faz o login e a
-        // guarda de acesso existirem. Sem isso não há nem por onde entrar.
+        /*
+         * Os SETORES primeiro, sozinhos: as contas precisam deles para receber o
+         * papel, e é a única dependência que elas têm.
+         */
+        Artisan::call('db:seed', ['--class' => SetoresSeeder::class, '--force' => true]);
+
+        /*
+         * As contas vêm ANTES do resto, e por dois motivos.
+         *
+         * O primeiro é ordem: o {@see \Database\Seeders\EstruturaSeeder} também
+         * cria essas matrículas, com a senha igual à própria matrícula. Se ele
+         * chegar antes, a conta nasce com uma senha que ninguém combinou — e,
+         * como este comando nunca sobrescreve senha, é essa que fica.
+         *
+         * O segundo é o desvio mais abaixo: numa base que já tem demandas, o
+         * preparo para por ali. Deixar as contas depois dele significava que,
+         * quanto mais pronta a demonstração, menos chance de existir porta — que
+         * foi exatamente o que aconteceu.
+         */
+        $this->garantirContasDaDemonstracao();
+
+        // O resto do sistema: permissões, listas de escolha e a estrutura de
+        // áreas e equipes. Todos idempotentes, e é o que faz a guarda de acesso
+        // existir.
         $this->components->task('Estrutura do sistema', function () {
             Artisan::call('db:seed', ['--class' => DatabaseSeeder::class, '--force' => true]);
 
@@ -73,8 +97,6 @@ class PrepararDemonstracao extends Command
             return true;
         });
 
-        $this->garantirAdministrador((string) ($this->option('senha') ?: 'sefal123'));
-
         $this->components->info(sprintf(
             '%d demandas na base, %d delas aguardando pré-triagem.',
             Demanda::count(),
@@ -85,33 +107,81 @@ class PrepararDemonstracao extends Command
     }
 
     /**
-     * Uma porta de entrada conhecida.
+     * As contas pelas quais se entra na demonstração.
      *
-     * Numa demonstração, banco íntegro e ninguém conseguindo entrar dá no mesmo
-     * que banco vazio. A senha é parâmetro para o ambiente decidir — e o padrão é
-     * público de propósito: é uma demo, não um sistema com dado de gente real.
+     * ## ⚠️ A SENHA DE QUEM JÁ TEM CONTA NUNCA É TOCADA
+     *
+     * Esta regra custou caro para ser aprendida. Uma versão deste comando repunha
+     * a senha a cada boot "para a demonstração ser previsível", e o efeito foi o
+     * contrário: quem tinha definido as próprias senhas ficou do lado de fora, e
+     * descobriu isso tentando entrar. O mesmo aviso já estava escrito no
+     * {@see EstruturaSeeder}, que usa `firstOrCreate` por esse
+     * motivo — e foi ignorado aqui.
+     *
+     * Senha é decisão de quem administra, não do boot. O comando só PREENCHE o
+     * que está vazio: conta nova ganha uma senha inicial, conta existente fica
+     * exatamente como está. Trocar a senha de alguém é ato deliberado e tem
+     * comando próprio: `sefal:setar-senha`.
+     *
+     * ## Por que existe um COORDENADOR na lista
+     *
+     * A pré-triagem e a caixa são a mesa DELE. Demonstrá-las como administrador
+     * mostra a tela, mas não o papel: o administrador enxerga tudo, então não se
+     * vê o recorte que o coordenador de verdade tem.
+     *
+     * @var list<array{login: string, nome: string, senha: string, setor: ?string, admin: bool}>
      */
-    private function garantirAdministrador(string $senha): void
+    private const CONTAS = [
+        ['login' => 'admin', 'nome' => 'Administrador', 'senha' => 'admin123', 'setor' => 'administrador', 'admin' => true],
+        ['login' => 'coordenador', 'nome' => 'Coordenador', 'senha' => 'coordenador123', 'setor' => 'coordenador', 'admin' => false],
+        ['login' => 'fiscal', 'nome' => 'Fiscal', 'senha' => 'fiscal123', 'setor' => 'fiscal', 'admin' => false],
+        ['login' => 'gestor1', 'nome' => 'Gestor 1', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],
+        ['login' => 'gestor2', 'nome' => 'Gestor 2', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],
+        ['login' => 'gestor3', 'nome' => 'Gestor 3', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],
+    ];
+
+    private function garantirContasDaDemonstracao(): void
     {
-        $admin = User::firstOrNew(['login' => 'admin']);
+        foreach (self::CONTAS as $conta) {
+            $usuario = User::firstOrNew(['login' => $conta['login']]);
+            $nasceuAgora = ! $usuario->exists;
 
-        $admin->fill([
-            'name' => $admin->name ?: 'Administrador da demonstração',
-            'email' => $admin->email ?: 'admin@sefal.demo',
-            'admin' => true,
-            'ativo' => true,
-        ]);
+            $usuario->fill([
+                'name' => $usuario->name ?: $conta['nome'],
+                // Sem e-mail de gente real: um derivado da matrícula mantém a
+                // coluna honesta sem inventar endereço de ninguém.
+                'email' => $usuario->email ?: $conta['login'].'@sefal.demo',
+                'ativo' => true,
+            ]);
 
-        // O cast `hashed` do model cifra na atribuição — passar por `Hash::make`
-        // aqui seria cifrar duas vezes. E a senha só é (re)definida quando não há
-        // uma: numa demo já em uso, trocar a senha no boot derruba quem está
-        // dentro.
-        if ($admin->exists === false || ($admin->password ?? '') === '') {
-            $admin->password = $senha;
+            // O `admin` só é CONCEDIDO, nunca retirado: se alguém promoveu uma
+            // conta, o boot não desfaz isso.
+            if ($conta['admin']) {
+                $usuario->admin = true;
+            }
+
+            /*
+             * Só preenche o vazio. O cast `hashed` do model cifra na atribuição —
+             * passar por `Hash::make` aqui cifraria duas vezes.
+             */
+            if ($nasceuAgora || ($usuario->password ?? '') === '') {
+                $usuario->password = (string) ($this->option('senha') ?: $conta['senha']);
+            }
+
+            $usuario->save();
+
+            if ($conta['setor'] !== null) {
+                $setor = Setor::where('slug', $conta['setor'])->first();
+
+                // `syncWithoutDetaching`: quem administra pode ter dado outro
+                // setor à conta, e o boot não desfaz decisão de gente.
+                $setor && $usuario->setores()->syncWithoutDetaching([$setor->id]);
+            }
+
+            $this->components->twoColumnDetail(
+                sprintf('<fg=yellow>%s</> · %s', $conta['login'], $conta['setor'] ?? 'administrador'),
+                $nasceuAgora ? 'conta criada' : 'já existia — senha preservada',
+            );
         }
-
-        $admin->save();
-
-        $this->components->twoColumnDetail('Acesso', 'login <fg=yellow>admin</>');
     }
 }

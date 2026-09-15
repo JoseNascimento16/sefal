@@ -497,11 +497,17 @@ export default function CadastroDeOperacao({
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando o módulo saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco, e
+              * com trâmite. O que continua de mentira são os DADOS, e é disso que
+              * quem avalia precisa ser avisado antes de tirar conclusão deles.
+              */}
             <SeloPrototipo>
-                Esta tela é a proposta do cadastro, para conferência da forma antes
-                de virar sistema. As operações são de exemplo e{' '}
-                <strong>nada é gravado</strong>: o que você criar, alterar ou
-                excluir vale só nesta sessão do navegador.
+                Ambiente de demonstração: as operações já cadastradas são{' '}
+                <strong>exemplos</strong>, não operações reais de rua. O que você
+                criar, alterar ou excluir{' '}
+                <strong>é gravado de verdade</strong>.
             </SeloPrototipo>
 
             {/* A informação que faz a tela ser entendida: é o MESMO catálogo que o

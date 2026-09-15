@@ -430,9 +430,28 @@ export default function CaixaDeEntrada({
         vencida: boolean,
     ): { conteudo: ReactNode; dica?: string } {
         if (chave === 'protocolo') {
+            const agregadas = d.agregadas?.length ?? 0;
+
             return {
-                conteudo: d.protocolo,
-                dica: `${d.protocolo} · ${d.origem} ${d.documento_origem}`,
+                /*
+                 * O "+N" ao lado do protocolo é o resultado da pré-triagem
+                 * viajando junto com a demanda. Sem ele, quem pega a linha na
+                 * Caixa vê um caso como qualquer outro — e este responde por
+                 * vários cidadãos, o que muda a urgência e o tamanho do estrago
+                 * se ficar parado.
+                 */
+                conteudo: agregadas === 0 ? d.protocolo : (
+                    <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                        {d.protocolo}
+                        <span className="selo selo-info" style={{ fontSize: 11 }}>
+                            +{agregadas} {agregadas === 1 ? 'denúncia' : 'denúncias'}
+                        </span>
+                    </span>
+                ),
+                dica: agregadas === 0
+                    ? `${d.protocolo} · ${d.origem} ${d.documento_origem}`
+                    : `${d.protocolo} · ${d.origem} ${d.documento_origem} — responde também por `
+                        + d.agregadas!.map((a) => a.protocolo).join(', '),
             };
         }
 
@@ -483,7 +502,9 @@ export default function CaixaDeEntrada({
     }
 
     const linhasExportacao = ord.itens.map((d) => ({
-        protocolo: d.protocolo,
+        protocolo: (d.agregadas?.length ?? 0) === 0
+            ? d.protocolo
+            : `${d.protocolo} (+${d.agregadas!.length})`,
         origem: d.origem,
         documento_origem: d.documento_origem,
         recebida_em: dataBR(d.recebida_em),

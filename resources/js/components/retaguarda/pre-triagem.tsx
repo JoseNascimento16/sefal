@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Inbox, Layers, Search, X } from 'lucide-react';
+import { Check, Inbox, Layers, Search, Store, Unlink, X } from 'lucide-react';
 
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
@@ -38,6 +38,10 @@ export interface LadoDaSugestao {
     numero_origem: string;
     canal: string;
     assunto: string;
+    /** Nome de FACHADA do que foi denunciado — o que decide "é o mesmo bar?". */
+    estabelecimento: string;
+    /** Pessoa ou razão social por trás do estabelecimento. */
+    denunciado: string;
     relato: string;
     endereco: string;
     referencia: string;
@@ -66,6 +70,37 @@ interface Props {
     base: string;
     /** Quem apenas acompanha não decide — a mesma resposta governa o servidor. */
     podeDecidir: boolean;
+}
+
+/*
+ * QUEM foi denunciado — a linha que decide a pré-triagem.
+ *
+ * Dois relatos de "mesas na calçada" na mesma rua podem ser o mesmo bar ou dois
+ * estabelecimentos a cinquenta metros um do outro. O assunto não separa (o
+ * comércio de rua repete o mesmo assunto a cidade inteira) e o endereço o
+ * cidadão escreve de memória. O nome da fachada separa — por isso ele aparece
+ * em destaque, e não perdido no meio do relato.
+ *
+ * Quando não veio nenhum dos dois, a linha DIZ isso em vez de sumir: "a
+ * ouvidoria não informou" é informação, e o coordenador precisa saber que está
+ * decidindo sem ela.
+ */
+function QuemFoiDenunciado({ lado }: { lado: { estabelecimento: string; denunciado: string } }) {
+    const temEstabelecimento = lado.estabelecimento.trim() !== '';
+    const temDenunciado = lado.denunciado.trim() !== '';
+
+    if (!temEstabelecimento && !temDenunciado) {
+        return <small className="rt-pretriagem-sem-alvo">Denunciado não informado pelo canal</small>;
+    }
+
+    return (
+        <small className="rt-pretriagem-alvo">
+            <Store size={13} aria-hidden />
+            {temEstabelecimento && <strong>{lado.estabelecimento}</strong>}
+            {temEstabelecimento && temDenunciado && ' · '}
+            {temDenunciado && <span>{lado.denunciado}</span>}
+        </small>
+    );
 }
 
 export function PreTriagem({ sugestoes, base, podeDecidir }: Props) {
@@ -136,6 +171,7 @@ export function PreTriagem({ sugestoes, base, podeDecidir }: Props) {
                         <span className="selo selo-info">Registro que vai a campo</span>
                         <strong>{principal.protocolo}</strong>
                         <span>{principal.assunto}</span>
+                        <QuemFoiDenunciado lado={principal} />
                         <small>
                             {principal.endereco || principal.bairro} · recebida em {dataBR(principal.recebida_em)} ·{' '}
                             {principal.anonima ? 'Anônima' : principal.requerente}
@@ -156,6 +192,7 @@ export function PreTriagem({ sugestoes, base, podeDecidir }: Props) {
                                         )}
                                     </div>
                                     <span>{sugestao.agregada!.assunto}</span>
+                                    <QuemFoiDenunciado lado={sugestao.agregada!} />
                                     <small>
                                         {sugestao.agregada!.endereco || sugestao.agregada!.bairro} · recebida em{' '}
                                         {dataBR(sugestao.agregada!.recebida_em)} ·{' '}
@@ -289,6 +326,8 @@ export interface DemandaEmPreTriagem {
     recebida_em: string;
     anonima: boolean;
     requerente: string | null;
+    estabelecimento: string;
+    denunciado: string;
     agregadas?: { id: number; protocolo: string; assunto: string; requerente: string | null }[];
 }
 
@@ -300,9 +339,34 @@ interface PropsDaFila {
 
 export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
     const { enviando, ocupado, enviar } = useEnvio();
+    const [desassociando, setDesassociando] = useState<{ id: number; protocolo: string; principal: string } | null>(null);
+    const [motivo, setMotivo] = useState('');
 
     function liberar(chave: string, ids: number[]) {
         enviar(chave, `${base}/agrupamento/liberar`, { demandas: ids });
+    }
+
+    /*
+     * DESASSOCIAR e' barato de proposito.
+     *
+     * A associacao pode estar errada -- "mesas na calcada" pode ser dois
+     * estabelecimentos a cinquenta metros um do outro --, e quem tria descobre
+     * isso relendo, nao no instante do clique. Como nada foi fundido, a denuncia
+     * volta a fila no estado em que chegou. Se desagrupar fosse caro ou
+     * irreversivel, o coordenador deixaria o erro de pe.
+     *
+     * O MOTIVO e' exigido mesmo assim: a denuncia desagrupada volta para a mesa
+     * de alguem, que vai precisar entender por que -- e e' esse texto que o
+     * cidadao encontra no tramite do protocolo dele.
+     */
+    function desassociar() {
+        if (!desassociando) return;
+        enviar(`desagrupar-${desassociando.id}`, `${base}/agrupamento/${desassociando.id}/desagrupar`, { motivo }, {
+            onSuccess: () => {
+                setDesassociando(null);
+                setMotivo('');
+            },
+        });
     }
 
     if (demandas.length === 0) {
@@ -376,10 +440,41 @@ export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
                               * vai mais responder por um cidadão, e sim por vários.
                               */}
                             {(demanda.agregadas?.length ?? 0) > 0 && (
-                                <p className="rt-pretriagem-motivo">
-                                    Responde também por{' '}
-                                    {demanda.agregadas!.map((a) => a.protocolo).join(', ')}.
-                                </p>
+                                <div className="rt-pretriagem-agregadas">
+                                    <p className="rt-pretriagem-motivo">
+                                        Responde também por{' '}
+                                        {demanda.agregadas!.length === 1
+                                            ? '1 denúncia'
+                                            : `${demanda.agregadas!.length} denúncias`}
+                                        :
+                                    </p>
+                                    <ul>
+                                        {demanda.agregadas!.map((agregada) => (
+                                            <li key={agregada.id}>
+                                                <span>
+                                                    <strong>{agregada.protocolo}</strong> · {agregada.assunto}
+                                                    {agregada.requerente ? ` · ${agregada.requerente}` : ' · Anônima'}
+                                                </span>
+                                                {podeDecidir && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-secondary btn-sm"
+                                                        disabled={ocupado}
+                                                        onClick={() =>
+                                                            setDesassociando({
+                                                                id: agregada.id,
+                                                                protocolo: agregada.protocolo,
+                                                                principal: demanda.protocolo,
+                                                            })
+                                                        }
+                                                    >
+                                                        <Unlink size={14} aria-hidden /> Desassociar
+                                                    </button>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             )}
                         </div>
 
@@ -398,6 +493,61 @@ export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
                     </li>
                 ))}
             </ul>
+
+            {desassociando && (
+                <Sobreposicao clicandoFora={ocupado ? undefined : () => setDesassociando(null)}>
+                    <div
+                        className="card-premium"
+                        style={{ width: '100%', maxWidth: 560, maxHeight: 'min(92vh, 100% - 8px)', overflowY: 'auto' }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Desassociar denúncia"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="sobreposicao-titulo">
+                            <Unlink size={17} aria-hidden /> Desassociar {desassociando.protocolo}
+                        </h2>
+
+                        <p className="rt-pretriagem-motivo" style={{ marginBottom: 14 }}>
+                            Ela deixa de ser respondida por {desassociando.principal} e volta para a
+                            pré-triagem, com decisão própria. O que você escrever fica no trâmite das
+                            duas — é o que explica a quem ler depois por que elas se separaram.
+                        </p>
+
+                        <label className="form-label" htmlFor="motivo-desassociar">
+                            Motivo
+                        </label>
+                        <textarea
+                            id="motivo-desassociar"
+                            className="form-control"
+                            rows={3}
+                            value={motivo}
+                            onChange={(e) => setMotivo(e.target.value)}
+                            placeholder="Reli os dois relatos: são dois bares diferentes, um em cada esquina do quarteirão."
+                        />
+
+                        <div className="sobreposicao-acoes" style={{ marginTop: 18 }}>
+                            <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setDesassociando(null)}
+                                disabled={ocupado}
+                            >
+                                Voltar
+                            </button>
+                            <BotaoAcao
+                                carregando={enviando === `desagrupar-${desassociando.id}`}
+                                ocupado={ocupado}
+                                disabled={motivo.trim().length < 10}
+                                rotuloCarregando="Desassociando…"
+                                onClick={desassociar}
+                            >
+                                Desassociar
+                            </BotaoAcao>
+                        </div>
+                    </div>
+                </Sobreposicao>
+            )}
         </section>
     );
 }

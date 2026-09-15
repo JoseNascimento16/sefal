@@ -46,6 +46,14 @@ export interface Demanda {
     /** O bairro é o que SUGERE a equipe responsável. */
     bairro: string;
     descricao: string;
+    /**
+     * QUEM foi denunciado — nome de fachada e, quando se sabe, a pessoa ou razão
+     * social por trás. É o que separa "o mesmo bar" de "dois estabelecimentos na
+     * mesma rua", e por isso decide a pré-triagem.
+     */
+    estabelecimento: string;
+    denunciado: string;
+    documento_denunciado?: string | null;
     /** Nome do arquivo digitalizado — no protótipo, só o nome. */
     anexo: string | null;
     situacao: string;
