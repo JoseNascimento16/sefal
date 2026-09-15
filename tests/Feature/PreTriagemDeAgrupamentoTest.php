@@ -372,3 +372,62 @@ it('o documento do denunciado é identidade, e a frase diz isso', function () {
         ->and($sugestao->motivo)->toContain('o MESMO documento do denunciado')
         ->and($sugestao->confianca)->toBe(1.0);
 });
+
+it('junta à mão o que a varredura não achou — e responde por todas', function () {
+    // Ruas diferentes, assuntos diferentes: a regra não liga nenhuma das três.
+    $antiga = relato('Camelô ocupando a esquina', '10', 80, ['logradouro' => 'Rua A']);
+    $b = relato('Banca azul sem licença', '20', 50, ['logradouro' => 'Rua B']);
+    $c = relato('Vendedor obstruindo a passagem', '30', 20, ['logradouro' => 'Rua C']);
+
+    expect(varrer()['propostas'])->toBe(0);
+
+    // O coordenador conhece a rua: é o mesmo camelô, que cada cidadão descreveu
+    // de um jeito. Sem esta porta, ele veria o mesmo fato e não teria o que clicar.
+    $this->actingAs(coordenadorDaTriagem())
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.juntar'), [
+            'demandas' => [$antiga->id, $b->id, $c->id],
+            'principal_id' => $antiga->id,
+            'motivo' => 'É o mesmo camelô da banca azul: ele muda de esquina ao longo do dia.',
+        ])
+        ->assertSessionHas('flash.sucesso');
+
+    expect($b->fresh()->agrupada_em_id)->toBe($antiga->id)
+        ->and($c->fresh()->agrupada_em_id)->toBe($antiga->id)
+        ->and($b->fresh()->situacao)->toBe(Demanda::AGRUPADA)
+        // Só a principal segue na fila de trabalho: é ela que vai a campo.
+        ->and(Demanda::emPreTriagem()->deTrabalho()->count())->toBe(1);
+});
+
+it('recusa juntar num registro que não está entre os escolhidos', function () {
+    $a = relato('Camelô na esquina', '10', 80, ['logradouro' => 'Rua A']);
+    $b = relato('Banca sem licença', '20', 50, ['logradouro' => 'Rua B']);
+    $forudoEscopo = relato('Outro caso', '30', 20, ['logradouro' => 'Rua C']);
+
+    $this->actingAs(coordenadorDaTriagem())
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.juntar'), [
+            'demandas' => [$a->id, $b->id],
+            'principal_id' => $forudoEscopo->id,
+            'motivo' => 'É o mesmo camelô da banca azul, muda de esquina ao longo do dia.',
+        ])
+        ->assertSessionHas('flash.erro');
+
+    // Sem a checagem, daria para pendurar a leva num registro que o coordenador
+    // não estava olhando — e ele não teria como perceber.
+    expect($a->fresh()->agrupada_em_id)->toBeNull()
+        ->and($b->fresh()->agrupada_em_id)->toBeNull();
+});
+
+it('exige o motivo, porque é o que o cidadão lê no trâmite dele', function () {
+    $a = relato('Camelô na esquina', '10', 80, ['logradouro' => 'Rua A']);
+    $b = relato('Banca sem licença', '20', 50, ['logradouro' => 'Rua B']);
+
+    $this->actingAs(coordenadorDaTriagem())
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.juntar'), [
+            'demandas' => [$a->id, $b->id],
+            'principal_id' => $a->id,
+            'motivo' => 'igual',
+        ])
+        ->assertSessionHasErrors('motivo');
+
+    expect($b->fresh()->agrupada_em_id)->toBeNull();
+});

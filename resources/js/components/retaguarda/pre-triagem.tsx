@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Inbox, Layers, Search, Store, Unlink, X } from 'lucide-react';
+import { Check, Inbox, Layers, Link2, Search, Store, Unlink, X } from 'lucide-react';
 
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
@@ -342,6 +342,57 @@ export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
     const [desassociando, setDesassociando] = useState<{ id: number; protocolo: string; principal: string } | null>(null);
     const [motivo, setMotivo] = useState('');
 
+    /*
+     * A JUNÇÃO À MÃO — o caminho para o que a varredura não achou.
+     *
+     * A regra enxerga bairro, rua, palavras e o nome da fachada. Ela não enxerga
+     * "é aquele camelô da banca azul", que cada cidadão descreve de um jeito, nem
+     * o relato em que alguém errou o nome da rua. Sem esta porta, o coordenador vê
+     * que são o mesmo fato e não tem o que clicar — e a equipe vai duas vezes ao
+     * mesmo ponto, que é o que a pré-triagem existe para evitar.
+     *
+     * A seleção fica na TELA, e não numa segunda janela de busca: o que ele
+     * precisa comparar (o relato, o endereço, quem foi denunciado) já está diante
+     * dele. Pedir que ele reconheça os casos de novo, por protocolo, numa lista
+     * solta, é pedir que decore.
+     */
+    const [selecionadas, setSelecionadas] = useState<number[]>([]);
+    const [juntando, setJuntando] = useState(false);
+    const [principalEscolhida, setPrincipalEscolhida] = useState<number | null>(null);
+    const [motivoDaJuncao, setMotivoDaJuncao] = useState('');
+
+    function alternar(id: number) {
+        setSelecionadas((atual) =>
+            atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id],
+        );
+    }
+
+    function abrirJuncao() {
+        // A mais ANTIGA vem pré-escolhida: é a que espera há mais tempo e a que a
+        // ouvidoria já cobrou. A fila vem em ordem crescente, então é a primeira
+        // selecionada que aparece nela.
+        const maisAntiga = demandas.find((d) => selecionadas.includes(d.id));
+
+        setPrincipalEscolhida(maisAntiga?.id ?? selecionadas[0] ?? null);
+        setMotivoDaJuncao('');
+        setJuntando(true);
+    }
+
+    function juntar() {
+        if (principalEscolhida === null) return;
+
+        enviar('juntar', `${base}/agrupamento/juntar`, {
+            demandas: selecionadas,
+            principal_id: principalEscolhida,
+            motivo: motivoDaJuncao,
+        }, {
+            onSuccess: () => {
+                setJuntando(false);
+                setSelecionadas([]);
+            },
+        });
+    }
+
     function liberar(chave: string, ids: number[]) {
         enviar(chave, `${base}/agrupamento/liberar`, { demandas: ids });
     }
@@ -413,11 +464,57 @@ export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
                 )}
             </header>
 
+            {/*
+              * A barra aparece assim que HÁ seleção, e não só a partir de duas.
+              * Com uma só marcada ela diz o que falta, em vez de o botão surgir do
+              * nada na segunda — quem marcou uma precisa saber que o caminho existe.
+              */}
+            {podeDecidir && selecionadas.length > 0 && (
+                <div className="rt-pretriagem-selecao">
+                    <span>
+                        {selecionadas.length === 1
+                            ? '1 denúncia marcada — marque outra para juntar as duas num caso só.'
+                            : `${selecionadas.length} denúncias marcadas.`}
+                    </span>
+                    <div className="rt-pretriagem-acoes">
+                        <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            disabled={ocupado}
+                            onClick={() => setSelecionadas([])}
+                        >
+                            Limpar
+                        </button>
+                        <BotaoAcao
+                            icone={<Link2 size={16} aria-hidden />}
+                            carregando={enviando === 'juntar'}
+                            ocupado={ocupado}
+                            disabled={selecionadas.length < 2}
+                            rotuloCarregando="Juntando…"
+                            onClick={abrirJuncao}
+                        >
+                            Juntar num caso só
+                        </BotaoAcao>
+                    </div>
+                </div>
+            )}
+
             <ul className="rt-pretriagem-fila">
                 {demandas.map((demanda) => (
                     <li key={demanda.id}>
                         <div className="rt-pretriagem-lado">
                             <div className="rt-pretriagem-cabeca">
+                                {podeDecidir && (
+                                    <label className="rt-pretriagem-marca">
+                                        <input
+                                            type="checkbox"
+                                            checked={selecionadas.includes(demanda.id)}
+                                            onChange={() => alternar(demanda.id)}
+                                            disabled={ocupado}
+                                            aria-label={`Marcar ${demanda.protocolo} para juntar`}
+                                        />
+                                    </label>
+                                )}
                                 <strong>{demanda.protocolo}</strong>
                                 <span className="selo selo-neutro">{demanda.origem}</span>
                                 {demanda.documento_origem && (
@@ -494,6 +591,93 @@ export function FilaDePreTriagem({ demandas, base, podeDecidir }: PropsDaFila) {
                     </li>
                 ))}
             </ul>
+
+            {juntando && (
+                <Sobreposicao clicandoFora={ocupado ? undefined : () => setJuntando(false)}>
+                    <div
+                        className="card-premium"
+                        style={{ width: '100%', maxWidth: 620, maxHeight: 'min(92vh, 100% - 8px)', overflowY: 'auto' }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Juntar denúncias num caso só"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="sobreposicao-titulo">
+                            <Link2 size={17} aria-hidden /> Juntar {selecionadas.length} denúncias num caso só
+                        </h2>
+
+                        <p className="rt-pretriagem-motivo" style={{ marginBottom: 14 }}>
+                            Uma delas vai a campo; as outras passam a ser respondidas por ela. Quando a
+                            fiscalização voltar, a resposta vale para todas — cada cidadão recebe o
+                            resultado no protocolo dele.
+                        </p>
+
+                        {/*
+                          * QUAL vai a campo é escolha, não automatismo. A mais antiga vem
+                          * marcada porque é a que espera há mais tempo, mas o coordenador
+                          * pode preferir a que descreve melhor o ponto — e é ela que o
+                          * fiscal vai ler na rua.
+                          */}
+                        <span className="form-label">Qual delas vai a campo?</span>
+                        <ul className="rt-pretriagem-escolha">
+                            {demandas
+                                .filter((d) => selecionadas.includes(d.id))
+                                .map((d) => (
+                                    <li key={d.id}>
+                                        <label>
+                                            <input
+                                                type="radio"
+                                                name="principal-da-juncao"
+                                                checked={principalEscolhida === d.id}
+                                                onChange={() => setPrincipalEscolhida(d.id)}
+                                                disabled={ocupado}
+                                            />
+                                            <span>
+                                                <strong>{d.protocolo}</strong> · {d.assunto}
+                                                <small>
+                                                    {d.endereco || d.bairro}
+                                                    {d.estabelecimento.trim() !== '' && ` · ${d.estabelecimento}`}
+                                                </small>
+                                            </span>
+                                        </label>
+                                    </li>
+                                ))}
+                        </ul>
+
+                        <label className="form-label" htmlFor="motivo-juncao" style={{ marginTop: 14 }}>
+                            Por que são o mesmo caso?
+                        </label>
+                        <textarea
+                            id="motivo-juncao"
+                            className="form-control"
+                            rows={3}
+                            value={motivoDaJuncao}
+                            onChange={(e) => setMotivoDaJuncao(e.target.value)}
+                            placeholder="É o mesmo camelô da banca azul em frente ao número 210 — cada um descreveu de um jeito."
+                        />
+
+                        <div className="sobreposicao-acoes" style={{ marginTop: 18 }}>
+                            <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setJuntando(false)}
+                                disabled={ocupado}
+                            >
+                                Voltar
+                            </button>
+                            <BotaoAcao
+                                carregando={enviando === 'juntar'}
+                                ocupado={ocupado}
+                                disabled={motivoDaJuncao.trim().length < 10 || principalEscolhida === null}
+                                rotuloCarregando="Juntando…"
+                                onClick={juntar}
+                            >
+                                Juntar
+                            </BotaoAcao>
+                        </div>
+                    </div>
+                </Sobreposicao>
+            )}
 
             {desassociando && (
                 <Sobreposicao clicandoFora={ocupado ? undefined : () => setDesassociando(null)}>
