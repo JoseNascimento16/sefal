@@ -1211,10 +1211,13 @@ export function PainelDeDenuncias({
                           * já ter encaminhado seria encaminhar duas vezes o
                           * mesmo ponto.
                           *
-                          * Quem apenas acompanha vê o painel e não decide — a
-                          * mesma resposta governa a recusa no servidor.
+                          * Quem apenas acompanha vê o painel só quando HÁ o que
+                          * decidir; quem tria vê sempre, mesmo vazio — é dentro
+                          * dele que mora o botão que roda a varredura, e
+                          * escondê-lo na ausência de propostas tornaria a
+                          * funcionalidade inalcançável a partir do estado limpo.
                           */}
-                        {aba === 'triagem' && sugestoesDeAgrupamento.length > 0 && (
+                        {aba === 'triagem' && (sugestoesDeAgrupamento.length > 0 || tria) && (
                             <PreTriagem
                                 sugestoes={sugestoesDeAgrupamento}
                                 base={baseDoAgrupamento}

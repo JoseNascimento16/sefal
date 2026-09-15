@@ -583,7 +583,7 @@ export default function CaixaDeEntrada({
                           * caso?"), e respondê-la depois de já ter encaminhado
                           * seria encaminhar duas vezes o mesmo ponto.
                           */}
-                        {sugestoesDeAgrupamento.length > 0 && (
+                        {(sugestoesDeAgrupamento.length > 0 || acoes.habilitado) && (
                             <PreTriagem
                                 sugestoes={sugestoesDeAgrupamento}
                                 base="/retaguarda/caixa-de-entrada"
