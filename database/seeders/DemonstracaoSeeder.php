@@ -60,6 +60,13 @@ class DemonstracaoSeeder extends Seeder
         $this->call(AmbulantesSeeder::class);
         $this->call(OperacoesSeeder::class);
         $this->call(DemandasSeeder::class);
+        /*
+         * O cenário da PRÉ-TRIAGEM: seis pessoas relatando o mesmo bar, mais
+         * uma armadilha na mesma rua. Sem ele a tela de agrupamento abre vazia,
+         * e tela que não se consegue avaliar vai para produção sem ter sido
+         * olhada.
+         */
+        $this->call(DenunciasRepetidasSeeder::class);
         $this->call(FiscalizacoesSeeder::class);
     }
 }

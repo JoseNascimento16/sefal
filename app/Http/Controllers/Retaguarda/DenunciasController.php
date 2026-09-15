@@ -7,9 +7,11 @@ use App\Models\Area;
 use App\Models\Demanda;
 use App\Models\Fiscalizacao;
 use App\Models\Operacao;
+use App\Models\SugestaoAgrupamento;
 use App\Models\User;
 use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\OperacaoParaTela;
+use App\Support\Apresentacao\SugestaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use App\Support\PapelNaArea;
@@ -385,6 +387,20 @@ class DenunciasController extends Controller
             // encaminhar: "vai para a Área 5" só diz metade; a outra metade é para
             // quem.
             'chefias' => Estrutura::chefiasPorArea(),
+            /*
+             * A PRÉ-TRIAGEM: as propostas de agrupamento que esperam decisão.
+             * É aqui que ela mais importa — o e-Salvador é o canal que repete o
+             * mesmo fato em dez protocolos.
+             *
+             * Vêm com os dois lados inteiros porque aceitar junta casos de
+             * cidadãos diferentes: ninguém deve decidir isso lendo dois
+             * protocolos e um número de confiança.
+             */
+            'sugestoesDeAgrupamento' => SugestaoAgrupamento::pendentes()
+                ->with(['demanda', 'principal'])
+                ->get()
+                ->map(SugestaoParaTela::completa(...))
+                ->all(),
             'operacoes' => Operacao::abertas()->with(['area', 'equipes', 'bairros'])
                 ->orderBy('nome')->get()->map(OperacaoParaTela::completa(...))->all(),
             // A etapa de quem entrou — é ela que decide o que a tela oferece, e a
@@ -403,8 +419,6 @@ class DenunciasController extends Controller
                 'denuncias.direcionamento',
                 'denuncias.todas',
             ]),
-            // Resíduo do protótipo: ligava o botão de reiniciar, que não existe mais.
-            'alterada' => false,
         ]);
     }
 

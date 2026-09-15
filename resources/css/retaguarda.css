@@ -3755,3 +3755,152 @@ button.rt-chip-vidro:focus-visible {
         opacity: 0.35;
     }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * PRÉ-TRIAGEM — dez denúncias que são um fato
+ *
+ * O painel tem uma hierarquia deliberada: o REGISTRO QUE VAI A CAMPO em cima,
+ * com faixa própria, e as candidatas indentadas abaixo dele. É a forma de dizer,
+ * sem legenda, quem responde por quem depois do agrupamento.
+ *
+ * Os dois relatos aparecem por extenso, e isso contraria de propósito o padrão
+ * de listagem enxuta: aqui não se está varrendo uma fila, e sim decidindo juntar
+ * casos de cidadãos diferentes. Truncar o relato deixaria a decisão apoiada no
+ * número de semelhança — que é justamente o que não se quer.
+ * ───────────────────────────────────────────────────────────────────────────── */
+.rt-pretriagem {
+    margin-bottom: 20px;
+    padding: 16px 18px;
+    border: 1px solid var(--sm-borda);
+    border-radius: var(--sm-raio, 12px);
+    background: var(--sm-superficie-2);
+}
+
+.rt-pretriagem-topo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.rt-pretriagem-topo h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.rt-pretriagem-topo p {
+    max-width: 68ch;
+    margin: 0;
+    color: var(--sm-texto-fraco);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.rt-pretriagem-grupo {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--sm-borda);
+}
+
+.rt-pretriagem-principal {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.rt-pretriagem-principal strong {
+    font-size: 14px;
+}
+
+.rt-pretriagem-principal small,
+.rt-pretriagem-lado small {
+    color: var(--sm-texto-fraco);
+    font-size: 12px;
+}
+
+/*
+ * A indentação com a barra à esquerda é o que mostra a relação: estas denúncias
+ * PASSAM a ser respondidas pela de cima. Sem ela seriam quatro cartões soltos, e
+ * o coordenador teria de deduzir a hierarquia do texto do selo.
+ */
+.rt-pretriagem-lista {
+    margin: 12px 0 0;
+    padding: 0 0 0 16px;
+    border-left: 2px solid var(--sm-borda-forte);
+    list-style: none;
+}
+
+.rt-pretriagem-lista > li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--sm-borda);
+}
+
+.rt-pretriagem-lista > li:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.rt-pretriagem-lado {
+    display: flex;
+    flex: 1 1 380px;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.rt-pretriagem-cabeca {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+/*
+ * A confiança fica DISCRETA de propósito: ela ordena a fila, mas não é o que
+ * decide. O que convence é o relato — um número grande e colorido aqui faria o
+ * coordenador aceitar por causa dele.
+ */
+.rt-pretriagem-confianca {
+    color: var(--sm-texto-fraco);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.rt-pretriagem-relato {
+    max-width: 72ch;
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.rt-pretriagem-motivo {
+    max-width: 72ch;
+    margin: 6px 0 0;
+    color: var(--sm-texto-fraco);
+    font-size: 12.5px;
+    font-style: italic;
+    line-height: 1.45;
+}
+
+.rt-pretriagem-acoes {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (max-width: 720px) {
+    .rt-pretriagem-acoes {
+        width: 100%;
+    }
+}

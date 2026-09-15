@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Demanda;
 use App\Models\DemandaTramite;
+use App\Models\SugestaoAgrupamento;
 use App\Rules\NomeDeCadastro;
 use App\Support\Apresentacao\DemandaParaTela;
+use App\Support\Apresentacao\SugestaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use App\Support\Protocolo;
@@ -92,15 +94,20 @@ class CaixaDeEntradaController extends Controller
             // sugestão aparecer no instante em que a pessoa escolhe o bairro,
             // sem uma ida ao servidor por tecla digitada.
             'sugestoes' => Estrutura::mapaDeSugestoes(),
+            /*
+             * A PRÉ-TRIAGEM: as propostas de agrupamento que esperam decisão.
+             * Vêm com os dois lados inteiros porque aceitar junta casos de
+             * cidadãos diferentes — ninguém deve decidir isso lendo dois
+             * protocolos e um número de confiança.
+             */
+            'sugestoesDeAgrupamento' => SugestaoAgrupamento::pendentes()
+                ->with(['demanda', 'principal'])
+                ->get()
+                ->map(SugestaoParaTela::completa(...))
+                ->all(),
             // As COLUNAS da grade e as do arquivo — APRESENTAÇÃO, e só ela.
             // Ver docs/padroes/listagem-clean.md.
             'listagens' => ListagensDaRetaguarda::para('caixa-de-entrada'),
-            /*
-             * Resíduo do protótipo: era o que ligava o botão "reiniciar". Vai
-             * fixo em `false` porque a caixa não se reinicia mais; a chave
-             * continua para a tela não quebrar enquanto ela não for limpa.
-             */
-            'alterada' => false,
         ]);
     }
 
