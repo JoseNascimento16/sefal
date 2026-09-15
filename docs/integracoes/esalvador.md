@@ -241,9 +241,10 @@ Enquanto `GET /consulta/{n}/{ano}` (metadados: classificação, unidades, datas,
 `codigo`, `identificador`) responde 200 para qualquer processo.
 
 E `GET /caixa-processos`, chamado sem `seleciona-caixa`, devolveu uma caixa que
-**não é a da SEMOP**: veio com processos de PGMS/SECOB, SEFAZ/DRM, grupos
-ADMINISTRATIVO FISCAL e POLITICAS PUBLICAS. Ou seja, o usuário da nossa
-credencial está hoje apontado para outra caixa.
+**não é a da SEMOP**: **91 processos**, e na primeira página vinte deles são de
+**SEFAZ (18) e PGMS (2)** — grupos ADMINISTRATIVO FISCAL e POLITICAS PUBLICAS,
+nenhum da Ordem Pública. O usuário da nossa credencial está hoje apontado para a
+caixa de outra secretaria.
 
 **Consequência direta: sem apontar a caixa para a unidade da SEFAL, a integração
 lê metadados e não lê denúncia nenhuma.** E apontar é `PUT /seleciona-caixa` —
