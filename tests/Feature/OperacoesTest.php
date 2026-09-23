@@ -6,6 +6,7 @@ use App\Models\Setor;
 use App\Models\User;
 use App\Support\Apresentacao\OperacaoParaTela;
 use App\Support\Estrutura;
+use App\Support\Papel;
 use Database\Seeders\DemonstracaoSeeder;
 use Database\Seeders\EstruturaSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
@@ -54,19 +55,23 @@ beforeEach(function () {
 });
 
 /** Um Chefe de Setor de verdade: a matrícula é o que o liga à área na estrutura. */
-function chefeDeOperacao(string $matricula): User
+/**
+ * O líder de uma equipe — recortado pela ÁREA da equipe dele, porque a operação
+ * é territorial. A conta `lider-<código>` nasce no seeder da estrutura.
+ */
+function liderDeOperacao(string $codigo): User
 {
-    // A conta já existe: é o seeder da estrutura que a cria e a liga à área.
-    $u = User::where('login', User::normalizarMatricula($matricula))->firstOrFail();
-    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
+    $u = User::where('login', User::normalizarMatricula('lider-'.$codigo))->firstOrFail();
+    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'lider-de-equipe')->firstOrFail()->id]);
 
     return $u->fresh();
 }
 
-function coordenadorDeOperacao(): User
+/** O Chefe de Setor: cadastra e vê tudo, sem recorte (22/09/2026). */
+function chefeDeOperacao(): User
 {
     $u = User::factory()->create(['admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'coordenador')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     return $u->fresh();
 }
@@ -140,7 +145,7 @@ test('lei: o cadastro e o direcionamento leem o MESMO catalogo de operacoes', fu
     }
 
     // E o que nasce aqui chega lá: mesma sessão, mesma lista.
-    $chefe = chefeDeOperacao('gestor1');
+    $chefe = liderDeOperacao('C1');
 
     $this->actingAs($chefe)->post('/retaguarda/operacoes', operacaoValida())
         ->assertRedirect()
@@ -161,7 +166,7 @@ test('o direcionamento recebe a operacao com as chaves que a tela dele LE', func
      * O gate deste projeto não executa JS, então o que se trava aqui é a metade que
      * ele alcança: as chaves que a tela precisa CHEGAM, e chegam no formato certo.
      */
-    $pagina = test()->actingAs(chefeDeOperacao('gestor1'))
+    $pagina = test()->actingAs(liderDeOperacao('C1'))
         ->get('/retaguarda/denuncias/e-salvador')
         ->viewData('page')['props'];
 
@@ -212,7 +217,7 @@ test('a operacao ENCERRADA nao recebe denuncia nova, e a recusa diz o porque', f
 
     expect($encerrada)->not->toBeNull();
 
-    $chefe = chefeDeOperacao('gestor1');
+    $chefe = liderDeOperacao('C1');
 
     // Uma denúncia da área dele que esteja esperando direcionamento.
     /*
@@ -224,7 +229,12 @@ test('a operacao ENCERRADA nao recebe denuncia nova, e a recusa diz o porque', f
         ->whereHas('area', static fn ($q) => $q->where('nome', 'Área 5'))
         ->first();
 
-    $daArea?->update(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'operacao_id' => null]);
+    // Na mesa do líder da C1 — é a equipe dele que a fronteira confere.
+    $daArea?->update([
+        'situacao' => Demanda::ENCAMINHADA_AO_LIDER,
+        'operacao_id' => null,
+        'equipe_id' => Estrutura::equipeModel('C1')?->id,
+    ]);
 
     expect($daArea)->not->toBeNull('a amostra precisa de denúncia da Área 5 aguardando direcionamento');
 
@@ -254,7 +264,7 @@ test('o periodo com FIM antes do inicio e recusado, dizendo o efeito', function 
      * antes de começar, e a conta de "quanto tempo ela durou" sairia negativa em
      * todo relatório que a somar.
      */
-    $chefe = chefeDeOperacao('gestor1');
+    $chefe = liderDeOperacao('C1');
 
     $this->actingAs($chefe)
         ->post('/retaguarda/operacoes', operacaoValida([
@@ -283,7 +293,7 @@ test('a AREA e obrigatoria, e area inventada e recusada', function () {
      * operação de ninguém: não aparece para chefe algum e não tem equipe a quem
      * cobrar.
      */
-    $chefe = chefeDeOperacao('gestor1');
+    $chefe = liderDeOperacao('C1');
 
     $this->actingAs($chefe)
         ->post('/retaguarda/operacoes', [...operacaoValida(), 'area' => ''])
@@ -303,7 +313,7 @@ test('nome repetido e recusado, aqui e no direcionamento', function () {
      * qualquer uma das duas, e ninguém sabe qual.
      */
     $existente = Operacao::firstOrFail()->nome;
-    $chefe = chefeDeOperacao('gestor1');
+    $chefe = liderDeOperacao('C1');
 
     $this->actingAs($chefe)
         ->post('/retaguarda/operacoes', operacaoValida(['nome' => $existente]))
@@ -321,7 +331,12 @@ test('nome repetido e recusado, aqui e no direcionamento', function () {
         ->whereHas('area', static fn ($q) => $q->where('nome', 'Área 5'))
         ->first();
 
-    $daArea?->update(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'operacao_id' => null]);
+    // Na mesa do líder da C1 — é a equipe dele que a fronteira confere.
+    $daArea?->update([
+        'situacao' => Demanda::ENCAMINHADA_AO_LIDER,
+        'operacao_id' => null,
+        'equipe_id' => Estrutura::equipeModel('C1')?->id,
+    ]);
 
     $this->actingAs($chefe)
         ->post('/retaguarda/denuncias/operacao', [
@@ -336,8 +351,8 @@ test('nome repetido e recusado, aqui e no direcionamento', function () {
 });
 
 test('o chefe de setor recebe so as operacoes da area dele', function () {
-    $chefe = chefeDeOperacao('gestor1');
-    $minhas = Estrutura::areasDoChefe('gestor1');
+    $chefe = liderDeOperacao('C1');
+    $minhas = Papel::areas(liderDeOperacao('C1'));
 
     expect($minhas)->not->toBe([]);
 
@@ -359,7 +374,7 @@ test('o conteudo da operacao alheia nao viaja ate o navegador do chefe de outra 
      * gestão, que vão dentro do registro. Então o teste procura o texto no corpo
      * inteiro da resposta, e não só na lista de identificadores.
      */
-    $this->actingAs(chefeDeOperacao('gestor3'))
+    $this->actingAs(liderDeOperacao('A2'))
         ->get('/retaguarda/operacoes')
         // "Operação Verão — Orla" e o foco dela são da Área 5 (gestor1).
         ->assertDontSee('Operação Verão')
@@ -367,7 +382,7 @@ test('o conteudo da operacao alheia nao viaja ate o navegador do chefe de outra 
 });
 
 test('quem tria ve o universo — inclusive a area sem chefe com conta', function () {
-    $servidas = operacoesServidas(coordenadorDeOperacao());
+    $servidas = operacoesServidas(chefeDeOperacao());
     $areas = array_values(array_unique(array_column($servidas, 'area')));
 
     // A Área 2 não tem conta de Chefe de Setor na demonstração: só o Coordenador e
@@ -376,29 +391,28 @@ test('quem tria ve o universo — inclusive a area sem chefe com conta', functio
         ->and(count($areas))->toBeGreaterThan(1);
 });
 
-test('quem apenas consulta nao cadastra: a tela nao oferece e o servidor recusa', function () {
+test('o chefe de setor cadastra em qualquer area: a tela oferece e o servidor grava', function () {
     /*
-     * O Coordenador tria a entrada do trabalho e precisa saber que operação existe
-     * para onde encaminhar a demanda — montar operação é de quem responde pela área.
-     *
-     * As duas metades: a tela não lhe oferece (`cadastra` falso, resposta do
-     * servidor) e o servidor recusa com o motivo. Esconder botão é conforto; a
-     * fronteira é a recusa.
+     * Até 22/09/2026 quem triava só consultava o catálogo. O Chefe de Setor de
+     * hoje responde pelo setor inteiro — é ele quem recebe a operação pedida de
+     * cima (a "avulsa") e a monta para a equipe executar. Sem recorte: qualquer
+     * área.
      */
-    $coordenador = coordenadorDeOperacao();
+    $chefe = chefeDeOperacao();
 
-    $this->actingAs($coordenador)->get('/retaguarda/operacoes')
+    $this->actingAs($chefe)->get('/retaguarda/operacoes')
         ->assertOk()
         ->assertInertia(fn ($p) => $p
             ->component('Retaguarda/Fiscalizacao/CadastroDeOperacao')
-            ->where('cadastra', false));
+            ->where('cadastra', true)
+            ->where('recorteDeArea', false));
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post('/retaguarda/operacoes', operacaoValida())
-        ->assertRedirect()
-        ->assertSessionHas('flash.erro', fn (string $r): bool => trim($r) !== '');
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('flash.sucesso');
 
-    expect(Operacao::where('nome', 'Operação Teste da Orla')->exists())->toBeFalse();
+    expect(Operacao::where('nome', 'Operação Teste da Orla')->exists())->toBeTrue();
 });
 
 test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area', function () {
@@ -407,8 +421,8 @@ test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area'
      * a operação de outra área. A recusa nomeia as áreas por que a pessoa responde,
      * para ela saber o que aconteceu.
      */
-    $chefe = chefeDeOperacao('gestor1');
-    $minhas = Estrutura::areasDoChefe('gestor1');
+    $chefe = liderDeOperacao('C1');
+    $minhas = Papel::areas(liderDeOperacao('C1'));
 
     $alheia = Operacao::with(['area', 'equipes', 'bairros'])->get()
         ->map(OperacaoParaTela::completa(...))
@@ -456,7 +470,7 @@ test('o chefe de setor e recusado NOMINALMENTE ao gravar operacao de outra area'
 });
 
 test('o chefe de setor cria, altera e exclui na propria area', function () {
-    $chefe = chefeDeOperacao('gestor1');
+    $chefe = liderDeOperacao('C1');
 
     $this->actingAs($chefe)->post('/retaguarda/operacoes', operacaoValida())
         ->assertSessionHasNoErrors()
@@ -494,7 +508,7 @@ test('operacao sem data de fim e rotina PERMANENTE, e a etiqueta diz isso', func
      * "Rotina Centro" é permanente: inventar um fim faria a tela mostrar prazo onde
      * não há, e a operação apareceria encerrando num dia que ninguém decidiu.
      */
-    $chefe = chefeDeOperacao('gestor1');
+    $chefe = liderDeOperacao('C1');
 
     $this->actingAs($chefe)
         ->post('/retaguarda/operacoes', operacaoValida(['nome' => 'Rotina Permanente da Orla', 'fim' => null]))
@@ -530,7 +544,7 @@ test('o recorte visivel do cadastro vira documento pelo ponto unico de exportaca
      * A lei do projeto: toda listagem exporta, e pelo endpoint único — nenhuma tela
      * gera arquivo por conta própria.
      */
-    $this->actingAs(chefeDeOperacao('gestor1'))
+    $this->actingAs(liderDeOperacao('C1'))
         ->post('/retaguarda/exportar-listagem', [
             'formato' => 'xlsx',
             'titulo' => 'Operações',

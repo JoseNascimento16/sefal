@@ -17,7 +17,7 @@ use InvalidArgumentException;
  * A DEMANDA — tudo que entra e pede uma decisão.
  *
  * É a mesma entidade que as telas chamam de "Caixa de Entrada" (o papel que o
- * coordenador digita) e de "Denúncias" (o que chega por integração). A razão de
+ * Chefe de Setor digita) e de "Denúncias" (o que chega por integração). A razão de
  * ser uma tabela só está na migration; aqui o que importa é a consequência:
  * **a regra de prazo, de roteamento e de trâmite é escrita UMA vez**.
  *
@@ -72,7 +72,7 @@ class Demanda extends Model
     /** O sistema recebeu sozinho, sem ninguém digitar. */
     public const ENTRADA_INTEGRACAO = 'integracao';
 
-    /** O coordenador digitou o papel que chegou à mesa. */
+    /** O Chefe de Setor digitou o papel que chegou à mesa. */
     public const ENTRADA_BALCAO = 'balcao';
 
     // ── De onde veio o fato ─────────────────────────────────────────────────
@@ -100,24 +100,34 @@ class Demanda extends Model
      *
      * O e-Salvador não entrega casos organizados: entrega o que cada cidadão
      * escreveu. Dez relatos podem ser um fato só, e mandar os dez para a mesa do
-     * coordenador como dez casos faria a triagem decidir dez vezes sobre o mesmo
+     * Chefe de Setor como dez casos faria a triagem decidir dez vezes sobre o mesmo
      * ponto — e a equipe ir dez vezes ao mesmo lugar.
      *
      * Por isso a integração cai ANTES da Caixa, numa etapa própria: a
      * PRÉ-TRIAGEM, onde o que é repetição vira um registro só. Só depois disso a
-     * demanda passa ao crivo do coordenador (encaminhar ou devolver).
+     * demanda passa ao crivo do Chefe de Setor (encaminhar ou devolver).
      *
-     * ⚠️ O que o coordenador DIGITA (balcão) não passa por aqui: ele já leu o
+     * ⚠️ O que o Chefe de Setor DIGITA (balcão) não passa por aqui: ele já leu o
      * papel e sabe o que é. Fazê-lo consolidar o que acabou de cadastrar seria
      * pedir que ele confira a si mesmo.
      */
     public const EM_PRE_TRIAGEM = 'Em pré-triagem';
 
+    /** Na mesa do Chefe de Setor: já entendida, esperando o crivo dele. */
     public const RECEBIDA = 'Recebida';
 
-    public const ENCAMINHADA_A_AREA = 'Encaminhada à área';
+    /**
+     * O chefe escolheu a EQUIPE e a demanda está na mesa do líder dela.
+     *
+     * Chamava-se "Encaminhada ao líder": o chefe de então era um por área e
+     * escolhia só a área. Desde 22/09/2026 o chefe é um só, escolhe a equipe, e
+     * quem recebe é o líder — o nome antigo mentiria numa tela em que se escolhe
+     * um líder. A migration `2026_09_22_090100` renomeou o que já estava gravado.
+     */
+    public const ENCAMINHADA_AO_LIDER = 'Encaminhada ao líder';
 
-    public const DIRECIONADA_A_EQUIPE = 'Direcionada à equipe';
+    /** O líder mandou a equipe ao ponto: está na fila do aplicativo. */
+    public const DIRECIONADA_AOS_FISCAIS = 'Direcionada aos fiscais';
 
     public const EM_OPERACAO = 'Em operação';
 
@@ -140,7 +150,7 @@ class Demanda extends Model
      * decisão própria: quem vai a campo é a principal, e o resultado dela
      * responde por esta. É por isso que a situação existe em vez de a agregada
      * simplesmente ficar `Recebida`: na fila de triagem, ela apareceria como
-     * trabalho a fazer, e o coordenador triaria dez vezes o mesmo caso.
+     * trabalho a fazer, e o Chefe de Setor triaria dez vezes o mesmo caso.
      */
     public const AGRUPADA = 'Agrupada';
 
@@ -166,8 +176,8 @@ class Demanda extends Model
     public const SITUACOES = [
         self::EM_PRE_TRIAGEM,
         self::RECEBIDA,
-        self::ENCAMINHADA_A_AREA,
-        self::DIRECIONADA_A_EQUIPE,
+        self::ENCAMINHADA_AO_LIDER,
+        self::DIRECIONADA_AOS_FISCAIS,
         self::EM_OPERACAO,
         self::EM_CAMPO,
         self::AGUARDANDO_REGULARIZACAO,
@@ -183,8 +193,8 @@ class Demanda extends Model
     public const ABERTAS = [
         self::EM_PRE_TRIAGEM,
         self::RECEBIDA,
-        self::ENCAMINHADA_A_AREA,
-        self::DIRECIONADA_A_EQUIPE,
+        self::ENCAMINHADA_AO_LIDER,
+        self::DIRECIONADA_AOS_FISCAIS,
         self::EM_OPERACAO,
         self::EM_CAMPO,
         self::AGUARDANDO_REGULARIZACAO,
@@ -406,7 +416,7 @@ class Demanda extends Model
         $this->registrar(
             acao: 'Agrupada a outro registro',
             situacao: self::AGRUPADA,
-            papel: DemandaTramite::PAPEL_COORDENADOR,
+            papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             autor: $quem,
             detalhe: $motivo,
             campos: [
@@ -423,7 +433,7 @@ class Demanda extends Model
         $principal->registrar(
             acao: 'Recebeu denúncia agregada',
             situacao: $principal->situacao,
-            papel: DemandaTramite::PAPEL_COORDENADOR,
+            papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             autor: $quem,
             detalhe: $motivo,
             campos: [
@@ -440,7 +450,7 @@ class Demanda extends Model
      * A associação pode estar errada ("mesas na calçada" pode ser dois
      * estabelecimentos a cinquenta metros um do outro). Nada foi fundido, então
      * desagrupar é devolver a demanda à fila de triagem no estado em que ela
-     * chegou. Se o coordenador tivesse de temer a irreversibilidade, deixaria o
+     * chegou. Se o Chefe de Setor tivesse de temer a irreversibilidade, deixaria o
      * erro de pé.
      */
     public function desagrupar(User $quem, string $motivo): void
@@ -456,9 +466,9 @@ class Demanda extends Model
             // Volta para a etapa em que ESTAVA quando foi agrupada, e não para
             // um estado fixo. Uma denúncia agrupada durante a pré-triagem ainda
             // não foi entendida por ninguém: devolvê-la direto à Caixa a faria
-            // pular a etapa e chegar à mesa do coordenador como caso pronto.
+            // pular a etapa e chegar à mesa do Chefe de Setor como caso pronto.
             situacao: $this->situacaoAntesDoAgrupamento(),
-            papel: DemandaTramite::PAPEL_COORDENADOR,
+            papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             autor: $quem,
             detalhe: $motivo,
             campos: ['Estava agregada a' => $principal?->protocolo ?? '—'],
@@ -468,7 +478,7 @@ class Demanda extends Model
         $principal?->registrar(
             acao: 'Denúncia agregada foi retirada',
             situacao: $principal->situacao,
-            papel: DemandaTramite::PAPEL_COORDENADOR,
+            papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             autor: $quem,
             detalhe: $motivo,
             campos: ['Denúncia retirada' => $this->protocolo],
@@ -517,7 +527,7 @@ class Demanda extends Model
             $agregada->registrar(
                 acao: 'Respondida pela fiscalização do registro agrupado',
                 situacao: $situacao,
-                papel: DemandaTramite::PAPEL_COORDENADOR,
+                papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
                 autor: $quem,
                 detalhe: $desfecho,
                 campos: [
@@ -570,7 +580,7 @@ class Demanda extends Model
         $query->where('entrada', self::ENTRADA_INTEGRACAO);
     }
 
-    /** O que o coordenador digitou — a Caixa de Entrada. */
+    /** O que o Chefe de Setor digitou — a Caixa de Entrada. */
     /** @param  Builder<static>  $query */
     public function scopeDeBalcao(Builder $query): void
     {
@@ -593,7 +603,7 @@ class Demanda extends Model
     /**
      * O que já passou da pré-triagem — a fila da Caixa.
      *
-     * Inclui o que o coordenador digitou (que nunca esteve em pré-triagem) e o
+     * Inclui o que o Chefe de Setor digitou (que nunca esteve em pré-triagem) e o
      * que veio por integração e já foi liberado. O crivo de encaminhar ou
      * devolver é o mesmo para os dois: a partir daqui, a origem não muda a
      * decisão.

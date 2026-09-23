@@ -135,7 +135,7 @@ const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
         // que escolheu só a área e o que escolheu a equipe. Quem digita a palavra
         // quer os dois; quem precisa distinguir lê a coluna.
         expressao: /\bencaminhad\w*\b|\bdirecionad\w*\b/,
-        valor: { tipo: 'situacao', valores: ['Encaminhada à área', 'Direcionada à equipe'] },
+        valor: { tipo: 'situacao', valores: ['Encaminhada ao líder', 'Direcionada aos fiscais'] },
     },
     { expressao: /\bdevolvid\w*\b/, valor: { tipo: 'situacao', valores: ['Devolvida'] } },
     { expressao: /\barquivad\w*\b/, valor: { tipo: 'situacao', valores: ['Arquivada'] } },
@@ -244,12 +244,12 @@ export default function CaixaDeEntrada({
         () => ({
             total: demandas.length,
             // Os nomes são os do MODEL (`Demanda::SITUACOES`). A tela já chamou
-            // `Recebida` de "Aguardando triagem" e `Encaminhada à área` de
+            // `Recebida` de "Aguardando triagem" e `Encaminhada ao líder` de
             // "Encaminhada" — e os contadores, presos aos nomes antigos, ficavam
             // zerados sem que nada parecesse quebrado.
             triagem: demandas.filter((d) => d.situacao === 'Recebida').length,
             encaminhadas: demandas.filter((d) =>
-                ['Encaminhada à área', 'Direcionada à equipe'].includes(d.situacao),
+                ['Encaminhada ao líder', 'Direcionada aos fiscais'].includes(d.situacao),
             ).length,
             retornadas: demandas.filter((d) =>
                 ['Devolvida', 'Arquivada'].includes(d.situacao),
@@ -1002,9 +1002,9 @@ export default function CaixaDeEntrada({
                                             {sugestao.regiao})
                                         </strong>
                                         <div>
-                                            Encarregado: {sugestao.encarregado}. A
-                                            sugestão vem do bloco de bairros da
-                                            área — você pode trocar abaixo.
+                                            Líder: {sugestao.lider || sugestao.encarregado} — é
+                                            quem recebe e direciona aos fiscais. A sugestão vem
+                                            do bloco de bairros da área — você pode trocar abaixo.
                                         </div>
 
                                         {sugestao.alternativas.length > 0 && (
@@ -1159,7 +1159,7 @@ export default function CaixaDeEntrada({
                                         {equipes.map((e) => (
                                             <option key={e.equipe} value={e.equipe}>
                                                 Equipe {e.equipe} · {e.area} ({e.regiao}) —{' '}
-                                                {e.encarregado}
+                                                {e.lider || e.encarregado}
                                             </option>
                                         ))}
                                     </select>

@@ -17,10 +17,11 @@ uses(RefreshDatabase::class);
  * decisão do coordenador sobrevive ao logout, e que ela deixa trilha de quem,
  * quando e por quê.
  */
-function coordenador(): User
+/** O Chefe de Setor — a Caixa é a mesa dele (decisão do dono, 22/09/2026). */
+function chefeDaCaixa(): User
 {
     $usuario = User::factory()->create(['admin' => true]);
-    $setor = Setor::firstOrCreate(['slug' => 'coordenador'], ['nome' => 'Coordenador']);
+    $setor = Setor::firstOrCreate(['slug' => 'chefe-de-setor'], ['nome' => 'Chefe de Setor']);
     $usuario->setores()->syncWithoutDetaching([$setor->id]);
 
     return $usuario;
@@ -28,10 +29,11 @@ function coordenador(): User
 
 function areaComEquipe(string $nome = 'Área 5', string $equipe = 'C1', string $bairro = 'Costa Azul'): Area
 {
-    $chefe = User::factory()->create(['name' => 'Gestor 1']);
-    $area = Area::create(['nome' => $nome, 'regiao' => 'Orla', 'chefe_de_setor_id' => $chefe->id]);
+    $lider = User::factory()->create(['name' => 'Líder '.$equipe]);
+    $area = Area::create(['nome' => $nome, 'regiao' => 'Orla']);
     AreaBairro::create(['area_id' => $area->id, 'bairro' => $bairro]);
-    Equipe::create(['codigo' => $equipe, 'nome' => 'Equipe '.$equipe, 'area_id' => $area->id, 'encarregado' => 'José']);
+    // O líder é USUÁRIO ligado à equipe: é ele que recebe o encaminhamento.
+    Equipe::create(['codigo' => $equipe, 'nome' => 'Equipe '.$equipe, 'area_id' => $area->id, 'encarregado' => 'José', 'lider_id' => $lider->id]);
 
     return $area;
 }
@@ -48,14 +50,15 @@ function formulario(array $extra = []): array
         'endereco' => 'Rua Barão de Mauá, altura do nº 120',
         'bairro' => 'Costa Azul',
         'descricao' => 'Quatro barracas fixas fechando a passagem de pedestres.',
-        'area' => 'Área 5',
+        // O destino é a EQUIPE: o chefe escolhe, e quem recebe é o líder dela.
+        'equipe' => 'C1',
     ], $extra);
 }
 
 it('grava a demanda em banco, com protocolo e o passo de recebimento', function () {
     areaComEquipe();
 
-    $this->actingAs(coordenador())
+    $this->actingAs(chefeDaCaixa())
         ->post(route('retaguarda.caixa-de-entrada.store'), formulario())
         ->assertRedirect(route('retaguarda.caixa-de-entrada.index'));
 
@@ -69,40 +72,27 @@ it('grava a demanda em banco, com protocolo e o passo de recebimento', function 
         ->and($demanda->tramites)->toHaveCount(2);
 });
 
-it('encaminhar à área deixa o caso na mesa do Chefe de Setor, não na da equipe', function () {
+it('encaminhar deixa o caso na mesa do LÍDER da equipe escolhida, e o trâmite diz quem', function () {
     areaComEquipe();
 
-    $this->actingAs(coordenador())->post(route('retaguarda.caixa-de-entrada.store'), formulario());
+    $this->actingAs(chefeDaCaixa())->post(route('retaguarda.caixa-de-entrada.store'), formulario());
 
     $demanda = Demanda::firstOrFail();
 
-    expect($demanda->situacao)->toBe(Demanda::ENCAMINHADA_A_AREA)
-        ->and($demanda->area->nome)->toBe('Área 5')
-        // Ninguém escolheu equipe ainda — e é isso que o estado tem de dizer.
-        ->and($demanda->equipe_id)->toBeNull()
-        ->and($demanda->ultimoTramite()->campos)->toMatchArray(['Chefe de Setor' => 'Gestor 1']);
-});
-
-it('direcionar já à equipe é outro estado, e o trâmite diz qual', function () {
-    areaComEquipe();
-
-    $this->actingAs(coordenador())
-        ->post(route('retaguarda.caixa-de-entrada.store'), formulario(['equipe' => 'C1']));
-
-    $demanda = Demanda::firstOrFail();
-
-    expect($demanda->situacao)->toBe(Demanda::DIRECIONADA_A_EQUIPE)
+    expect($demanda->situacao)->toBe(Demanda::ENCAMINHADA_AO_LIDER)
+        // A equipe é o destino; a área vem junto porque é a dela.
         ->and($demanda->equipe->codigo)->toBe('C1')
-        // A área vem junto mesmo sem ter sido escolhida: ela é a da equipe.
-        ->and($demanda->area->nome)->toBe('Área 5');
+        ->and($demanda->area->nome)->toBe('Área 5')
+        // Encaminhar é entregar trabalho a ALGUÉM: o passo diz a quem.
+        ->and($demanda->ultimoTramite()->campos)->toMatchArray(['Líder da equipe' => 'Líder C1']);
 });
 
-it('recusa encaminhar sem destino, dizendo o que fazer', function () {
+it('recusa encaminhar sem equipe, dizendo o que fazer', function () {
     areaComEquipe();
 
-    $this->actingAs(coordenador())
-        ->post(route('retaguarda.caixa-de-entrada.store'), formulario(['area' => null]))
-        ->assertSessionHasErrors('area');
+    $this->actingAs(chefeDaCaixa())
+        ->post(route('retaguarda.caixa-de-entrada.store'), formulario(['equipe' => null]))
+        ->assertSessionHasErrors('equipe');
 
     expect(Demanda::count())->toBe(0);
 });
@@ -110,7 +100,7 @@ it('recusa encaminhar sem destino, dizendo o que fazer', function () {
 it('devolver exige justificativa escrita, porque é ato administrativo', function () {
     areaComEquipe();
 
-    $this->actingAs(coordenador())
+    $this->actingAs(chefeDaCaixa())
         ->post(route('retaguarda.caixa-de-entrada.store'), formulario([
             'destino' => 'devolver',
             'motivo' => 'Fora da competência da SEFAL',
@@ -123,7 +113,7 @@ it('devolver exige justificativa escrita, porque é ato administrativo', functio
 it('arquiva com o motivo e o destino gravados no passo', function () {
     areaComEquipe();
 
-    $this->actingAs(coordenador())
+    $this->actingAs(chefeDaCaixa())
         ->post(route('retaguarda.caixa-de-entrada.store'), formulario([
             'destino' => 'devolver',
             'motivo' => 'Objeto já regularizado',
@@ -143,17 +133,17 @@ it('arquiva com o motivo e o destino gravados no passo', function () {
 
 it('a tela lista o que está em banco e não mostra as agregadas', function () {
     areaComEquipe();
-    $coordenador = coordenador();
+    $chefe = chefeDaCaixa();
 
-    $this->actingAs($coordenador)->post(route('retaguarda.caixa-de-entrada.store'), formulario());
-    $this->actingAs($coordenador)->post(route('retaguarda.caixa-de-entrada.store'), formulario([
+    $this->actingAs($chefe)->post(route('retaguarda.caixa-de-entrada.store'), formulario());
+    $this->actingAs($chefe)->post(route('retaguarda.caixa-de-entrada.store'), formulario([
         'documento_origem' => '156-2026-884121',
     ]));
 
     [$principal, $agregada] = Demanda::orderBy('id')->get()->all();
-    $agregada->agruparEm($principal, $coordenador, 'Mesmo ponto.');
+    $agregada->agruparEm($principal, $chefe, 'Mesmo ponto.');
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->get(route('retaguarda.caixa-de-entrada.index'))
         ->assertOk()
         ->assertInertia(fn ($pagina) => $pagina
@@ -162,6 +152,7 @@ it('a tela lista o que está em banco e não mostra as agregadas', function () {
             ->has('demandas', 1)
             ->where('demandas.0.protocolo', $principal->protocolo)
             ->has('sugestoes')
-            ->has('chefias'),
+            // As equipes vêm com o líder de cada uma: é a quem o chefe encaminha.
+            ->has('equipes'),
         );
 });

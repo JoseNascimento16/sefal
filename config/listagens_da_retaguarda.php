@@ -28,7 +28,7 @@
 |                  nenhuma pode ser campo de texto livre (lista `texto_livre`).
 |                  `quando` marca a coluna CONDICIONAL: ela só entra quando o
 |                  contexto daquele acesso a pede — hoje só `varias-areas`, o
-|                  caso do Coordenador que varre cinco áreas e do Chefe de Setor
+|                  caso do Chefe de Setor que varre todas as equipes e do líder
 |                  que só tem a sua (para ele a coluna seria uma constante).
 |  · `detalhe`   — o que DESCEU da grade para o detalhe do registro. Não é
 |                  documentação: é a lista que o teste exige encontrar na
@@ -106,7 +106,7 @@ return [
                 ['chave' => 'ponto', 'titulo' => 'Ponto', 'largura' => 150],
                 // A ÁREA só para quem vê mais de uma. Para o Chefe de Setor a
                 // coluna repetiria a área dele em toda linha; para o
-                // Coordenador, que responde por cinco, ela é o que faz a fila
+                // Chefe de Setor, que responde por todas, ela é o que faz a fila
                 // ser varrível.
                 ['chave' => 'area', 'titulo' => 'Área', 'largura' => 80, 'quando' => 'varias-areas'],
                 ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 196],
@@ -193,23 +193,23 @@ return [
 
         /*
         |----------------------------------------------------------------------
-        | Denúncias › e-Salvador / Salvador Digital — aba "A triar"
+        | Denúncias › e-Salvador / Fala Salvador — aba "A encaminhar"
         |----------------------------------------------------------------------
         |
-        | Quem varre: o Coordenador, decidindo a ÁREA a partir do BAIRRO. Só
-        | isso: bairro é o dado que decide, área é onde ele confirma (a célula é
-        | um seletor, não texto), e o prazo é o que ordena a urgência.
+        | Quem varre: o Chefe de Setor, decidindo a EQUIPE a partir do BAIRRO.
+        | Só isso: bairro é o dado que decide, equipe é onde ele confirma (a
+        | célula é um seletor, não texto), e o prazo é o que ordena a urgência.
         |
         | Requerente e assunto descem — o assunto é texto livre e era ele que
         | esticava a linha. Situação não entra: nesta aba é sempre "Recebida".
         */
-        'denuncias.triagem' => [
+        'denuncias.encaminhamento' => [
             'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',
             'grade' => [
                 ['chave' => 'protocolo', 'titulo' => 'Protocolo', 'largura' => 132],
                 ['chave' => 'recebida', 'titulo' => 'Recebida', 'largura' => 132, 'alinhar' => 'center'],
                 ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 190],
-                ['chave' => 'area', 'titulo' => 'Área (sugerida)', 'largura' => 250],
+                ['chave' => 'equipe', 'titulo' => 'Equipe (sugerida)', 'largura' => 250],
                 ['chave' => 'prazo', 'titulo' => 'Prazo', 'largura' => 118, 'alinhar' => 'center'],
             ],
             'detalhe' => ['protocolo_origem', 'requerente', 'assunto', 'destino', 'situacao', 'desfecho'],
@@ -221,6 +221,7 @@ return [
                 ['chave' => 'assunto', 'titulo' => 'Assunto'],
                 ['chave' => 'bairro', 'titulo' => 'Bairro'],
                 ['chave' => 'area', 'titulo' => 'Área'],
+                ['chave' => 'equipe', 'titulo' => 'Equipe (sugerida)'],
                 ['chave' => 'destino', 'titulo' => 'Destino'],
                 ['chave' => 'situacao', 'titulo' => 'Situação'],
                 ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
@@ -233,9 +234,10 @@ return [
         | Denúncias — aba "A direcionar"
         |----------------------------------------------------------------------
         |
-        | Quem varre: o Chefe de Setor, escolhendo equipe ou operação. A área já
-        | está definida e ele pode responder por mais de uma, então ela fica —
-        | curta, como texto. Situação, de novo, é constante na aba.
+        | Quem varre: o líder da equipe, mandando os fiscais ao ponto ou anexando
+        | a uma operação. A área já está definida e ele pode liderar mais de uma
+        | equipe, então ela fica — curta, como texto. Situação, de novo, é
+        | constante na aba.
         */
         'denuncias.direcionamento' => [
             'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',
@@ -382,7 +384,7 @@ return [
         | Fiscalização › Caixa de Entrada
         |----------------------------------------------------------------------
         |
-        | Quem varre: o Coordenador vendo o que chegou em papel e o que está
+        | Quem varre: o Chefe de Setor vendo o que chegou em papel e o que está
         | estourando prazo. Protocolo, data de recebimento, bairro (o dado que
         | define a equipe), situação e prazo.
         |

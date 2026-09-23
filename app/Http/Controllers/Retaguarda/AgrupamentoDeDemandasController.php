@@ -8,7 +8,6 @@ use App\Models\DemandaTramite;
 use App\Models\SugestaoAgrupamento;
 use App\Support\Agrupamento\AnalisadorPorRegra;
 use App\Support\Agrupamento\VarreduraDeAgrupamento;
-use App\Support\PapelNaArea;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -19,7 +18,7 @@ use InvalidArgumentException;
  * O e-Salvador não entrega casos organizados — entrega o que cada cidadão
  * escreveu. Dez pessoas relatam "mesas e cadeiras atrapalhando a via" em dez
  * protocolos e, quando a equipe chega, é o mesmo ambulante. Esta tela é onde o
- * coordenador junta os dez num registro só, ANTES de mandar alguém à rua.
+ * Chefe de Setor junta os dez num registro só, ANTES de mandar alguém à rua.
  *
  * ## A máquina PROPÕE; quem agrupa é gente
  *
@@ -30,12 +29,12 @@ use InvalidArgumentException;
  * ouvidoria vai cobrar nove respostas que o sistema acha que já deu.
  *
  * A recusa é registrada com o mesmo cuidado da aceitação. Ela é a informação
- * mais cara daqui: é o coordenador dizendo "são dois bares diferentes", e é ela
+ * mais cara daqui: é o Chefe de Setor dizendo "são dois bares diferentes", e é ela
  * que impede a varredura de propor o mesmo par amanhã.
  *
  * ## Agrupar à mão continua valendo
  *
- * O coordenador conhece a rua melhor que qualquer regra. Ele agrupa dois casos
+ * O Chefe de Setor conhece a rua melhor que qualquer regra. Ele agrupa dois casos
  * que a máquina não ligou, e desagrupa o que ela ligou errado — as duas ações
  * exigem MOTIVO por escrito, porque as duas mudam o que o cidadão vai receber
  * como resposta.
@@ -45,7 +44,7 @@ use InvalidArgumentException;
  * O mesmo controller atende `/retaguarda/denuncias/agrupamento/…` e
  * `/retaguarda/caixa-de-entrada/agrupamento/…`. A guarda de acesso deduz a tela
  * do primeiro trecho do caminho, então cada porta herda a permissão da tela onde
- * o coordenador já está — em vez de a pré-triagem virar uma terceira tela, com
+ * o Chefe de Setor já está — em vez de a pré-triagem virar uma terceira tela, com
  * uma terceira concessão para alguém esquecer de dar.
  */
 class AgrupamentoDeDemandasController extends Controller
@@ -54,37 +53,26 @@ class AgrupamentoDeDemandasController extends Controller
      * Roda a varredura e deixa as propostas na tela.
      *
      * É disparada por gente, e não por agendador, enquanto a régua estiver sendo
-     * calibrada: o coordenador aperta, olha o que veio e diz se presta. Quando a
+     * calibrada: o Chefe de Setor aperta, olha o que veio e diz se presta. Quando a
      * confiança do que ela propõe estiver assentada, ela vira tarefa da noite —
      * e aí o que muda é o gatilho, não a regra.
      */
     public function varrer(Request $request): RedirectResponse
     {
-        $usuario = $request->user();
-
-        $recortada = PapelNaArea::recorta($usuario);
-
-        $efeito = (new VarreduraDeAgrupamento(new AnalisadorPorRegra))->executar(
-            $recortada ? PapelNaArea::areas($usuario) : null,
-        );
-
         /*
-         * O RECORTE é dito na frase, e não deduzido por quem lê.
-         *
-         * Para o Chefe de Setor a varredura só olha a área dele. Sem essa
-         * ressalva, "nenhuma repetição entre as denúncias abertas" parece falar
-         * do universo — e ele conclui que a funcionalidade não faz nada, quando
-         * ela fez exatamente o que devia e não achou nada NA ÁREA DELE.
+         * Sem recorte: a pré-triagem é a mesa do Chefe de Setor, que responde
+         * pelo setor inteiro (22/09/2026). Até então a varredura era recortada
+         * pela área do chefe — e a tela se contradizia quando a fila mostrava
+         * sete e a varredura respondia sobre a área. Quem não é chefe nem
+         * administrador não chega a esta tela.
          */
-        $areas = $recortada ? PapelNaArea::areas($usuario) : [];
-        $ondeOlhou = $areas === []
-            ? ''
-            : ' (só '.(count($areas) === 1 ? 'a área' : 'as áreas').' '.implode(', ', $areas).')';
+        $efeito = (new VarreduraDeAgrupamento(new AnalisadorPorRegra))->executar(null);
+        $ondeOlhou = '';
 
         if ($efeito['propostas'] === 0) {
             /*
              * Nenhuma proposta é NOTÍCIA, não silêncio: significa que a fila não
-             * tem repetição aparente — e o coordenador precisa saber disso para
+             * tem repetição aparente — e o chefe precisa saber disso para
              * não ficar esperando uma lista que não vem.
              */
             return back()->with('flash.sucesso', $efeito['ja_decididas'] > 0
@@ -125,7 +113,7 @@ class AgrupamentoDeDemandasController extends Controller
                 $request->user(),
                 /*
                  * O motivo que fica registrado é o da MÁQUINA, mais o que o
-                 * coordenador acrescentou. Guardar só a observação dele apagaria
+                 * Chefe de Setor acrescentou. Guardar só a observação dele apagaria
                  * o raciocínio que ele aceitou — e quem lesse o trâmite depois
                  * veria um agrupamento sem fundamento.
                  */
@@ -152,7 +140,7 @@ class AgrupamentoDeDemandasController extends Controller
      * RECUSA uma proposta — e a recusa não some.
      *
      * É ela que impede a varredura de propor o mesmo par amanhã. Um assistente
-     * que insiste no que já foi negado é pior do que nenhum: o coordenador para
+     * que insiste no que já foi negado é pior do que nenhum: o Chefe de Setor para
      * de ler a lista, e aí as propostas boas também se perdem.
      */
     public function recusar(Request $request, SugestaoAgrupamento $sugestao): RedirectResponse
@@ -174,7 +162,7 @@ class AgrupamentoDeDemandasController extends Controller
     }
 
     /**
-     * JUNTA à mão as que o coordenador escolheu — o caminho para o que a regra
+     * JUNTA à mão as que o Chefe de Setor escolheu — o caminho para o que a regra
      * não achou.
      *
      * ## Por que ele precisa existir
@@ -183,7 +171,7 @@ class AgrupamentoDeDemandasController extends Controller
      * palavras em comum, o nome da fachada. Ela não enxerga "é aquele camelô da
      * banca azul que todo mundo descreve de um jeito diferente", nem o caso em
      * que um cidadão escreveu o nome da rua errado. Sem uma porta manual, esses
-     * casos ficam sem saída nenhuma: o coordenador vê que são o mesmo fato e não
+     * casos ficam sem saída nenhuma: o Chefe de Setor vê que são o mesmo fato e não
      * tem o que clicar — e acaba mandando a equipe duas vezes ao mesmo ponto,
      * que é exatamente o que a pré-triagem existe para evitar.
      *
@@ -194,7 +182,7 @@ class AgrupamentoDeDemandasController extends Controller
      * ## Por que N de uma vez, e não uma a uma
      *
      * Dez relatos do mesmo ponto é o caso comum, não a exceção. Juntar um por um
-     * faria o coordenador escrever o mesmo motivo dez vezes — e, na décima, ele
+     * faria o Chefe de Setor escrever o mesmo motivo dez vezes — e, na décima, ele
      * escreveria "idem".
      */
     public function juntar(Request $request): RedirectResponse
@@ -213,7 +201,7 @@ class AgrupamentoDeDemandasController extends Controller
 
         /*
          * A principal tem de estar ENTRE as escolhidas. Sem essa checagem daria
-         * para pendurar a leva num registro que o coordenador não estava olhando
+         * para pendurar a leva num registro que o Chefe de Setor não estava olhando
          * — e ele não teria como perceber.
          */
         if (! in_array($dados['principal_id'], $dados['demandas'], true)) {
@@ -240,7 +228,7 @@ class AgrupamentoDeDemandasController extends Controller
                 $juntadas++;
             } catch (InvalidArgumentException $e) {
                 // A recusa do model vem com o motivo escrito. Guardada e dita no
-                // fim: parar na primeira deixaria o coordenador sem saber quais
+                // fim: parar na primeira deixaria o Chefe de Setor sem saber quais
                 // das dez entraram.
                 $recusadas[] = $agregada->protocolo.' — '.$e->getMessage();
             }
@@ -261,7 +249,7 @@ class AgrupamentoDeDemandasController extends Controller
     }
 
     /**
-     * AGRUPA à mão — o coordenador conhece a rua melhor que qualquer regra.
+     * AGRUPA à mão — o Chefe de Setor conhece a rua melhor que qualquer regra.
      */
     public function agrupar(Request $request, Demanda $demanda): RedirectResponse
     {
@@ -302,7 +290,7 @@ class AgrupamentoDeDemandasController extends Controller
      * A associação pode estar errada: "mesas na calçada" pode ser dois
      * estabelecimentos a cinquenta metros um do outro. Como nada foi fundido,
      * desagrupar devolve a denúncia à fila no estado em que ela chegou. Se o
-     * coordenador tivesse de temer a irreversibilidade, deixaria o erro de pé.
+     * Chefe de Setor tivesse de temer a irreversibilidade, deixaria o erro de pé.
      */
     public function desagrupar(Request $request, Demanda $demanda): RedirectResponse
     {
@@ -330,7 +318,7 @@ class AgrupamentoDeDemandasController extends Controller
      *
      * É o fim da etapa, e o começo da outra. Enquanto está em pré-triagem, a
      * pergunta é "quantos fatos isto é?"; depois dela, a pergunta é "o que se faz
-     * com este fato?" — e essa é a da Caixa, onde o coordenador encaminha ou
+     * com este fato?" — e essa é a da Caixa, onde o Chefe de Setor encaminha ou
      * devolve. São duas decisões diferentes, e misturá-las foi o que fez a leva
      * crua do e-Salvador chegar à mesa como dez casos.
      *
@@ -339,7 +327,7 @@ class AgrupamentoDeDemandasController extends Controller
      * Nada impediria o sistema de mandar para a Caixa tudo que a varredura não
      * ligou a ninguém. Mas "a máquina não achou repetição" não é o mesmo que
      * "alguém olhou": a varredura só enxerga o que a regra alcança, e é o
-     * coordenador que conhece a rua. Liberar é ele dizendo que olhou.
+     * Chefe de Setor que conhece a rua. Liberar é ele dizendo que olhou.
      *
      * ── Liberar NÃO desfaz agrupamento ──────────────────────────────────────
      *
@@ -368,11 +356,11 @@ class AgrupamentoDeDemandasController extends Controller
             $demanda->registrar(
                 acao: 'Pré-triagem concluída',
                 situacao: Demanda::RECEBIDA,
-                papel: DemandaTramite::PAPEL_COORDENADOR,
+                papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
                 autor: $request->user(),
                 detalhe: $demanda->agregadas()->count() > 0
                     ? 'Caso consolidado: responde também pelas denúncias agregadas a ele.'
-                    : 'Sem repetição a consolidar. Segue para a triagem do coordenador.',
+                    : 'Sem repetição a consolidar. Segue para o encaminhamento do Chefe de Setor.',
             );
         }
 
@@ -384,7 +372,7 @@ class AgrupamentoDeDemandasController extends Controller
          * tomar. Já as propostas em que ela é a PRINCIPAL continuam de pé, e é
          * assim que tem de ser: quando a leva nova repete o que já está em campo,
          * é o caso em campo que responde pelas novas. Descartar os dois lados
-         * fazia liberar a principal apagar o grupo inteiro — o coordenador
+         * fazia liberar a principal apagar o grupo inteiro — o Chefe de Setor
          * clicava em "liberar" e as seis propostas sumiam da mesa dele.
          */
         SugestaoAgrupamento::where('estado', SugestaoAgrupamento::SUGERIDA)

@@ -4,6 +4,7 @@ namespace App\Support\Apresentacao;
 
 use App\Models\Demanda;
 use App\Models\DemandaTramite;
+use App\Support\Estrutura;
 
 /**
  * A demanda do banco na forma que a tela lê.
@@ -90,6 +91,14 @@ class DemandaParaTela
             // Em que pé está.
             'situacao' => $demanda->situacao,
             'area' => $demanda->area?->nome,
+            /*
+             * A equipe que o BAIRRO sugere, com as alternativas de divisa. É o
+             * que a tela de encaminhamento pré-seleciona em cada linha: o chefe
+             * confirma, em vez de escolher do zero trinta vezes. Nula quando o
+             * bairro não está na estrutura — e a tela diz "sem equipe sugerida"
+             * em vez de inventar uma.
+             */
+            'area_sugerida' => Estrutura::sugerirPorBairro($demanda->bairro),
             'equipe' => $demanda->equipe?->codigo,
             'operacao' => $demanda->operacao?->nome,
 

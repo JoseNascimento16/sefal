@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Date;
  * cru seria inútil e perigoso:
  *
  *  - **inútil**: seis denúncias do mesmo bar produzem quinze pares. O
- *    coordenador decidiria quinze vezes para juntar seis casos, e desistiria
+ *    Chefe de Setor decidiria quinze vezes para juntar seis casos, e desistiria
  *    antes da quinta;
  *  - **perigoso**: os pares apontam em cadeia (A←B, B←C). Aceitar dois deles
  *    tentaria agregar a uma agregada — que o model recusa, com razão, mas só
@@ -33,13 +33,13 @@ use Illuminate\Support\Facades\Date;
  *
  * ⚠️ A transitividade também traz para o grupo quem se parece com um membro sem
  * se parecer com os outros — o restaurante da esquina, na mesma rua. Isso é
- * deliberado: ele entra como UMA proposta, que o coordenador recusa
+ * deliberado: ele entra como UMA proposta, que o Chefe de Setor recusa
  * individualmente, e a recusa dele não derruba as outras.
  *
  * ## O que ela NÃO propõe de novo
  *
  * Par já decidido — aceito ou RECUSADO — não volta. A recusa é a informação mais
- * cara desta tela: é o coordenador dizendo "são dois bares diferentes", e propor
+ * cara desta tela: é o Chefe de Setor dizendo "são dois bares diferentes", e propor
  * o mesmo par toda noite faria ele parar de ler a lista inteira. Um assistente
  * que insiste no que já foi negado é pior do que nenhum.
  *
@@ -110,7 +110,7 @@ class VarreduraDeAgrupamento
                 /*
                  * O motivo é o do par que de fato ligou os dois. Quando o membro
                  * entrou no grupo por transitividade — parecido com outro membro,
-                 * não com a principal —, isso é DITO: o coordenador precisa saber
+                 * não com a principal —, isso é DITO: o Chefe de Setor precisa saber
                  * que a ligação é indireta antes de aceitar.
                  */
                 $direto = $pares[$this->chaveDoPar($membro->id, $principal->id)] ?? null;

@@ -11,17 +11,21 @@ return [
     | nasce daqui (SetoresSeeder, idempotente por slug) e os comandos de bootstrap
     | validam contra esta lista. Um usuário pertence a N setores (`user_setores`).
     |
-    | administrador  — enxerga e administra tudo;
-    | coordenador    — o setor de retaguarda que RECEBE o que chega de fora e faz a
-    |                  TRIAGEM: lê a denúncia das ouvidorias, registra o que vem em
-    |                  papel e encaminha à área. NÃO é o administrador do sistema —
-    |                  é quem coordena a entrada do trabalho. O administrador também
-    |                  pode fazer esse trabalho, por ser administrador;
-    | fiscal         — usa o PWA em rua e registra fiscalizações;
-    | chefe-de-setor — responde por uma ÁREA de fiscalização: direciona o que foi
-    |                  encaminhado à área dele, recebe de volta o que a equipe
-    |                  concluiu em campo, valida cadastros de rua e acompanha a
-    |                  operação.
+    | administrador   — enxerga e administra tudo;
+    | chefe-de-setor  — UMA pessoa, que responde pelo setor inteiro: recebe tudo
+    |                   que chega (do e-Salvador, do Fala Salvador, por ligação),
+    |                   pré-tria, encaminha a um líder de equipe ou devolve, lê o
+    |                   que volta e responde ao e-Salvador. Sem recorte.
+    | lider-de-equipe — o encarregado de UMA equipe (o "encarregado" do documento
+    |                   das áreas): recebe o que o chefe encaminhou à sua equipe,
+    |                   direciona aos fiscais, recebe o retorno da rua e dá ciência
+    |                   ou pede nova vistoria. Recortado pela própria equipe.
+    | fiscal          — usa o PWA em rua e registra fiscalizações.
+    |
+    | ⚠️ Não há `coordenador`. Os coordenadores existem, mas trabalham no
+    | e-Salvador e direcionam de lá para a caixa do setor — não entram aqui. O
+    | setor existiu até 22/09/2026 e foi removido pela migration
+    | `2026_09_22_090000_lider_de_equipe_e_fim_do_coordenador`.
     |
     | ⚠️ Os dois últimos NASCERAM com outro nome — `administrativo` e `gestor` —, e
     | a renomeação (decisão do dono, 04/09/2026) alcançou o SLUG, não só o rótulo:
@@ -34,9 +38,9 @@ return [
 
     'setores' => [
         'administrador' => 'Administrador',
-        'coordenador' => 'Coordenador',
-        'fiscal' => 'Fiscal',
         'chefe-de-setor' => 'Chefe de Setor',
+        'lider-de-equipe' => 'Líder de Equipe',
+        'fiscal' => 'Fiscal',
     ],
 
     /*

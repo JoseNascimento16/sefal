@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
  *
  * É o primeiro analisador porque não depende de nada externo e porque o motivo
  * que ele escreve é auditável — "mesmo bairro, o mesmo logradouro e 7 palavras
- * em comum no assunto" é uma frase que o coordenador pode conferir em dois
+ * em comum no assunto" é uma frase que o Chefe de Setor pode conferir em dois
  * segundos. Um modelo de linguagem responderá melhor nos casos difíceis (o
  * cidadão que descreve o mesmo ponto com palavras completamente diferentes),
  * mas responderá com uma confiança que ninguém consegue verificar sozinho — e
@@ -115,7 +115,7 @@ class AnalisadorPorRegra implements Analisador
         }
 
         /*
-         * Da mais confiante para a menos, e só as primeiras: o coordenador olha
+         * Da mais confiante para a menos, e só as primeiras: o Chefe de Setor olha
          * a lista de cima para baixo, e uma fila longa de propostas fracas faz
          * ele parar de ler — que é como um assistente útil vira ruído.
          */

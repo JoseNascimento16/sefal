@@ -36,13 +36,18 @@ class DemandaTramite extends Model
     /** O passo que o SISTEMA deu: recebimento por integração, sem autor humano. */
     public const PAPEL_INTEGRACAO = 'integracao';
 
-    public const PAPEL_COORDENADOR = 'coordenador';
-
+    /**
+     * Quem recebe tudo, pré-tria, encaminha a um líder, devolve, fecha e responde
+     * ao canal. Até 22/09/2026 parte disso era assinado como `coordenador`; os
+     * passos antigos guardam esse texto e não são reescritos — trâmite é
+     * história, e naquele dia o papel se chamava assim.
+     */
     public const PAPEL_CHEFE_DE_SETOR = 'chefe-de-setor';
 
-    public const PAPEL_FISCAL = 'fiscal';
+    /** Quem direciona aos fiscais e lê o que volta da própria equipe. */
+    public const PAPEL_LIDER = 'lider-de-equipe';
 
-    public const PAPEL_ENCARREGADO = 'encarregado';
+    public const PAPEL_FISCAL = 'fiscal';
 
     protected $table = 'demanda_tramites';
 

@@ -95,10 +95,12 @@ interface Props {
     areas: string[];
     equipes: Equipe[];
     bairros: string[];
-    chefias: Record<string, { nome: string; matricula: string | null }>;
+    /** Quem lidera cada equipe — a operação é executada por uma equipe, e o líder dela responde. */
+    lideres: Record<string, { nome: string; matricula: string | null }>;
     /** Esta pessoa CADASTRA, ou apenas consulta? Quem responde é o servidor. */
     cadastra: boolean;
-    areasDoChefe: string[];
+    /** As áreas das equipes que esta pessoa lidera (vazio para quem vê tudo). */
+    areasDoLider: string[];
     recorteDeArea: boolean;
     /**
      * As colunas da grade e as do arquivo, declaradas no servidor. Ver
@@ -139,9 +141,9 @@ export default function CadastroDeOperacao({
     areas,
     equipes,
     bairros,
-    chefias,
+    lideres,
     cadastra,
-    areasDoChefe,
+    areasDoLider,
     recorteDeArea,
     listagens,
 }: Props) {
@@ -306,9 +308,10 @@ export default function CadastroDeOperacao({
         });
     }
 
-    /** O Chefe de Setor de uma área, ou null quando a estrutura não registra nenhum. */
-    const chefeDa = (area: string): string | null => {
-        const nome = chefias[area]?.nome ?? '';
+    /** O líder da equipe que executa a operação, ou null quando não há equipe ou líder. */
+    const liderDe = (equipes: string[]): string | null => {
+        const primeira = equipes[0];
+        const nome = primeira === undefined ? '' : (lideres[primeira]?.nome ?? '');
 
         return nome.trim() === '' ? null : nome;
     };
@@ -343,7 +346,7 @@ export default function CadastroDeOperacao({
         if (chave === 'area') {
             return {
                 conteudo: o.area,
-                dica: `${o.area} · ${chefeDa(o.area) ?? 'sem Chefe de Setor registrado'}`,
+                dica: `${o.area} · ${liderDe(o.equipes) ?? 'equipe sem líder registrado'}`,
             };
         }
 
@@ -427,16 +430,16 @@ export default function CadastroDeOperacao({
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
                                 <span className="rt-chip-dot" />
                                 Você monta operação
-                                {areasDoChefe.length > 0
-                                    ? ` · ${areasDoChefe.join(' e ')}`
+                                {areasDoLider.length > 0
+                                    ? ` · ${areasDoLider.join(' e ')}`
                                     : ''}
                             </li>
                         )}
 
-                        {cadastra && recorteDeArea && areasDoChefe.length === 0 && (
+                        {cadastra && recorteDeArea && areasDoLider.length === 0 && (
                             <li className="rt-chip" style={{ color: 'var(--sm-perigo)' }}>
                                 <span className="rt-chip-dot" />
-                                Sua conta não está vinculada a nenhuma área — procure
+                                Sua conta não está vinculada a nenhuma equipe — procure
                                 quem administra o sistema
                             </li>
                         )}
@@ -444,8 +447,8 @@ export default function CadastroDeOperacao({
                         {!cadastra && (
                             <li className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                Você consulta as operações para saber a que encaminhar
-                                a demanda; montar operação é do Chefe de Setor da área
+                                Você consulta as operações para saber a que anexar a
+                                demanda; montar operação é do Chefe de Setor ou do líder
                             </li>
                         )}
                     </ul>
@@ -535,7 +538,7 @@ export default function CadastroDeOperacao({
                     <div>
                         <strong>
                             Você está vendo as operações de{' '}
-                            {areasDoChefe.join(' e ')}.
+                            {areasDoLider.join(' e ')}.
                         </strong>
                         <div>
                             As operações das outras áreas não aparecem aqui — e
@@ -618,7 +621,7 @@ export default function CadastroDeOperacao({
                                     subtitulo="Sistema › Cadastro de Operação"
                                     contexto={[
                                         recorteDeArea
-                                            ? `Áreas: ${areasDoChefe.join(' e ')}`
+                                            ? `Áreas: ${areasDoLider.join(' e ')}`
                                             : 'Todas as áreas',
                                         busca.trim() ? `busca: "${busca.trim()}"` : null,
                                     ]
@@ -741,8 +744,9 @@ export default function CadastroDeOperacao({
                                         <dd>
                                             {aberta.area}
                                             <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                {chefeDa(aberta.area) ??
-                                                    'sem Chefe de Setor registrado'}
+                                                {liderDe(aberta.equipes) === null
+                                                    ? 'equipe sem líder registrado'
+                                                    : `líder ${liderDe(aberta.equipes)}`}
                                             </div>
                                         </dd>
                                     </div>
@@ -1108,7 +1112,7 @@ export default function CadastroDeOperacao({
             {operacoes.length === 0 && recorteDeArea && (
                 <p className="form-ajuda" style={{ marginTop: 14 }}>
                     <MapPinned size={14} aria-hidden /> Não há operação registrada em{' '}
-                    {areasDoChefe.join(' e ')}. As operações das outras áreas existem
+                    {areasDoLider.join(' e ')}. As operações das outras áreas existem
                     e não aparecem aqui.
                 </p>
             )}

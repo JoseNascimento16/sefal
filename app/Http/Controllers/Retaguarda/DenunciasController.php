@@ -12,7 +12,7 @@ use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\OperacaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\PapelNaArea;
+use App\Support\Papel;
 use App\Support\Protocolo;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
 use App\Support\TriagemDeDemandas;
@@ -25,15 +25,19 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Denúncias das ouvidorias.
+ * Denúncias por canal.
  *
  * Duas telas, uma por canal (`e-Salvador` e `Salvador Digital`), com a MESMA
- * mecânica: as denúncias chegam por integração, o coordenador tria e
- * encaminha à área, e o Chefe de Setor da área direciona à equipe ou anexa a uma
- * operação. O que muda entre elas é a origem e o que o formato do canal
- * carrega — o e-Salvador vem com requerente identificado, endereço estruturado
- * e anexos; o Salvador Digital pode ser anônimo e traz a transcrição do
- * atendimento telefônico, às vezes sem número nem ponto de referência.
+ * mecânica: o Chefe de Setor ENCAMINHA a denúncia a uma equipe (e, portanto, ao
+ * líder dela) ou a devolve; o líder de equipe DIRECIONA aos fiscais ou anexa a
+ * uma operação. O que muda entre elas é a origem e o que o formato do canal
+ * carrega — o e-Salvador vem com requerente identificado e anexos; o outro
+ * canal pode ser anônimo e traz a transcrição do atendimento, às vezes sem
+ * número nem ponto de referência.
+ *
+ * Até 22/09/2026 a primeira etapa era do coordenador, que escolhia uma ÁREA. Os
+ * coordenadores trabalham no e-Salvador e não entram aqui; o chefe passou a ser
+ * um só, e escolhe a equipe.
  *
  * ── Por que UM controller e UMA tela para os dois canais ─────────────────────
  *
@@ -46,7 +50,7 @@ use Inertia\Response;
  * ── Nada é digitado aqui ────────────────────────────────────────────────────
  *
  * Não há rota de inclusão, e isso é deliberado: estas telas não são a Caixa de
- * Entrada (onde o coordenador digita o papel que chegou ao balcão). A
+ * Entrada (onde o Chefe de Setor digita o papel que chegou ao balcão). A
  * denúncia entra pela integração, e cada uma mostra o carimbo de quando o canal
  * a entregou e sob que número. Um botão "cadastrar denúncia" aqui apagaria
  * justamente a distinção que o módulo existe para deixar clara.
@@ -54,9 +58,10 @@ use Inertia\Response;
  * ── As duas etapas têm dois donos, e a tela obedece ─────────────────────────
  *
  * A permissão de ABRIR a tela é uma só (slug `denuncias`, no Modo Gerente). O
- * que separa os papéis é a ETAPA, derivada do setor de quem entrou: o
- * COORDENADOR tria, o CHEFE DE SETOR direciona, e o administrador do sistema exerce
- * as duas — é ele que demonstra o fluxo inteiro e que cobre a ausência do outro.
+ * que separa os papéis é a ETAPA, derivada do setor de quem entrou: o CHEFE DE
+ * SETOR encaminha, o LÍDER DE EQUIPE direciona, e o administrador do sistema
+ * exerce as duas — é ele que demonstra o fluxo inteiro e que cobre a ausência
+ * do outro.
  * A conferência acontece AQUI, no servidor, e não só na tela: esconder o botão é
  * conforto, nunca fronteira.
  *
@@ -69,8 +74,8 @@ use Inertia\Response;
  * ação deixaria a fronteira valendo apenas para quem não sabe mandar a
  * requisição.
  *
- * O administrador continua vendo tudo — é o dono do sistema. O coordenador
- * também, porque quem tria precisa saber o que aconteceu com o que encaminhou.
+ * O administrador continua vendo tudo — é o dono do sistema. O Chefe de Setor
+ * também, porque quem encaminha precisa saber o que aconteceu com o que mandou.
  *
  * ── O que mudou ao sair do protótipo ───────────────────────────────────────
  *
@@ -101,48 +106,50 @@ class DenunciasController extends Controller
     }
 
     /**
-     * TRIAGEM — encaminha as denúncias selecionadas às áreas escolhidas.
+     * ENCAMINHAMENTO — o Chefe de Setor manda cada denúncia à equipe que
+     * confirmou, e quem recebe é o líder dela.
      *
-     * O corpo traz `destinos`: uma lista de pares identificador → área. Não é um
-     * identificador por requisição nem uma área para o lote inteiro, porque a
-     * triagem real é os dois casos ao mesmo tempo — chegam dez denúncias de
-     * bairros diferentes, cada uma com a sua área, e o coordenador confirma
-     * todas de uma vez.
+     * O corpo traz `destinos`: uma lista de pares identificador → equipe. Não é
+     * um identificador por requisição nem uma equipe para o lote inteiro, porque
+     * o encaminhamento real é os dois casos ao mesmo tempo — chegam dez denúncias
+     * de bairros diferentes, cada uma com a sua equipe sugerida, e o chefe
+     * confirma todas de uma vez.
      */
     public function encaminhar(Request $request): RedirectResponse
     {
-        if (($recusa = $this->exigirEtapa($request, 'triagem')) !== null) {
+        if (($recusa = $this->exigirEtapa($request, 'encaminhamento')) !== null) {
             return $recusa;
         }
 
         $dados = $request->validate([
             'destinos' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'destinos.*.id' => ['required', 'integer'],
-            'destinos.*.area' => ['required', Rule::in(Estrutura::nomesDeArea())],
+            'destinos.*.equipe' => ['required', Rule::in(Estrutura::codigosDeEquipe())],
             'observacao' => ['nullable', 'string', 'max:500'],
         ], [
             'destinos.required' => 'Escolha ao menos uma denúncia para encaminhar.',
-            'destinos.*.area.required' => 'Confirme a área de cada denúncia antes de encaminhar.',
-            'destinos.*.area.in' => 'A área escolhida não existe na estrutura de fiscalização.',
+            'destinos.*.equipe.required' => 'Confirme a equipe de cada denúncia antes de encaminhar.',
+            'destinos.*.equipe.in' => 'A equipe escolhida não existe na estrutura de fiscalização.',
         ]);
 
-        $areasPorId = [];
+        $equipesPorId = [];
 
         foreach ($dados['destinos'] as $destino) {
-            $areasPorId[(int) $destino['id']] = (string) $destino['area'];
+            $equipesPorId[(int) $destino['id']] = (string) $destino['equipe'];
         }
 
-        $efeito = $this->triagem($request)->encaminharAArea($areasPorId, $dados['observacao'] ?? null);
+        $efeito = $this->triagem($request)->encaminharAoLider($equipesPorId, $dados['observacao'] ?? null);
 
         return back()->with(...$this->recado(
             $efeito,
-            'encaminhada à área, para o Chefe de Setor direcionar',
-            'encaminhadas às áreas, para os Chefes de Setor direcionarem',
+            'encaminhada ao líder da equipe, que direciona aos fiscais',
+            'encaminhadas aos líderes das equipes, que direcionam aos fiscais',
         ));
     }
 
     /**
-     * TRIAGEM — devolve ao canal de origem ou arquiva, com motivo e justificativa.
+     * ENCAMINHAMENTO — o Chefe de Setor devolve ao canal de origem ou arquiva,
+     * com motivo e justificativa.
      *
      * A justificativa é exigida no SERVIDOR, e com tamanho mínimo: devolver é ato
      * administrativo, e "não procede" não conta o caso a quem ler depois.
@@ -150,7 +157,7 @@ class DenunciasController extends Controller
      */
     public function devolver(Request $request): RedirectResponse
     {
-        if (($recusa = $this->exigirEtapa($request, 'triagem')) !== null) {
+        if (($recusa = $this->exigirEtapa($request, 'encaminhamento')) !== null) {
             return $recusa;
         }
 
@@ -183,13 +190,11 @@ class DenunciasController extends Controller
     }
 
     /**
-     * DIRECIONAMENTO — o Chefe de Setor manda as denúncias a uma equipe.
+     * DIRECIONAMENTO — o líder manda a própria equipe vistoriar.
      *
-     * A justificativa passa a ser OBRIGATÓRIA quando a equipe escolhida não é a
-     * da área da denúncia: tirar o trabalho da equipe responsável é decisão que
-     * precisa estar escrita. A conferência é feita contra a área GRAVADA na
-     * denúncia, não contra o que a tela mandou — senão bastaria omitir a área no
-     * corpo para a exigência desaparecer.
+     * A equipe já está na denúncia (o chefe a escolheu ao encaminhar); o líder
+     * não troca de equipe aqui — se ela veio para a equipe errada, o caminho é
+     * devolver ao chefe. O que ele acrescenta é a ORIENTAÇÃO aos fiscais.
      */
     public function direcionar(Request $request): RedirectResponse
     {
@@ -200,41 +205,30 @@ class DenunciasController extends Controller
         $dados = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'ids.*' => ['required', 'integer'],
-            'equipe' => ['required', Rule::in(Estrutura::codigosDeEquipe())],
-            'justificativa' => ['nullable', 'string', 'max:1000'],
+            'orientacao' => ['nullable', 'string', 'max:1000'],
         ], [
             'ids.required' => 'Escolha ao menos uma denúncia.',
-            'equipe.required' => 'Escolha a equipe que vai vistoriar.',
-            'equipe.in' => 'A equipe escolhida não existe na estrutura de fiscalização.',
         ]);
 
         $ids = array_map('intval', $dados['ids']);
 
-        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
             return $recusa;
         }
 
-        $equipe = (string) $dados['equipe'];
-        $justificativa = trim((string) ($dados['justificativa'] ?? ''));
+        $orientacao = trim((string) ($dados['orientacao'] ?? ''));
 
-        if ($justificativa === '' && $this->trocaDeEquipe($ids, $equipe)) {
-            return back()->withErrors([
-                'justificativa' => 'A equipe escolhida não é a da área da denúncia. Escreva por que o '
-                    .'trabalho sai da equipe responsável.',
-            ]);
-        }
-
-        $efeito = $this->triagem($request)->direcionarAEquipe($ids, $equipe, $justificativa === '' ? null : $justificativa);
+        $efeito = $this->triagem($request)->direcionarAosFiscais($ids, $orientacao === '' ? null : $orientacao);
 
         return back()->with(...$this->recado(
             $efeito,
-            "direcionada à Equipe {$equipe} — aparecerá no aplicativo dos fiscais dela",
-            "direcionadas à Equipe {$equipe} — aparecerão no aplicativo dos fiscais dela",
+            'direcionada aos fiscais — aparecerá no aplicativo deles',
+            'direcionadas aos fiscais — aparecerão no aplicativo deles',
         ));
     }
 
     /**
-     * DIRECIONAMENTO — o Chefe de Setor anexa as denúncias a uma operação.
+     * DIRECIONAMENTO — o líder (ou o chefe) anexa as denúncias a uma operação.
      *
      * A operação pode ser uma das que já existem ou uma NOVA, aberta dali mesmo:
      * é o caso de não haver trabalho planejado para aquela região ainda. Um
@@ -308,7 +302,7 @@ class DenunciasController extends Controller
 
         $ids = array_map('intval', $dados['ids']);
 
-        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
             return $recusa;
         }
 
@@ -329,7 +323,12 @@ class DenunciasController extends Controller
             ? $this->abrirOperacao($dados)
             : Operacao::where('nome', (string) $dados['operacao'])->firstOrFail();
 
-        $efeito = $this->triagem($request)->anexarAOperacao($ids, $operacao);
+        $efeito = $this->triagem($request)->anexarAOperacao(
+            $ids,
+            $operacao,
+            null,
+            Papel::papelDoTramite($request->user(), Papel::recorta($request->user()) ? 'lider' : 'chefe'),
+        );
 
         return back()->with(...$this->recado(
             $efeito,
@@ -353,15 +352,15 @@ class DenunciasController extends Controller
         $configuracao = ['slug' => $canal, ...(array) config("demandas.canais.{$canal}", [])];
 
         $usuario = $request->user();
-        $areasDoChefe = self::areasDoChefe($usuario);
-        $comRecorte = self::temRecorteDeArea($usuario);
+        $equipesDoLider = Papel::equipes($usuario);
+        $comRecorte = Papel::recorta($usuario);
 
         return Inertia::render("Retaguarda/Denuncias/{$pagina}", [
             'canal' => $configuracao,
-            // O Chefe de Setor recebe SÓ o que é da área dele — o recorte é feito aqui, e
+            // O líder recebe SÓ o que é da equipe dele — o recorte é feito aqui, e
             // não na tela: filtro de front esconde, não protege, e a lista inteira
             // teria viajado até o navegador de quem não deve vê-la.
-            'denuncias' => $this->doCanal($canal, $comRecorte ? $areasDoChefe : null),
+            'denuncias' => $this->doCanal($canal, $comRecorte ? $equipesDoLider : null),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
             // uma opção que o servidor recusa.
@@ -381,10 +380,10 @@ class DenunciasController extends Controller
             'destinos' => array_values((array) config('demandas.destinos_de_retorno', [])),
             'equipes' => Estrutura::equipes(),
             'areas' => Estrutura::nomesDeArea(),
-            // Quem responde por cada área. É o que o triador precisa ver ANTES de
-            // encaminhar: "vai para a Área 5" só diz metade; a outra metade é para
+            // Quem lidera cada equipe. É o que o chefe precisa ver ANTES de
+            // encaminhar: "vai para a C2" só diz metade; a outra metade é para
             // quem.
-            'chefias' => Estrutura::chefiasPorArea(),
+            'lideres' => Estrutura::lideresPorEquipe(),
             /*
              * A PRÉ-TRIAGEM não é servida aqui.
              *
@@ -398,16 +397,16 @@ class DenunciasController extends Controller
             // A etapa de quem entrou — é ela que decide o que a tela oferece, e a
             // mesma resposta governa a recusa no servidor.
             'etapas' => self::etapas($usuario),
-            // As áreas que esta pessoa responde, e se a listagem está recortada
-            // por elas. A tela usa isso para dizer QUAL é a sua área no selo, e
+            // As equipes que esta pessoa lidera, e se a listagem está recortada
+            // por elas. A tela usa isso para dizer QUAL é a sua equipe no selo, e
             // para explicar que a lista não é o universo.
-            'areasDoChefe' => $areasDoChefe,
-            'recorteDeArea' => $comRecorte,
+            'equipesDoLider' => $equipesDoLider,
+            'recorteDeEquipe' => $comRecorte,
             // As COLUNAS de cada aba — da grade e do arquivo. Uma listagem por
             // aba porque a aba é uma ETAPA do fluxo, e cada etapa se decide
             // olhando um dado diferente. Ver docs/padroes/listagem-clean.md.
             'listagens' => ListagensDaRetaguarda::para([
-                'denuncias.triagem',
+                'denuncias.encaminhamento',
                 'denuncias.direcionamento',
                 'denuncias.todas',
             ]),
@@ -417,9 +416,9 @@ class DenunciasController extends Controller
     /**
      * As etapas do fluxo que esta pessoa exerce.
      *
-     * O papel vem do SETOR, não de uma coluna nova: `coordenador` tria,
-     * `chefe-de-setor` direciona, e quem administra o sistema exerce as duas — é ele quem
-     * demonstra o fluxo inteiro e quem cobre a ausência do outro. O setor
+     * O papel vem do SETOR, não de uma coluna nova: `chefe-de-setor` encaminha,
+     * `lider-de-equipe` direciona, e quem administra o sistema exerce as duas — é
+     * ele quem demonstra o fluxo inteiro e quem cobre a ausência do outro. O setor
      * `administrador` não precisa de linha própria aqui: `ehAdmin()` já o
      * reconhece, e uma segunda conta do mesmo papel um dia discordaria da
      * primeira.
@@ -437,46 +436,22 @@ class DenunciasController extends Controller
         }
 
         if ($usuario->ehAdmin()) {
-            return ['triagem', 'direcionamento'];
+            return ['encaminhamento', 'direcionamento'];
         }
 
         $setores = $usuario->setores->pluck('slug')->all();
 
         $etapas = [];
 
-        if (in_array('coordenador', $setores, true)) {
-            $etapas[] = 'triagem';
+        if (in_array(Papel::CHEFE, $setores, true)) {
+            $etapas[] = 'encaminhamento';
         }
 
-        if (in_array('chefe-de-setor', $setores, true)) {
+        if (in_array(Papel::LIDER, $setores, true)) {
             $etapas[] = 'direcionamento';
         }
 
         return $etapas;
-    }
-
-    /**
-     * As áreas que esta pessoa responde como Chefe de Setor, e se a listagem dela
-     * vem recortada por elas.
-     *
-     * As duas respostas DELEGAM para {@see PapelNaArea}, que é a fonte única da
-     * regra: as mesmas perguntas governam esta tela, a de Fiscalizações e o
-     * Cadastro de Operação. Elas viviam copiadas aqui e na fila do retorno de
-     * campo, e cópia da mesma regra é a mesma regra com dois donos — no dia em que
-     * "Chefe de Setor que também é Coordenador" mudasse de resposta, uma tela
-     * passaria a recortar e a outra não, e a que não recortasse continuaria
-     * abrindo sem nada acusar.
-     *
-     * @return list<string>
-     */
-    private static function areasDoChefe(?User $usuario): array
-    {
-        return PapelNaArea::areas($usuario);
-    }
-
-    private static function temRecorteDeArea(?User $usuario): bool
-    {
-        return PapelNaArea::recorta($usuario);
     }
 
     /**
@@ -493,59 +468,58 @@ class DenunciasController extends Controller
             return null;
         }
 
-        $recado = $etapa === 'triagem'
-            ? 'A triagem das denúncias é do Coordenador. Você acompanha o que foi encaminhado à sua área.'
-            : 'O direcionamento é do Chefe de Setor da área. A triagem encaminha; quem escolhe equipe ou operação é ele.';
+        $recado = $etapa === 'encaminhamento'
+            ? 'Encaminhar é do Chefe de Setor. Você acompanha o que foi encaminhado à sua equipe e direciona aos fiscais.'
+            : 'O direcionamento é do líder da equipe. O chefe encaminha; quem manda os fiscais ao ponto é ele.';
 
         return back()->with('flash.erro', $recado);
     }
 
     /**
-     * Recusa a ação do Chefe de Setor sobre denúncia que NÃO é da área dele.
+     * Recusa a ação do líder sobre denúncia que NÃO é da equipe dele.
      *
-     * Existe porque esconder da listagem não é fronteira: a lista do Chefe de Setor já vem
+     * Existe porque esconder da listagem não é fronteira: a lista do líder já vem
      * recortada, mas quem souber montar a requisição alcançaria a denúncia de
-     * outra área — e o lote é justamente o caminho fácil para isso, porque manda
-     * uma lista de identificadores.
+     * outra equipe — e o lote é justamente o caminho fácil para isso, porque
+     * manda uma lista de identificadores.
      *
-     * A conferência é contra a área GRAVADA em cada denúncia e o vínculo do
+     * A conferência é contra a EQUIPE GRAVADA em cada denúncia e o vínculo do
      * usuário, as duas coisas que o corpo da requisição não controla. O
-     * administrador passa: é o dono do sistema. Quem não responde por área nenhuma
-     * também passa aqui — quem o barra é a guarda de ETAPA, que roda antes.
+     * administrador e o Chefe de Setor passam: respondem por tudo.
      *
      * @param  list<int>  $ids
      */
-    private function exigirArea(Request $request, array $ids): ?RedirectResponse
+    private function exigirEquipe(Request $request, array $ids): ?RedirectResponse
     {
         $usuario = $request->user();
 
-        if ($usuario === null || $usuario->ehAdmin()) {
+        if (! Papel::recorta($usuario)) {
             return null;
         }
 
-        $minhas = self::areasDoChefe($usuario);
+        $minhas = Papel::equipes($usuario);
 
         /*
-         * Chefe de Setor SEM área vinculada não é caso de passar batido: ele exerce a etapa
-         * de direcionamento (senão não chegaria aqui) e não tem área para
-         * direcionar. Recusar dizendo isso é o que faz alguém corrigir o cadastro —
-         * deixar passar daria a ele o sistema inteiro.
+         * Líder SEM equipe vinculada não é caso de passar batido: ele exerce a
+         * etapa de direcionamento (senão não chegaria aqui) e não tem equipe para
+         * direcionar. Recusar dizendo isso é o que faz alguém corrigir o cadastro
+         * — deixar passar daria a ele o sistema inteiro.
          */
         if ($minhas === []) {
             return back()->with(
                 'flash.erro',
-                'Sua conta não está vinculada a nenhuma área de fiscalização, então não há o que '
-                .'direcionar. Procure quem administra o sistema para registrar a sua área.',
+                'Sua conta não está vinculada a nenhuma equipe, então não há o que direcionar. '
+                .'Procure quem administra o sistema para registrar a sua equipe.',
             );
         }
 
         $deFora = [];
 
         foreach ($ids as $id) {
-            $denuncia = Demanda::with('area')->find($id);
-            $area = $denuncia?->area?->nome;
+            $denuncia = Demanda::with('equipe')->find($id);
+            $equipe = $denuncia?->equipe?->codigo;
 
-            if (! is_string($area) || ! in_array($area, $minhas, true)) {
+            if (! is_string($equipe) || ! in_array($equipe, $minhas, true)) {
                 $deFora[] = $denuncia->protocolo ?? "#{$id}";
             }
         }
@@ -556,44 +530,12 @@ class DenunciasController extends Controller
 
         return back()->with(
             'flash.erro',
-            'Você responde por '.implode(', ', $minhas).', e '
+            'Você lidera '.(count($minhas) === 1 ? 'a Equipe ' : 'as Equipes ').implode(', ', $minhas).', e '
             .(count($deFora) === 1 ? 'a denúncia ' : 'as denúncias ')
             .implode(', ', $deFora)
-            .(count($deFora) === 1 ? ' não é dessa área' : ' não são dessa área')
+            .(count($deFora) === 1 ? ' não é dessa equipe' : ' não são dessa equipe')
             .'. Nada foi alterado — recarregue a listagem.',
         );
-    }
-
-    /**
-     * Alguma das denúncias escolhidas sairia da equipe da própria área?
-     *
-     * A pergunta é feita contra a área GRAVADA em cada denúncia e a estrutura
-     * vigente — as duas coisas que o corpo da requisição não controla.
-     *
-     * @param  list<int>  $ids
-     */
-    private function trocaDeEquipe(array $ids, string $equipe): bool
-    {
-        $equipeDaArea = [];
-
-        foreach (Estrutura::equipes() as $registro) {
-            $equipeDaArea[(string) $registro['area']] = (string) $registro['equipe'];
-        }
-
-        foreach ($ids as $id) {
-            $denuncia = Demanda::with('area')->find($id);
-            $area = $denuncia?->area?->nome;
-
-            if (! is_string($area) || ! isset($equipeDaArea[$area])) {
-                continue;
-            }
-
-            if ($equipeDaArea[$area] !== $equipe) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     // ── O acesso ao banco ───────────────────────────────────────────────────
@@ -607,19 +549,19 @@ class DenunciasController extends Controller
     /**
      * As denúncias de um canal, já na forma que a tela lê.
      *
-     * O recorte por área é feito AQUI, e não na tela: filtro de front esconde,
+     * O recorte por equipe é feito AQUI, e não na tela: filtro de front esconde,
      * não protege, e a lista inteira teria viajado até o navegador de quem não
-     * deve vê-la. `$areas` nulo significa "sem recorte" — é o caso do
-     * administrador e do coordenador, que precisam do universo.
+     * deve vê-la. `$equipes` nulo significa "sem recorte" — é o caso do
+     * administrador e do Chefe de Setor, que precisam do universo.
      *
      * As AGREGADAS ficam de fora: quem leva o caso a campo é o registro de
      * trabalho, e mostrar as dez faria a fila cobrar dez vezes o mesmo fato. Elas
      * aparecem dentro do registro que as agrupou.
      *
-     * @param  list<string>|null  $areas
+     * @param  list<string>|null  $equipes  códigos
      * @return list<array<string, mixed>>
      */
-    private function doCanal(string $canal, ?array $areas): array
+    private function doCanal(string $canal, ?array $equipes): array
     {
         $consulta = Demanda::where('canal', $canal)
             ->deTrabalho()
@@ -632,13 +574,13 @@ class DenunciasController extends Controller
             ->orderByDesc('recebida_em')
             ->orderByDesc('id');
 
-        if ($areas !== null) {
+        if ($equipes !== null) {
             /*
-             * Sem área ainda (recém-recebida) não é da área de ninguém — e some
-             * da lista do Chefe de Setor por isso, não por engano: ela está na
-             * mesa do Coordenador, esperando triagem.
+             * Sem equipe ainda (recém-recebida) não é da equipe de ninguém — e
+             * some da lista do líder por isso, não por engano: ela está na mesa
+             * do Chefe de Setor, esperando encaminhamento.
              */
-            $consulta->whereHas('area', static fn ($q) => $q->whereIn('nome', $areas));
+            $consulta->whereHas('equipe', static fn ($q) => $q->whereIn('codigo', $equipes));
         }
 
         return $consulta->get()->map(DemandaParaTela::completa(...))->all();
@@ -662,7 +604,9 @@ class DenunciasController extends Controller
             'codigo' => Protocolo::proximo('OP', modelClass: Operacao::class, coluna: 'codigo'),
             'nome' => (string) $dados['nome'],
             'area_id' => $area->id,
-            'coordenador_id' => $area->chefe_de_setor_id,
+            // Quem abriu a operação é quem responde por ela — o vínculo por área
+            // deixou de existir com o chefe único.
+            'coordenador_id' => Auth::id(),
             'regiao' => $area->regiao,
             'foco' => $dados['foco'] ?? null,
             'inicio' => Date::now()->startOfDay(),

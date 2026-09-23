@@ -20,7 +20,7 @@ uses(RefreshDatabase::class);
 |
 | O e-Salvador não entrega casos organizados — entrega o que cada cidadão
 | escreveu. O que estes testes protegem não é o acerto do algoritmo (esse o
-| coordenador julga olhando), e sim as três promessas que sustentam a tela:
+| o Chefe de Setor julga olhando), e sim as três promessas que sustentam a tela:
 |
 | 1. **a máquina PROPÕE, quem agrupa é gente.** Enquanto ninguém decide, nada
 |    mudou de lugar — nem a situação, nem a fila;
@@ -28,7 +28,7 @@ uses(RefreshDatabase::class);
 |    cinco propostas que convergem na mais antiga, e não quinze pares em cadeia
 |    que, aceitos dois a dois, o próprio model recusaria;
 | 3. **a recusa segura.** É a informação mais cara daqui — e um assistente que
-|    insiste no que já foi negado faz o coordenador parar de ler a lista.
+|    insiste no que já foi negado faz o Chefe de Setor parar de ler a lista.
 |
 */
 
@@ -37,10 +37,10 @@ beforeEach(function () {
     $this->seed(PermissoesSetorSeeder::class);
 });
 
-function coordenadorDaTriagem(): User
+function chefeDaTriagem(): User
 {
     $u = User::factory()->create(['admin' => false, 'ativo' => true]);
-    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'coordenador')->firstOrFail()->id]);
+    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
 
     return $u->fresh();
 }
@@ -102,7 +102,7 @@ it('não compara bairros diferentes, por mais parecido que seja o assunto', func
 
     /*
      * O comércio de rua repete assunto a cidade inteira. Sem o bairro como
-     * pré-requisito, a fila de propostas viraria ruído — e o coordenador pararia
+     * pré-requisito, a fila de propostas viraria ruído — e o Chefe de Setor pararia
      * de ler a lista inteira.
      */
     expect(varrer()['propostas'])->toBe(0);
@@ -123,7 +123,7 @@ it('fecha o grupo na mais antiga: seis denúncias viram cinco propostas que conv
 
     /*
      * ⚠️ É AQUI que a tela presta ou não presta. Seis denúncias produzem quinze
-     * PARES; publicar os quinze faria o coordenador decidir quinze vezes para
+     * PARES; publicar os quinze faria o Chefe de Setor decidir quinze vezes para
      * juntar seis casos — e aceitar dois em cadeia (A←B, B←C) esbarraria na
      * recusa do model, depois de ele já ter clicado.
      */
@@ -143,7 +143,7 @@ it('aceitar agrupa, tira da fila de trabalho e deixa passo nos dois lados', func
 
     $sugestao = SugestaoAgrupamento::firstOrFail();
 
-    $this->actingAs(coordenadorDaTriagem())
+    $this->actingAs(chefeDaTriagem())
         ->post(route('retaguarda.denuncias.agrupamento.aceitar', $sugestao), [
             'observacao' => 'Conferi no mapa: é o mesmo bar.',
         ])
@@ -166,14 +166,14 @@ it('recusar exige o porquê, e a recusa impede a próxima varredura de propor de
     varrer();
 
     $sugestao = SugestaoAgrupamento::firstOrFail();
-    $coordenador = coordenadorDaTriagem();
+    $chefe = chefeDaTriagem();
 
     // Sem motivo escrito não passa: é ele que ensina a próxima varredura.
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.agrupamento.recusar', $sugestao), ['observacao' => 'não'])
         ->assertSessionHasErrors('observacao');
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.agrupamento.recusar', $sugestao), [
             'observacao' => 'São dois estabelecimentos diferentes, a cinquenta metros um do outro.',
         ])
@@ -182,27 +182,27 @@ it('recusar exige o porquê, e a recusa impede a próxima varredura de propor de
     expect($sugestao->fresh()->estado)->toBe(SugestaoAgrupamento::RECUSADA);
 
     // A segunda varredura não propõe o mesmo par: insistir no que já foi negado
-    // faz o coordenador parar de ler a lista.
+    // faz o Chefe de Setor parar de ler a lista.
     expect(varrer()['propostas'])->toBe(0);
     expect(SugestaoAgrupamento::pendentes()->count())->toBe(0);
 });
 
 it('agrupar à mão vale, e exige o motivo que o cidadão vai ler', function () {
     $antiga = relato('Barraca na calçada', '212', 40);
-    // Assunto e rua diferentes: a máquina não ligaria os dois, e o coordenador
+    // Assunto e rua diferentes: a máquina não ligaria os dois, e o Chefe de Setor
     // conhece a rua melhor que qualquer regra.
     $outra = relato('Som alto depois das 22h', '900', 10, ['logradouro' => 'Rua Ceará']);
 
-    $coordenador = coordenadorDaTriagem();
+    $chefe = chefeDaTriagem();
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.agrupamento.agrupar', $outra), [
             'principal_id' => $antiga->id,
             'motivo' => 'curto',
         ])
         ->assertSessionHasErrors('motivo');
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.agrupamento.agrupar', $outra), [
             'principal_id' => $antiga->id,
             'motivo' => 'É o mesmo estabelecimento: a entrada é pela Rua Ceará e as mesas ficam na outra face.',
@@ -215,11 +215,11 @@ it('agrupar à mão vale, e exige o motivo que o cidadão vai ler', function () 
 it('desagrupar devolve a denúncia à triagem, porque a associação pode estar errada', function () {
     $antiga = relato('Mesas e cadeiras ocupando a calçada', '212', 40);
     $nova = relato('Cadeiras impedindo a passagem', '214', 10);
-    $coordenador = coordenadorDaTriagem();
+    $chefe = chefeDaTriagem();
 
-    $nova->agruparEm($antiga, $coordenador, 'Pareceu o mesmo ponto.');
+    $nova->agruparEm($antiga, $chefe, 'Pareceu o mesmo ponto.');
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.agrupamento.desagrupar', $nova), [
             'motivo' => 'Fui ao mapa: são dois estabelecimentos, a cinquenta metros um do outro.',
         ])
@@ -242,7 +242,7 @@ it('a denúncia que ganhou dono some das outras propostas pendentes', function (
 
     $sugestao = SugestaoAgrupamento::pendentes()->firstOrFail();
 
-    $this->actingAs(coordenadorDaTriagem())
+    $this->actingAs(chefeDaTriagem())
         ->post(route('retaguarda.denuncias.agrupamento.aceitar', $sugestao), []);
 
     /*
@@ -278,7 +278,7 @@ it('não propõe agrupamento em canal que não repete o mesmo fato', function ()
 it('a varredura avisa quando não encontrou repetição, em vez de ficar calada', function () {
     relato('Barraca na calçada', '212', 40);
 
-    $this->actingAs(coordenadorDaTriagem())
+    $this->actingAs(chefeDaTriagem())
         ->post(route('retaguarda.denuncias.agrupamento.varrer'))
         ->assertSessionHas('flash.sucesso', fn (string $r): bool => str_contains($r, 'Nenhuma denúncia repetida'));
 });
@@ -309,12 +309,12 @@ it('a tela entrega as propostas com os dois lados inteiros', function () {
 it('não propõe agregar o que já saiu da pré-triagem — mas aceita que a principal seja um caso já triado', function () {
     // A mais antiga já foi entendida e encaminhada: é ela que está em campo.
     $emCampo = relato('Mesas e cadeiras ocupando a calçada', '212', 90);
-    $emCampo->update(['situacao' => Demanda::ENCAMINHADA_A_AREA]);
+    $emCampo->update(['situacao' => Demanda::ENCAMINHADA_AO_LIDER]);
 
     // Uma chegou agora, ainda crua; a outra também já foi triada.
     $crua = relato('Cadeiras impedindo a passagem', '214', 20);
     $jaTriada = relato('Bar ocupando o passeio', '216', 50);
-    $jaTriada->update(['situacao' => Demanda::DIRECIONADA_A_EQUIPE]);
+    $jaTriada->update(['situacao' => Demanda::DIRECIONADA_AOS_FISCAIS]);
 
     varrer();
 
@@ -327,7 +327,7 @@ it('não propõe agregar o que já saiu da pré-triagem — mas aceita que a pri
     expect($pendentes)->toHaveCount(1)
         ->and($pendentes->first()->demanda_id)->toBe($crua->id)
         ->and($pendentes->first()->principal_id)->toBe($emCampo->id)
-        ->and($jaTriada->fresh()->situacao)->toBe(Demanda::DIRECIONADA_A_EQUIPE);
+        ->and($jaTriada->fresh()->situacao)->toBe(Demanda::DIRECIONADA_AOS_FISCAIS);
 });
 
 it('o mesmo estabelecimento pesa mais que a mesma rua, e o documento pesa mais ainda', function () {
@@ -383,7 +383,7 @@ it('junta à mão o que a varredura não achou — e responde por todas', functi
 
     // O coordenador conhece a rua: é o mesmo camelô, que cada cidadão descreveu
     // de um jeito. Sem esta porta, ele veria o mesmo fato e não teria o que clicar.
-    $this->actingAs(coordenadorDaTriagem())
+    $this->actingAs(chefeDaTriagem())
         ->post(route('retaguarda.caixa-de-entrada.agrupamento.juntar'), [
             'demandas' => [$antiga->id, $b->id, $c->id],
             'principal_id' => $antiga->id,
@@ -403,7 +403,7 @@ it('recusa juntar num registro que não está entre os escolhidos', function () 
     $b = relato('Banca sem licença', '20', 50, ['logradouro' => 'Rua B']);
     $forudoEscopo = relato('Outro caso', '30', 20, ['logradouro' => 'Rua C']);
 
-    $this->actingAs(coordenadorDaTriagem())
+    $this->actingAs(chefeDaTriagem())
         ->post(route('retaguarda.caixa-de-entrada.agrupamento.juntar'), [
             'demandas' => [$a->id, $b->id],
             'principal_id' => $forudoEscopo->id,
@@ -411,7 +411,7 @@ it('recusa juntar num registro que não está entre os escolhidos', function () 
         ])
         ->assertSessionHas('flash.erro');
 
-    // Sem a checagem, daria para pendurar a leva num registro que o coordenador
+    // Sem a checagem, daria para pendurar a leva num registro que o Chefe de Setor
     // não estava olhando — e ele não teria como perceber.
     expect($a->fresh()->agrupada_em_id)->toBeNull()
         ->and($b->fresh()->agrupada_em_id)->toBeNull();
@@ -421,7 +421,7 @@ it('exige o motivo, porque é o que o cidadão lê no trâmite dele', function (
     $a = relato('Camelô na esquina', '10', 80, ['logradouro' => 'Rua A']);
     $b = relato('Banca sem licença', '20', 50, ['logradouro' => 'Rua B']);
 
-    $this->actingAs(coordenadorDaTriagem())
+    $this->actingAs(chefeDaTriagem())
         ->post(route('retaguarda.caixa-de-entrada.agrupamento.juntar'), [
             'demandas' => [$a->id, $b->id],
             'principal_id' => $a->id,

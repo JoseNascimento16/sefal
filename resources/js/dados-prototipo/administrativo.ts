@@ -77,7 +77,11 @@ export interface EquipeResumo {
     equipe: string;
     area: string;
     regiao: string;
+    /** O nome do documento do cliente — o que se mostra quando não há líder com conta. */
     encarregado: string;
+    /** Quem RECEBE o encaminhamento: o líder da equipe (nome do usuário, ou o do documento). */
+    lider: string;
+    lider_matricula?: string | null;
     recorte: Recorte;
     turno: string;
 }
@@ -88,24 +92,36 @@ export interface Sugestao {
     area: string;
     regiao: string;
     encarregado: string;
+    lider: string;
     alternativas: {
         equipe: string;
         area: string;
         regiao: string;
         encarregado: string;
+        lider: string;
     }[];
 }
 
 /**
- * O tom do selo de cada situação.
+ * O tom do selo de cada situação — as chaves são as do MODEL
+ * (`Demanda::SITUACOES`), e não apelidos de tela.
  *
- * Aguardando triagem é o que EXIGE ação de quem abre a tela, então é aviso;
- * encaminhada é o caminho normal (ok); devolvida e arquivada são fim de linha —
- * neutro, porque não são erro: são decisão tomada.
+ * O que EXIGE ação de quem abre a tela é aviso (a leva crua, o que espera o
+ * chefe, o prazo estourado); o caminho normal em andamento é ok; o que espera
+ * outra mesa é info; e o fim de linha é neutro — devolvida e arquivada não são
+ * erro, são decisão tomada.
  */
 export const TOM_DA_SITUACAO: Record<string, string> = {
-    'Aguardando triagem': 'selo-aviso',
-    Encaminhada: 'selo-ok',
+    'Em pré-triagem': 'selo-aviso',
+    Recebida: 'selo-aviso',
+    'Encaminhada ao líder': 'selo-info',
+    'Direcionada aos fiscais': 'selo-ok',
+    'Em operação': 'selo-ok',
+    'Em campo': 'selo-ok',
+    'Aguardando regularização': 'selo-info',
+    'Retorno vencido': 'selo-aviso',
+    Agrupada: 'selo-neutro',
+    Concluída: 'selo-ok',
     Devolvida: 'selo-info',
     Arquivada: 'selo-neutro',
 };
@@ -133,8 +149,9 @@ export interface Fiscal {
  * `matricula` nula = a estrutura sabe o nome, mas essa pessoa ainda não tem acesso
  * ao sistema.
  */
-export interface ChefeDeSetor {
+export interface LiderDeEquipe {
     nome: string;
+    /** `null` quando o encarregado do documento ainda não virou usuário do sistema. */
     matricula: string | null;
 }
 
@@ -144,8 +161,13 @@ export interface Area {
     regiao: string;
     equipe: string;
     encarregado: string;
-    /** `null` na área em que a estrutura ainda não registrou chefia nenhuma. */
-    chefe_de_setor: ChefeDeSetor | null;
+    /**
+     * O LÍDER DA EQUIPE — quem recebe o que o Chefe de Setor encaminha a esta
+     * equipe. `null` quando o encarregado do documento ainda não tem conta.
+     * (Até 22/09/2026 aqui ficava o "chefe de setor da área"; o chefe passou a
+     * ser um só, e o vínculo por área deixou de existir.)
+     */
+    lider: LiderDeEquipe | null;
     recorte: Recorte;
     turno: string;
     fiscais: Fiscal[];

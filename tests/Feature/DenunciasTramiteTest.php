@@ -63,20 +63,23 @@ function denunciasComTramiteDeclarado(): array
     ));
 }
 
-/** Um chefe de setor de verdade: a matrícula é o que o liga à área na estrutura. */
-function chefeDeArea(string $matricula): User
+/**
+ * O líder de uma equipe de verdade: a conta `lider-<código>` nasce no seeder da
+ * estrutura, ligada à equipe por `equipes.lider_id`. É o papel recortado.
+ */
+function liderDaEquipe(string $codigo): User
 {
-    // A conta já existe: é o seeder da estrutura que a cria e a liga à área.
-    $u = User::where('login', User::normalizarMatricula($matricula))->firstOrFail();
-    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
+    $u = User::where('login', User::normalizarMatricula('lider-'.$codigo))->firstOrFail();
+    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'lider-de-equipe')->firstOrFail()->id]);
 
     return $u->fresh();
 }
 
-function coordenadorDoFluxo(): User
+/** O Chefe de Setor: um só, vê tudo, encaminha e devolve (22/09/2026). */
+function chefeDoSetor(): User
 {
     $u = User::factory()->create(['admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'coordenador')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     return $u->fresh();
 }
@@ -271,7 +274,8 @@ test('as consideracoes e as recomendacoes chegam a tela dentro do passo do trami
      * servidor e chegam ao passo, declarados em TODO passo (nulo e vazio nos que
      * não os produziram) para a tela não precisar de leitura defensiva.
      */
-    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'salvador-digital');
+    // 30 é da Área 5, cuja equipe é a C1: o líder dela a enxerga.
+    $servidas = denunciasServidas(liderDaEquipe('C1'), 'salvador-digital');
     $vencida = collect($servidas)->firstWhere('id', 30);
 
     expect($vencida)->not->toBeNull();
@@ -306,11 +310,11 @@ test('a linha de tramite criada por uma decisao nasce com TODAS as chaves do pas
      * derrubava a tela, logo depois de a pessoa decidir algo e sem erro nenhum no
      * servidor para investigar.
      */
-    $coordenador = coordenadorDoFluxo();
+    $chefe = chefeDoSetor();
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post('/retaguarda/denuncias/encaminhar', [
-            'destinos' => [['id' => 1, 'area' => 'Área 1']],
+            'destinos' => [['id' => 1, 'equipe' => 'C2']],
         ])
         ->assertRedirect();
 
@@ -318,7 +322,7 @@ test('a linha de tramite criada por uma decisao nasce com TODAS as chaves do pas
         Demanda::with(['tramites.fiscalizacao.recomendacoes', 'tramites.fiscalizacao.fotos', 'tramites.fiscalizacao.documento'])->findOrFail(1),
     ))->last();
 
-    expect($ultimo['o_que'])->toBe('Triada e encaminhada à área')
+    expect($ultimo['o_que'])->toBe('Encaminhada ao líder de equipe')
         ->and($ultimo)->toHaveKeys([
             'em', 'quem', 'o_que', 'detalhe', 'situacao', 'desfecho',
             'consideracoes', 'recomendacoes', 'campos', 'fiscalizacao', 'documento',
@@ -328,17 +332,17 @@ test('a linha de tramite criada por uma decisao nasce com TODAS as chaves do pas
         /*
          * ⚠️ MUDOU NA CONSOLIDAÇÃO: no protótipo o passo criado por uma decisão
          * nascia sem `campos`. Agora ele carrega os campos ESTRUTURADOS daquela
-         * decisão — o bairro que sugeriu a área, a área escolhida e o Chefe de
-         * Setor que a recebeu. É o que faltava para quem lê o histórico saber
-         * POR QUE o caso foi para lá, em vez de só que foi.
+         * decisão — o bairro que sugeriu a equipe, a equipe escolhida e o líder
+         * que a recebeu. É o que faltava para quem lê o histórico saber POR QUE
+         * o caso foi para lá, em vez de só que foi.
          */
         ->and($ultimo['campos'])->not->toBe([])
-        ->and(array_column($ultimo['campos'], 'rotulo'))->toContain('Área de destino')
+        ->and(array_column($ultimo['campos'], 'rotulo'))->toContain('Equipe de destino')
         ->and($ultimo['recomendacoes'])->toBe([])
         // E o passo novo carrega a situação em que a denúncia entrou: sem ela, o
         // único passo do percurso sem selo seria justamente o que acabou de
         // acontecer.
-        ->and($ultimo['situacao'])->toBe('Encaminhada à área');
+        ->and($ultimo['situacao'])->toBe('Encaminhada ao líder');
 });
 
 test('lei: o documento semeado referencia caixas, sancoes e prazos que existem no impresso', function () {
@@ -798,8 +802,9 @@ test('cada chefe de setor com conta de demonstracao tem caso avancado nos dois c
     }
 });
 
-test('o chefe de setor recebe o tramite avancado da area dele, com o documento lavrado', function () {
-    $servidas = denunciasServidas(chefeDeArea('gestor1'), 'e-salvador');
+test('o líder recebe o tramite avancado da equipe dele, com o documento lavrado', function () {
+    // 29 é da Área 5 → Equipe C1.
+    $servidas = denunciasServidas(liderDaEquipe('C1'), 'e-salvador');
 
     $notificada = collect($servidas)->firstWhere('id', 29);
 
@@ -825,31 +830,31 @@ test('o chefe de setor de outra area nao recebe nem a linha nem o conteudo do tr
      * não aparece não basta: o teste procura o número do documento no corpo
      * inteiro da resposta.
      */
-    $chefe2 = chefeDeArea('gestor2');
+    $liderC2 = liderDaEquipe('C2');
 
-    $servidas = denunciasServidas($chefe2, 'e-salvador');
+    $servidas = denunciasServidas($liderC2, 'e-salvador');
     $ids = array_column($servidas, 'id');
 
-    // 29 é da Área 5 (gestor1); 13 é da Área 1, dele.
+    // 29 é da Área 5 (Equipe C1); 13 é da Área 1 (Equipe C2), dele.
     expect($ids)->not->toContain(29)
         ->and($ids)->toContain(13);
 
-    $this->actingAs($chefe2)
+    $this->actingAs($liderC2)
         ->get('/retaguarda/denuncias/e-salvador')
         ->assertDontSee('194903')
         ->assertDontSee('Jailson Pereira dos Santos');
 });
 
-test('quem tria ve o universo, com os casos avancados de todas as areas', function () {
-    $ids = array_column(denunciasServidas(coordenadorDoFluxo(), 'salvador-digital'), 'id');
+test('o chefe de setor ve o universo, com os casos avancados de todas as equipes', function () {
+    $ids = array_column(denunciasServidas(chefeDoSetor(), 'salvador-digital'), 'id');
 
-    // 27 é da Área 4, que não tem chefe de setor com conta: só o coordenador e o
-    // administrador a enxergam, e é isso que faz dela a prova do recorte.
+    // 27 (Área 4), 30, 32 e 33 (Área 5): equipes diferentes, e o chefe vê todas
+    // — ele não tem recorte, é isso que o distingue do líder.
     expect($ids)->toContain(27, 30, 32, 33);
 });
 
 test('o catalogo de desfechos chega a tela, para a busca reconhecer a faceta', function () {
-    $props = $this->actingAs(coordenadorDoFluxo())
+    $props = $this->actingAs(chefeDoSetor())
         ->get('/retaguarda/denuncias/e-salvador')
         ->viewData('page')['props'];
 

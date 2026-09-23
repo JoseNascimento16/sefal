@@ -2,7 +2,18 @@
 
 **Onde fica:** Menu → **Denúncias** (item que expande) → **e-Salvador**
 (`/retaguarda/denuncias/e-salvador`) e **Salvador Digital** (`/retaguarda/denuncias/salvador-digital`).
-**Quem usa:** Coordenador, Chefe de Setor e administrador. **O fiscal não entra** (ver RN-11).
+**Quem usa:** Chefe de Setor (encaminha e devolve), líder de equipe (direciona aos fiscais) e administrador. **O fiscal não entra** (ver RN-11).
+
+> ## 🔁 22/09/2026 — os papéis mudaram; leia [Papéis e setores](../papeis-e-setores.md) antes deste doc
+>
+> Depois de ouvir coordenadores, Chefe de Setor e líderes, o dono redesenhou quem faz o quê:
+> os **coordenadores não usam o SEFAL** (trabalham no e-Salvador e mandam para a caixa do setor);
+> o **Chefe de Setor é UM SÓ**, recebe tudo na Caixa de Entrada e **encaminha à EQUIPE** — quem
+> recebe é o **líder da equipe** (o encarregado do documento de 17/04/2026, agora com conta); o
+> líder **direciona aos fiscais** e recebe o retorno; o chefe responde ao canal. O setor
+> `coordenador` foi removido. Onde este doc diz "Coordenador", leia **Chefe de Setor**; onde diz
+> "Chefe de Setor da área", leia **líder da equipe**; `Encaminhada à área` virou
+> **`Encaminhada ao líder`** e `Direcionada à equipe` virou **`Direcionada aos fiscais`**.
 
 > ## ⚠️ ESTE MÓDULO É UM PROTÓTIPO
 >
@@ -23,7 +34,7 @@
 
 As ouvidorias da Prefeitura recebem a denúncia do cidadão e a **entregam ao SEFAL**. Este módulo é
 onde ela chega, é analisada e vira trabalho dirigido de campo — e o caminho tem **duas etapas com
-dois donos**: o coordenador tria, o Chefe de Setor da área direciona.
+dois donos**: o Chefe de Setor encaminha à equipe, o líder da equipe direciona aos fiscais.
 
 ---
 
@@ -85,7 +96,7 @@ Não é enfeite: é o dado que decide entre mandar equipe, pedir complemento ao 
 impossibilidade de localizar (RN-07). Esconder isso faria o Chefe de Setor deslocar equipe para um endereço
 que não existe.
 
-### RN-05 — ETAPA 1, triagem: o coordenador encaminha à ÁREA, derivada do bairro
+### RN-05 — ETAPA 1, encaminhamento: o Chefe de Setor encaminha à EQUIPE, sugerida pelo bairro
 
 A denúncia chega como **`Recebida`** e espera a triagem. O Coordenador analisa e a encaminha à
 **área** de fiscalização correspondente, que sai do **bairro** pela estrutura permanente
@@ -134,9 +145,9 @@ tria precisa ver o universo, porque não se tria o que não se vê, e quem encam
 que aconteceu depois. Um Chefe de Setor que também seja Coordenador não é recortado: o papel que amplia
 ganha, a mesma regra da união de setores na matriz de permissões.
 
-### RN-06 — ETAPA 2, direcionamento: o Chefe de Setor da área escolhe COMO o trabalho acontece
+### RN-06 — ETAPA 2, direcionamento: o LÍDER da equipe escolhe COMO o trabalho acontece
 
-A denúncia **`Encaminhada à área`** espera o Chefe de Setor daquela área, que tem **duas saídas**:
+A denúncia **`Encaminhada ao líder`** espera o líder daquela equipe, que tem **duas saídas**:
 
 1. **direcionar à equipe** — vira vistoria dirigida e aparece no aplicativo dos fiscais da equipe;
 2. **incluir numa operação** já planejada para a região, em vez de gerar uma ida isolada ao local. A
@@ -175,7 +186,7 @@ a tela mandou: senão bastaria omitir a área no corpo da requisição para a ex
 ### RN-09 — Os estados, e o trâmite de cada mudança
 
 ```
-Recebida ─► Encaminhada à área ─► Direcionada à equipe ─► Em campo ─┬─► Concluída
+Recebida ─► Encaminhada ao líder ─► Direcionada aos fiscais ─► Em campo ─┬─► Concluída
                               └─► Em operação ──────────┘           │
                                                                     ├─► Aguardando regularização
                                                                     │      (Notificação lavrada,
@@ -548,3 +559,4 @@ que estão na rua agora, e `retorno vencido` traz o que está parado esperando d
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Salvador Digital) | **Retorno do dono, três mudanças.** (1) As duas telas passam a ser **filhas de um item de menu "Denúncias" que expande**, e não itens soltos — estrutura genérica de pasta no config, com as três formas da casca resolvidas (RN-11). (2) O **gestor é de uma área**: vínculo gestor↔área na estrutura, listagem recortada pela área dele, ação sobre denúncia de outra área recusada no servidor, selo da etapa nomeando a área e o triador passando a ver o **nome do gestor** que vai receber (RN-05b e RN-05). (3) Nasce o setor **`administrativo`**, dono da triagem e também da Caixa de Entrada — a triagem deixa de ser do setor `administrador` (RN-12). | Respostas do dono às perguntas estruturais que o protótipo abriu: "pra ele só interessa o que for direcionado para a área dele" e "não é o admin do sistema, mas o admin pode fazer também". O submenu veio do print do dono, que mostrava os dois canais no mesmo nível dos demais itens do menu. |
 | 02/09/2026 | José Nascimento | Denúncias (e-Salvador e Salvador Digital) | Nasce o módulo, como **protótipo**: duas telas de canal com a mesma mecânica, denúncias semeadas como se tivessem chegado por integração (com carimbo de recebimento e número de origem), fluxo de duas etapas com dois papéis — triagem encaminhando à área derivada do bairro e gestor direcionando à equipe ou a uma operação —, decisão em lote e individual, devolução/arquivamento com justificativa, trâmite por ato, busca inteligente e exportação. | Pedido do dono de 02/09/2026, a partir do cenário da reunião com o cliente: as ouvidorias da Prefeitura passarão a entregar denúncia ao SEFAL por API, e o setor precisa de onde triar, encaminhar à área e direcionar o trabalho — fluxo NOVO e paralelo ao da Caixa de Entrada, que continua sendo o que chega em papel. Entregue como protótipo para o dono aprovar a forma antes de virar tabela, migration e contrato de integração. |
 | 04/09/2026 | José Nascimento | Denúncias | Os papéis passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`) — slug inclusive, com migration renomeando catálogo e matriz. Ver [Papéis e setores](../papeis-e-setores.md). | As duas etapas do fluxo são nomeadas pelos papéis em quase toda a tela; deixar o nome antigo aqui faria a tela chamar de "gestor" quem o resto do sistema já chama de Chefe de Setor. |
+| 22/09/2026 | José Nascimento | Denúncias | **Duas etapas, dois donos novos.** (1) ENCAMINHAMENTO — o **Chefe de Setor** (um só, sem recorte) escolhe a **EQUIPE** (`destinos[].equipe`), sugerida pelo bairro; o passo registra o líder que recebe. (2) DIRECIONAMENTO — o **líder da equipe** manda os fiscais ao ponto com a orientação (`ids` + `orientacao`, sem escolher equipe: a equipe já é a dele) ou anexa a uma operação; recorte **por equipe** (`Papel::equipes`), recusa nominal para denúncia de outra equipe. Estados: `Encaminhada ao líder` e `Direcionada aos fiscais`. Props: `lideres`, `equipesDoLider`, `recorteDeEquipe` (eram `chefias`, `areasDoChefe`, `recorteDeArea`); listagem `denuncias.encaminhamento` (era `denuncias.triagem`), com a coluna **Equipe (sugerida)** na grade e no arquivo. Sai a troca de equipe com justificativa (o líder não escolhe equipe). | Reforma dos papéis de 22/09/2026 — ver [Papéis e setores](../papeis-e-setores.md). |

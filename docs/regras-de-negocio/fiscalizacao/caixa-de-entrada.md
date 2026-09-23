@@ -1,7 +1,18 @@
-# Caixa de Entrada do Coordenador
+# Caixa de Entrada — a mesa do Chefe de Setor
 
 **Onde fica:** Menu → Fiscalização → Caixa de Entrada (`/retaguarda/caixa-de-entrada`).
-**Quem usa:** administrador e Chefe de Setor. **O fiscal não entra** (ver RN-08).
+**Quem usa:** o Chefe de Setor (a Caixa é a mesa dele) e o administrador. **O líder e o fiscal não entram** (ver RN-08).
+
+> ## 🔁 22/09/2026 — os papéis mudaram; leia [Papéis e setores](../papeis-e-setores.md) antes deste doc
+>
+> Depois de ouvir coordenadores, Chefe de Setor e líderes, o dono redesenhou quem faz o quê:
+> os **coordenadores não usam o SEFAL** (trabalham no e-Salvador e mandam para a caixa do setor);
+> o **Chefe de Setor é UM SÓ**, recebe tudo na Caixa de Entrada e **encaminha à EQUIPE** — quem
+> recebe é o **líder da equipe** (o encarregado do documento de 17/04/2026, agora com conta); o
+> líder **direciona aos fiscais** e recebe o retorno; o chefe responde ao canal. O setor
+> `coordenador` foi removido. Onde este doc diz "Coordenador", leia **Chefe de Setor**; onde diz
+> "Chefe de Setor da área", leia **líder da equipe**; `Encaminhada à área` virou
+> **`Encaminhada ao líder`** e `Direcionada à equipe` virou **`Direcionada aos fiscais`**.
 
 > ## ⚠️ ESTA TELA É UM PROTÓTIPO
 >
@@ -20,7 +31,7 @@
 > nasce `hu_status => 'nao'` declarando essa origem.
 
 O sistema não é uma ilha: **ele recebe demanda de fora**. Hoje ela chega em **papel** — o
-e-Salvador e o Salvador Digital entregam documento impresso ao coordenador, e o pedido
+e-Salvador e o Salvador Digital entregam documento impresso ao Chefe de Setor, e o pedido
 de nova licença chega como processo. Esta tela é a porta por onde isso entra, e de onde sai
 **trabalho dirigido** para as equipes de campo.
 
@@ -30,7 +41,7 @@ de nova licença chega como processo. Esta tela é a porta por onde isso entra, 
 
 ### RN-01 — O cadastro manual é requisito, não gambiarra
 
-O Coordenador **digita** o que chegou em papel: origem, número do documento de origem, data de
+O Chefe de Setor **digita** o que chegou em papel: origem, número do documento de origem, data de
 recebimento, requerente, endereço, bairro, assunto, descrição e o arquivo digitalizado.
 
 A adaptação para API (e-Salvador e 156) vem depois, e **o cadastro manual permanece**: papel não
@@ -53,7 +64,7 @@ opcional — **mas só quando a demanda é marcada como anônima**. Sem a marca,
 A marca existe justamente para que "anônima" nunca seja o resultado de um campo esquecido: na
 grade, a demanda anônima aparece dita como tal, nunca como um espaço em branco.
 
-### RN-04 — O BAIRRO define a equipe; o sistema sugere, o coordenador confirma
+### RN-04 — O BAIRRO define a equipe; o sistema sugere, o Chefe de Setor confirma
 
 A equipe responsável é derivada do bairro, pela estrutura Área › Equipe
 ([Áreas e Equipes](../estrutura/areas-e-equipes.md)). Ao escolher o bairro, a tela mostra a
@@ -131,7 +142,7 @@ protótipo — o prazo real de cada canal é pergunta aberta ao cliente).
 
 Demanda **aguardando triagem** com prazo passado ganha a marca laranja na ponta da linha, o selo
 "vencido" na coluna do prazo e um aviso acima da grade com a contagem. Demanda já encaminhada ou já
-retornada não é acusada: o prazo era para a decisão do coordenador, e ela foi tomada.
+retornada não é acusada: o prazo era para a decisão do Chefe de Setor, e ela foi tomada.
 
 ### RN-11 — A listagem exporta o recorte visível
 
@@ -169,3 +180,4 @@ sistema real esta rota não existe:** caixa de entrada não se reinicia.
 | 09/09/2026 | José Nascimento | Caixa de Entrada | **A grade ficou enxuta** (padrão [`docs/padroes/listagem-clean.md`](../../padroes/listagem-clean.md)): de 9 colunas para **Protocolo · Recebida · Bairro · Situação · Prazo**. O **assunto** (texto livre) saiu da célula, e com ele origem, nº do documento de origem, requerente e equipe — os cinco já apareciam por inteiro na ficha do clique, e todos seguem no arquivo exportado. "Vencido" virou cor no texto, não um segundo chip. ⚠️ **Só a apresentação mudou:** o fluxo, os dados de `config/prototipo_caixa_entrada.php`, as ações e as abas ficaram como estavam. | Ordem do dono (09/09/2026): _"as listagens estão muito poluídas, muita informação quebrando linha de forma irregular… deixe a informação detalhada para quando o usuário clicar"_. A régua e o porquê de cada item ficam em [`docs/padroes/listagem-clean.md`](../../padroes/listagem-clean.md) — este doc aponta para lá em vez de repetir a régua. |
 | 02/09/2026 | José Nascimento | Caixa de Entrada | Nasce o módulo, como **protótipo**: grade com busca inteligente e exportação, cadastro da demanda com as duas saídas (encaminhar / devolver-arquivar), sugestão de equipe pelo bairro com o caso do bairro compartilhado, e o trâmite de cada demanda. | Decisão da reunião com o cliente de 02/09/2026: o sistema recebe demanda de fora (e-Salvador, Salvador Digital, pedido de nova licença) e o administrativo precisa de onde registrar, triar e recusar com justificativa. Entregue como protótipo para o dono aprovar a forma antes de virar tabela e regra. |
 | 04/09/2026 | José Nascimento | Caixa de Entrada | Os papéis passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`) — slug inclusive, com migration renomeando catálogo e matriz. Ver [Papéis e setores](../papeis-e-setores.md). | A tela é o trabalho do papel que tria: o rótulo dele aparece no texto de abertura, no aviso das duas saídas e na concessão da matriz. |
+| 22/09/2026 | José Nascimento | Caixa de Entrada | A Caixa passa a ser a **mesa do Chefe de Setor** (um só, sem recorte): o destino do encaminhamento é a **EQUIPE**, obrigatória, e o passo registra o **líder** que a recebe (`Líder da equipe`); a área vem junto porque é a da equipe. Sai a saída "direcionar já à equipe" (era o chefe de área pulando etapa) — quem direciona aos fiscais é o líder, na tela de Denúncias. Pré-triagem continua aqui, como passo do chefe, sem recorte por área. | Reforma dos papéis de 22/09/2026 — ver [Papéis e setores](../papeis-e-setores.md). |

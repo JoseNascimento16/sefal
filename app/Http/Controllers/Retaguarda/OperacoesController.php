@@ -10,7 +10,7 @@ use App\Rules\NomeDeCadastro;
 use App\Support\Apresentacao\OperacaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\PapelNaArea;
+use App\Support\Papel;
 use App\Support\Protocolo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,11 +61,12 @@ use Inertia\Response;
  *
  * ── O recorte por ÁREA ──────────────────────────────────────────────────────
  *
- * O Chefe de Setor cadastra e vê as operações da área dele; o Coordenador e o
- * administrador veem o universo. Quem responde isso é {@see PapelNaArea}, a mesma
- * fonte que governa Denúncias e Fiscalizações — e o recorte é feito no SERVIDOR,
- * porque filtro de front esconde e não protege. A gravação sobre operação de outra
- * área é recusada NOMINALMENTE, dizendo por quais áreas a pessoa responde.
+ * O líder de equipe cadastra e vê as operações da área da equipe dele; o Chefe
+ * de Setor e o administrador veem o universo. Quem responde isso é {@see Papel},
+ * a mesma fonte que governa Denúncias e Fiscalizações — e o recorte é feito no
+ * SERVIDOR, porque filtro de front esconde e não protege. A gravação sobre
+ * operação de outra área é recusada NOMINALMENTE, dizendo por quais áreas a
+ * pessoa responde.
  *
  * ⚠️ PROTÓTIPO: nada é gravado em banco. A lista de partida é
  * `config/prototipo_operacoes.php` e o que a pessoa cria ou altera fica na sessão
@@ -80,13 +81,16 @@ class OperacoesController extends Controller
     public function index(Request $request): Response
     {
         $usuario = $request->user();
-        $areas = PapelNaArea::areas($usuario);
-        $comRecorte = PapelNaArea::recorta($usuario);
+        // A operação é TERRITORIAL (nasce numa área), então o recorte do líder é
+        // pelas áreas das equipes dele — derivado da equipe, nunca de um vínculo
+        // próprio com a área, que deixou de existir com o chefe único.
+        $areas = Papel::areas($usuario);
+        $comRecorte = Papel::recorta($usuario);
 
         return Inertia::render('Retaguarda/Fiscalizacao/CadastroDeOperacao', [
             // O recorte é do SERVIDOR: a operação carrega foco e observação da
             // gestão, e a lista inteira não tem por que viajar até o navegador de
-            // quem responde por uma área só.
+            // quem responde por uma equipe só.
             'operacoes' => $this->listar($comRecorte ? $areas : null),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
@@ -95,11 +99,11 @@ class OperacoesController extends Controller
             'areas' => $comRecorte ? $areas : Estrutura::nomesDeArea(),
             'equipes' => Estrutura::equipes(),
             'bairros' => Estrutura::bairros(),
-            'chefias' => Estrutura::chefiasPorArea(),
+            'lideres' => Estrutura::lideresPorEquipe(),
             // O que esta pessoa exerce aqui, e sobre o que. A MESMA resposta
             // governa a recusa no servidor: a tela não oferece o que ele recusa.
-            'cadastra' => PapelNaArea::decide($usuario),
-            'areasDoChefe' => $areas,
+            'cadastra' => Papel::decide($usuario),
+            'areasDoLider' => $areas,
             'recorteDeArea' => $comRecorte,
             // As COLUNAS da grade e as do arquivo — ver
             // docs/padroes/listagem-clean.md. Enxugar é da TELA: foco, região,
@@ -265,7 +269,9 @@ class OperacoesController extends Controller
             'codigo' => $operacao->codigo ?? Protocolo::proximo('OP', modelClass: Operacao::class, coluna: 'codigo'),
             'nome' => (string) $dados['nome'],
             'area_id' => $area->id,
-            'coordenador_id' => $operacao->coordenador_id ?? $area->chefe_de_setor_id,
+            // Quem responde pela operação é quem a criou — o vínculo por área
+            // deixou de existir com o chefe único.
+            'coordenador_id' => $operacao->coordenador_id ?? $this->autor(),
             'regiao' => $dados['regiao'] ?? null,
             'foco' => $dados['foco'] ?? null,
             'observacao' => $dados['observacao'] ?? null,
@@ -378,47 +384,46 @@ class OperacoesController extends Controller
     /**
      * Recusa a gravação de quem apenas CONSULTA o cadastro.
      *
-     * Planejar operação é ato de quem responde pela área (e do administrador, que
-     * cobre a ausência dele). O Coordenador acompanha: ele tria a entrada do
-     * trabalho e precisa saber que operação existe para onde encaminhar, mas quem
-     * monta a operação é a chefia da área.
+     * Planejar operação é ato de quem manda equipe à rua — o líder da equipe, o
+     * Chefe de Setor (que recebe a operação pedida de cima) e o administrador,
+     * que cobre a ausência dos dois. O fiscal executa e não desenha o plano.
      *
      * Isto é papel, e não permissão de tela: a permissão (slug `operacoes`) diz
      * quem entra; isto diz de quem é o cadastro.
      */
     private function exigirCadastro(Request $request): ?RedirectResponse
     {
-        if (PapelNaArea::decide($request->user())) {
+        if (Papel::decide($request->user())) {
             return null;
         }
 
         return back()->with(
             'flash.erro',
-            'Montar operação é do Chefe de Setor da área — é ele que responde pelo trabalho de '
-            .'rua dela. Você consulta as operações para saber a que encaminhar a demanda.',
+            'Montar operação é do Chefe de Setor ou do líder da equipe — são eles que respondem '
+            .'pelo trabalho de rua. Você consulta as operações para saber a que encaminhar a demanda.',
         );
     }
 
     /**
-     * Recusa a gravação do Chefe de Setor sobre área que não é dele — dizendo por
-     * quais ele responde.
+     * Recusa a gravação do líder sobre área que não é da equipe dele — dizendo
+     * por quais ele responde.
      *
      * Existe porque esconder da listagem não é fronteira: a lista dele já vem
      * recortada, mas quem souber montar a requisição alcança a operação de outra
-     * área. O administrador e o Coordenador passam: os dois veem o universo.
+     * área. O administrador e o Chefe de Setor passam: os dois veem o universo.
      */
     private function exigirArea(Request $request, string $area): ?RedirectResponse
     {
         $usuario = $request->user();
 
-        if (! PapelNaArea::recorta($usuario)) {
+        if (! Papel::recorta($usuario)) {
             return null;
         }
 
-        $minhas = PapelNaArea::areas($usuario);
+        $minhas = Papel::areas($usuario);
 
         /*
-         * Chefe de Setor SEM área vinculada não passa batido: ele exerce o cadastro
+         * Líder SEM equipe vinculada não passa batido: ele exerce o cadastro
          * (senão não chegaria aqui) e não tem área sobre a qual cadastrar. Recusar
          * dizendo isso é o que faz alguém corrigir o vínculo — deixar passar lhe
          * daria o cadastro inteiro do setor.
@@ -426,9 +431,8 @@ class OperacoesController extends Controller
         if ($minhas === []) {
             return back()->with(
                 'flash.erro',
-                'Sua conta não está vinculada a nenhuma área de fiscalização, então não há área '
-                .'sua em que montar operação. Procure quem administra o sistema para registrar a '
-                .'sua área.',
+                'Sua conta não está vinculada a nenhuma equipe, então não há área sua em que '
+                .'montar operação. Procure quem administra o sistema para registrar a sua equipe.',
             );
         }
 

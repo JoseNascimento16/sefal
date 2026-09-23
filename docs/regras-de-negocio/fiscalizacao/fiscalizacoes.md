@@ -1,8 +1,19 @@
-# Fiscalizações — a fila do Chefe de Setor e o acervo
+# Fiscalizações — a fila de quem mandou a equipe, e o acervo
 
 **Onde fica:** Menu → Fiscalização → Fiscalizações (`/retaguarda/fiscalizacoes`).
-**Quem usa:** Chefe de Setor (a fila é dele), Coordenador (acompanha, sem decidir), administrador e
-o Fiscal em **apenas leitura** (ver RN-08).
+**Quem usa:** o líder de equipe (a fila da equipe dele), o Chefe de Setor (a fila inteira — ele
+também decide), o administrador e o Fiscal em **apenas leitura** (ver RN-08).
+
+> ## 🔁 22/09/2026 — os papéis mudaram; leia [Papéis e setores](../papeis-e-setores.md) antes deste doc
+>
+> Depois de ouvir coordenadores, Chefe de Setor e líderes, o dono redesenhou quem faz o quê:
+> os **coordenadores não usam o SEFAL** (trabalham no e-Salvador e mandam para a caixa do setor);
+> o **Chefe de Setor é UM SÓ**, recebe tudo na Caixa de Entrada e **encaminha à EQUIPE** — quem
+> recebe é o **líder da equipe** (o encarregado do documento de 17/04/2026, agora com conta); o
+> líder **direciona aos fiscais** e recebe o retorno; o chefe responde ao canal. O setor
+> `coordenador` foi removido. Onde este doc diz "Coordenador", leia **Chefe de Setor**; onde diz
+> "Chefe de Setor da área", leia **líder da equipe**; `Encaminhada à área` virou
+> **`Encaminhada ao líder`** e `Direcionada à equipe` virou **`Direcionada aos fiscais`**.
 
 > ### Esta tela era DUAS, e foi unificada em 09/09/2026
 >
@@ -321,3 +332,4 @@ Duas regras que o número obedece, e as duas por um motivo prático:
 | 09/09/2026 | José Nascimento | Fiscalizações | **As duas telas viraram uma, com duas abas.** "Retorno de Campo" passou a ser a aba **A decidir** e o andaime "Fiscalizações" foi substituído pela aba **Acervo**, que entrega o que ele anunciava: consulta por ambulante, área e período, com alvo, fotos, GPS, documento e **prazo de retorno** (RN-12, RN-13). O endereço antigo **redireciona** (301) e a concessão do slug `retorno-de-campo` foi migrada para `fiscalizacoes`. O **Fiscal** passou a entrar em **apenas leitura**, sem poder decidir (RN-08). O item de menu ganhou o **contador da fila**, recortado por área e só para quem decide (RN-14). O recorte por área passou a vir de uma **fonte única** (`PapelNaArea`), que antes era código copiado entre esta tela e Denúncias. | Duas telas sobre o **mesmo registro** — a fiscalização concluída — obrigavam o gestor a pular de menu para juntar as duas metades da mesma informação, e a lei da fonte única já dizia onde isso ia parar: uma ganharia regra nova e a outra continuaria mostrando o mundo de antes. Decisão do dono: *"pode unificar em Fiscalizações com aba a decidir, acervo e outras se necessário"*. A entrada do fiscal é decisão dele na mesma conversa, com a ressalva de que **o fiscal é usuário do aplicativo** — o acesso à Retaguarda existe por completude, não por fluxo. |
 | 04/09/2026 | José Nascimento | Retorno de Campo | A recomendação do fiscal passa a chegar como **chave** e a ser mostrada na **redação explícita** do catálogo do servidor (RN-03) — na coluna, no destaque do detalhe, na exportação e na busca. Chave desconhecida aparece **crua**, em vez de desaparecer. | O catálogo estava divergente entre a Retaguarda (que esperava a frase inteira) e o aplicativo do fiscal (que grava chave): o despacho chegaria aqui com recomendação que a tela não sabe ler. Decisão do dono: unificar por chave, com a redação curta no aplicativo e a explícita na Retaguarda. |
 | 04/09/2026 | José Nascimento | Retorno de Campo | Nasce a tela, como **protótipo**: a fila do Chefe de Setor com todo registro de fiscalização concluído da área dele, derivado do trâmite das denúncias mais as fiscalizações avulsas (RN-02); recomendação do fiscal em coluna própria (RN-03); três estados e as duas decisões da chefia, em lote, com justificativa obrigatória para mandar a equipe voltar (RN-05, RN-06); recorte por área feito no servidor, com as duas recusas explicadas (RN-07); busca inteligente, aba que troca a fonte e exportação do recorte visível (RN-09, RN-10). | Decisão do dono de 04/09/2026: "todo registro de fiscalização concluído cai/volta para a caixa de entrada do Chefe de Setor". Sem a tela, o trabalho da equipe terminava no aplicativo do fiscal e ninguém do outro lado era obrigado a ler — o desfecho existia no sistema e a decisão que ele pede ficava sem dono. Entregue como protótipo para o dono aprovar a forma antes de a fiscalização existir como tabela. |
+| 22/09/2026 | José Nascimento | Fiscalizações | A fila passa a ser recortada **por EQUIPE** (`recorteDeEquipe`, `equipesDoLider`, `lideres`): o **líder** vê e decide sobre o que a equipe dele concluiu; o **Chefe de Setor decide sobre tudo**, sem recorte (não é mais "acompanha sem decidir"); o contador do menu segue a mesma régua (líder: a equipe; chefe: o universo; fiscal: nada). "Devolver à coordenação" virou **"Devolver ao Chefe de Setor"**; a nova vistoria põe a demanda em `Direcionada aos fiscais`. A coluna condicional de área continua: some para quem lidera uma equipe só. | Reforma dos papéis de 22/09/2026 — ver [Papéis e setores](../papeis-e-setores.md). |

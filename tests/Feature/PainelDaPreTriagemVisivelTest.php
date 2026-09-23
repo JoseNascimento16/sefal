@@ -1,8 +1,11 @@
 <?php
 
+use App\Models\Area;
 use App\Models\Demanda;
 use App\Models\Setor;
+use App\Models\SugestaoAgrupamento;
 use App\Models\User;
+use App\Support\Estrutura;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,10 +55,10 @@ function chegadaCrua(string $protocolo, string $situacao = Demanda::EM_PRE_TRIAG
 }
 
 it('entrega os props da pré-triagem mesmo quando não há nenhuma proposta', function () {
-    $coordenador = User::factory()->create(['admin' => false, 'ativo' => true]);
-    $coordenador->setores()->syncWithoutDetaching([Setor::where('slug', 'coordenador')->firstOrFail()->id]);
+    $chefe = User::factory()->create(['admin' => false, 'ativo' => true]);
+    $chefe->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->get(route('retaguarda.caixa-de-entrada.index'))
         ->assertOk()
         ->assertInertia(fn ($p) => $p
@@ -77,7 +80,7 @@ it('separa as duas filas: a leva crua na pré-triagem, o resto na caixa', functi
             ->has('preTriagem', 1)
             ->where('preTriagem.0.protocolo', 'DEN-9001')
             // A que já foi entendida está na CAIXA, à espera do crivo do
-            // coordenador — e não aparece duas vezes.
+            // Chefe de Setor — e não aparece duas vezes.
             ->has('demandas', 1)
             ->where('demandas.0.protocolo', 'DEN-9002'),
         );
@@ -97,7 +100,7 @@ it('liberar passa a denúncia para a caixa e deixa o passo registrado', function
 });
 
 it('liberar recusa o que não está em pré-triagem', function () {
-    $jaTriada = chegadaCrua('DEN-9004', Demanda::ENCAMINHADA_A_AREA);
+    $jaTriada = chegadaCrua('DEN-9004', Demanda::ENCAMINHADA_AO_LIDER);
 
     $this->actingAs(User::factory()->create(['admin' => true, 'ativo' => true]))
         ->post(route('retaguarda.caixa-de-entrada.agrupamento.liberar'), ['demandas' => [$jaTriada->id]])
@@ -105,7 +108,7 @@ it('liberar recusa o que não está em pré-triagem', function () {
 
     // Nada mudou: a etapa dela já passou, e "liberar" de novo a devolveria à
     // triagem desfazendo um encaminhamento que ninguém pediu para desfazer.
-    expect($jaTriada->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_A_AREA);
+    expect($jaTriada->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_AO_LIDER);
 });
 
 it('liberar a principal não apaga as propostas do grupo', function () {
@@ -113,7 +116,7 @@ it('liberar a principal não apaga as propostas do grupo', function () {
     $principal = chegadaCrua('DEN-9010');
     $agregada = chegadaCrua('DEN-9011');
 
-    $sugestao = App\Models\SugestaoAgrupamento::create([
+    $sugestao = SugestaoAgrupamento::create([
         'demanda_id' => $agregada->id,
         'principal_id' => $principal->id,
         'confianca' => 0.9,
@@ -126,15 +129,15 @@ it('liberar a principal não apaga as propostas do grupo', function () {
 
     // A proposta SOBREVIVE: quando a leva nova repete o que já saiu para a rua,
     // é o caso que saiu que responde pelas novas. Descartar os dois lados fazia
-    // liberar a principal apagar o grupo inteiro da mesa do coordenador.
-    expect($sugestao->fresh()->estado)->toBe(App\Models\SugestaoAgrupamento::SUGERIDA);
+    // liberar a principal apagar o grupo inteiro da mesa do Chefe de Setor.
+    expect($sugestao->fresh()->estado)->toBe(SugestaoAgrupamento::SUGERIDA);
 });
 
 it('liberar a agregada descarta a proposta, que ninguém mais poderia decidir', function () {
     $principal = chegadaCrua('DEN-9020');
     $agregada = chegadaCrua('DEN-9021');
 
-    $sugestao = App\Models\SugestaoAgrupamento::create([
+    $sugestao = SugestaoAgrupamento::create([
         'demanda_id' => $agregada->id,
         'principal_id' => $principal->id,
         'confianca' => 0.9,
@@ -145,35 +148,36 @@ it('liberar a agregada descarta a proposta, que ninguém mais poderia decidir', 
         ->post(route('retaguarda.caixa-de-entrada.agrupamento.liberar'), ['demandas' => [$agregada->id]]);
 
     // Agregar só vale para quem ainda está em pré-triagem: mantida, a proposta
-    // seria uma decisão que o coordenador não tem como tomar.
-    expect($sugestao->fresh()->estado)->toBe(App\Models\SugestaoAgrupamento::RECUSADA);
+    // seria uma decisão que o Chefe de Setor não tem como tomar.
+    expect($sugestao->fresh()->estado)->toBe(SugestaoAgrupamento::RECUSADA);
 });
 
-it('a fila da pré-triagem segue o mesmo recorte de área da varredura', function () {
-    $pituba = App\Models\Area::create(['nome' => 'Área 1', 'regiao' => 'Orla']);
-    $outra = App\Models\Area::create(['nome' => 'Área 9', 'regiao' => 'Miolo']);
+it('a fila da pré-triagem e a varredura olham o MESMO universo: o Chefe de Setor vê tudo', function () {
+    $pituba = Area::create(['nome' => 'Área 1', 'regiao' => 'Orla']);
+    $outra = Area::create(['nome' => 'Área 9', 'regiao' => 'Miolo']);
 
     chegadaCrua('DEN-9030')->update(['area_id' => $pituba->id]);
     chegadaCrua('DEN-9031')->update(['area_id' => $outra->id]);
 
-    // Um Chefe de Setor responde por UMA área.
+    /*
+     * O Chefe de Setor é UM e responde pelo setor inteiro (decisão do dono,
+     * 22/09/2026): a pré-triagem é o passo dele, e nela não há recorte — a
+     * repetição que ele procura pode estar em áreas diferentes. Fila e
+     * varredura precisam concordar: "2 aguardam pré-triagem" logo acima de uma
+     * varredura que só olhasse uma área faria a tela se contradizer na mesma
+     * dobra.
+     */
     $chefe = User::factory()->create(['admin' => false, 'ativo' => true]);
     $chefe->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
-    $pituba->update(['chefe_de_setor_id' => $chefe->id]);
 
-    // A estrutura vive em memória dentro do container; sem esquecê-la, a
-    // consulta enxergaria a árvore anterior ao vínculo que acabou de nascer.
-    App\Support\Estrutura::esquecer();
+    Estrutura::esquecer();
 
     $this->actingAs($chefe)
         ->get(route('retaguarda.caixa-de-entrada.index'))
         ->assertOk()
         ->assertInertia(fn ($p) => $p
-            // Só a área dele. A fila mostrar o universo enquanto a varredura
-            // olha só a área fazia a tela se contradizer na mesma dobra:
-            // "N denúncias aguardam pré-triagem" logo acima de "nenhuma
-            // repetição entre as abertas".
-            ->has('preTriagem', 1)
-            ->where('preTriagem.0.protocolo', 'DEN-9030'),
+            ->has('preTriagem', 2)
+            ->where('preTriagem.0.protocolo', 'DEN-9030')
+            ->where('preTriagem.1.protocolo', 'DEN-9031'),
         );
 });

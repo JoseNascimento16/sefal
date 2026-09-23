@@ -40,14 +40,21 @@ function comSetor(string $slug, array $atributos = []): User
     return $usuario;
 }
 
+/**
+ * A estrutura mínima: uma área com uma equipe, e o LÍDER dela com conta.
+ *
+ * Devolve o líder no lugar em que antes vinha o chefe da área: desde 22/09/2026
+ * o chefe é um só (e não é vinculado a área nenhuma); quem tem recorte é o
+ * líder, pela equipe.
+ */
 function estrutura(): array
 {
-    $chefe = comSetor('chefe-de-setor', ['name' => 'Gestor 1']);
-    $area = Area::create(['nome' => 'Área 5', 'regiao' => 'Orla', 'chefe_de_setor_id' => $chefe->id]);
+    $lider = comSetor('lider-de-equipe', ['name' => 'Líder C1']);
+    $area = Area::create(['nome' => 'Área 5', 'regiao' => 'Orla']);
     AreaBairro::create(['area_id' => $area->id, 'bairro' => 'Costa Azul']);
-    $equipe = Equipe::create(['codigo' => 'C1', 'nome' => 'Equipe C1', 'area_id' => $area->id]);
+    $equipe = Equipe::create(['codigo' => 'C1', 'nome' => 'Equipe C1', 'area_id' => $area->id, 'lider_id' => $lider->id]);
 
-    return [$area, $equipe, $chefe];
+    return [$area, $equipe, $lider];
 }
 
 function denunciaRecebida(array $extra = []): Demanda
@@ -73,7 +80,7 @@ it('a tela do canal lista o que está em banco, com os catálogos do servidor', 
     denunciaRecebida();
     denunciaRecebida(['canal' => Demanda::CANAL_SALVADOR_DIGITAL]);
 
-    $this->actingAs(comSetor('coordenador', ['admin' => true]))
+    $this->actingAs(comSetor('chefe-de-setor', ['admin' => true]))
         ->get(route('retaguarda.denuncias.e-salvador.index'))
         ->assertOk()
         ->assertInertia(fn ($p) => $p
@@ -86,59 +93,67 @@ it('a tela do canal lista o que está em banco, com os catálogos do servidor', 
             // quando uma etapa NOVA nascia antes das outras, que é exatamente o
             // que a pré-triagem é.
             ->where('situacoes', Demanda::SITUACOES)
-            ->has('chefias')
+            ->has('lideres')
             ->has('operacoes'),
         );
 });
 
-it('o coordenador tria em lote e cada denúncia ganha passo com a área e o chefe', function () {
+it('o chefe de setor encaminha em lote e cada denúncia ganha passo com a equipe e o líder', function () {
     estrutura();
     $a = denunciaRecebida();
     $b = denunciaRecebida();
 
-    $this->actingAs(comSetor('coordenador'))
+    $this->actingAs(comSetor('chefe-de-setor'))
         ->post(route('retaguarda.denuncias.encaminhar'), [
             'destinos' => [
-                ['id' => $a->id, 'area' => 'Área 5'],
-                ['id' => $b->id, 'area' => 'Área 5'],
+                ['id' => $a->id, 'equipe' => 'C1'],
+                ['id' => $b->id, 'equipe' => 'C1'],
             ],
         ])
         ->assertSessionHas('flash.sucesso');
 
-    expect($a->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_A_AREA)
+    expect($a->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_AO_LIDER)
+        ->and($a->fresh()->equipe->codigo)->toBe('C1')
+        // A área vem junto: é a da equipe.
         ->and($a->fresh()->area->nome)->toBe('Área 5')
-        ->and($a->fresh()->ultimoTramite()->campos)->toMatchArray(['Chefe de Setor' => 'Gestor 1'])
-        ->and($b->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_A_AREA);
+        ->and($a->fresh()->ultimoTramite()->campos)->toMatchArray(['Líder da equipe' => 'Líder C1'])
+        ->and($b->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_AO_LIDER);
 });
 
-it('o chefe de setor direciona à equipe e o caso chega à fila de campo', function () {
-    [$area, , $chefe] = estrutura();
-    $denuncia = denunciaRecebida(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'area_id' => $area->id]);
+it('o líder direciona aos fiscais e o caso chega à fila de campo', function () {
+    [$area, $equipe, $lider] = estrutura();
+    $denuncia = denunciaRecebida([
+        'situacao' => Demanda::ENCAMINHADA_AO_LIDER, 'area_id' => $area->id, 'equipe_id' => $equipe->id,
+    ]);
 
-    $this->actingAs($chefe)
+    $this->actingAs($lider)
         ->post(route('retaguarda.denuncias.direcionar'), [
             'ids' => [$denuncia->id],
-            'equipe' => 'C1',
+            'orientacao' => 'Ir depois das 18h: as mesas só saem à noite.',
         ])
         ->assertSessionHas('flash.sucesso');
 
-    expect($denuncia->fresh()->situacao)->toBe(Demanda::DIRECIONADA_A_EQUIPE)
-        ->and($denuncia->fresh()->equipe->codigo)->toBe('C1');
+    expect($denuncia->fresh()->situacao)->toBe(Demanda::DIRECIONADA_AOS_FISCAIS)
+        ->and($denuncia->fresh()->equipe->codigo)->toBe('C1')
+        ->and($denuncia->fresh()->ultimoTramite()->papel)->toBe('lider-de-equipe');
 });
 
-it('recusa o direcionamento de denúncia que não é da área do chefe, sem alterar nada', function () {
-    [, , $chefe] = estrutura();
+it('recusa o direcionamento de denúncia que não é da equipe do líder, sem alterar nada', function () {
+    [, , $lider] = estrutura();
     $outra = Area::create(['nome' => 'Área 1', 'regiao' => 'Centro']);
-    $denuncia = denunciaRecebida(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'area_id' => $outra->id]);
+    $outraEquipe = Equipe::create(['codigo' => 'C2', 'nome' => 'Equipe C2', 'area_id' => $outra->id]);
+    $denuncia = denunciaRecebida([
+        'situacao' => Demanda::ENCAMINHADA_AO_LIDER, 'area_id' => $outra->id, 'equipe_id' => $outraEquipe->id,
+    ]);
 
-    $this->actingAs($chefe)
-        ->post(route('retaguarda.denuncias.direcionar'), ['ids' => [$denuncia->id], 'equipe' => 'C1'])
+    $this->actingAs($lider)
+        ->post(route('retaguarda.denuncias.direcionar'), ['ids' => [$denuncia->id]])
         ->assertSessionHas('flash.erro');
 
-    expect($denuncia->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_A_AREA);
+    expect($denuncia->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_AO_LIDER);
 });
 
-it('o chefe anexa a denúncia a uma operação aberta', function () {
+it('o líder anexa a denúncia a uma operação aberta', function () {
     [$area, $equipe, $chefe] = estrutura();
     $operacao = Operacao::create([
         'codigo' => 'OP-1', 'nome' => 'Operação Verão — Orla', 'area_id' => $area->id,
@@ -147,7 +162,9 @@ it('o chefe anexa a denúncia a uma operação aberta', function () {
     ]);
     $operacao->equipes()->attach($equipe->id);
 
-    $denuncia = denunciaRecebida(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'area_id' => $area->id]);
+    $denuncia = denunciaRecebida([
+        'situacao' => Demanda::ENCAMINHADA_AO_LIDER, 'area_id' => $area->id, 'equipe_id' => $equipe->id,
+    ]);
 
     $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.operacao'), [
@@ -164,14 +181,16 @@ it('o chefe anexa a denúncia a uma operação aberta', function () {
 });
 
 it('recusa anexar a operação encerrada, dizendo o porquê e o que fazer', function () {
-    [$area, , $chefe] = estrutura();
+    [$area, $equipe, $chefe] = estrutura();
     Operacao::create([
         'codigo' => 'OP-2', 'nome' => 'Operação Réveillon', 'area_id' => $area->id,
         'inicio' => Date::now()->subDays(60), 'fim' => Date::now()->subDays(30),
         'situacao' => Operacao::ENCERRADA,
     ]);
 
-    $denuncia = denunciaRecebida(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'area_id' => $area->id]);
+    $denuncia = denunciaRecebida([
+        'situacao' => Demanda::ENCAMINHADA_AO_LIDER, 'area_id' => $area->id, 'equipe_id' => $equipe->id,
+    ]);
 
     $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.operacao'), [
@@ -181,12 +200,14 @@ it('recusa anexar a operação encerrada, dizendo o porquê e o que fazer', func
         ])
         ->assertSessionHas('flash.erro');
 
-    expect($denuncia->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_A_AREA);
+    expect($denuncia->fresh()->situacao)->toBe(Demanda::ENCAMINHADA_AO_LIDER);
 });
 
 it('abre operação nova no próprio direcionamento e anexa a denúncia a ela', function () {
-    [$area, , $chefe] = estrutura();
-    $denuncia = denunciaRecebida(['situacao' => Demanda::ENCAMINHADA_A_AREA, 'area_id' => $area->id]);
+    [$area, $equipe, $chefe] = estrutura();
+    $denuncia = denunciaRecebida([
+        'situacao' => Demanda::ENCAMINHADA_AO_LIDER, 'area_id' => $area->id, 'equipe_id' => $equipe->id,
+    ]);
 
     $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.operacao'), [
@@ -212,7 +233,7 @@ it('devolver ao canal exige justificativa e registra motivo e destino', function
     estrutura();
     $denuncia = denunciaRecebida();
 
-    $this->actingAs(comSetor('coordenador'))
+    $this->actingAs(comSetor('chefe-de-setor'))
         ->post(route('retaguarda.denuncias.devolver'), [
             'ids' => [$denuncia->id],
             'motivo' => 'Endereço insuficiente para localizar o ponto',
@@ -230,9 +251,9 @@ it('avisa quando nada mudou, em vez de fingir sucesso', function () {
     estrutura();
     $denuncia = denunciaRecebida(['situacao' => Demanda::ARQUIVADA]);
 
-    $this->actingAs(comSetor('coordenador'))
+    $this->actingAs(comSetor('chefe-de-setor'))
         ->post(route('retaguarda.denuncias.encaminhar'), [
-            'destinos' => [['id' => $denuncia->id, 'area' => 'Área 5']],
+            'destinos' => [['id' => $denuncia->id, 'equipe' => 'C1']],
         ])
         ->assertSessionHas('flash.erro');
 });

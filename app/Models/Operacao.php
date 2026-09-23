@@ -87,7 +87,13 @@ class Operacao extends Model
         return $this->belongsTo(Area::class);
     }
 
-    /** @return BelongsTo<User, $this> */
+    /**
+     * Quem ABRIU a operação. O nome da coluna é histórico (`coordenador_id`):
+     * desde 22/09/2026 quem abre é o líder da equipe ou o Chefe de Setor — o
+     * setor `coordenador` não existe mais.
+     *
+     * @return BelongsTo<User, $this>
+     */
     public function coordenador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'coordenador_id');
