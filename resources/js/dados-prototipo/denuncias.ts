@@ -169,9 +169,17 @@ export interface Canal {
     /** O canal admite denúncia anônima? O e-Salvador exige conta; o 156 não. */
     admite_anonima: boolean;
     tem_anexo: boolean;
-    endereco_estruturado: boolean;
-    prazo_em_dias: number;
-    como_chega: string;
+    endereco_estruturado?: boolean;
+    prazo_em_dias?: number;
+    como_chega?: string;
+    /**
+     * Como o canal chega HOJE: `integracao` (o sistema recebe sozinho) ou
+     * `balcao` (alguém digita). Muda a frase do cabeçalho — "entrega por
+     * integração" seria mentira no Fala Salvador, que não tem API.
+     */
+    entrada_padrao?: 'integracao' | 'balcao';
+    /** Quem digita o canal quando ele não vem por integração. */
+    registro?: 'chefe' | 'lider';
 }
 
 export interface Denuncia {
@@ -194,9 +202,9 @@ export interface Denuncia {
 
     assunto: string;
     relato: string;
-    /** A categoria que o atendente do Salvador Digital escolheu (só no Salvador Digital). */
+    /** A categoria que o atendente do Fala Salvador escolheu (só no Fala Salvador). */
     categoria: string | null;
-    /** Quem atendeu a ligação (só no Salvador Digital). */
+    /** Quem atendeu a ligação (só no Fala Salvador). */
     atendente: string | null;
 
     logradouro: string;

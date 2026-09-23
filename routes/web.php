@@ -177,11 +177,12 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /*
-     * Caixa de Entrada do Administrativo — PROTÓTIPO.
+     * Caixa de Entrada — a mesa do Chefe de Setor.
      *
-     * A porta por onde a demanda de fora entra: e-Salvador, Salvador Digital,
-     * pedido de nova licença e ofício chegam em PAPEL, e é aqui que o
-     * administrativo digita, decide e encaminha à equipe da área do bairro.
+     * A porta por onde a demanda entra fora da integração: papel do
+     * e-Salvador, pedido de nova licença, ofício e a avulsa (ligação ou e-mail
+     * de superior). É aqui que o chefe digita, decide e encaminha à equipe
+     * sugerida pelo bairro. O Fala Salvador não entra por aqui: é do líder.
      *
      * O primeiro trecho do caminho é o slug da tela (`caixa-de-entrada`), de onde
      * as guardas deduzem a permissão: as mutações abaixo nascem protegidas pela
@@ -230,14 +231,14 @@ Route::middleware(['auth'])->group(function () {
     /*
      * Denúncias das ouvidorias — PROTÓTIPO.
      *
-     * Duas telas, uma por canal (e-Salvador e Salvador Digital), e as mutações do
-     * fluxo de duas etapas: a triagem encaminha à ÁREA ou devolve/arquiva; o
-     * Chefe de Setor da área direciona à EQUIPE ou anexa a uma OPERAÇÃO.
+     * Duas telas, uma por canal (e-Salvador e Fala Salvador), e as mutações do
+     * fluxo de duas etapas: o Chefe de Setor encaminha à EQUIPE ou devolve/
+     * arquiva; o líder da equipe direciona aos FISCAIS ou anexa a uma OPERAÇÃO.
      *
      * As duas telas dividem o primeiro trecho do caminho (`denuncias`), e é
      * dele que as guardas deduzem a permissão: a concessão é UMA, para o
      * módulo, que é o que "quem cuida de denúncia" quer dizer. Separar a
-     * permissão do e-Salvador da do Salvador Digital seria uma decisão que ninguém
+     * permissão do e-Salvador da do Fala Salvador seria uma decisão que ninguém
      * precisa tomar e uma linha a mais na matriz.
      *
      * Não há rota de INCLUSÃO, e isso é deliberado: a denúncia entra por
@@ -249,7 +250,14 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::prefix('retaguarda/denuncias')->name('retaguarda.denuncias.')->group(function () {
         Route::get('e-salvador', [DenunciasController::class, 'eSalvador'])->name('e-salvador.index');
-        Route::get('salvador-digital', [DenunciasController::class, 'salvadorDigital'])->name('salvador-digital.index');
+        Route::get('fala-salvador', [DenunciasController::class, 'falaSalvador'])->name('fala-salvador.index');
+        /*
+         * O REGISTRO manual do Fala Salvador, pelo líder. Não há API: o líder
+         * digita aqui o que recebeu lá, e o caso nasce já na mesa dele. Vive sob
+         * `denuncias` para herdar a permissão da tela em que ele já está.
+         */
+        Route::post('fala-salvador/registrar', [DenunciasController::class, 'registrarFalaSalvador'])
+            ->name('fala-salvador.registrar');
 
         Route::post('encaminhar', [DenunciasController::class, 'encaminhar'])->name('encaminhar');
         Route::post('devolver', [DenunciasController::class, 'devolver'])->name('devolver');

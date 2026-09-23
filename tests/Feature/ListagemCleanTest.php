@@ -270,7 +270,7 @@ function liderDeUmaEquipeSo(): User
 dataset('telas com listagem', [
     'Fiscalizações' => ['/retaguarda/fiscalizacoes', ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo']],
     'Denúncias do e-Salvador' => ['/retaguarda/denuncias/e-salvador', ['denuncias.encaminhamento', 'denuncias.direcionamento', 'denuncias.todas']],
-    'Denúncias do Salvador Digital' => ['/retaguarda/denuncias/salvador-digital', ['denuncias.encaminhamento', 'denuncias.direcionamento', 'denuncias.todas']],
+    'Denúncias do Fala Salvador' => ['/retaguarda/denuncias/fala-salvador', ['denuncias.encaminhamento', 'denuncias.direcionamento', 'denuncias.todas']],
     'Cadastro de Operação' => ['/retaguarda/operacoes', ['operacoes']],
     'Ambulantes' => ['/retaguarda/ambulantes', ['ambulantes']],
     'Caixa de Entrada' => ['/retaguarda/caixa-de-entrada', ['caixa-de-entrada']],

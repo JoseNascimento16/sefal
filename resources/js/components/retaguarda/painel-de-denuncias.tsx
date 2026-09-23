@@ -59,7 +59,7 @@ import {
 /**
  * Denúncias das ouvidorias — PROTÓTIPO. O miolo das DUAS telas do módulo.
  *
- * As telas de canal (`e-Salvador` e `Salvador Digital`) são cascas de vinte linhas
+ * As telas de canal (`e-Salvador` e `Fala Salvador`) são cascas de vinte linhas
  * que só declaram título e trilha: a mecânica é a mesma, e escrevê-la duas vezes
  * daria dois donos à mesma regra — um dia só uma das telas ganharia o campo
  * novo. O que varia entre os canais é declarado no servidor
@@ -978,14 +978,31 @@ export function PainelDeDenuncias({
                     <h1>{canal.nome}</h1>
                     <p>
                         {/* O artigo vem do CANAL, não escrito aqui: "o portal
-                            e-Salvador" e "a central Salvador Digital" não aceitam o
+                            e-Salvador" e "a central Fala Salvador" não aceitam o
                             mesmo artigo, e um fixo erraria em um dos dois. */}
-                        Denúncias que {canal.artigo}{' '}
-                        <strong>{canal.sistema}</strong> entrega ao SEFAL por
-                        integração. O Chefe de Setor{' '}
-                        <strong>encaminha à equipe</strong> sugerida pelo bairro; o{' '}
-                        <strong>líder da equipe direciona</strong> aos fiscais ou
-                        inclui numa operação.
+                        {canal.registro === 'lider' ? (
+                            <>
+                                Denúncias que {canal.artigo}{' '}
+                                <strong>{canal.sistema}</strong> entregou aos{' '}
+                                <strong>líderes de equipe</strong>, registradas aqui
+                                por eles: o canal não tem integração, e a resposta
+                                ao cidadão continua nele. O{' '}
+                                <strong>líder direciona</strong> aos fiscais ou
+                                inclui numa operação.
+                            </>
+                        ) : (
+                            <>
+                                Denúncias que {canal.artigo}{' '}
+                                <strong>{canal.sistema}</strong> entrega ao SEFAL
+                                {canal.entrada_padrao === 'balcao'
+                                    ? ' em papel, registradas na Caixa de Entrada'
+                                    : ' por integração'}
+                                . O Chefe de Setor{' '}
+                                <strong>encaminha à equipe</strong> sugerida pelo
+                                bairro; o <strong>líder da equipe direciona</strong>{' '}
+                                aos fiscais ou inclui numa operação.
+                            </>
+                        )}
                     </p>
 
                     {/* Qual é a SUA etapa — o selo que o dono usa para mostrar

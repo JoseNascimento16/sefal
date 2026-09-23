@@ -275,7 +275,7 @@ test('as consideracoes e as recomendacoes chegam a tela dentro do passo do trami
      * não os produziram) para a tela não precisar de leitura defensiva.
      */
     // 30 é da Área 5, cuja equipe é a C1: o líder dela a enxerga.
-    $servidas = denunciasServidas(liderDaEquipe('C1'), 'salvador-digital');
+    $servidas = denunciasServidas(liderDaEquipe('C1'), 'fala-salvador');
     $vencida = collect($servidas)->firstWhere('id', 30);
 
     expect($vencida)->not->toBeNull();
@@ -787,7 +787,7 @@ test('cada chefe de setor com conta de demonstracao tem caso avancado nos dois c
 
         expect($areas)->not->toBe([], "{$matricula} não é chefe de setor de área nenhuma");
 
-        foreach (['e-salvador', 'salvador-digital'] as $canal) {
+        foreach (['e-salvador', 'fala-salvador'] as $canal) {
             $avancadas = array_filter(
                 DenunciasFicticias::doCanal($canal),
                 static fn (array $d): bool => in_array($d['area'] ?? null, $areas, true)
@@ -846,7 +846,7 @@ test('o chefe de setor de outra area nao recebe nem a linha nem o conteudo do tr
 });
 
 test('o chefe de setor ve o universo, com os casos avancados de todas as equipes', function () {
-    $ids = array_column(denunciasServidas(chefeDoSetor(), 'salvador-digital'), 'id');
+    $ids = array_column(denunciasServidas(chefeDoSetor(), 'fala-salvador'), 'id');
 
     // 27 (Área 4), 30, 32 e 33 (Área 5): equipes diferentes, e o chefe vê todas
     // — ele não tem recorte, é isso que o distingue do líder.

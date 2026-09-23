@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Retaguarda;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Demanda;
+use App\Models\DemandaTramite;
 use App\Models\Fiscalizacao;
 use App\Models\Operacao;
 use App\Models\User;
+use App\Rules\NomeDeCadastro;
 use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\OperacaoParaTela;
 use App\Support\Estrutura;
@@ -27,7 +29,7 @@ use Inertia\Response;
 /**
  * Denúncias por canal.
  *
- * Duas telas, uma por canal (`e-Salvador` e `Salvador Digital`), com a MESMA
+ * Duas telas, uma por canal (`e-Salvador` e `Fala Salvador`), com a MESMA
  * mecânica: o Chefe de Setor ENCAMINHA a denúncia a uma equipe (e, portanto, ao
  * líder dela) ou a devolve; o líder de equipe DIRECIONA aos fiscais ou anexa a
  * uma operação. O que muda entre elas é a origem e o que o formato do canal
@@ -100,9 +102,114 @@ class DenunciasController extends Controller
         return $this->tela($request, 'e-salvador', 'ESalvador');
     }
 
-    public function salvadorDigital(Request $request): Response
+    public function falaSalvador(Request $request): Response
     {
-        return $this->tela($request, 'salvador-digital', 'SalvadorDigital');
+        return $this->tela($request, Demanda::CANAL_FALA_SALVADOR, 'FalaSalvador');
+    }
+
+    /**
+     * REGISTRO do Fala Salvador — o líder digita o que recebeu por telefone.
+     *
+     * O canal não tem API e só os líderes o acessam (decisão do dono,
+     * 22/09/2026); o SEFAL é intermediário de registro. Por isso a demanda não
+     * passa pela Caixa nem pelo chefe: nasce **na mesa do próprio líder**
+     * (`Encaminhada ao líder`), com a equipe dele, e segue o fluxo normal —
+     * direcionar aos fiscais, receber o retorno. Responder ao cidadão continua
+     * sendo no Fala Salvador.
+     *
+     * Quem lidera mais de uma equipe escolhe; quem lidera uma não precisa dizer.
+     */
+    public function registrarFalaSalvador(Request $request): RedirectResponse
+    {
+        $usuario = $request->user();
+
+        if (! Papel::ehLider($usuario) && ! ($usuario?->ehAdmin() ?? false)) {
+            return back()->with(
+                'flash.erro',
+                'Registrar o Fala Salvador é do líder de equipe: é ele que atende o canal. '
+                .'O Chefe de Setor registra o que chega a ele na Caixa de Entrada.',
+            );
+        }
+
+        $minhas = Papel::equipes($usuario);
+        $canal = (array) config('demandas.canais.'.Demanda::CANAL_FALA_SALVADOR, []);
+
+        $dados = $request->validate([
+            'documento_origem' => ['required', 'string', 'max:40'],
+            'recebida_em' => ['required', 'date'],
+            'anonima' => ['required', 'boolean'],
+            'requerente' => ['exclude_if:anonima,true', 'required', 'string', 'max:150', new NomeDeCadastro],
+            'contato' => ['exclude_if:anonima,true', 'nullable', 'string', 'max:80'],
+            'assunto' => ['required', 'string', 'max:180'],
+            'endereco' => ['required', 'string', 'max:200'],
+            'bairro' => ['required', 'string', 'max:80'],
+            'descricao' => ['nullable', 'string', 'max:2000'],
+            // Uma equipe só: fica implícita. Mais de uma (ou administrador): escolhe.
+            'equipe' => [
+                count($minhas) === 1 ? 'nullable' : 'required',
+                Rule::in(count($minhas) > 0 ? $minhas : Estrutura::codigosDeEquipe()),
+            ],
+        ], [
+            'documento_origem.required' => 'Informe o número do atendimento no Fala Salvador.',
+            'requerente.required' => 'Informe quem ligou — ou marque a denúncia como anônima.',
+            'assunto.required' => 'Descreva em uma linha o que foi relatado.',
+            'endereco.required' => 'Informe onde é: sem endereço não há a quem mandar.',
+            'bairro.required' => 'Informe o bairro.',
+            'equipe.required' => 'Escolha para qual das suas equipes é este caso.',
+            'equipe.in' => 'Essa equipe não é sua. O líder registra para a equipe que lidera.',
+        ]);
+
+        $equipe = Estrutura::equipeModel((string) ($dados['equipe'] ?? $minhas[0] ?? ''));
+
+        if ($equipe === null) {
+            return back()->with('flash.erro', 'Sua conta não está ligada a nenhuma equipe — procure quem administra o sistema.');
+        }
+
+        $recebida = Date::parse((string) $dados['recebida_em']);
+
+        $demanda = Demanda::create([
+            'protocolo' => Protocolo::proximo('DEM', modelClass: Demanda::class),
+            'canal' => Demanda::CANAL_FALA_SALVADOR,
+            'entrada' => Demanda::ENTRADA_BALCAO,
+            'numero_origem' => $dados['documento_origem'],
+            'recebida_em' => $recebida,
+            'prazo_em' => $recebida->copy()->addDays((int) config('demandas.prazo_padrao_em_dias', 10)),
+            'anonima' => (bool) $dados['anonima'],
+            'requerente' => $dados['requerente'] ?? null,
+            'telefone' => $dados['contato'] ?? null,
+            'assunto' => $dados['assunto'],
+            'relato' => $dados['descricao'] ?? null,
+            'logradouro' => $dados['endereco'],
+            'bairro' => $dados['bairro'],
+            // Já na mesa do líder: é ele quem registrou, e é dele o próximo passo.
+            'situacao' => Demanda::ENCAMINHADA_AO_LIDER,
+            'equipe_id' => $equipe->id,
+            'area_id' => $equipe->area_id,
+            'criada_por_id' => Auth::id(),
+        ]);
+
+        $demanda->tramites()->create([
+            'ordem' => 1,
+            'ocorrida_em' => $recebida,
+            'user_id' => Auth::id(),
+            'papel' => DemandaTramite::PAPEL_LIDER,
+            'autor' => Auth::user()?->name,
+            'acao' => 'Registrada pelo líder da equipe',
+            'detalhe' => 'Recebida no '.((string) ($canal['nome'] ?? 'Fala Salvador'))
+                .' e registrada aqui pelo líder da Equipe '.$equipe->codigo.', para direcionar aos fiscais.',
+            'situacao' => Demanda::ENCAMINHADA_AO_LIDER,
+            'campos' => [
+                'Origem do documento' => (string) ($canal['nome'] ?? 'Fala Salvador'),
+                'Número na origem' => (string) $dados['documento_origem'],
+                'Equipe' => $equipe->codigo,
+            ],
+        ]);
+
+        return back()->with(
+            'flash.sucesso',
+            "Demanda {$demanda->protocolo} registrada na sua mesa (Equipe {$equipe->codigo}). "
+            .'Direcione aos fiscais quando for a hora — a resposta ao cidadão continua no Fala Salvador.',
+        );
     }
 
     /**
@@ -357,6 +464,16 @@ class DenunciasController extends Controller
 
         return Inertia::render("Retaguarda/Denuncias/{$pagina}", [
             'canal' => $configuracao,
+            /*
+             * Esta pessoa REGISTRA este canal aqui? Só quando o canal é digitado
+             * pelo líder (`registro = lider`) e ela lidera uma equipe — ou é o
+             * administrador, que cobre a ausência. O chefe não: o que chega a ele
+             * entra pela Caixa.
+             */
+            'registra' => ($configuracao['registro'] ?? null) === 'lider'
+                && (Papel::ehLider($usuario) || ($usuario?->ehAdmin() ?? false)),
+            'bairros' => Estrutura::bairros(),
+            'sugestoes' => Estrutura::mapaDeSugestoes(),
             // O líder recebe SÓ o que é da equipe dele — o recorte é feito aqui, e
             // não na tela: filtro de front esconde, não protege, e a lista inteira
             // teria viajado até o navegador de quem não deve vê-la.

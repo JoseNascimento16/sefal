@@ -275,7 +275,7 @@ test('o filtro por origem do relatorio de denuncias filtra de verdade', function
             'chave' => 'denuncias',
             'formato' => 'xlsx',
             'modo' => 'analitico',
-            'filtros' => ['canal' => 'salvador-digital'],
+            'filtros' => ['canal' => 'fala-salvador'],
         ]);
 
     $texto = textoDaAba(
@@ -290,7 +290,7 @@ test('o filtro por origem do relatorio de denuncias filtra de verdade', function
      * e traz os dois, e ninguém confere linha a linha um arquivo de mil linhas.
      */
     expect($texto)
-        ->toContain('Salvador Digital')
+        ->toContain('Fala Salvador')
         ->not->toContain('e-Salvador');
 });
 

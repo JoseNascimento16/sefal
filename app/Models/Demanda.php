@@ -79,18 +79,30 @@ class Demanda extends Model
 
     public const CANAL_E_SALVADOR = 'e-salvador';
 
-    public const CANAL_SALVADOR_DIGITAL = 'salvador-digital';
+    /**
+     * O canal telefônico da Prefeitura (156). Era `salvador-digital` até
+     * 22/09/2026. Sem API: o LÍDER de equipe digita aqui o que recebeu lá.
+     */
+    public const CANAL_FALA_SALVADOR = 'fala-salvador';
 
     public const CANAL_NOVA_LICENCA = 'nova-licenca';
 
     public const CANAL_OFICIO = 'oficio';
 
+    /**
+     * Ligação ou e-mail de um superior ao Chefe de Setor pedindo uma ação. Não
+     * chega por sistema nenhum: o chefe registra, encaminha ao líder e, ao
+     * final, abre o processo no e-Salvador com o resultado.
+     */
+    public const CANAL_AVULSA = 'avulsa';
+
     /** @var list<string> */
     public const CANAIS = [
         self::CANAL_E_SALVADOR,
-        self::CANAL_SALVADOR_DIGITAL,
+        self::CANAL_FALA_SALVADOR,
         self::CANAL_NOVA_LICENCA,
         self::CANAL_OFICIO,
+        self::CANAL_AVULSA,
     ];
 
     // ── Onde ela está ───────────────────────────────────────────────────────

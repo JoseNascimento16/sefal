@@ -144,7 +144,9 @@ const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
         expressao: /\bprazo vencido\b|\bvencid\w*\b|\batrasad\w*\b/,
         valor: { tipo: 'prazo-vencido' },
     },
-    { expressao: /\bfala salvador\b|\b156\b/, valor: { tipo: 'origem', valor: 'Salvador Digital' } },
+    // O Fala Salvador não entra pela Caixa (é do líder); a avulsa — ligação ou
+    // e-mail de superior — é o que o chefe registra fora de canal.
+    { expressao: /\bavulsas?\b|\bligacao\b|\be-?mail\b/, valor: { tipo: 'origem', valor: 'Avulsa' } },
     { expressao: /\be-?salvador\b/, valor: { tipo: 'origem', valor: 'e-Salvador' } },
     { expressao: /\bnova licenca\b|\blicenca\b/, valor: { tipo: 'origem', valor: 'Nova licença' } },
     { expressao: /\boficio\b/, valor: { tipo: 'origem', valor: 'Ofício' } },
@@ -525,10 +527,11 @@ export default function CaixaDeEntrada({
                     <p className="sobrancelha">Fiscalização</p>
                     <h1>Caixa de Entrada</h1>
                     <p>
-                        O que chega de <strong>fora</strong> e em papel —
-                        e-Salvador, Salvador Digital, pedido de nova licença e
-                        ofício. Aqui o coordenador registra, decide e{' '}
-                        <strong>encaminha à equipe da área do bairro</strong> ou
+                        O que chega ao <strong>Chefe de Setor</strong> fora da
+                        integração — papel do e-Salvador, pedido de nova licença,
+                        ofício e a <strong>avulsa</strong> (ligação ou e-mail de
+                        superior). Aqui ele registra, decide e{' '}
+                        <strong>encaminha à equipe sugerida pelo bairro</strong> ou
                         devolve com justificativa.
                     </p>
                 </div>

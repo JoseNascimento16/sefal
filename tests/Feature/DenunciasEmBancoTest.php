@@ -78,7 +78,7 @@ function denunciaRecebida(array $extra = []): Demanda
 it('a tela do canal lista o que está em banco, com os catálogos do servidor', function () {
     estrutura();
     denunciaRecebida();
-    denunciaRecebida(['canal' => Demanda::CANAL_SALVADOR_DIGITAL]);
+    denunciaRecebida(['canal' => Demanda::CANAL_FALA_SALVADOR]);
 
     $this->actingAs(comSetor('chefe-de-setor', ['admin' => true]))
         ->get(route('retaguarda.denuncias.e-salvador.index'))

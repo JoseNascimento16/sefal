@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * O que de fato difere são duas coisas, e as duas viram COLUNA:
  *
- *   `canal`  — de onde o fato veio (e-salvador, salvador-digital, nova-licenca, oficio);
+ *   `canal`  — de onde o fato veio (e-salvador, fala-salvador — era salvador-digital —, nova-licenca, oficio, avulsa);
  *   `entrada` — COMO ele chegou aqui: `integracao` (o sistema recebeu sozinho) ou
  *               `balcao` (o coordenador digitou o papel).
  *

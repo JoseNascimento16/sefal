@@ -90,7 +90,7 @@ $fluxoDenuncias = 'PAPÉIS DESDE 22/09/2026 (decisão do dono): não há coorden
     .'dali. As duas etapas operam em LOTE e uma a uma, e a etapa de quem entrou vem do SETOR (chefe de '
     .'setor encaminha, líder direciona, quem administra o sistema exerce as duas), com selo visível na '
     .'tela dizendo a etapa E a equipe. O LÍDER É DE UMA EQUIPE: a listagem dele traz só o que foi '
-    .'encaminhado à(s) equipe(s) que ele lidera, e a ação sobre denúncia de outra equipe é recusada no '
+    .'encaminhado às equipes que ele lidera, e a ação sobre denúncia de outra equipe é recusada no '
     .'servidor com o motivo escrito — esconder sem barrar deixaria a fronteira valendo só para quem não '
     .'sabe montar a requisição. Estados: Recebida › Encaminhada ao '
     .'líder › Direcionada aos fiscais | Em operação › Em campo › Concluída, com Devolvida e Arquivada como '
@@ -118,7 +118,7 @@ $fluxoDenuncias = 'PAPÉIS DESDE 22/09/2026 (decisão do dono): não há coorden
     .'avançados (vistoria, desfecho, documento) são SEMEADOS: quando o aplicativo do fiscal receber a '
     .'denúncia dirigida de verdade, é ele que acrescenta esses passos, e a leitura da tela continua a '
     .'mesma. Pendências que '
-    .'isto abre: contrato das APIs do e-Salvador e do Salvador Digital, prazo real de cada canal, canal de devolução, '
+    .'isto abre: contrato das APIs do e-Salvador e do Fala Salvador, prazo real de cada canal, canal de devolução, '
     .'a MODELAGEM DEFINITIVA do vínculo chefia↔área (em produção é tabela usuário↔área, não arquivo de '
     .'configuração), a numeração definitiva do protocolo, a numeração dos blocos de documento (hoje as '
     .'faixas do papel do cliente, escritas à mão; no sistema saem do estoque reservado por aparelho), a '
@@ -249,7 +249,7 @@ return [
                 .'reconhece a operação em rua e que a denúncia a registra ao ser anexada; operação '
                 .'ENCERRADA não recebe denúncia nova — sai da escolha do direcionamento e é recusada '
                 .'no servidor, continuando consultável aqui. RECORTE POR ÁREA: o líder de equipe '
-                .'cadastra e vê as da área da(s) equipe(s) dele; o Chefe de Setor e o administrador veem '
+                .'cadastra e vê as da área das equipes dele; o Chefe de Setor e o administrador veem '
                 .'o universo e cadastram em qualquer área (o chefe recebe a operação pedida de cima). '
                 .'O recorte é do SERVIDOR e a recusa é NOMINAL, dizendo por quais áreas a pessoa '
                 .'responde — na alteração as DUAS áreas são conferidas (a de origem e a de destino), '
@@ -299,7 +299,7 @@ return [
                 .'identificado, com foto, prazo vencido, prazo correndo, últimos 7 e 30 dias) — e não '
                 .'por filtros segmentados, que é o padrão de busca do projeto. NÃO há terceira aba: '
                 .'"por operação" e "por prazo vencido" não são conjuntos diferentes, são recortes que '
-                .'a busca entrega. RECORTE POR EQUIPE: o líder vê só o que a(s) equipe(s) dele '
+                .'a busca entrega. RECORTE POR EQUIPE: o líder vê só o que as equipes dele '
                 .'concluíram; o Chefe de Setor e o administrador veem o universo e também decidem, '
                 .'porque o retorno volta para a mesa do chefe. O recorte é feito no SERVIDOR, e '
                 .'há DUAS recusas explicadas ali: quem apenas consulta não decide, e decisão sobre '
@@ -500,8 +500,10 @@ return [
             'breadcrumb' => 'Fiscalização › Caixa de Entrada',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemPrototipo.' Porta por onde a demanda de FORA entra: e-Salvador, Fala '
-                .'Salvador 156, pedido de nova licença e ofício chegam em papel e são digitados aqui. '
+            'nota' => $origemPrototipo.' Porta por onde a demanda entra FORA DA INTEGRAÇÃO: papel do '
+                .'e-Salvador, pedido de nova licença, ofício e a AVULSA (ligação ou e-mail de superior ao '
+                .'chefe, canal criado em 22/09/2026) são digitados aqui pelo Chefe de Setor. O Fala Salvador '
+                .'NÃO entra por aqui — é digitado pelo líder, na tela do canal. '
                 .'Denúncia pode ser ANÔNIMA. O bairro sugere a equipe responsável (a estrutura Área › '
                 .'Equipe), e quem confirma é o Chefe de Setor — bairro pertencente a duas áreas tem duas '
                 .'respostas certas. Duas saídas: registrar e encaminhar (vira trabalho dirigido da '
@@ -535,18 +537,23 @@ return [
 
         [
             'modulo' => 'Denúncias',
-            'tela' => 'Denúncias do Salvador Digital',
+            'tela' => 'Denúncias do Fala Salvador',
             'origem' => 'Retaguarda',
-            'rota' => 'retaguarda.denuncias.salvador-digital.index',
-            'breadcrumb' => 'Denúncias › Salvador Digital',
+            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+            'breadcrumb' => 'Denúncias › Fala Salvador',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemDenuncias.' As denúncias que a central telefônica Salvador Digital (Disque '
-                .'156) entrega ao SEFAL por INTEGRAÇÃO — mesma mecânica da tela do e-Salvador, com o que '
-                .'o telefone muda no dado: a denúncia pode ser ANÔNIMA, o relato é a transcrição do que '
-                .'o atendente ouviu (às vezes sem número nem ponto de referência, e a tela marca isso '
-                .'porque é o que decide se dá para mandar equipe), a categoria é a que o atendente '
-                .'escolheu, e não há anexo. '.$fluxoDenuncias,
+            'nota' => $origemDenuncias.' O canal telefônico da Prefeitura (156) — era "Salvador Digital" até '
+                .'22/09/2026. NÃO TEM INTEGRAÇÃO e SÓ OS LÍDERES DE EQUIPE o acessam: o SEFAL é intermediário '
+                .'de registro. O LÍDER digita aqui o que recebeu por telefone (nº do atendimento, data, '
+                .'anônima ou quem ligou, endereço, bairro, assunto, relato; a equipe fica implícita para '
+                .'quem lidera uma só e é escolhida por quem lidera várias — só entre as suas), e o caso '
+                .'nasce JÁ NA MESA DELE (Encaminhada ao líder), sem passar pelo chefe, para ele direcionar '
+                .'aos fiscais; a resposta ao cidadão continua no Fala Salvador. O Chefe de Setor vê a tela '
+                .'mas não registra (recusa com o motivo). O formulário é o MÍNIMO para o caso existir no '
+                .'fluxo; o específico do canal vem depois (PEND-023). O que o telefone muda no dado: a '
+                .'denúncia pode ser ANÔNIMA, o relato é a transcrição do que o atendente ouviu, e não há '
+                .'anexo. '.$fluxoDenuncias,
         ],
 
         [

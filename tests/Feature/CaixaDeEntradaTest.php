@@ -42,7 +42,7 @@ function formulario(array $extra = []): array
 {
     return array_merge([
         'destino' => 'encaminhar',
-        'origem' => 'Salvador Digital',
+        'origem' => 'Avulsa',
         'documento_origem' => '156-2026-884120',
         'recebida_em' => now()->format('Y-m-d'),
         'anonima' => true,
@@ -65,7 +65,7 @@ it('grava a demanda em banco, com protocolo e o passo de recebimento', function 
     $demanda = Demanda::firstOrFail();
 
     expect($demanda->entrada)->toBe(Demanda::ENTRADA_BALCAO)
-        ->and($demanda->canal)->toBe(Demanda::CANAL_SALVADOR_DIGITAL)
+        ->and($demanda->canal)->toBe(Demanda::CANAL_AVULSA)
         ->and($demanda->protocolo)->not->toBeEmpty()
         // O prazo nasce do padrão quando o formulário não informa outro.
         ->and($demanda->prazo_em)->not->toBeNull()

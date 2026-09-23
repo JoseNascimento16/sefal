@@ -84,6 +84,19 @@ As contas de demonstração continuam sendo `gestor1`, `gestor2`, `gestor3` e
 sem recorte) e os líderes são `lider-<equipe>` (`lider-a1`, `lider-c1`…), com a
 senha inicial igual à matrícula.
 
+### RN-08 — Três frentes de entrada, e quem registra cada uma
+
+| Canal | Como chega | Quem registra | Onde |
+|---|---|---|---|
+| **e-Salvador** | integração (API em reconhecimento; o papel, enquanto isso) | Chefe de Setor | Caixa de Entrada |
+| **Fala Salvador** (156) | **sem API** — só os líderes o acessam | **líder de equipe** | tela Denúncias › Fala Salvador (nasce na mesa dele) |
+| **Avulsa** | ligação ou e-mail de superior ao chefe | Chefe de Setor | Caixa de Entrada |
+| Nova licença · Ofício | papel | Chefe de Setor | Caixa de Entrada |
+
+A chave é `registro` em `config/demandas.php` (`chefe` ou `lider`): é ela que decide o que a
+Caixa oferece e em que tela o formulário aparece. O "Salvador Digital" virou Fala Salvador em
+23/09/2026 (`2026_09_23_090000_canal_fala_salvador`).
+
 ### RN-07 — Os estados dizem PARA QUEM a demanda foi
 
 `Encaminhada ao líder` (o chefe escolheu a equipe; está na mesa do líder dela) e

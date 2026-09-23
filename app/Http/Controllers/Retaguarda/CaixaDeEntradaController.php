@@ -25,11 +25,12 @@ use Inertia\Response;
 /**
  * Caixa de Entrada — a mesa do Chefe de Setor.
  *
- * É a porta por onde a demanda entra QUANDO CHEGA EM PAPEL: o e-Salvador e o
- * Salvador Digital entregam documento impresso ao Chefe de Setor, que digita,
- * decide e encaminha. O cadastro manual é requisito, não gambiarra — quando a
- * API chegar, ele continua existindo, e é a coluna `entrada` que separa um do
- * outro.
+ * É a porta por onde a demanda entra QUANDO CHEGA FORA DA INTEGRAÇÃO: o papel
+ * do e-Salvador, o ofício, o pedido de licença e a AVULSA — a ligação ou o
+ * e-mail de um superior pedindo uma ação. O Chefe de Setor digita, decide e
+ * encaminha. O cadastro manual é requisito, não gambiarra — quando a API ler,
+ * ele continua existindo, e é a coluna `entrada` que separa um do outro. O Fala
+ * Salvador NÃO entra por aqui: é digitado pelo líder, na tela do canal.
  *
  * ── As duas decisões que a tela existe para tomar ───────────────────────────
  *
@@ -180,8 +181,8 @@ class CaixaDeEntradaController extends Controller
             'recebida_em' => ['required', 'date'],
             'prazo' => ['nullable', 'date', 'after_or_equal:recebida_em'],
 
-            // Denúncia PODE ser anônima — é a realidade do Salvador Digital e do
-            // e-Salvador. Quando não é, o nome passa a ser obrigatório:
+            // Denúncia PODE ser anônima — é a realidade do que chega por
+            // telefone. Quando não é, o nome passa a ser obrigatório:
             // "anônima" tem de ser escolha explícita, nunca campo esquecido.
             'anonima' => ['required', 'boolean'],
             'requerente' => ['exclude_if:anonima,true', 'required', 'string', 'max:150', new NomeDeCadastro],
@@ -421,13 +422,20 @@ class CaixaDeEntradaController extends Controller
     /**
      * Os nomes de canal que o formulário oferece — e que a validação aceita.
      *
+     * Só os que o CHEFE registra (`registro = chefe`). O Fala Salvador fica de
+     * fora de propósito: só os líderes o acessam, e eles o digitam na tela do
+     * próprio canal (decisão do dono, 22/09/2026).
+     *
      * @return list<string>
      */
     private function origens(): array
     {
         return array_values(array_map(
             static fn (array $canal): string => (string) $canal['nome'],
-            (array) config('demandas.canais', []),
+            array_filter(
+                (array) config('demandas.canais', []),
+                static fn (array $canal): bool => ($canal['registro'] ?? 'chefe') === 'chefe',
+            ),
         ));
     }
 

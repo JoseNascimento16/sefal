@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Date;
  * As demandas do protótipo virando banco — as duas portas de entrada.
  *
  *  - `config/prototipo_denuncias.php` → o que chega por INTEGRAÇÃO (e-Salvador,
- *    Salvador Digital), com o trâmite que cada caso já andou;
+ *    Fala Salvador), com o trâmite que cada caso já andou;
  *  - `config/prototipo_caixa_entrada.php` → o que o coordenador DIGITA no
  *    balcão (inclusive pedido de licença e ofício).
  *
@@ -43,7 +43,7 @@ class DemandasSeeder extends Seeder
     /** Origem escrita na Caixa de Entrada → canal canônico do sistema. */
     private const CANAL_DA_ORIGEM = [
         'e-Salvador' => Demanda::CANAL_E_SALVADOR,
-        'Salvador Digital' => Demanda::CANAL_SALVADOR_DIGITAL,
+        'Fala Salvador' => Demanda::CANAL_FALA_SALVADOR,
         'Nova licença' => Demanda::CANAL_NOVA_LICENCA,
         'Ofício' => Demanda::CANAL_OFICIO,
     ];
