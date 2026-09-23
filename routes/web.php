@@ -22,6 +22,7 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeInfracaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
+use App\Http\Controllers\Retaguarda\RetornoAoCanalController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -199,6 +200,9 @@ Route::middleware(['auth'])->group(function () {
             ->name('encaminhar')->whereNumber('demanda');
         Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
             ->name('devolver')->whereNumber('demanda');
+        // A avulsa concluída vira PROCESSO no e-Salvador: o chefe registra a abertura aqui.
+        Route::post('{demanda}/responder-ao-canal', [RetornoAoCanalController::class, 'store'])
+            ->name('responder-ao-canal')->whereNumber('demanda');
 
         /*
          * A PRÉ-TRIAGEM: dez denúncias que são um fato.
@@ -206,7 +210,7 @@ Route::middleware(['auth'])->group(function () {
          * As mesmas quatro ações existem sob os dois caminhos (aqui e em
          * `denuncias`), apontando para o MESMO controller. É de propósito: a
          * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
-         * porta herda a permissão da tela onde o coordenador já está — em vez de
+         * porta herda a permissão da tela onde o chefe já está — em vez de
          * a pré-triagem virar uma terceira tela, com uma terceira concessão para
          * alguém esquecer de dar.
          */
@@ -258,6 +262,13 @@ Route::middleware(['auth'])->group(function () {
          */
         Route::post('fala-salvador/registrar', [DenunciasController::class, 'registrarFalaSalvador'])
             ->name('fala-salvador.registrar');
+        /*
+         * O RETORNO AO CANAL — o chefe responde, no processo do e-Salvador, o
+         * que a fiscalização apurou. Mesmo controller sob `caixa-de-entrada`
+         * (a avulsa, que vira processo): cada porta herda a permissão da tela.
+         */
+        Route::post('{demanda}/responder-ao-canal', [RetornoAoCanalController::class, 'store'])
+            ->name('responder-ao-canal')->whereNumber('demanda');
 
         Route::post('encaminhar', [DenunciasController::class, 'encaminhar'])->name('encaminhar');
         Route::post('devolver', [DenunciasController::class, 'devolver'])->name('devolver');
@@ -270,7 +281,7 @@ Route::middleware(['auth'])->group(function () {
          * As mesmas quatro ações existem sob os dois caminhos (aqui e em
          * `denuncias`), apontando para o MESMO controller. É de propósito: a
          * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
-         * porta herda a permissão da tela onde o coordenador já está — em vez de
+         * porta herda a permissão da tela onde o chefe já está — em vez de
          * a pré-triagem virar uma terceira tela, com uma terceira concessão para
          * alguém esquecer de dar.
          */

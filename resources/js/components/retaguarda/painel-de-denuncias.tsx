@@ -17,6 +17,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
+import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
@@ -51,6 +52,7 @@ import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
 import {
     devolver as rotaDevolver,
+    responderAoCanal as rotaResponderAoCanal,
     direcionar as rotaDirecionar,
     encaminhar as rotaEncaminhar,
     operacao as rotaOperacao,
@@ -118,6 +120,8 @@ interface Props {
     equipesDoLider: string[];
     /** A listagem já veio recortada por essas equipes? Quem recorta é o servidor. */
     recorteDeEquipe: boolean;
+    /** Esta pessoa responde ao canal, concluído o trabalho (chefe ou administrador)? */
+    decide: boolean;
     /**
      * As colunas de cada aba — da grade e do arquivo —, declaradas no servidor.
      * Ver `docs/padroes/listagem-clean.md`.
@@ -347,6 +351,7 @@ export function PainelDeDenuncias({
     etapas,
     equipesDoLider,
     recorteDeEquipe,
+    decide,
     listagens,
 }: Props) {
     const { enviando, ocupado, enviar } = useEnvio();
@@ -1650,6 +1655,15 @@ export function PainelDeDenuncias({
                             tramites={aberta.tramites}
                             proximoPasso={proximoPassoDe(aberta)}
                             recomendacoesDoFiscal={recomendacoesDoFiscal}
+                        />
+
+                        {/* Concluída, a denúncia VOLTA ao canal: o chefe responde no
+                            processo de origem. Registrado aqui, feito à mão lá
+                            enquanto a escrita na API está proibida. */}
+                        <RetornoAoCanal
+                            demanda={aberta}
+                            decide={decide}
+                            rota={rotaResponderAoCanal({ demanda: aberta.id }).url}
                         />
 
                         {/* A decisão de UM registro usa os MESMOS caminhos do lote:

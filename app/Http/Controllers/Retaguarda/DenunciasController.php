@@ -472,6 +472,8 @@ class DenunciasController extends Controller
              */
             'registra' => ($configuracao['registro'] ?? null) === 'lider'
                 && (Papel::ehLider($usuario) || ($usuario?->ehAdmin() ?? false)),
+            // Quem RESPONDE ao canal, concluído o trabalho: o chefe (e o administrador).
+            'decide' => Papel::ehChefe($usuario) || ($usuario?->ehAdmin() ?? false),
             'bairros' => Estrutura::bairros(),
             'sugestoes' => Estrutura::mapaDeSugestoes(),
             // O líder recebe SÓ o que é da equipe dele — o recorte é feito aqui, e

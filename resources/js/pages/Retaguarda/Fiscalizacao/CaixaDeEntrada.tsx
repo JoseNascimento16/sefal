@@ -16,6 +16,7 @@ import {
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
+import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import {
     FilaDePreTriagem,
@@ -50,6 +51,7 @@ import {
     devolver as rotaDevolver,
     encaminhar as rotaEncaminhar,
     index,
+    responderAoCanal as rotaResponderAoCanal,
     store,
 } from '@/routes/retaguarda/caixa-de-entrada';
 
@@ -90,6 +92,8 @@ interface Props {
     motivos: string[];
     destinos: string[];
     prazoPadraoEmDias: number;
+    /** Esta pessoa responde ao canal (a avulsa vira processo no e-Salvador)? Vem do servidor. */
+    decide: boolean;
     equipes: EquipeResumo[];
     bairros: string[];
     /** `bairro → equipe sugerida`, para a sugestão aparecer sem ida ao servidor. */
@@ -166,6 +170,7 @@ export default function CaixaDeEntrada({
     motivos,
     destinos,
     prazoPadraoEmDias,
+    decide,
     equipes,
     bairros,
     sugestoes,
@@ -1386,6 +1391,14 @@ export default function CaixaDeEntrada({
                                 </div>
                             )}
                         </dl>
+
+                        {/* A avulsa concluída vira PROCESSO no e-Salvador: o chefe abre
+                            lá e registra aqui o número, enquanto a integração não escreve. */}
+                        <RetornoAoCanal
+                            demanda={aberta}
+                            decide={decide}
+                            rota={rotaResponderAoCanal({ demanda: aberta.id }).url}
+                        />
 
                         <h3 className="card-titulo" style={{ marginTop: 26 }}>
                             Trâmite

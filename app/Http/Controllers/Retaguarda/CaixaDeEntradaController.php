@@ -136,6 +136,8 @@ class CaixaDeEntradaController extends Controller
             'motivos' => array_values((array) config('demandas.motivos_de_devolucao', [])),
             'destinos' => array_values((array) config('demandas.destinos_de_retorno', [])),
             'prazoPadraoEmDias' => (int) config('demandas.prazo_padrao_em_dias', 10),
+            // Quem RESPONDE ao canal (a avulsa vira processo no e-Salvador): o chefe e o administrador.
+            'decide' => Papel::ehChefe($usuario) || ($usuario?->ehAdmin() ?? false),
             'equipes' => Estrutura::equipes(),
             'areas' => Estrutura::nomesDeArea(),
             'bairros' => Estrutura::bairros(),

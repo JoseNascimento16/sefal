@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Documento;
+use App\Support\RetornoAoCanal;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -64,6 +65,7 @@ use InvalidArgumentException;
     'logradouro', 'numero', 'referencia', 'bairro', 'endereco_impreciso', 'latitude', 'longitude',
     'situacao', 'area_id', 'equipe_id', 'operacao_id', 'criada_por_id', 'concluida_em',
     'agrupada_em_id', 'agrupada_em',
+    'respondida_ao_canal_em', 'resposta_ao_canal', 'processo_esalvador', 'respondida_por_id',
 ])]
 class Demanda extends Model
 {
@@ -228,6 +230,7 @@ class Demanda extends Model
             'prazo_em' => 'date',
             'concluida_em' => 'datetime',
             'agrupada_em' => 'datetime',
+            'respondida_ao_canal_em' => 'datetime',
             'anonima' => 'boolean',
             'endereco_impreciso' => 'boolean',
             'latitude' => 'float',
@@ -325,6 +328,17 @@ class Demanda extends Model
      * @param  array<string, scalar|null>  $campos  rótulo => valor da decisão
      * @param  array<string, mixed>  $mudancas  colunas da demanda que este passo altera
      */
+    /**
+     * Quem registrou o RETORNO ao canal (a resposta no e-Salvador, ou a abertura
+     * do processo da avulsa). Ver {@see RetornoAoCanal}.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function respondidaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'respondida_por_id');
+    }
+
     public function registrar(
         string $acao,
         string $situacao,

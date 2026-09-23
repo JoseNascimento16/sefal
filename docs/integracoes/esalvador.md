@@ -342,3 +342,17 @@ Enquanto isso, `ESALVADOR_LIGADA=false`: nada sai daqui para a rede.
 > lista é genérica. Quando o primeiro teste real acontecer, registre aqui o
 > código e a mensagem que vierem: é a única forma de o próximo a depurar não
 > refazer a adivinhação.
+
+## A ESTRUTURA da escrita — montada em 23/09/2026, sem escrever
+
+O ato do chefe que fecha o ciclo existe no sistema, e a chamada à API **não**:
+
+| Peça | Onde | O que faz hoje |
+|---|---|---|
+| Cliente | `App\Services\ESalvador\ESalvador` | `responderProcesso()` (→ `POST /criar-tramite`) e `abrirProcesso()` (endpoint ainda não documentado para nós). Com `ESALVADOR_LIGADA=false` devolvem `null` e **nada sai para a rede**; com a integração ligada lançam `EscritaNaoLiberada` — ligar o interruptor por engano não escreve num processo real. |
+| Ato | `App\Support\RetornoAoCanal` | Concluída a demanda, registra em `demandas` (`respondida_ao_canal_em`, `resposta_ao_canal`, `processo_esalvador`, `respondida_por_id`) e no trâmite (`Resposta registrada no e-Salvador` / `Processo aberto no e-Salvador`, com "Enviado pela integração: Não"). Um retorno por demanda; só `Concluída`; só canais com `retorno` na config (`e-salvador` → `tramite`, `avulsa` → `processo`). |
+| Porta | `POST retaguarda/denuncias/{demanda}/responder-ao-canal` e `POST retaguarda/caixa-de-entrada/{demanda}/responder-ao-canal` (`RetornoAoCanalController`) | Só o Chefe de Setor e o administrador. Na avulsa o **número do processo** é obrigatório: com a integração desligada, é a prova de que o chefe o abriu à mão. |
+| Tela | `components/retaguarda/retorno-ao-canal.tsx`, no detalhe da denúncia (e-Salvador) e da Caixa (avulsa) | Formulário para o chefe; a resposta dada, para quem chegar depois. O texto da tela diz "registrado aqui e feito à mão no e-Salvador". |
+
+**Para ligar de verdade**, quando a SEMGE/SEMOP liberar a escrita: preencher o corpo dos dois métodos do cliente (login `POST /login` → `POST /criar-tramite` com `descricao`; criação de processo conforme o contrato que a SEMGE definir), e a replicação nos processos **agregados** (`demandas.agrupada_em_id`) — um resultado, um trâmite em cada processo. O resto do sistema não muda.
+

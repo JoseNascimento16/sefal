@@ -235,6 +235,18 @@ export interface Denuncia {
     /** A área que o BAIRRO sugere — calculada na leitura, nunca gravada. */
     area_sugerida: AreaSugerida | null;
     tramites: TramiteDenuncia[];
+    /**
+     * O RETORNO ao canal de origem — o tipo que o canal pede e o que já foi
+     * registrado (ver `components/retaguarda/retorno-ao-canal.tsx`).
+     */
+    retorno_ao_canal: 'tramite' | 'processo' | null;
+    resposta_ao_canal: {
+        texto: string;
+        em: string;
+        por: string | null;
+        processo: string | null;
+        enviado: boolean;
+    } | null;
 }
 
 /** Uma operação a que o Chefe de Setor pode anexar denúncia. */

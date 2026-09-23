@@ -60,6 +60,15 @@ return [
             'agrupa' => true,
             // Enquanto a integração não lê, o papel que chega é digitado pelo chefe.
             'registro' => 'chefe',
+            /*
+             * `retorno` diz como o RESULTADO volta ao canal, concluído o trabalho
+             * ({@see \App\Support\RetornoAoCanal}): `tramite` = o chefe responde
+             * no processo de origem; `processo` = o chefe abre um processo (a
+             * avulsa não tem); ausente = não volta por sistema. A escrita na API
+             * do e-Salvador está proibida por enquanto: o ato é registrado aqui
+             * e feito à mão lá.
+             */
+            'retorno' => 'tramite',
         ],
 
         Demanda::CANAL_FALA_SALVADOR => [
@@ -115,6 +124,8 @@ return [
             // Um pedido, uma ação: agrupar não faz sentido.
             'agrupa' => false,
             'registro' => 'chefe',
+            // Concluída, vira PROCESSO no e-Salvador: o resultado precisa de um dono formal.
+            'retorno' => 'processo',
         ],
     ],
 

@@ -64,6 +64,18 @@ export interface Demanda {
     destino: string | null;
     tramites: Tramite[];
     /**
+     * O RETORNO ao canal de origem — o tipo que o canal pede e o que já foi
+     * registrado (ver `components/retaguarda/retorno-ao-canal.tsx`).
+     */
+    retorno_ao_canal: 'tramite' | 'processo' | null;
+    resposta_ao_canal: {
+        texto: string;
+        em: string;
+        por: string | null;
+        processo: string | null;
+        enviado: boolean;
+    } | null;
+    /**
      * As denúncias que este registro passou a responder.
      *
      * Só vem preenchida depois da pré-triagem: é o resultado dela. Quando tem
