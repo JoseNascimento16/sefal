@@ -114,6 +114,15 @@ interface Props {
 }
 
 type Aba = 'pre-triagem' | 'caixa' | 'registro' | 'detalhe';
+
+/**
+ * A aba Pré-Triagem está ESCONDIDA (decisão do dono, 24/09/2026 — incerto sobre
+ * a necessidade). Nada foi removido: o servidor segue entregando `preTriagem`, a
+ * varredura e o agrupamento continuam de pé, e voltar a mostrar é trocar isto.
+ * ⚠️ Enquanto escondida, o que estiver `Em pré-triagem` não aparece em aba
+ * nenhuma da Caixa.
+ */
+const MOSTRAR_PRE_TRIAGEM = false;
 type Destino = 'encaminhar' | 'devolver';
 
 /** O que a busca reconhece além das palavras soltas. */
@@ -185,7 +194,9 @@ export default function CaixaDeEntrada({
      * chegou cru vem antes do que já foi entendido, e abrir na Caixa faria o
      * coordenador encaminhar casos que ainda podem ser um só.
      */
-    const [aba, setAba] = useState<Aba>(preTriagem.length > 0 ? 'pre-triagem' : 'caixa');
+    const [aba, setAba] = useState<Aba>(
+        MOSTRAR_PRE_TRIAGEM && preTriagem.length > 0 ? 'pre-triagem' : 'caixa',
+    );
     const [busca, setBusca] = useState('');
     const [abertaId, setAbertaId] = useState<number | null>(null);
 
@@ -607,19 +618,21 @@ export default function CaixaDeEntrada({
                       * que chega por integração cai aqui, cru, e só passa à
                       * Caixa depois que alguém disse quantos fatos aquilo é.
                       */}
-                    <button
-                        type="button"
-                        role="tab"
-                        className="aba"
-                        aria-selected={aba === 'pre-triagem'}
-                        onClick={() => setAba('pre-triagem')}
-                    >
-                        <Layers size={16} aria-hidden />
-                        <span className="aba-rotulo">
-                            Pré-Triagem
-                            {preTriagem.length > 0 && ` (${preTriagem.length})`}
-                        </span>
-                    </button>
+                    {MOSTRAR_PRE_TRIAGEM && (
+                        <button
+                            type="button"
+                            role="tab"
+                            className="aba"
+                            aria-selected={aba === 'pre-triagem'}
+                            onClick={() => setAba('pre-triagem')}
+                        >
+                            <Layers size={16} aria-hidden />
+                            <span className="aba-rotulo">
+                                Pré-Triagem
+                                {preTriagem.length > 0 && ` (${preTriagem.length})`}
+                            </span>
+                        </button>
+                    )}
 
                     <button
                         type="button"
@@ -659,7 +672,7 @@ export default function CaixaDeEntrada({
                     )}
                 </div>
 
-                {aba === 'pre-triagem' && (
+                {MOSTRAR_PRE_TRIAGEM && aba === 'pre-triagem' && (
                     <>
                         {/*
                           * As PROPOSTAS antes da FILA: a primeira pergunta do dia

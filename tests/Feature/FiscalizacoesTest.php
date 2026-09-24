@@ -406,7 +406,10 @@ test('o lider e recusado NOMINALMENTE ao decidir sobre registro de outra equipe'
     expect($alheio)->not->toBeNull();
 
     $this->actingAs($chefe)
-        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$alheio['id']]])
+        ->post('/retaguarda/fiscalizacoes/devolver', [
+            'ids' => [$alheio['id']],
+            'motivo' => 'Tentando encaminhar ao chefe um registro que não é da minha equipe.',
+        ])
         ->assertRedirect()
         ->assertSessionHas(
             'flash.erro',
@@ -418,9 +421,25 @@ test('o lider e recusado NOMINALMENTE ao decidir sobre registro de outra equipe'
         ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 });
 
+test('o LIDER nao da ciencia: a demanda nao se encerra na mao dele, e nada e alterado', function () {
+    $lider = liderDaFila('C1');
+    $meus = array_column(filaServida($lider), 'id');
+
+    $this->actingAs($lider)
+        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0]]])
+        ->assertRedirect()
+        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'Chefe de Setor')
+            && str_contains($r, 'Nada foi alterado'));
+
+    expect(estadoNoBanco((int) $meus[0]))->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
+});
+
 test('a ciencia do chefe de setor tira o registro da fila e deixa o ato registrado', function () {
-    $chefe = liderDaFila('C1');
-    $meus = array_column(filaServida($chefe), 'id');
+    $chefe = chefeDaFila();
+    $meus = array_values(array_column(array_filter(
+        filaServida($chefe),
+        static fn (array $r): bool => $r['estado'] === Fiscalizacao::AGUARDANDO_LEITURA,
+    ), 'id'));
 
     expect($meus)->not->toBe([]);
 
@@ -489,7 +508,10 @@ test('a decisao em lote conta o efeito, e lote com registro de outra equipe nao 
      * e quem montou a requisição sairia com metade do que pediu.
      */
     $this->actingAs($chefe)
-        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0], $alheio['id']]])
+        ->post('/retaguarda/fiscalizacoes/nova-vistoria', [
+            'ids' => [$meus[0], $alheio['id']],
+            'justificativa' => 'Voltar no fim da tarde, quando as mesas saem para a calçada.',
+        ])
         ->assertSessionHas('flash.erro');
 
     expect(estadoNoBanco((int) $meus[0]))
@@ -593,8 +615,11 @@ test('o ACERVO guarda o que a fila perdeu: o decidido segue consultavel, com a p
      * estado. E sobre o que o acervo carrega a mais — quem foi encontrado, as fotos
      * e a coordenada —, que é o que transforma consulta em prova.
      */
-    $chefe = liderDaFila('C1');
-    $meus = array_column(filaServida($chefe), 'id');
+    $chefe = chefeDaFila();
+    $meus = array_values(array_column(array_filter(
+        filaServida($chefe),
+        static fn (array $r): bool => $r['estado'] === Fiscalizacao::AGUARDANDO_LEITURA,
+    ), 'id'));
 
     $this->actingAs($chefe)->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0]]]);
 

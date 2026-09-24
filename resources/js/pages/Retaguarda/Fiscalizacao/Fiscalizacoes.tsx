@@ -2,7 +2,6 @@ import { Head } from '@inertiajs/react';
 import {
     Archive,
     Camera,
-    Check,
     ClipboardCheck,
     FileText,
     Info,
@@ -37,7 +36,7 @@ import { contar, plural } from '@/lib/plural';
 import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
 import { textoDaRecomendacao, textosDasRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
-import { ciencia, devolver, index, novaVistoria } from '@/routes/retaguarda/fiscalizacoes';
+import { devolver, index, novaVistoria } from '@/routes/retaguarda/fiscalizacoes';
 
 /**
  * Fiscalizações — TODO registro de fiscalização concluído, numa tela só.
@@ -282,7 +281,6 @@ export default function Fiscalizacoes({
     const [busca, setBusca] = useState('');
     const [abertoId, setAbertoId] = useState<number | null>(null);
     const [marcados, setMarcados] = useState<number[]>([]);
-    const [observacao, setObservacao] = useState('');
     const [justificativa, setJustificativa] = useState('');
     const [confirmandoVolta, setConfirmandoVolta] = useState(false);
     /* O motivo da devolução ao Chefe de Setor — obrigatório, como a justificativa da
@@ -458,18 +456,8 @@ export default function Fiscalizacoes({
 
     function limpar() {
         setMarcados([]);
-        setObservacao('');
         setJustificativa('');
         setMotivo('');
-    }
-
-    function darCiencia() {
-        enviar(
-            'ciencia',
-            ciencia().url,
-            { ids: marcados, observacao: observacao.trim() || null },
-            { onSuccess: limpar },
-        );
     }
 
     function mandarVoltar() {
@@ -702,7 +690,7 @@ export default function Fiscalizacoes({
                                 {equipesDoLider.length > 0
                                     ? ` · ${equipesDoLider.map((e) => `Equipe ${e}`).join(' e ')}`
                                     : ''}{' '}
-                                — você dá ciência ou manda a equipe voltar
+                                — você manda a equipe voltar ou encaminha ao Chefe de Setor
                             </li>
                         )}
 
@@ -821,8 +809,8 @@ export default function Fiscalizacoes({
               */}
             <SeloPrototipo>
                 Ambiente de demonstração: as fiscalizações já registradas são{' '}
-                <strong>exemplos</strong>, não vistorias reais. A ciência e o pedido
-                de nova vistoria que você registrar{' '}
+                <strong>exemplos</strong>, não vistorias reais. O pedido de nova
+                vistoria e o encaminhamento ao chefe que você registrar{' '}
                 <strong>são gravados de verdade</strong> e ficam no histórico.
             </SeloPrototipo>
 
@@ -967,52 +955,15 @@ export default function Fiscalizacoes({
                             {contar(selecionados.length, 'retorno', 'retornos')}
                         </h2>
                         <p className="sobreposicao-texto">
-                            Os dois caminhos da leitura: encerrar na sua fila, ou
-                            devolver o ponto à equipe dizendo o que procurar.
+                            Os dois caminhos: mandar a equipe voltar ao ponto dizendo
+                            o que procurar, ou encaminhar o caso ao Chefe de Setor
+                            para ele deliberar.
                         </p>
 
+                        {/* Sem "Dar ciência" (decisão do dono, 24/09/2026): o líder
+                            decide, e não encerra demanda. As duas saídas mantêm o
+                            caso vivo — de volta à rua, ou para o chefe deliberar. */}
                         <div className="rt-escolha" style={{ marginBottom: 4 }}>
-                        <div className="card-premium" style={{ margin: 0 }}>
-                            <h3 className="card-titulo">
-                                <Check size={16} aria-hidden /> Dar ciência
-                            </h3>
-                            <p className="card-sub">
-                                O retorno sai da sua fila e fica no acervo.{' '}
-                                {contar(selecionados.length, 'registro', 'registros')}{' '}
-                                {plural(selecionados.length, 'selecionado', 'selecionados')}.
-                            </p>
-
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="observacao">
-                                    Observação (opcional)
-                                </label>
-                                <textarea
-                                    id="observacao"
-                                    className="form-control"
-                                    rows={2}
-                                    maxLength={1000}
-                                    value={observacao}
-                                    onChange={(e) => setObservacao(e.target.value)}
-                                    placeholder="O que você quer que fique registrado na leitura"
-                                />
-                                <p className="form-ajuda">
-                                    Opcional de propósito: o ato de ler já é a
-                                    informação, e exigir texto para dar ciência de
-                                    vários faria escrever frases vazias.
-                                </p>
-                            </div>
-
-                            <BotaoAcao
-                                icone={<Check size={16} aria-hidden />}
-                                carregando={enviando === 'ciencia'}
-                                ocupado={ocupado}
-                                rotuloCarregando="Registrando…"
-                                onClick={darCiencia}
-                            >
-                                Dar ciência
-                            </BotaoAcao>
-                        </div>
-
                         <div className="card-premium" style={{ margin: 0 }}>
                             <h3 className="card-titulo">
                                 <RotateCcw size={16} aria-hidden /> Mandar a equipe voltar
@@ -1024,7 +975,7 @@ export default function Fiscalizacoes({
 
                             <div className="form-group">
                                 <label className="form-label" htmlFor="justificativa">
-                                    Justificativa
+                                    Justificativa <span aria-hidden style={{ color: 'var(--sm-perigo)' }}>*</span>
                                 </label>
                                 <textarea
                                     id="justificativa"
@@ -1036,9 +987,9 @@ export default function Fiscalizacoes({
                                     placeholder="O que a equipe deve procurar, e em que dia ou horário"
                                 />
                                 <p className="form-ajuda">
-                                    Obrigatória: mandar a equipe de volta gasta o
-                                    trabalho dela outra vez, e &quot;voltar lá&quot;
-                                    não diz o que procurar.
+                                    Mandar a equipe de volta consome tempo de
+                                    trabalho, portanto seja específico nessa
+                                    justificativa.
                                 </p>
                             </div>
 
@@ -1054,21 +1005,19 @@ export default function Fiscalizacoes({
                             </BotaoAcao>
                         </div>
 
-                        {/* A TERCEIRA saída: o caso não é desta área. Não é ciência
-                            (que encerra) nem nova vistoria (que gasta o trabalho da
-                            equipe de novo) — é devolver a quem TRIA, que é quem
-                            redireciona. Fecha o ciclo da Caixa de Entrada. */}
+                        {/* A outra saída: o caso sobe ao Chefe de Setor, que delibera
+                            — responde à Coordenadoria ou pede nova fiscalização. */}
                         <div className="card-premium" style={{ margin: 0 }}>
                             <h3 className="card-titulo">
-                                <Undo2 size={16} aria-hidden /> Devolver ao Chefe de Setor
+                                <Undo2 size={16} aria-hidden /> Encaminhar ao Chefe de Setor
                             </h3>
                             <p className="card-sub">
-                                O caso volta para quem tria, para ser redirecionado.
+                                O caso volta para o Chefe de Setor deliberar.
                             </p>
 
                             <div className="form-group">
                                 <label className="form-label" htmlFor="motivo">
-                                    Motivo
+                                    Motivo <span aria-hidden style={{ color: 'var(--sm-perigo)' }}>*</span>
                                 </label>
                                 <textarea
                                     id="motivo"
@@ -1077,12 +1026,11 @@ export default function Fiscalizacoes({
                                     maxLength={1000}
                                     value={motivo}
                                     onChange={(e) => setMotivo(e.target.value)}
-                                    placeholder="Por que este caso não é da sua equipe"
+                                    placeholder="Porque você está encaminhando ao Chefe"
                                 />
                                 <p className="form-ajuda">
-                                    Obrigatório: sem o motivo, o Chefe de Setor recebe
-                                    o caso de volta sem nada com que decidir para onde
-                                    mandá-lo.
+                                    Contexto para o Chefe de Setor saber deliberar para
+                                    a Coordenadoria ou solicitar nova Fiscalização.
                                 </p>
                             </div>
 
@@ -1091,10 +1039,10 @@ export default function Fiscalizacoes({
                                 carregando={enviando === 'devolver'}
                                 ocupado={ocupado}
                                 disabled={motivo.trim().length < 15}
-                                rotuloCarregando="Devolvendo…"
+                                rotuloCarregando="Encaminhando…"
                                 onClick={devolverAoChefe}
                             >
-                                Devolver ao Chefe de Setor
+                                Encaminhar ao Chefe de Setor
                             </BotaoAcao>
                         </div>
                         </div>
