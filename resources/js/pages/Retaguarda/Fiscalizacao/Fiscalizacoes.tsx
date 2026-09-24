@@ -105,6 +105,9 @@ const ROTULO: Record<Aba, string> = {
 
 /** O tom da posse: com a equipe é trabalho andando; com o chefe, espera ele. */
 const TOM_DA_POSSE: Record<string, string> = {
+    // Na mesa do líder: pede decisão dele (enviar à equipe, ou ler o retorno).
+    'Líder de Equipe': 'selo-aviso',
+    // Com os fiscais, em campo.
     Equipe: 'selo-info',
     'Chefe de Setor': 'selo-aviso',
 };

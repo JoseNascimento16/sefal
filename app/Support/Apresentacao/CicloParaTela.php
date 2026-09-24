@@ -21,6 +21,20 @@ class CicloParaTela
         CicloDeFiscalizacao::POSSE_CHEFE => 'Chefe de Setor',
     ];
 
+    /**
+     * Com QUEM está, em palavras (dono, 24/09/2026): com a equipe, a posse é do
+     * LÍDER quando a decisão é dele — enviar aos fiscais, ou ler o retorno de
+     * campo — e da EQUIPE quando os fiscais estão com o ponto.
+     */
+    public static function posse(CicloDeFiscalizacao $c): string
+    {
+        if ($c->posse === CicloDeFiscalizacao::POSSE_EQUIPE && $c->arquivado_em === null) {
+            return $c->aDecidir() ? 'Líder de Equipe' : 'Equipe';
+        }
+
+        return self::POSSES[$c->posse] ?? $c->posse;
+    }
+
     /** @return array<string, mixed> */
     public static function completo(CicloDeFiscalizacao $c): array
     {
@@ -79,7 +93,7 @@ class CicloParaTela
             'protocolo' => $c->protocolo,
             'aberto_em' => $c->aberto_em->format('Y-m-d H:i'),
             'equipe' => (string) ($c->equipe?->codigo ?? ''),
-            'posse' => self::POSSES[$c->posse] ?? $c->posse,
+            'posse' => self::posse($c),
             'aba' => $c->aba(),
             'desfecho' => $c->desfechoAtual(),
             'total_vistorias' => $despachadas->count(),
