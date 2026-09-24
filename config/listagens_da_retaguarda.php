@@ -77,117 +77,41 @@ return [
 
         /*
         |----------------------------------------------------------------------
-        | Fiscalização › Fiscalizações — aba "A decidir"
+        | Fiscalização › Fiscalizações — as três abas
         |----------------------------------------------------------------------
         |
-        | Quem varre: o Chefe de Setor, procurando o que voltou da rua e o que
-        | a equipe está PEDINDO. Por isso a recomendação do fiscal é coluna, e
-        | não linha do detalhe: quem lê trinta retornos não abre trinta fichas.
-        |
-        | `estado` NÃO é coluna aqui: a aba já filtra por "aguardando leitura",
-        | então a coluna seria a mesma palavra repetida em toda linha — e a
-        | marca laranja na ponta da linha já diz que aquilo espera alguém.
-        | Equipe, fiscal e documento descem: a decisão é sobre o PONTO.
+        | Uma linha por FISCALIZAÇÃO (o ciclo — do encaminhamento do chefe ao
+        | líder até o resultado voltar ao chefe), e não por vistoria (dono,
+        | 24/09/2026). A mesma grade nas três abas: Em andamento, Encaminhadas e
+        | Arquivo. O DESFECHO muda conforme ela avança (aguardando envio à
+        | equipe, em campo, e o desfecho da última vistoria); a POSSE ATUAL diz
+        | com quem está — Equipe ou Chefe de Setor. As vistorias, com relato,
+        | fotos e documento, abrem no detalhe.
         */
-        'fiscalizacoes.a-decidir' => [
+        'fiscalizacoes.ciclos' => [
             'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Fiscalizacoes.tsx',
             'grade' => [
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída', 'largura' => 104, 'alinhar' => 'center'],
-                /*
-                 * O ORÇAMENTO da linha é fixo (medido: ~798px úteis numa janela
-                 * de 1280 com a barra estendida), então largura aqui é decisão
-                 * sobre o que pode truncar. O endereço trunca sem perder o
-                 * sentido — "Avenida Otávio Mangabei…" ainda diz onde é, e a
-                 * ficha tem o resto. O DESFECHO não: cortado em "Regularizado
-                 * no l…" ele deixa de distinguir "Regularizado no local" de
-                 * "Regularizado após notificação", que são desfechos
-                 * diferentes. Por isso quem cede é o ponto.
-                 */
-                ['chave' => 'ponto', 'titulo' => 'Ponto', 'largura' => 150],
-                // A ÁREA só para quem vê mais de uma. Para o Chefe de Setor a
-                // coluna repetiria a área dele em toda linha; para o
-                // Chefe de Setor, que responde por todas, ela é o que faz a fila
-                // ser varrível.
-                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 80, 'quando' => 'varias-areas'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 196],
-                /*
-                 * `linhas: 2` é exceção declarada à régua (ver
-                 * docs/padroes/listagem-clean.md): a frase da recomendação É a
-                 * informação que o Chefe de Setor foi ler, e cortada em
-                 * "Voltar ao ponto no venci…" ela não diz nada. Quebra em duas
-                 * linhas com a fonte um ponto menor, e a altura da linha não
-                 * muda.
-                 *
-                 * `minima` existe por causa de uma medição: numa janela de
-                 * 1280px o navegador espremia esta coluna para 153px (dos 296
-                 * declarados como teto) e dava 226px a "Ponto" — a frase caía
-                 * para três linhas e o teto da célula cortava a terceira.
-                 * `largura` é TETO, e teto não impede o esmagamento; o piso é
-                 * que impede. As vizinhas cederam o que sobrava: "Ponto" e
-                 * "Desfecho" truncam com reticências, que é o desenho delas,
-                 * enquanto a frase não pode ser truncada sem perder o sentido.
-                 */
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal', 'largura' => 260, 'minima' => 240, 'linhas' => 2],
+                ['chave' => 'protocolo', 'titulo' => 'Fiscalização', 'largura' => 150],
+                ['chave' => 'demanda', 'titulo' => 'Demanda', 'largura' => 200],
+                ['chave' => 'equipe', 'titulo' => 'Equipe', 'largura' => 90],
+                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 230],
+                ['chave' => 'posse', 'titulo' => 'Posse atual', 'largura' => 140],
             ],
-            'detalhe' => ['protocolo', 'equipe', 'fiscal', 'documento', 'consideracoes', 'origem', 'estado'],
+            // A data de abertura desce para o detalhe: a grade tem cinco colunas, e a
+            // POSSE ATUAL (pedido do dono) é a que não podia faltar.
+            'detalhe' => ['aberto_em', 'vistorias', 'irmas', 'motivo'],
             'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Registro'],
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída em', 'alinhar' => 'center'],
-                ['chave' => 'area', 'titulo' => 'Área'],
+                ['chave' => 'protocolo', 'titulo' => 'Fiscalização'],
+                ['chave' => 'aberto_em', 'titulo' => 'Aberta em', 'alinhar' => 'center'],
+                ['chave' => 'demanda', 'titulo' => 'Demanda'],
+                ['chave' => 'canal', 'titulo' => 'Canal'],
                 ['chave' => 'equipe', 'titulo' => 'Equipe'],
-                ['chave' => 'fiscal', 'titulo' => 'Fiscal'],
-                ['chave' => 'ponto', 'titulo' => 'Ponto'],
                 ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'documento', 'titulo' => 'Documento'],
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal'],
-                ['chave' => 'consideracoes', 'titulo' => 'Considerações do fiscal'],
-                ['chave' => 'origem', 'titulo' => 'Origem'],
-                ['chave' => 'estado', 'titulo' => 'Estado'],
-            ],
-        ],
-
-        /*
-        |----------------------------------------------------------------------
-        | Fiscalização › Fiscalizações — aba "Acervo"
-        |----------------------------------------------------------------------
-        |
-        | Quem varre: quem consulta o histórico de um ponto ou de uma pessoa.
-        | A pergunta é "o que foi feito ali?", então o ALVO encontrado sobe para
-        | a grade e o PRAZO fica — é o único sinal desta aba que ainda cobra
-        | ação de alguém.
-        |
-        | A área desce: no acervo procura-se por endereço e por nome, e a barra
-        | de busca entende "Área 5" quando a pergunta for essa.
-        */
-        'fiscalizacoes.acervo' => [
-            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Fiscalizacoes.tsx',
-            'grade' => [
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída', 'largura' => 104, 'alinhar' => 'center'],
-                ['chave' => 'ponto', 'titulo' => 'Ponto', 'largura' => 250],
-                ['chave' => 'alvo', 'titulo' => 'Quem foi encontrado', 'largura' => 200],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 224],
-                ['chave' => 'prazo', 'titulo' => 'Prazo de retorno', 'largura' => 196],
-            ],
-            'detalhe' => [
-                'protocolo', 'area', 'equipe', 'fiscal', 'documento', 'provas',
-                'recomendacoes', 'consideracoes', 'origem', 'estado',
-            ],
-            'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Registro'],
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída em', 'alinhar' => 'center'],
-                ['chave' => 'area', 'titulo' => 'Área'],
-                ['chave' => 'equipe', 'titulo' => 'Equipe'],
-                ['chave' => 'fiscal', 'titulo' => 'Fiscal'],
-                ['chave' => 'ponto', 'titulo' => 'Ponto'],
-                ['chave' => 'alvo', 'titulo' => 'Quem foi encontrado'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'documento', 'titulo' => 'Documento'],
-                ['chave' => 'prazo', 'titulo' => 'Prazo de retorno'],
-                ['chave' => 'provas', 'titulo' => 'Provas'],
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal'],
-                ['chave' => 'consideracoes', 'titulo' => 'Considerações do fiscal'],
-                ['chave' => 'origem', 'titulo' => 'Origem'],
-                ['chave' => 'estado', 'titulo' => 'Estado'],
+                ['chave' => 'posse', 'titulo' => 'Posse atual'],
+                ['chave' => 'vistorias', 'titulo' => 'Vistorias'],
+                ['chave' => 'documentos', 'titulo' => 'Documentos lavrados'],
+                ['chave' => 'irmas', 'titulo' => 'Outras Fiscalizações do processo'],
+                ['chave' => 'motivo', 'titulo' => 'Motivo do encaminhamento'],
             ],
         ],
 

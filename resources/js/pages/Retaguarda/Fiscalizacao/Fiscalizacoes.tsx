@@ -1,667 +1,368 @@
 import { Head } from '@inertiajs/react';
 import {
     Archive,
-    Camera,
     ClipboardCheck,
+    ExternalLink,
     FileText,
     Info,
-    Lightbulb,
-    MapPin,
+    Layers,
     RotateCcw,
-    Timer,
+    Send,
+    Siren,
     Undo2,
-    UserRound,
+    X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
+import type { Registro } from '@/components/retaguarda/detalhe-da-vistoria';
+import { DetalheDaVistoria } from '@/components/retaguarda/detalhe-da-vistoria';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
-import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
-import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
-import {
-    Paginacao,
-    useOrdenacao,
-    usePaginacao,
-} from '@/components/retaguarda/th-ordenavel';
+import { Paginacao, useOrdenacao, usePaginacao } from '@/components/retaguarda/th-ordenavel';
+import type { Operacao } from '@/dados-prototipo/denuncias';
 import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta } from '@/lib/busca';
 import { dataBR, dataHoraBR, VAZIO } from '@/lib/datas';
 import { linhaClicavel } from '@/lib/linha-clicavel';
-import { contar, plural } from '@/lib/plural';
+import { contar } from '@/lib/plural';
 import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
-import { textoDaRecomendacao, textosDasRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
-import { devolver, index, novaVistoria } from '@/routes/retaguarda/fiscalizacoes';
-
-/**
- * Fiscalizações — TODO registro de fiscalização concluído, numa tela só.
- * PROTÓTIPO.
- *
- * ── Por que UMA tela, e não duas ─────────────────────────────────────────────
- *
- * Isto era duas coisas: "Retorno de Campo", construída, com a fila do Chefe de
- * Setor; e "Fiscalizações", um andaime que prometia a consulta por ambulante,
- * área e período. Duas telas sobre o MESMO registro — a fiscalização concluída —,
- * e o gestor tinha de pular de menu para juntar as duas metades da mesma
- * informação. Unificadas por decisão do dono (09/09/2026).
- *
- * ── As duas abas, e a pergunta que cada uma responde ────────────────────────
- *
- *  · **A decidir** — "o que eu tenho para fazer agora?". É a FILA: o que voltou da
- *    rua e espera a leitura da chefia. Tela de TRABALHO: seleção, comando
- *    flutuante, janela de decisão.
- *  · **Acervo** — "o que foi feito naquele ponto?". É a CONSULTA, sem ação: tudo
- *    o que passou por aqui, inclusive o já lido, com o alvo encontrado, as fotos,
- *    a coordenada, o documento que saiu na hora e o PRAZO de quem foi notificado.
- *
- * ⚠️ Não há uma terceira aba, e isso foi decidido: "por operação" e "por prazo
- * vencido" não são conjuntos diferentes — são recortes do acervo, e a BUSCA os
- * entrega ("vencido", "operação"). Aba que só filtra o mesmo conjunto seria um
- * segundo filtro concorrendo com a barra, contra o padrão de busca do projeto.
- *
- * ── A grade é ENXUTA; o resto está no clique ─────────────────────────────────
- *
- * Padrão do sistema, em `docs/padroes/listagem-clean.md`: uma linha por
- * registro, altura fixa, no máximo cinco colunas, texto livre fora da grade.
- * As colunas — as da tela e as do arquivo — vêm do servidor
- * (`config/listagens_da_retaguarda.php`), porque enxugar é da TELA: o arquivo
- * exportado continua levando equipe, fiscal, documento, considerações e tudo o
- * mais que desceu para a ficha.
- *
- * ── A RECOMENDAÇÃO do fiscal é a coluna que decide ───────────────────────────
- *
- * O desfecho diz como a vistoria terminou; a recomendação diz o que quem esteve
- * no ponto está PEDINDO. É por ela que a chefia direciona, então ela tem coluna
- * própria na fila — não uma linha no detalhe. Quem precisa varrer trinta retornos
- * com o olho não abre trinta detalhes. Na linha vai a PRIMEIRA, com o quanto
- * falta ("+2"); a lista inteira está na dica e na ficha, e é a dica que devolve
- * ao leitor de tela o que a linha resumiu.
- *
- * ── A lista não é o universo, e a tela avisa ─────────────────────────────────
- *
- * O recorte por área é feito no SERVIDOR (ver o controller). A tela diz de quais
- * áreas é a lista, porque sem o aviso a chefia contaria os registros, acharia o
- * número baixo e concluiria que a equipe não trabalhou.
- *
- * ⚠️ A busca é o filtro ÚNICO — não há chip de filtro paralelo. Os números do
- * topo são o resumo da mesma lista e, clicados, escrevem a faceta na busca. A
- * ABA, sim, troca a FONTE dos dados, e é por isso que ela entra no contexto da
- * exportação.
- */
-
-interface Decisao {
-    em: string;
-    quem: string;
-    o_que: string;
-    detalhe: string;
-}
-
-/** O prazo de retorno de quem foi notificado — só a Notificação Preliminar tem. */
-interface Prazo {
-    /** ISO — quem escreve dd/mm/aaaa é a tela. */
-    vence_em: string;
-    /** Dias até o vencimento; NEGATIVO quando já venceu. Conta do servidor. */
-    dias: number;
-    vencido: boolean;
-    notificado: string | null;
-}
-
-interface Registro {
-    id: number;
-    protocolo: string;
-    /** 'Denúncia', 'Operação planejada', 'Ronda da equipe', 'Pedido de outro órgão'. */
-    origem: string;
-    /** O que originou a ida ao ponto: o canal e o protocolo, ou o nome da operação. */
-    referencia: string;
-    /** O protocolo da denúncia, quando o registro veio de uma. */
-    denuncia_protocolo: string | null;
-    /** ISO com hora — quem escreve dd/mm/aaaa é a tela. */
-    concluida_em: string;
-    area: string;
-    equipe: string;
-    /** Quem assinou a vistoria, com a equipe. */
-    fiscal: string;
-    endereco: string;
-    bairro: string;
-    ponto_de_referencia: string | null;
-    gps: string | null;
-    precisao_m: number | null;
-    /**
-     * Quem a equipe encontrou no ponto. NULO é caso previsto, e não dado
-     * faltando: "nada encontrado no local" é desfecho legítimo — a foto do ponto
-     * vazio é a prova da ida.
-     */
-    alvo: string | null;
-    equipamento: string | null;
-    /** Nomes dos arquivos de foto: o protótipo não guarda imagem. */
-    fotos: string[];
-    desfecho: string;
-    /** `np` = Notificação Preliminar; `aa` = Auto de Apreensão. */
-    documento: {
-        tipo: 'np' | 'aa';
-        numero: string;
-        notificado: string | null;
-        /** ISO. Vem PRONTO do servidor: a duração do prazo tem um dono só. */
-        vence_em: string | null;
-        /** "48 horas", "05 dias" — a redação do impresso. */
-        prazo_rotulo: string | null;
-    } | null;
-    consideracoes: string | null;
-    /**
-     * As **CHAVES** dos atalhos que o fiscal assinalou (`retorno`, `sgci`…),
-     * nunca a frase: é a chave que o aplicativo dele grava, e é por ela que o
-     * relatório soma. A frase sai do catálogo `recomendacoesDoFiscal`.
-     */
-    recomendacoes: string[];
-    /** A situação em que a denúncia de origem ficou — nulo na fiscalização avulsa. */
-    situacao_da_origem: string | null;
-    estado: string;
-    decisao: Decisao | null;
-    /** Dias esperando a leitura da chefia. Nulo depois de decidido. */
-    dias_parado: number | null;
-    prazo: Prazo | null;
-}
-
-type Aba = 'a-decidir' | 'acervo';
-
-/** O tom do selo de cada estado da fila. */
-const TOM_DO_ESTADO: Record<string, string> = {
-    'Aguardando leitura': 'selo-aviso',
-    Ciente: 'selo-neutro',
-    'Nova vistoria determinada': 'selo-info',
-};
-
-/** As expressões do domínio que a busca reconhece e retira do texto livre. */
-type Faceta =
-    | 'com-documento'
-    | 'sem-documento'
-    | 'de-denuncia'
-    | 'avulsa'
-    | 'com-recomendacao'
-    | 'nao-identificado'
-    | 'com-foto'
-    | 'prazo-vencido'
-    | 'prazo-correndo'
-    | 'ultimos-7'
-    | 'ultimos-30';
+import { direcionar as rotaDirecionar, operacao as rotaOperacao } from '@/routes/retaguarda/denuncias';
+import { arquivar as rotaArquivar, encaminharAoChefe, index, novaVistoria } from '@/routes/retaguarda/fiscalizacoes';
 
 /*
- * ⚠️ A ORDEM importa: a expressão mais específica vem antes, senão a genérica come
- * a outra ("prazo vencido" antes de "prazo").
+ * Fiscalizações — a mesa do LÍDER de equipe, e o acompanhamento do Chefe de Setor.
+ *
+ * ⚠️ A LINHA MUDOU DE SENTIDO em 24/09/2026 (decisão do dono). Cada linha era uma
+ * VISTORIA (uma ida ao ponto); agora é a FISCALIZAÇÃO — o conjunto de atos que
+ * pôs a demanda em prática: nasce quando o chefe encaminha ao líder, o líder a
+ * envia à equipe, recebe o retorno de campo (e pode mandar a equipe voltar), e a
+ * encaminha ao chefe com o resultado. As vistorias abrem DENTRO dela.
+ *
+ *   · Em andamento — com a EQUIPE: o líder envia aos fiscais, lê o retorno,
+ *     manda voltar ou encaminha ao chefe. O DESFECHO muda conforme ela avança.
+ *   · Encaminhadas — com o CHEFE DE SETOR: ele delibera pela Caixa de Entrada
+ *     (responde à origem, ou encaminha de novo — o que abre uma Fiscalização irmã).
+ *   · Arquivo — o processo voltou à origem.
+ *
+ * Não existe "dar ciência": o líder decide, e o que decide sai da mão dele.
  */
+
+interface CicloResumo {
+    id: number;
+    protocolo: string;
+    aberto_em: string;
+    equipe: string;
+    posse: string;
+    aba: 'andamento' | 'encaminhadas' | 'arquivo';
+    desfecho: string;
+    total_vistorias: number;
+    total_fotos: number;
+    documentos: string[];
+    url: string;
+}
+
+interface Ciclo extends CicloResumo {
+    origem: string;
+    area: string;
+    lider: string | null;
+    a_decidir: boolean;
+    aguarda_envio: boolean;
+    vistoria_pendente: number | null;
+    encaminhado_ao_chefe_em: string | null;
+    encaminhado_por: string | null;
+    motivo: string | null;
+    arquivado_em: string | null;
+    demanda: {
+        id: number;
+        protocolo: string;
+        canal: string;
+        canal_nome: string;
+        assunto: string;
+        bairro: string;
+        situacao: string;
+        situacao_resumida: string;
+        url: string;
+    } | null;
+    vistorias: Registro[];
+    irmas: CicloResumo[];
+}
+
+type Aba = CicloResumo['aba'] | 'detalhe';
+
+const ROTULO: Record<Aba, string> = {
+    andamento: 'Em andamento',
+    encaminhadas: 'Encaminhadas',
+    arquivo: 'Arquivo',
+    detalhe: 'Detalhe',
+};
+
+/** O tom da posse: com a equipe é trabalho andando; com o chefe, espera ele. */
+const TOM_DA_POSSE: Record<string, string> = {
+    Equipe: 'selo-info',
+    'Chefe de Setor': 'selo-aviso',
+};
+
+type Decisao = 'equipe' | 'operacao' | 'voltar' | 'chefe' | null;
+
+type Faceta = 'a-decidir' | 'aguardando-envio' | 'com-documento' | 'sem-demanda';
+
 const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
-    { expressao: /\bsem documento\b|\bsem papel\b/, valor: 'sem-documento' },
+    { expressao: /\ba decidir\b|\bpendente\w*\b/, valor: 'a-decidir' },
+    { expressao: /\baguardando envio\b|\bsem equipe\b|\ba enviar\b/, valor: 'aguardando-envio' },
     { expressao: /\bcom documento\b|\bnotificad\w*\b|\bautuad\w*\b/, valor: 'com-documento' },
-    { expressao: /\bde denuncia\b|\bdenuncia\b/, valor: 'de-denuncia' },
-    { expressao: /\bavuls\w*\b|\brond\w*\b|\boperacao\b/, valor: 'avulsa' },
-    { expressao: /\bcom recomendacao\b|\brecomendad\w*\b/, valor: 'com-recomendacao' },
-    // O alvo: "não identificado" é caso previsto do domínio, e quem procura por
-    // ele está procurando exatamente os registros sem alvo — não uma falha.
-    { expressao: /\bnao identificad\w*\b|\bsem alvo\b/, valor: 'nao-identificado' },
-    { expressao: /\bcom foto\w*\b/, valor: 'com-foto' },
-    { expressao: /\bprazo vencid\w*\b|\bvencid\w*\b/, valor: 'prazo-vencido' },
-    { expressao: /\bprazo corrend\w*\b|\bcom prazo\b/, valor: 'prazo-correndo' },
-    // O PERÍODO como faceta, e não como par de campos de data: o padrão do projeto
-    // é uma barra só que interpreta a frase. "Nos últimos 7 dias" é como a chefia
-    // pergunta; dois seletores de data seriam um segundo filtro ao lado da busca.
-    { expressao: /\bultimos 7 dias\b|\bultima semana\b|\besta semana\b/, valor: 'ultimos-7' },
-    { expressao: /\bultimos 30 dias\b|\bultimo mes\b|\beste mes\b/, valor: 'ultimos-30' },
+    { expressao: /\bsem demanda\b|\bronda\w*\b|\bavuls\w*\b/, valor: 'sem-demanda' },
 ];
 
-/** O documento em uma linha: "Notificação nº 194903". */
-function nomeDoDocumento(d: NonNullable<Registro['documento']>): string {
-    return `${d.tipo === 'np' ? 'Notificação' : 'Apreensão'} nº ${d.numero}`;
-}
-
-/** Quantos dias inteiros separam a conclusão de hoje — para a faceta de período. */
-function diasDesde(iso: string): number {
-    const [data] = String(iso).replace(' ', 'T').split('T');
-    const [ano, mes, dia] = data.split('-').map(Number);
-
-    return Math.floor(
-        (Date.now() - Date.UTC(ano, (mes ?? 1) - 1, dia ?? 1)) / 86400000,
-    );
-}
-
-/** "vence em 3 dias" / "venceu há 2 dias" / "vence hoje". */
-function textoDoPrazo(prazo: Prazo): string {
-    if (prazo.dias === 0) {
-        return 'vence hoje';
-    }
-
-    return prazo.dias > 0
-        ? `vence em ${contar(prazo.dias, 'dia', 'dias')}`
-        : `venceu há ${contar(-prazo.dias, 'dia', 'dias')}`;
-}
-
 export default function Fiscalizacoes({
-    registros,
-    estados,
+    fiscalizacoes,
+    abrir,
     recomendacoesDoFiscal,
     lideres,
-    decide,
+    conduz,
+    arquiva,
     equipesDoLider,
     recorteDeEquipe,
+    operacoes,
     listagens,
 }: {
-    registros: Registro[];
-    estados: string[];
-    /**
-     * Chave da recomendação → a frase EXPLÍCITA que a chefia lê — catálogo do
-     * servidor. A pílula curta é do celular do fiscal; aqui quem decide precisa
-     * da frase inteira. Chave que o catálogo não conhece aparece CRUA (ver
-     * `@/lib/recomendacoes`): recomendação que evapora em silêncio faria a
-     * chefia decidir sem saber que o fiscal pediu algo.
-     */
+    fiscalizacoes: Ciclo[];
+    /** A Fiscalização a abrir ao chegar (link vindo da Caixa de Entrada). */
+    abrir: number | null;
     recomendacoesDoFiscal: CatalogoDeRecomendacoes;
-    /** Quem lidera cada equipe — o Chefe de Setor precisa ver de quem é o retorno. */
     lideres: Record<string, { nome: string; matricula: string | null }>;
-    /** Esta pessoa DECIDE aqui, ou apenas consulta? Quem responde é o servidor. */
-    decide: boolean;
-    /** As equipes que esta pessoa lidera (vazio para quem não lidera nenhuma). */
+    /** Conduz a Fiscalização com a equipe (líder, administrador)? Quem responde é o servidor. */
+    conduz: boolean;
+    /** Arquiva a Fiscalização sem processo (chefe, administrador)? */
+    arquiva: boolean;
     equipesDoLider: string[];
-    /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
-    /** A fila já veio recortada por essas equipes? Quem recorta é o servidor. */
     recorteDeEquipe: boolean;
-    /**
-     * As colunas de cada aba — da grade e do arquivo —, resolvidas no servidor
-     * (a de ÁREA só existe para quem varre mais de uma). Ver
-     * `docs/padroes/listagem-clean.md`.
-     */
+    operacoes: Operacao[];
     listagens: Listagens;
 }) {
     const { enviando, ocupado, enviar } = useEnvio();
 
-    const [aba, setAba] = useState<Aba>('a-decidir');
+    const abertaNoLink = fiscalizacoes.find((c) => c.id === abrir) ?? null;
+    const [aba, setAba] = useState<Aba>(abertaNoLink !== null ? 'detalhe' : 'andamento');
+    const [abertoId, setAbertoId] = useState<number | null>(abertaNoLink?.id ?? null);
     const [busca, setBusca] = useState('');
-    const [abertoId, setAbertoId] = useState<number | null>(null);
     const [marcados, setMarcados] = useState<number[]>([]);
-    const [justificativa, setJustificativa] = useState('');
-    const [confirmandoVolta, setConfirmandoVolta] = useState(false);
-    /* O motivo da devolução ao Chefe de Setor — obrigatório, como a justificativa da
-       nova vistoria: quem recebe o caso de volta precisa saber por quê. */
-    const [motivo, setMotivo] = useState('');
+    const [decisao, setDecisao] = useState<Decisao>(null);
+    const [alvos, setAlvos] = useState<number[]>([]);
+    const [texto, setTexto] = useState('');
+    const [operacaoEscolhida, setOperacaoEscolhida] = useState(operacoes[0]?.nome ?? '');
 
-    /*
-     * O estado da FILA, e ele vem do servidor: o catálogo chega na ordem em que a
-     * fila anda, e o primeiro é o que espera a leitura da chefia. Escrito na tela,
-     * "Aguardando leitura" seria a mesma palavra com dois donos — e no dia em que
-     * ela mudasse, a aba "A decidir" ficaria vazia sem nada acusar.
-     */
-    const aguardando = estados[0];
-
-    /** O líder de uma equipe, ou null quando a estrutura não registra nenhum. */
     const liderDa = (equipe: string | null): string | null => {
         const nome = equipe === null ? '' : (lideres[equipe]?.nome ?? '');
 
         return nome.trim() === '' ? null : nome;
     };
 
-    // A ABA troca a FONTE: "A decidir" é a fila propriamente dita, "Acervo" é
-    // tudo o que passou por aqui — inclusive o já lido e o devolvido à equipe.
-    // Não é filtro paralelo à busca: é outro conjunto de partida, e é por isso que
-    // ela entra no contexto da exportação.
-    const daAba = useMemo(
-        () =>
-            aba === 'a-decidir'
-                ? registros.filter((r) => r.estado === aguardando)
-                : registros,
-        [registros, aba, aguardando],
+    const porAba = useMemo(
+        () => ({
+            andamento: fiscalizacoes.filter((c) => c.aba === 'andamento'),
+            encaminhadas: fiscalizacoes.filter((c) => c.aba === 'encaminhadas'),
+            arquivo: fiscalizacoes.filter((c) => c.aba === 'arquivo'),
+        }),
+        [fiscalizacoes],
     );
 
-    const filtrados = useMemo(() => {
-        const { facetas, termos } = parseConsulta<Faceta>(busca, FACETAS);
+    // A resposta do servidor traz a lista nova: a seleção antiga já não vale.
+    useEffect(() => {
+        setMarcados([]);
+        setDecisao(null);
+        setAlvos([]);
+    }, [fiscalizacoes]);
 
-        return daAba.filter((r) => {
-            if (facetas.includes('sem-documento') && r.documento !== null) {
-                return false;
-            }
+    const fonte = aba === 'detalhe' ? [] : porAba[aba];
 
-            if (facetas.includes('com-documento') && r.documento === null) {
-                return false;
-            }
+    const filtradas = useMemo(() => {
+        const { facetas: achadas, termos } = parseConsulta<Faceta>(busca, FACETAS);
 
-            if (facetas.includes('de-denuncia') && r.denuncia_protocolo === null) {
-                return false;
-            }
-
-            if (facetas.includes('avulsa') && r.denuncia_protocolo !== null) {
-                return false;
-            }
-
-            if (facetas.includes('com-recomendacao') && r.recomendacoes.length === 0) {
-                return false;
-            }
-
-            if (facetas.includes('nao-identificado') && r.alvo !== null) {
-                return false;
-            }
-
-            if (facetas.includes('com-foto') && r.fotos.length === 0) {
-                return false;
-            }
-
-            if (facetas.includes('prazo-vencido') && !(r.prazo?.vencido ?? false)) {
-                return false;
-            }
-
-            if (
-                facetas.includes('prazo-correndo') &&
-                (r.prazo === null || r.prazo.vencido)
-            ) {
-                return false;
-            }
-
-            if (facetas.includes('ultimos-7') && diasDesde(r.concluida_em) > 7) {
-                return false;
-            }
-
-            if (facetas.includes('ultimos-30') && diasDesde(r.concluida_em) > 30) {
-                return false;
+        return fonte.filter((c) => {
+            for (const f of achadas) {
+                if (f === 'a-decidir' && !c.a_decidir) return false;
+                if (f === 'aguardando-envio' && !c.aguarda_envio) return false;
+                if (f === 'com-documento' && c.documentos.length === 0) return false;
+                if (f === 'sem-demanda' && c.demanda !== null) return false;
             }
 
             return casaTermos(termos, [
-                r.protocolo,
-                r.referencia,
-                r.endereco,
-                r.bairro,
-                r.ponto_de_referencia,
-                r.equipe,
-                r.fiscal,
-                r.area,
-                r.desfecho,
-                r.consideracoes,
-                // O ALVO entra na busca: "consultar por ambulante" é a pergunta que
-                // o acervo existe para responder, e o nome de quem foi encontrado
-                // no ponto é como se procura por ele.
-                r.alvo,
-                r.equipamento,
-                r.documento?.numero,
-                r.documento?.notificado,
-                // Contra a FRASE, e não contra a chave: quem procura por
-                // "operação" tem de achar o registro em que o fiscal pediu
-                // operação — a chave `operacao` casaria por acidente, e
-                // `passagem` não casaria com "passagem semanal".
-                textosDasRecomendacoes(r.recomendacoes, recomendacoesDoFiscal).join(' '),
-                r.estado,
+                c.protocolo,
+                c.demanda?.protocolo,
+                c.demanda?.canal_nome,
+                c.demanda?.assunto,
+                c.demanda?.bairro,
+                c.equipe,
+                c.area,
+                c.desfecho,
+                c.posse,
+                c.origem,
+                ...c.documentos,
             ]);
         });
-    }, [daAba, busca, recomendacoesDoFiscal]);
+    }, [fonte, busca]);
 
-    const ord = useOrdenacao(filtrados, {
-        campo: 'concluida_em',
-        dir: 'desc',
-        acessor: 'concluida_em',
-    });
+    const acessores: Record<string, AcessorOrd<Ciclo> | undefined> = {
+        protocolo: 'protocolo',
+        aberto_em: 'aberto_em',
+        demanda: (c: Ciclo) => c.demanda?.protocolo ?? '',
+        equipe: 'equipe',
+        desfecho: 'desfecho',
+        posse: 'posse',
+    };
+    const ord = useOrdenacao(filtradas, { campo: 'aberto_em', dir: 'desc', acessor: 'aberto_em' });
     const pag = usePaginacao(ord.itens);
 
-    /*
-     * A SELEÇÃO só existe na aba "A decidir". O acervo é leitura — oferecer
-     * caixinha lá prometeria uma ação que a aba não tem.
-     */
-    const selecionavel = decide && aba === 'a-decidir';
+    const listagem = listagens['fiscalizacoes.ciclos'];
+    const selecionavel = conduz && aba === 'andamento';
+    const colunas = (selecionavel ? 1 : 0) + listagem.grade.length;
+    const aberta = fiscalizacoes.find((c) => c.id === abertoId) ?? null;
+
+    const idsVisiveis = pag.visiveis.map((c) => c.id);
+    const todosMarcados = idsVisiveis.length > 0 && idsVisiveis.every((id) => marcados.includes(id));
 
     /*
-     * Trocar de aba, filtrar ou receber a lista de volta do servidor deixaria
-     * marcado um registro que já não está à vista — e a decisão em lote alcançaria
-     * o que a pessoa não está vendo. A seleção é do RECORTE VISÍVEL, e some com
-     * ele.
+     * O que cada ação ALCANÇA do que foi marcado — a lista mistura Fiscalizações
+     * em pontos diferentes do ciclo, e cada botão diz quantas vai levar.
      */
-    useEffect(() => {
-        setMarcados((atuais) =>
-            atuais.filter((id) => filtrados.some((r) => r.id === id)),
-        );
-    }, [filtrados]);
+    const doMarcado = (ids: number[]) => fiscalizacoes.filter((c) => ids.includes(c.id));
+    const paraEnviar = (ids: number[]) => doMarcado(ids).filter((c) => c.aguarda_envio);
+    const paraVoltar = (ids: number[]) => doMarcado(ids).filter((c) => c.vistoria_pendente !== null);
+    const paraChefe = (ids: number[]) => doMarcado(ids).filter((c) => c.aba === 'andamento');
 
-    /* Ir para o acervo desfaz a seleção: ela pertence à fila. */
-    useEffect(() => {
-        if (!selecionavel) {
-            setMarcados([]);
-        }
-    }, [selecionavel]);
-
-    const selecionados = registros.filter((r) => marcados.includes(r.id));
-    const podeDecidir = selecionavel && selecionados.length > 0;
-
-    /* A janela de decisão fica fechada até o comando flutuante ser tocado. */
-    const [decidindo, setDecidindo] = useState(false);
-
-    /* Seleção esvaziada — pela ação que acabou de gravar, por troca de aba ou
-       por desmarcar a última linha — fecha a janela. Deixá-la no ar sem alvo
-       ofereceria "dar ciência" de nada. */
-    useEffect(() => {
-        if (selecionados.length === 0) {
-            setDecidindo(false);
-        }
-    }, [selecionados.length]);
-
-    function alternarMarca(id: number) {
-        setMarcados((atuais) =>
-            atuais.includes(id) ? atuais.filter((i) => i !== id) : [...atuais, id],
-        );
-    }
-
-    /** Marca ou desmarca TODO o recorte filtrado — não só a página à vista. */
-    function alternarTodos() {
-        const doRecorte = filtrados.map((r) => r.id);
-        const todosMarcados = doRecorte.every((id) => marcados.includes(id));
-
-        setMarcados(todosMarcados ? [] : doRecorte);
-    }
-
-    function limpar() {
+    function trocarAba(nova: Aba) {
+        setAba(nova);
         setMarcados([]);
-        setJustificativa('');
-        setMotivo('');
     }
 
-    function mandarVoltar() {
-        enviar(
-            'nova-vistoria',
-            novaVistoria().url,
-            { ids: marcados, justificativa },
-            {
-                onSuccess: () => {
-                    setConfirmandoVolta(false);
-                    limpar();
-                },
-                onError: () => setConfirmandoVolta(false),
-            },
-        );
+    function abrirDetalhe(c: Ciclo) {
+        setAbertoId(c.id);
+        setAba('detalhe');
     }
 
-    function devolverAoChefe() {
-        enviar(
-            'devolver',
-            devolver().url,
-            { ids: marcados, motivo },
-            { onSuccess: limpar },
-        );
+    function abrirDecisao(qual: Decisao, ids: number[]) {
+        setAlvos(ids);
+        setTexto('');
+        setDecisao(qual);
     }
 
-    const numeros = {
-        total: registros.length,
-        aLer: registros.filter((r) => r.estado === aguardando).length,
-        comRecomendacao: registros.filter(
-            (r) => r.estado === aguardando && r.recomendacoes.length > 0,
-        ).length,
-        comDocumento: registros.filter((r) => r.documento !== null).length,
-        prazoVencido: registros.filter((r) => r.prazo?.vencido ?? false).length,
-    };
+    function confirmar() {
+        const escolhidas = doMarcado(alvos);
+        const fechar = { onSuccess: () => setDecisao(null) };
 
-    /*
-     * As COLUNAS da aba — da grade e do arquivo. Vêm do servidor porque as duas
-     * listas têm de ser conferidas uma contra a outra: a grade é enxuta por
-     * ordem do dono, e o arquivo continua completo. Ver
-     * `docs/padroes/listagem-clean.md` e `config/listagens_da_retaguarda.php`.
-     */
-    const listagem =
-        listagens[aba === 'a-decidir' ? 'fiscalizacoes.a-decidir' : 'fiscalizacoes.acervo'];
+        if (decisao === 'equipe') {
+            enviar('equipe', rotaDirecionar().url, {
+                ids: paraEnviar(alvos).map((c) => c.demanda!.id),
+                orientacao: texto.trim() === '' ? null : texto.trim(),
+            }, fechar);
+        } else if (decisao === 'operacao') {
+            enviar('operacao', rotaOperacao().url, {
+                ids: paraEnviar(alvos).map((c) => c.demanda!.id),
+                nova: false,
+                operacao: operacaoEscolhida,
+            }, fechar);
+        } else if (decisao === 'voltar') {
+            enviar('voltar', novaVistoria().url, { ids: paraVoltar(alvos).map((c) => c.id), justificativa: texto }, fechar);
+        } else if (decisao === 'chefe') {
+            enviar('chefe', encaminharAoChefe().url, { ids: escolhidas.map((c) => c.id), motivo: texto }, fechar);
+        }
+    }
 
-    /** Como ORDENAR por cada coluna. Sem entrada, a coluna não ordena. */
-    const acessores: Record<string, AcessorOrd<Registro> | undefined> = {
-        concluida_em: 'concluida_em',
-        ponto: (r) => r.endereco,
-        area: 'area',
-        alvo: 'alvo',
-        desfecho: 'desfecho',
-        // Pelo VENCIMENTO, e não pelo texto exibido: ordenar por "vence em 3
-        // dias" ordenaria alfabeticamente pela palavra "vence".
-        prazo: (r) => r.prazo?.vence_em ?? '',
-        recomendacoes: undefined,
-    };
+    function arquivar(c: Ciclo) {
+        enviar('arquivar', rotaArquivar().url, { ids: [c.id] });
+    }
 
-    /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
     const fraco = { color: 'var(--sm-texto-fraco)' };
 
-    /**
-     * O que cada célula DESENHA, e o texto inteiro para a dica.
-     *
-     * `resumida` marca o único caso em que a tela realmente omite conteúdo (a
-     * primeira recomendação com "+2"): aí a dica também é anunciada, porque é o
-     * único lugar onde o que ficou de fora volta a existir.
-     */
-    function celula(
-        r: Registro,
-        chave: string,
-    ): { conteudo: ReactNode; dica?: string; resumida?: boolean } {
-        if (chave === 'concluida_em') {
-            return {
-                conteudo: dataBR(r.concluida_em),
-                dica:
-                    `Concluída em ${dataHoraBR(r.concluida_em)}`
-                    + (r.dias_parado !== null && r.dias_parado > 0
-                        ? ` · há ${contar(r.dias_parado, 'dia', 'dias')} na fila`
-                        : ''),
-            };
+    function celula(c: Ciclo, chave: string): { conteudo: ReactNode; dica?: string } {
+        switch (chave) {
+            case 'protocolo':
+                return { conteudo: c.protocolo, dica: `${c.protocolo} · ${c.origem}` };
+            case 'aberto_em':
+                return { conteudo: dataBR(c.aberto_em), dica: `Aberta em ${dataHoraBR(c.aberto_em)}` };
+            case 'demanda':
+                return c.demanda === null
+                    ? { conteudo: <span style={fraco}>{c.origem}</span>, dica: 'Sem demanda: nasceu em rua' }
+                    : {
+                          conteudo: `${c.demanda.protocolo} · ${c.demanda.canal_nome}`,
+                          dica: `${c.demanda.protocolo} · ${c.demanda.canal_nome} · ${c.demanda.assunto}`,
+                      };
+            case 'equipe':
+                return c.equipe === ''
+                    ? { conteudo: <span style={fraco}>{VAZIO}</span> }
+                    : {
+                          conteudo: c.equipe,
+                          dica: `Equipe ${c.equipe}${liderDa(c.equipe) ? ` · líder ${liderDa(c.equipe)}` : ''}`,
+                      };
+            case 'desfecho':
+                return { conteudo: c.desfecho, dica: c.desfecho };
+            case 'posse':
+                return {
+                    conteudo: (
+                        <span className={cn('selo', c.aba === 'arquivo' ? 'selo-neutro' : (TOM_DA_POSSE[c.posse] ?? 'selo-neutro'))}>
+                            {c.posse}
+                        </span>
+                    ),
+                    dica: c.aba === 'arquivo' ? 'Arquivada — o processo voltou à origem' : `Com: ${c.posse}`,
+                };
+            default:
+                return { conteudo: VAZIO };
         }
-
-        if (chave === 'ponto') {
-            return {
-                conteudo: r.endereco,
-                dica: [r.endereco, r.bairro, r.area]
-                    .filter((parte) => parte !== null && String(parte).trim() !== '')
-                    .join(' · '),
-            };
-        }
-
-        if (chave === 'area') {
-            return { conteudo: r.area || VAZIO, dica: r.area || undefined };
-        }
-
-        if (chave === 'alvo') {
-            // "não identificado" e não um travessão: o alvo nulo é INFORMAÇÃO —
-            // a equipe foi e não achou ninguém —, e o traço a leria como falta
-            // de dado.
-            return r.alvo === null
-                ? {
-                      conteudo: <span style={fraco}>não identificado</span>,
-                      dica: 'Ninguém foi identificado no ponto — a foto do local é a prova da ida.',
-                  }
-                : {
-                      conteudo: r.alvo,
-                      dica: [r.alvo, r.equipamento].filter(Boolean).join(' · '),
-                  };
-        }
-
-        if (chave === 'desfecho') {
-            return { conteudo: r.desfecho, dica: r.desfecho };
-        }
-
-        if (chave === 'prazo') {
-            if (r.prazo === null) {
-                return { conteudo: <span style={fraco}>sem prazo correndo</span> };
-            }
-
-            return {
-                conteudo: (
-                    <span
-                        className={cn(
-                            'selo',
-                            r.prazo.vencido ? 'selo-perigo' : 'selo-aviso',
-                        )}
-                    >
-                        <Timer size={11} aria-hidden /> {dataBR(r.prazo.vence_em)}
-                        {r.prazo.vencido ? ' · vencido' : ''}
-                    </span>
-                ),
-                dica: [
-                    `${dataBR(r.prazo.vence_em)} — ${textoDoPrazo(r.prazo)}`,
-                    r.prazo.notificado,
-                ]
-                    .filter(Boolean)
-                    .join(' · '),
-            };
-        }
-
-        const frases = textosDasRecomendacoes(r.recomendacoes, recomendacoesDoFiscal);
-
-        if (frases.length === 0) {
-            return { conteudo: <span style={fraco}>o fiscal não recomendou nada</span> };
-        }
-
-        return {
-            /*
-             * Texto corrido, sem selo e sem ícone: a frase da recomendação é
-             * longa por decisão de produto, e o selo custava dois terços do que
-             * ela precisa — o acolchoamento dele mais a lâmpada comiam ~35px da
-             * largura útil e empurravam as maiores para uma terceira linha, que
-             * o teto da célula cortava. Sem a caixa, a mesma frase cabe em duas.
-             *
-             * O "+N" fica junto das palavras, no fim da frase, pelo mesmo motivo
-             * de antes: como caixa própria, ele descia de linha sozinho.
-             */
-            conteudo: (
-                <span className="celula-frase">
-                    {frases[0]}
-                    {frases.length > 1 && ` (+${frases.length - 1})`}
-                </span>
-            ),
-            dica: frases.join(' · '),
-            resumida: frases.length > 1,
-        };
     }
 
-    const linhasExportacao = ord.itens.map((r) => ({
-        protocolo: r.protocolo,
-        concluida_em: dataHoraBR(r.concluida_em),
-        area: r.area || VAZIO,
-        equipe: r.equipe || VAZIO,
-        fiscal: r.fiscal,
-        ponto: [r.endereco, r.bairro].filter(Boolean).join(' — '),
-        // "não identificado" e não vazio: o alvo nulo é uma INFORMAÇÃO (a equipe
-        // foi e não achou ninguém), e um travessão a esconderia como dado faltando.
-        alvo: r.alvo ?? 'não identificado',
-        desfecho: r.desfecho,
-        documento: r.documento === null ? 'nenhum' : nomeDoDocumento(r.documento),
-        prazo:
-            r.prazo === null
-                ? VAZIO
-                : `${dataBR(r.prazo.vence_em)} (${textoDoPrazo(r.prazo)})`,
-        provas: [
-            r.fotos.length > 0 ? contar(r.fotos.length, 'foto', 'fotos') : null,
-            r.gps === null ? 'sem coordenada' : r.gps,
-        ]
-            .filter(Boolean)
-            .join(' · '),
-        // O arquivo vai EXPLÍCITO: quem o abre é quem decide, não o aparelho —
-        // uma célula com `sgci` não é resposta para ninguém.
-        recomendacoes:
-            r.recomendacoes.length === 0
-                ? VAZIO
-                : textosDasRecomendacoes(r.recomendacoes, recomendacoesDoFiscal).join('; '),
-        consideracoes: r.consideracoes ?? VAZIO,
-        origem: r.referencia,
-        estado: r.estado,
+    const linhasExportacao = ord.itens.map((c) => ({
+        protocolo: c.protocolo,
+        aberto_em: dataHoraBR(c.aberto_em),
+        demanda: c.demanda?.protocolo ?? c.origem,
+        canal: c.demanda?.canal_nome ?? VAZIO,
+        equipe: c.equipe || VAZIO,
+        desfecho: c.desfecho,
+        posse: c.aba === 'arquivo' ? 'Arquivada' : c.posse,
+        vistorias: String(c.total_vistorias),
+        documentos: c.documentos.join(', ') || VAZIO,
+        irmas: c.irmas.map((i) => i.protocolo).join(', ') || VAZIO,
+        motivo: c.motivo ?? VAZIO,
     }));
 
-    /** Quantas colunas a grade tem — para o `colSpan` da linha vazia e do detalhe. */
-    const colunas = (selecionavel ? 1 : 0) + listagem.grade.length;
+    /** Os botões de decisão — os mesmos no lote e na Fiscalização aberta. */
+    function botoes(ids: number[]) {
+        const enviar = paraEnviar(ids).length;
+        const voltar = paraVoltar(ids).length;
+        const chefe = paraChefe(ids).length;
+        const n = (x: number) => (ids.length > 1 && x > 0 ? ` (${x})` : '');
+
+        return (
+            <>
+                <BotaoAcao icone={<Send size={16} aria-hidden />} ocupado={ocupado} disabled={enviar === 0}
+                    title={enviar === 0 ? 'Só a Fiscalização que aguarda o envio à equipe' : undefined}
+                    onClick={() => abrirDecisao('equipe', ids)}>
+                    Encaminhar à equipe{n(enviar)}
+                </BotaoAcao>
+                <BotaoAcao className="btn btn-secondary btn-sm" icone={<Siren size={16} aria-hidden />} ocupado={ocupado}
+                    disabled={enviar === 0 || operacoes.length === 0} onClick={() => abrirDecisao('operacao', ids)}>
+                    Incluir em operação{n(enviar)}
+                </BotaoAcao>
+                <BotaoAcao className="btn btn-secondary btn-sm" icone={<RotateCcw size={16} aria-hidden />} ocupado={ocupado}
+                    disabled={voltar === 0} title={voltar === 0 ? 'Só a Fiscalização com retorno de campo esperando você' : undefined}
+                    onClick={() => abrirDecisao('voltar', ids)}>
+                    Mandar a equipe voltar{n(voltar)}
+                </BotaoAcao>
+                <BotaoAcao className="btn btn-secondary btn-sm" icone={<Undo2 size={16} aria-hidden />} ocupado={ocupado}
+                    disabled={chefe === 0} onClick={() => abrirDecisao('chefe', ids)}>
+                    Encaminhar ao Chefe de Setor{n(chefe)}
+                </BotaoAcao>
+            </>
+        );
+    }
+
+    const obrigatorio = <span aria-hidden style={{ color: 'var(--sm-perigo)' }}>*</span>;
 
     return (
         <>
@@ -672,797 +373,362 @@ export default function Fiscalizacoes({
                     <p className="sobrancelha">Fiscalização</p>
                     <h1>Fiscalizações</h1>
                     <p>
-                        Tudo que a equipe <strong>concluiu em rua</strong>: o que
-                        acabou de voltar e espera a sua leitura, na aba{' '}
-                        <strong>A decidir</strong>, e o histórico consultável do
-                        ponto, no <strong>Acervo</strong>.
+                        Cada demanda que o Chefe de Setor encaminha gera uma{' '}
+                        <strong>Fiscalização</strong>: o líder a envia à equipe, recebe o retorno
+                        de campo — e pode mandar a equipe voltar — e a encaminha ao chefe com o
+                        resultado. Quando o processo volta à origem, ela vai para o Arquivo.
                     </p>
-
-                    {/* Qual é o SEU papel aqui. O dono usa o selo para mostrar que
-                        a mesma tela serve dois papéis: um decide, o outro consulta. */}
                     <ul className="rt-chips">
-                        {decide && (
+                        {conduz && (
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
                                 <span className="rt-chip-dot" />
-                                {/* A EQUIPE vai no selo: "você decide" sem dizer sobre o
-                                    quê deixaria o líder sem saber por que a fila é curta. */}
-                                Sua fila
-                                {equipesDoLider.length > 0
+                                Você conduz
+                                {equipesDoLider.length > 0 && equipesDoLider.length <= 2
                                     ? ` · ${equipesDoLider.map((e) => `Equipe ${e}`).join(' e ')}`
                                     : ''}{' '}
-                                — você manda a equipe voltar ou encaminha ao Chefe de Setor
+                                — envia à equipe, manda voltar ou encaminha ao Chefe de Setor
                             </li>
                         )}
-
-                        {/* Líder sem equipe vinculada: ele decide e não tem sobre
-                            o quê. Dito na cara, e não em lista vazia sem
-                            explicação — lista vazia parece sistema quebrado. */}
-                        {decide && recorteDeEquipe && equipesDoLider.length === 0 && (
-                            <li className="rt-chip" style={{ color: 'var(--sm-perigo)' }}>
+                        {!conduz && arquiva && (
+                            <li className="rt-chip" style={{ color: 'var(--sm-aviso)' }}>
                                 <span className="rt-chip-dot" />
-                                Sua conta não está vinculada a nenhuma equipe — procure
-                                quem administra o sistema
+                                Você acompanha — o que o líder encaminha chega em "Encaminhadas"; a
+                                deliberação é na Caixa de Entrada
                             </li>
                         )}
-
-                        {!decide && (
+                        {!conduz && !arquiva && (
                             <li className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                Você consulta o que a fiscalização registrou; a decisão
-                                sobre o retorno é do líder da equipe ou do Chefe de Setor
+                                Você consulta o que a fiscalização registrou
                             </li>
                         )}
                     </ul>
                 </div>
 
-                {/* Resumo da MESMA lista que a grade desenha. Clicar escreve a
-                    faceta na busca: atalho sem criar um segundo filtro. */}
                 <div className="rt-numeros">
-                    <button
-                        type="button"
-                        className="rt-numero"
-                        title={
-                            recorteDeEquipe
-                                ? 'Ver o acervo da sua equipe'
-                                : 'Ver o acervo inteiro'
-                        }
-                        onClick={() => {
-                            setBusca('');
-                            setAba('acervo');
-                        }}
-                    >
-                        <strong>{numeros.total}</strong>
-                        <span>{recorteDeEquipe ? 'da sua equipe' : 'concluídas'}</span>
-                    </button>
-
-                    <div className="rt-numeros-separador" />
-                    <button
-                        type="button"
-                        className="rt-numero alerta"
-                        title="Ver os que ainda esperam a leitura da chefia"
-                        onClick={() => {
-                            setBusca('');
-                            setAba('a-decidir');
-                        }}
-                    >
-                        <strong>{numeros.aLer}</strong>
+                    <button type="button" className="rt-numero alerta" title="Ver as que esperam decisão do líder"
+                        onClick={() => { trocarAba('andamento'); setBusca('a decidir'); }}>
+                        <strong>{porAba.andamento.filter((c) => c.a_decidir).length}</strong>
                         <span>a decidir</span>
                     </button>
-
                     <div className="rt-numeros-separador" />
-                    <button
-                        type="button"
-                        className="rt-numero info"
-                        title="Ver os que esperam leitura e trazem recomendação do fiscal"
-                        onClick={() => {
-                            setAba('a-decidir');
-                            setBusca('com recomendação');
-                        }}
-                    >
-                        <strong>{numeros.comRecomendacao}</strong>
-                        <span>com recomendação</span>
+                    <button type="button" className="rt-numero info" title="Ver as encaminhadas ao Chefe de Setor"
+                        onClick={() => { trocarAba('encaminhadas'); setBusca(''); }}>
+                        <strong>{porAba.encaminhadas.length}</strong>
+                        <span>com o chefe</span>
                     </button>
-
-                    <div className="rt-numeros-separador" />
-                    <button
-                        type="button"
-                        className="rt-numero"
-                        title="Ver os que tiveram documento lavrado"
-                        onClick={() => {
-                            setAba('acervo');
-                            setBusca('com documento');
-                        }}
-                    >
-                        <strong>{numeros.comDocumento}</strong>
-                        <span>com documento</span>
-                    </button>
-
-                    {/* Prazo VENCIDO é o único número desta tela que cobra ação de
-                        quem não está na fila: a notificação sem retorno fica no
-                        papel. Ele mora no acervo porque continua correndo depois de
-                        a chefia dar ciência. */}
-                    {numeros.prazoVencido > 0 && (
-                        <>
-                            <div className="rt-numeros-separador" />
-                            <button
-                                type="button"
-                                className="rt-numero alerta"
-                                title="Ver os notificados cujo prazo de retorno já venceu"
-                                onClick={() => {
-                                    setAba('acervo');
-                                    setBusca('prazo vencido');
-                                }}
-                            >
-                                <strong>{numeros.prazoVencido}</strong>
-                                <span>prazo vencido</span>
-                            </button>
-                        </>
-                    )}
                 </div>
             </div>
 
-            {/*
-              * O aviso mudou de assunto quando o módulo saiu do protótipo: o que
-              * era falso era dizer que nada é gravado — agora tudo é, em banco, e
-              * com trâmite. O que continua de mentira são os DADOS, e é disso que
-              * quem avalia precisa ser avisado antes de tirar conclusão deles.
-              */}
             <SeloPrototipo>
-                Ambiente de demonstração: as fiscalizações já registradas são{' '}
-                <strong>exemplos</strong>, não vistorias reais. O pedido de nova
-                vistoria e o encaminhamento ao chefe que você registrar{' '}
-                <strong>são gravados de verdade</strong> e ficam no histórico.
+                Ambiente de demonstração: as vistorias já registradas são <strong>exemplos</strong>.
+                O que você encaminhar ou pedir de nova vistoria <strong>é gravado de verdade</strong>{' '}
+                e fica no trâmite da demanda.
             </SeloPrototipo>
 
-            {/* O aviso que separa esta tela das duas portas de ENTRADA. Fica em
-                cima, e não numa coluna da grade, porque é a natureza da tela
-                inteira. */}
-            <div className="rt-sugestao" style={{ marginBottom: 18 }}>
-                <Undo2 size={16} aria-hidden />
-                <div>
-                    <strong>
-                        O trabalho VOLTANDO da rua — ninguém registra fiscalização
-                        aqui.
-                    </strong>
-                    <div>
-                        Quem registra é o fiscal, em rua, pelo aplicativo. Esta tela
-                        é o outro lado da cadeia: o que chega em papel ao balcão é
-                        assunto da <strong>Caixa de Entrada</strong>, e o que chega
-                        das ouvidorias é assunto de <strong>Denúncias</strong>.
-                    </div>
-                </div>
-            </div>
-
-            {/* A lista da chefia NÃO é o universo, e a tela diz isso. */}
             {recorteDeEquipe && (
                 <div className="rt-sugestao" style={{ marginBottom: 18 }}>
                     <Info size={16} aria-hidden />
                     <div>
-                        <strong>
-                            Você está vendo só o que voltou da{' '}
-                            {equipesDoLider.map((e) => `Equipe ${e}`).join(' e da ')}.
-                        </strong>
-                        <div>
-                            As fiscalizações das outras equipes não aparecem aqui — e a
-                            decisão sobre registro de outra equipe é recusada pelo
-                            sistema, não só escondida.
-                        </div>
+                        <strong>Você está vendo só as Fiscalizações das suas equipes.</strong>
+                        <div>As das outras equipes não aparecem aqui — e a ação sobre elas é recusada pelo sistema.</div>
                     </div>
                 </div>
             )}
 
             <div className="card-premium">
-                {/* A ABA troca a FONTE dos dados (a fila × o acervo da área), e por
-                    isso ela é aba e não chip de filtro — a busca continua sendo o
-                    filtro único dentro do conjunto escolhido. */}
-                <div className="abas" role="tablist" aria-label="Recorte das fiscalizações">
-                    <button
-                        type="button"
-                        role="tab"
-                        className="aba"
-                        aria-selected={aba === 'a-decidir'}
-                        onClick={() => setAba('a-decidir')}
-                    >
-                        <ClipboardCheck size={16} aria-hidden />
-                        <span className="aba-rotulo">A decidir ({numeros.aLer})</span>
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        className="aba"
-                        aria-selected={aba === 'acervo'}
-                        onClick={() => setAba('acervo')}
-                    >
-                        <Archive size={16} aria-hidden />
-                        <span className="aba-rotulo">Acervo ({numeros.total})</span>
-                    </button>
-                </div>
-
-                {/* O que a aba do ACERVO é, dito na própria aba: sem isto ela parece
-                    a mesma grade com mais linhas, e ninguém procuraria por ponto
-                    antigo aqui. */}
-                {aba === 'acervo' && (
-                    <div className="rt-sugestao" style={{ marginBottom: 4 }}>
-                        <Archive size={16} aria-hidden />
-                        <div>
-                            <strong>
-                                O histórico do ponto — consulta, sem ação.
-                            </strong>
-                            <div>
-                                Tudo o que a equipe concluiu, inclusive o que já foi
-                                lido: quem foi encontrado, as fotos, a coordenada, o
-                                documento que saiu na hora e o prazo de retorno de
-                                quem foi notificado. Procure por ambulante, por área
-                                ou por período — a barra abaixo entende a frase.
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <BuscaInteligente
-                    busca={busca}
-                    setBusca={setBusca}
-                    placeholder={
-                        aba === 'acervo'
-                            ? 'Procure por ambulante, ponto, bairro, área, equipe, documento ou período'
-                            : 'Procure por ponto, bairro, equipe, fiscal, desfecho ou o que o fiscal escreveu'
-                    }
-                    exemplos={
-                        aba === 'acervo'
-                            ? [
-                                  'nos últimos 7 dias',
-                                  'prazo vencido',
-                                  'não identificado',
-                                  'com documento',
-                              ]
-                            : [
-                                  'com recomendação',
-                                  'sem documento',
-                                  'de denúncia',
-                                  'ronda',
-                              ]
-                    }
-                />
-
-                {/* A DECISÃO mora numa janela, aberta pelo comando flutuante.
-                    Ela só existe com seleção, e só para quem decide: oferecer o
-                    botão a quem o servidor recusa é prometer o que a tela não
-                    entrega.
-
-                    Por que janela e não painel na página: a grade é longa, e o
-                    painel embaixo dela obrigava quem marcou uma linha do meio da
-                    lista a rolar de volta para achar o que fazer com ela. Na
-                    janela, a decisão é o único assunto — e a `Sobreposicao`
-                    resolve trava de rolagem, fundo inerte e empilhamento com a
-                    confirmação que vem depois. */}
-                {podeDecidir && decidindo && (
-                  <Sobreposicao clicandoFora={ocupado ? undefined : () => setDecidindo(false)}>
-                    <div
-                        className="card-premium"
-                        style={{
-                            width: '100%',
-                            maxWidth: 860,
-                            maxHeight: 'min(92vh, 100% - 8px)',
-                            overflowY: 'auto',
-                        }}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Decidir sobre as fiscalizações selecionadas"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h2 className="sobreposicao-titulo">
-                            <ClipboardCheck size={18} aria-hidden /> Decidir sobre{' '}
-                            {contar(selecionados.length, 'retorno', 'retornos')}
-                        </h2>
-                        <p className="sobreposicao-texto">
-                            Os dois caminhos: mandar a equipe voltar ao ponto dizendo
-                            o que procurar, ou encaminhar o caso ao Chefe de Setor
-                            para ele deliberar.
-                        </p>
-
-                        {/* Sem "Dar ciência" (decisão do dono, 24/09/2026): o líder
-                            decide, e não encerra demanda. As duas saídas mantêm o
-                            caso vivo — de volta à rua, ou para o chefe deliberar. */}
-                        <div className="rt-escolha" style={{ marginBottom: 4 }}>
-                        <div className="card-premium" style={{ margin: 0 }}>
-                            <h3 className="card-titulo">
-                                <RotateCcw size={16} aria-hidden /> Mandar a equipe voltar
-                            </h3>
-                            <p className="card-sub">
-                                O ponto volta para a equipe, com o que ela deve
-                                procurar desta vez.
-                            </p>
-
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="justificativa">
-                                    Justificativa <span aria-hidden style={{ color: 'var(--sm-perigo)' }}>*</span>
-                                </label>
-                                <textarea
-                                    id="justificativa"
-                                    className="form-control"
-                                    rows={3}
-                                    maxLength={1000}
-                                    value={justificativa}
-                                    onChange={(e) => setJustificativa(e.target.value)}
-                                    placeholder="O que a equipe deve procurar, e em que dia ou horário"
-                                />
-                                <p className="form-ajuda">
-                                    Mandar a equipe de volta consome tempo de
-                                    trabalho, portanto seja específico nessa
-                                    justificativa.
-                                </p>
-                            </div>
-
-                            <BotaoAcao
-                                icone={<RotateCcw size={16} aria-hidden />}
-                                carregando={enviando === 'nova-vistoria'}
-                                ocupado={ocupado}
-                                disabled={justificativa.trim().length < 15}
-                                rotuloCarregando="Devolvendo…"
-                                onClick={() => setConfirmandoVolta(true)}
-                            >
-                                Determinar nova vistoria
-                            </BotaoAcao>
-                        </div>
-
-                        {/* A outra saída: o caso sobe ao Chefe de Setor, que delibera
-                            — responde à Coordenadoria ou pede nova fiscalização. */}
-                        <div className="card-premium" style={{ margin: 0 }}>
-                            <h3 className="card-titulo">
-                                <Undo2 size={16} aria-hidden /> Encaminhar ao Chefe de Setor
-                            </h3>
-                            <p className="card-sub">
-                                O caso volta para o Chefe de Setor deliberar.
-                            </p>
-
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="motivo">
-                                    Motivo <span aria-hidden style={{ color: 'var(--sm-perigo)' }}>*</span>
-                                </label>
-                                <textarea
-                                    id="motivo"
-                                    className="form-control"
-                                    rows={3}
-                                    maxLength={1000}
-                                    value={motivo}
-                                    onChange={(e) => setMotivo(e.target.value)}
-                                    placeholder="Porque você está encaminhando ao Chefe"
-                                />
-                                <p className="form-ajuda">
-                                    Contexto para o Chefe de Setor saber deliberar para
-                                    a Coordenadoria ou solicitar nova Fiscalização.
-                                </p>
-                            </div>
-
-                            <BotaoAcao
-                                icone={<Undo2 size={16} aria-hidden />}
-                                carregando={enviando === 'devolver'}
-                                ocupado={ocupado}
-                                disabled={motivo.trim().length < 15}
-                                rotuloCarregando="Encaminhando…"
-                                onClick={devolverAoChefe}
-                            >
-                                Encaminhar ao Chefe de Setor
-                            </BotaoAcao>
-                        </div>
-                        </div>
-
-                        <div className="sobreposicao-acoes">
-                            <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => setDecidindo(false)}
-                                disabled={ocupado}
-                            >
-                                Voltar à lista
-                            </button>
-                        </div>
-                    </div>
-                  </Sobreposicao>
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 12 }}>
-                    {marcados.length > 0 && (
-                        <p className="form-ajuda" style={{ margin: 0 }}>
-                            {contar(marcados.length, 'registro', 'registros')}{' '}
-                            {plural(marcados.length, 'selecionado', 'selecionados')}.
-                        </p>
+                <div className="abas" role="tablist" aria-label="Fiscalizações">
+                    {(['andamento', 'encaminhadas', 'arquivo'] as const).map((a) => (
+                        <button key={a} type="button" role="tab" className="aba" aria-selected={aba === a} onClick={() => trocarAba(a)}>
+                            {a === 'arquivo' ? <Archive size={16} aria-hidden /> : a === 'encaminhadas' ? <Undo2 size={16} aria-hidden /> : <ClipboardCheck size={16} aria-hidden />}
+                            <span className="aba-rotulo">{ROTULO[a]} ({porAba[a].length})</span>
+                        </button>
+                    ))}
+                    {aberta !== null && (
+                        <button type="button" role="tab" className="aba" aria-selected={aba === 'detalhe'} onClick={() => setAba('detalhe')}>
+                            <FileText size={16} aria-hidden />
+                            <span className="aba-rotulo">{aberta.protocolo}</span>
+                        </button>
                     )}
-
-                    <BotaoExportar
-                        titulo="Fiscalizações"
-                        subtitulo="Fiscalização › Fiscalizações"
-                        contexto={[
-                            `Aba: ${aba === 'a-decidir' ? 'A decidir' : 'Acervo'}`,
-                            recorteDeEquipe
-                                ? `Equipes: ${equipesDoLider.join(' e ')}`
-                                : 'Todas as equipes',
-                            busca.trim() ? `busca: "${busca.trim()}"` : null,
-                        ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        colunas={listagem.exportacao}
-                        linhas={linhasExportacao}
-                    />
                 </div>
 
-                <div className="table-wrap">
-                    <table className="data-table enxuta">
-                        <thead>
-                            <tr>
-                                {selecionavel && (
-                                    <th style={{ width: 34 }}>
-                                        <input
-                                            type="checkbox"
-                                            aria-label="Selecionar todos os registros filtrados"
-                                            title="Selecionar todos os registros do filtro — não só os desta página"
-                                            checked={
-                                                filtrados.length > 0 &&
-                                                filtrados.every((r) =>
-                                                    marcados.includes(r.id),
-                                                )
-                                            }
-                                            onChange={alternarTodos}
-                                        />
-                                    </th>
-                                )}
-                                {/* O cabeçalho e as células saem da MESMA lista de
-                                    colunas: escritos em dois lugares, um dia uma
-                                    coluna nova entra só num deles e a grade passa a
-                                    mostrar o valor embaixo do título errado.
+                {aba !== 'detalhe' && (
+                    <>
+                        <BuscaInteligente
+                            busca={busca}
+                            setBusca={setBusca}
+                            placeholder='Fiscalização, demanda, canal, equipe, bairro ou desfecho — ex.: "a decidir", "aguardando envio"'
+                            exemplos={['a decidir', 'aguardando envio', 'com documento', 'regularizado no local', 'sem demanda']}
+                        />
 
-                                    O ALVO é coluna do ACERVO e a RECOMENDAÇÃO é da
-                                    fila — quem decide o retorno decide sobre o
-                                    PONTO, e quem consulta o histórico procura pela
-                                    PESSOA. Quem declara isso é o catálogo. */}
-                                <CabecaDaGrade
-                                    grade={listagem.grade}
-                                    ord={ord}
-                                    acessores={acessores}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                            {selecionavel && botoes(marcados)}
+                            <div style={{ marginLeft: 'auto' }}>
+                                <BotaoExportar
+                                    titulo="Fiscalizações"
+                                    subtitulo="Fiscalização › Fiscalizações"
+                                    contexto={[
+                                        `Aba: ${ROTULO[aba]}`,
+                                        recorteDeEquipe ? `Equipes: ${equipesDoLider.join(' e ')}` : 'Todas as equipes',
+                                        busca.trim() ? `busca: "${busca.trim()}"` : null,
+                                    ].filter(Boolean).join(' · ')}
+                                    colunas={listagem.exportacao}
+                                    linhas={linhasExportacao}
                                 />
-                            </tr>
-                        </thead>
+                            </div>
+                        </div>
 
-                        <tbody>
-                            {pag.visiveis.length === 0 && (
-                                <tr>
-                                    <td colSpan={colunas} className="tabela-vazia">
-                                        {registros.length === 0
-                                            ? 'Nenhuma fiscalização por aqui ainda. Quando a equipe concluir uma em rua, ela aparece nesta tela.'
-                                            : aba === 'a-decidir' && busca.trim() === ''
-                                              ? 'Nada a decidir: todos os retornos desta fila já foram lidos. Veja a aba “Acervo” para o histórico.'
-                                              : 'Nenhum registro casa com a busca. Limpe o campo para ver a lista inteira.'}
-                                    </td>
-                                </tr>
-                            )}
-
-                            {pag.visiveis.map((r) => (
-                                <Fragment key={r.id}>
-                                    <tr
-                                        {...linhaClicavel(
-                                            () =>
-                                                setAbertoId(
-                                                    abertoId === r.id ? null : r.id,
-                                                ),
-                                            'Abrir ou fechar o que o fiscal registrou neste ponto',
-                                            aba === 'a-decidir' &&
-                                                r.estado === aguardando &&
-                                                'pendente',
-                                        )}
-                                    >
+                        <div className="table-wrap">
+                            <table className="data-table enxuta">
+                                <thead>
+                                    <tr>
                                         {selecionavel && (
-                                            <td
-                                                onClick={(e) => e.stopPropagation()}
-                                                onKeyDown={(e) => e.stopPropagation()}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    aria-label={`Selecionar o registro ${r.protocolo}`}
-                                                    checked={marcados.includes(r.id)}
-                                                    onChange={() => alternarMarca(r.id)}
-                                                />
-                                            </td>
+                                            <th style={{ width: 38 }}>
+                                                <input type="checkbox" checked={todosMarcados}
+                                                    onChange={() => setMarcados(todosMarcados ? [] : idsVisiveis)}
+                                                    aria-label="Selecionar as Fiscalizações da página" />
+                                            </th>
                                         )}
-                                        {listagem.grade.map((coluna) => {
-                                            const { conteudo, dica, resumida } = celula(
-                                                r,
-                                                coluna.chave,
-                                            );
-
-                                            return (
-                                                <Celula
-                                                    key={coluna.chave}
-                                                    coluna={coluna}
-                                                    dica={dica}
-                                                    resumida={resumida}
-                                                >
-                                                    {conteudo}
-                                                </Celula>
-                                            );
-                                        })}
+                                        <CabecaDaGrade grade={listagem.grade} ord={ord} acessores={acessores} />
                                     </tr>
-
-                                    {abertoId === r.id && (
-                                        <tr className="linha-detalhe">
-                                            <td colSpan={colunas}>
-                                                <dl className="rt-ficha">
-                                                    <div>
-                                                        <dt>Registro</dt>
-                                                        <dd>{r.protocolo}</dd>
-                                                    </div>
-                                                    {/* A HORA da conclusão e o tempo na
-                                                        fila moram aqui: na grade a coluna
-                                                        leva só dd/mm/aaaa, e a espera já é
-                                                        dita pela marca laranja na ponta da
-                                                        linha. */}
-                                                    <div>
-                                                        <dt>Concluída em</dt>
-                                                        <dd>
-                                                            {dataHoraBR(r.concluida_em)}
-                                                            {r.dias_parado !== null &&
-                                                                r.dias_parado > 0 && (
-                                                                    <div style={fraco}>
-                                                                        há{' '}
-                                                                        {contar(
-                                                                            r.dias_parado,
-                                                                            'dia',
-                                                                            'dias',
-                                                                        )}{' '}
-                                                                        na fila
-                                                                    </div>
-                                                                )}
-                                                        </dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt>Estado</dt>
-                                                        <dd>
-                                                            <span
-                                                                className={cn(
-                                                                    'selo',
-                                                                    TOM_DO_ESTADO[r.estado] ??
-                                                                        'selo-neutro',
-                                                                )}
-                                                            >
-                                                                {r.estado}
-                                                            </span>
-                                                        </dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt>Ponto</dt>
-                                                        <dd>
-                                                            {r.endereco}
-                                                            {/* O BAIRRO desceu da grade: na
-                                                                coluna ele era a sub-linha que
-                                                                dobrava a altura, e a área
-                                                                tem linha própria logo abaixo. */}
-                                                            <div style={fraco}>{r.bairro}</div>
-                                                        </dd>
-                                                    </div>
-                                                    {/* Equipe e fiscal desceram da grade: a
-                                                        decisão da chefia é sobre o PONTO, e
-                                                        a assinatura de quem foi importa ao
-                                                        abrir o registro. O arquivo exportado
-                                                        continua levando as duas. */}
-                                                    <div>
-                                                        <dt>Equipe e fiscal</dt>
-                                                        <dd>
-                                                            {r.equipe ? `Equipe ${r.equipe}` : VAZIO}
-                                                            <div style={fraco}>{r.fiscal}</div>
-                                                        </dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt>Desfecho</dt>
-                                                        <dd>{r.desfecho}</dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt>Origem da ida ao ponto</dt>
-                                                        <dd>
-                                                            {r.origem} · {r.referencia}
-                                                        </dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt>Área e chefia</dt>
-                                                        <dd>
-                                                            {r.area || VAZIO}
-                                                            {liderDa(r.equipe) === null
-                                                                ? ''
-                                                                : ` · líder ${liderDa(r.equipe)}`}
-                                                        </dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt>Quem foi encontrado</dt>
-                                                        <dd>
-                                                            {r.alvo ?? 'não identificado'}
-                                                            {r.equipamento === null
-                                                                ? ''
-                                                                : ` · ${r.equipamento}`}
-                                                        </dd>
-                                                    </div>
-                                                    {r.situacao_da_origem !== null && (
-                                                        <div>
-                                                            <dt>Situação da denúncia</dt>
-                                                            <dd>{r.situacao_da_origem}</dd>
-                                                        </div>
-                                                    )}
-                                                    {r.documento !== null && (
-                                                        <div>
-                                                            <dt>Documento lavrado</dt>
-                                                            <dd>
-                                                                {nomeDoDocumento(r.documento)}
-                                                                {r.documento.notificado === null
-                                                                    ? ''
-                                                                    : ` · ${r.documento.notificado}`}
-                                                            </dd>
-                                                        </div>
-                                                    )}
-                                                    {r.prazo !== null && (
-                                                        <div>
-                                                            <dt>Prazo de retorno</dt>
-                                                            <dd>
-                                                                {dataBR(r.prazo.vence_em)} —{' '}
-                                                                {textoDoPrazo(r.prazo)}
-                                                                {/* A redação do IMPRESSO ("48 horas"),
-                                                                    e não os dias que a conta usou: é
-                                                                    o que está escrito na via que o
-                                                                    notificado tem na mão. */}
-                                                                {r.documento?.prazo_rotulo == null ? (
-                                                                    ''
-                                                                ) : (
-                                                                    <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                                        prazo de {r.documento.prazo_rotulo} na via entregue
-                                                                    </div>
-                                                                )}
-                                                            </dd>
-                                                        </div>
-                                                    )}
-                                                    {r.ponto_de_referencia !== null && (
-                                                        <div style={{ gridColumn: '1 / -1' }}>
-                                                            <dt>Ponto de referência</dt>
-                                                            <dd>{r.ponto_de_referencia}</dd>
-                                                        </div>
-                                                    )}
-                                                </dl>
-
-                                                {/* A coordenada vem SEMPRE com a
-                                                    precisão: um ponto ruim é pior que
-                                                    um ponto ausente disfarçado de bom. */}
-                                                {r.gps !== null && (
-                                                    <p className="form-ajuda" style={{ marginTop: 8 }}>
-                                                        <MapPin size={14} aria-hidden /> {r.gps}
-                                                        {r.precisao_m !== null
-                                                            ? ` · precisão de ±${r.precisao_m} m`
-                                                            : ''}
-                                                    </p>
-                                                )}
-
-                                                {/* As FOTOS entram como nome de
-                                                    arquivo: o protótipo não guarda
-                                                    imagem, e miniatura falsa
-                                                    prometeria o que a tela não
-                                                    entrega. O que importa aqui é
-                                                    saber QUANTAS provas existem. */}
-                                                {r.fotos.length > 0 && (
-                                                    <p className="form-ajuda" style={{ marginTop: 6 }}>
-                                                        <Camera size={14} aria-hidden />{' '}
-                                                        {contar(r.fotos.length, 'foto', 'fotos')}{' '}
-                                                        {plural(
-                                                            r.fotos.length,
-                                                            'registrada',
-                                                            'registradas',
-                                                        )}{' '}
-                                                        no ponto: {r.fotos.join(', ')}
-                                                    </p>
-                                                )}
-
-                                                <div className="rt-sugestao" style={{ marginTop: 12 }}>
-                                                    <Lightbulb size={16} aria-hidden />
-                                                    <div>
-                                                        <strong>
-                                                            {r.recomendacoes.length === 0
-                                                                ? 'Considerações finais do fiscal'
-                                                                : `${plural(r.recomendacoes.length, 'Recomendação', 'Recomendações')} do fiscal`}
-                                                        </strong>
-
-                                                        {r.recomendacoes.length > 0 && (
-                                                            <div style={{ margin: '6px 0 2px' }}>
-                                                                {r.recomendacoes.map((rec) => (
-                                                                    <span
-                                                                        key={rec}
-                                                                        className="selo selo-info"
-                                                                        style={{
-                                                                            marginRight: 6,
-                                                                            marginBottom: 4,
-                                                                        }}
-                                                                    >
-                                                                        {textoDaRecomendacao(
-                                                                            rec,
-                                                                            recomendacoesDoFiscal,
-                                                                        )}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
-
-                                                        <div>
-                                                            {r.consideracoes ?? (
-                                                                <span
-                                                                    style={{
-                                                                        color: 'var(--sm-texto-fraco)',
-                                                                    }}
-                                                                >
-                                                                    O fiscal não escreveu
-                                                                    considerações neste retorno.
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {r.denuncia_protocolo !== null && (
-                                                    <p className="form-ajuda" style={{ marginTop: 10 }}>
-                                                        <FileText size={14} aria-hidden /> O percurso
-                                                        inteiro — relato, fotos e o documento
-                                                        lavrado — está no trâmite da denúncia{' '}
-                                                        <strong>{r.denuncia_protocolo}</strong>, em
-                                                        Denúncias.
-                                                    </p>
-                                                )}
-
-                                                {r.decisao !== null && (
-                                                    <p className="form-ajuda" style={{ marginTop: 10 }}>
-                                                        <UserRound size={14} aria-hidden />{' '}
-                                                        <strong>{r.decisao.o_que}</strong> ·{' '}
-                                                        {dataHoraBR(r.decisao.em)} ·{' '}
-                                                        {r.decisao.quem} — {r.decisao.detalhe}
-                                                    </p>
-                                                )}
+                                </thead>
+                                <tbody>
+                                    {pag.visiveis.length === 0 && (
+                                        <tr>
+                                            <td colSpan={colunas} className="tabela-vazia">
+                                                {fonte.length === 0
+                                                    ? aba === 'andamento'
+                                                        ? 'Nenhuma Fiscalização com a equipe agora.'
+                                                        : aba === 'encaminhadas'
+                                                          ? 'Nada encaminhado ao Chefe de Setor esperando deliberação.'
+                                                          : 'O arquivo está vazio.'
+                                                    : 'Nenhuma Fiscalização casa com a busca. Limpe o campo para ver a lista inteira.'}
                                             </td>
                                         </tr>
                                     )}
-                                </Fragment>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                    {pag.visiveis.map((c) => (
+                                        <tr key={c.id} {...linhaClicavel(() => abrirDetalhe(c), 'Abrir a Fiscalização, as vistorias e o processo', c.a_decidir && 'pendente')}>
+                                            {selecionavel && (
+                                                <td onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                                                    <input type="checkbox" checked={marcados.includes(c.id)}
+                                                        onChange={() => setMarcados((m) => (m.includes(c.id) ? m.filter((i) => i !== c.id) : [...m, c.id]))}
+                                                        aria-label={`Selecionar a Fiscalização ${c.protocolo}`} />
+                                                </td>
+                                            )}
+                                            {listagem.grade.map((coluna) => {
+                                                const { conteudo, dica } = celula(c, coluna.chave);
 
-                <Paginacao {...pag.props} />
+                                                return (
+                                                    <Celula key={coluna.chave} coluna={coluna} dica={dica}>
+                                                        {conteudo}
+                                                    </Celula>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <Paginacao {...pag.props} />
+                    </>
+                )}
+
+                {aba === 'detalhe' && aberta !== null && (
+                    <>
+                        <div className="rt-detalhe-cabeca">
+                            <div>
+                                <p className="sobrancelha">Fiscalização · {aberta.origem}</p>
+                                <h2 className="card-titulo">{aberta.protocolo}</h2>
+                                <p className="card-sub">
+                                    Aberta em {dataHoraBR(aberta.aberto_em)}
+                                    {aberta.equipe ? ` · Equipe ${aberta.equipe}` : ''}
+                                    {aberta.lider ? ` · líder ${aberta.lider}` : ''}
+                                </p>
+                            </div>
+                            <span className={cn('selo', aberta.aba === 'arquivo' ? 'selo-neutro' : (TOM_DA_POSSE[aberta.posse] ?? 'selo-neutro'))}>
+                                {aberta.aba === 'arquivo' ? 'Arquivada' : `Com: ${aberta.posse}`}
+                            </span>
+                        </div>
+
+                        <dl className="rt-ficha">
+                            <div>
+                                <dt>Desfecho</dt>
+                                <dd>{aberta.desfecho}</dd>
+                            </div>
+                            <div>
+                                <dt>Processo</dt>
+                                <dd>
+                                    {aberta.demanda === null ? (
+                                        <span style={fraco}>Sem demanda — nasceu em rua</span>
+                                    ) : (
+                                        <a href={aberta.demanda.url}>
+                                            {aberta.demanda.protocolo} · {aberta.demanda.canal_nome}{' '}
+                                            <ExternalLink size={13} aria-hidden />
+                                        </a>
+                                    )}
+                                    {aberta.demanda !== null && (
+                                        <div style={fraco}>
+                                            {aberta.demanda.assunto} · {aberta.demanda.situacao_resumida}
+                                        </div>
+                                    )}
+                                </dd>
+                            </div>
+                            {aberta.encaminhado_ao_chefe_em !== null && (
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <dt>Encaminhada ao Chefe de Setor</dt>
+                                    <dd>
+                                        {dataHoraBR(aberta.encaminhado_ao_chefe_em)}
+                                        {aberta.encaminhado_por ? ` · ${aberta.encaminhado_por}` : ''}
+                                        {aberta.motivo && <div>{aberta.motivo}</div>}
+                                    </dd>
+                                </div>
+                            )}
+                            {aberta.arquivado_em !== null && (
+                                <div>
+                                    <dt>Arquivada em</dt>
+                                    <dd>{dataHoraBR(aberta.arquivado_em)}</dd>
+                                </div>
+                            )}
+                        </dl>
+
+                        {conduz && aberta.aba === 'andamento' && (
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '14px 0' }}>{botoes([aberta.id])}</div>
+                        )}
+
+                        {arquiva && aberta.aba === 'encaminhadas' && (
+                            <div className="rt-sugestao" style={{ margin: '14px 0' }}>
+                                <Info size={16} aria-hidden />
+                                <div>
+                                    {aberta.demanda !== null ? (
+                                        <>
+                                            O líder encaminhou o resultado. A deliberação é na{' '}
+                                            <a href={aberta.demanda.url}>Caixa de Entrada — {aberta.demanda.protocolo}</a>:
+                                            responder à origem (a Fiscalização vai para o Arquivo) ou encaminhar de novo
+                                            ao líder (abre uma Fiscalização irmã).
+                                        </>
+                                    ) : (
+                                        <>
+                                            Fiscalização sem processo atrás: depois de ler o resultado, arquive.{' '}
+                                            <BotaoAcao className="btn btn-secondary btn-sm" icone={<Archive size={15} aria-hidden />}
+                                                carregando={enviando === 'arquivar'} ocupado={ocupado} onClick={() => arquivar(aberta)}>
+                                                Arquivar
+                                            </BotaoAcao>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <h3 className="card-titulo" style={{ marginTop: 22 }}>
+                            Vistorias ({aberta.vistorias.length})
+                        </h3>
+                        {aberta.vistorias.length === 0 ? (
+                            <p className="card-sub">
+                                Nenhuma vistoria ainda — {aberta.aguarda_envio ? 'a Fiscalização espera o envio à equipe.' : 'a equipe está em campo.'}
+                            </p>
+                        ) : (
+                            aberta.vistorias.map((v, i) => (
+                                <div key={v.id} className="card-premium" style={{ margin: '10px 0', boxShadow: 'none' }}>
+                                    <p className="sobrancelha" style={{ marginBottom: 6 }}>
+                                        {i + 1}ª vistoria · {v.protocolo}
+                                    </p>
+                                    <DetalheDaVistoria r={v} recomendacoesDoFiscal={recomendacoesDoFiscal} liderDa={liderDa} />
+                                </div>
+                            ))
+                        )}
+
+                        {aberta.irmas.length > 0 && (
+                            <>
+                                <h3 className="card-titulo" style={{ marginTop: 22 }}>
+                                    <Layers size={16} aria-hidden /> Outras Fiscalizações deste processo
+                                </h3>
+                                <p className="card-sub">Cada encaminhamento do Chefe de Setor ao líder abre uma. Todas ficam consultáveis.</p>
+                                <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                                    {aberta.irmas.map((irma) => (
+                                        <li key={irma.id} style={{ marginBottom: 4 }}>
+                                            <button type="button" className="btn-link" onClick={() => setAbertoId(irma.id)}>
+                                                {irma.protocolo}
+                                            </button>{' '}
+                                            · aberta em {dataBR(irma.aberto_em)} · {irma.desfecho} ·{' '}
+                                            {irma.aba === 'arquivo' ? 'Arquivada' : `com: ${irma.posse}`} ·{' '}
+                                            {contar(irma.total_vistorias, 'vistoria', 'vistorias')}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </>
+                        )}
+
+                        <hr className="rt-regua" />
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => trocarAba(aberta.aba)}>
+                            <X size={15} aria-hidden /> Fechar a Fiscalização
+                        </button>
+                    </>
+                )}
             </div>
 
+            {decisao !== null && (
+                <Sobreposicao clicandoFora={ocupado ? undefined : () => setDecisao(null)}>
+                    <div className="card-premium" style={{ width: '100%', maxWidth: 620 }} role="dialog" aria-modal="true">
+                        <h2 className="sobreposicao-titulo">
+                            {decisao === 'equipe' && 'Encaminhar à equipe'}
+                            {decisao === 'operacao' && 'Incluir em operação'}
+                            {decisao === 'voltar' && 'Mandar a equipe voltar'}
+                            {decisao === 'chefe' && 'Encaminhar ao Chefe de Setor'}
+                        </h2>
+                        <p className="sobreposicao-texto">
+                            {decisao === 'equipe' && `${contar(paraEnviar(alvos).length, 'Fiscalização vai', 'Fiscalizações vão')} para a fila dos fiscais da equipe.`}
+                            {decisao === 'operacao' && `${contar(paraEnviar(alvos).length, 'Fiscalização entra', 'Fiscalizações entram')} numa operação já planejada.`}
+                            {decisao === 'voltar' && 'O ponto volta para a equipe, com o que ela deve procurar desta vez — na mesma Fiscalização.'}
+                            {decisao === 'chefe' && 'O caso volta para o Chefe de Setor deliberar.'}
+                        </p>
 
-            {/* O comando FLUTUANTE: nasce com a primeira linha marcada e acompanha
-                a rolagem. Sem seleção ele não existe — botão que não tem sobre o
-                que agir é enfeite que engana. */}
-            {podeDecidir && !decidindo && (
-                <button
-                    type="button"
-                    className="rt-acao-flutuante"
-                    onClick={() => setDecidindo(true)}
-                >
-                    <ClipboardCheck size={17} aria-hidden />
-                    Decidir
-                    <span className="rt-acao-flutuante-conta">
-                        {selecionados.length}
-                    </span>
-                </button>
-            )}
+                        {decisao === 'operacao' ? (
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="op">Operação {obrigatorio}</label>
+                                <select id="op" className="form-control" value={operacaoEscolhida} onChange={(e) => setOperacaoEscolhida(e.target.value)}>
+                                    {operacoes.map((o) => (
+                                        <option key={o.nome} value={o.nome}>{o.nome}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="texto">
+                                    {decisao === 'equipe' && 'Orientação aos fiscais'}
+                                    {decisao === 'voltar' && <>Justificativa {obrigatorio}</>}
+                                    {decisao === 'chefe' && <>Motivo {obrigatorio}</>}
+                                </label>
+                                <textarea id="texto" className="form-control" rows={3} maxLength={1000} value={texto}
+                                    onChange={(e) => setTexto(e.target.value)}
+                                    placeholder={
+                                        decisao === 'equipe' ? 'Opcional — ex.: ir depois das 18h, as mesas saem à noite'
+                                            : decisao === 'voltar' ? 'O que a equipe deve procurar, e em que dia ou horário'
+                                                : 'Porque você está encaminhando ao Chefe'
+                                    } />
+                                <p className="form-ajuda">
+                                    {decisao === 'voltar' && 'Mandar a equipe de volta consome tempo de trabalho, portanto seja específico nessa justificativa.'}
+                                    {decisao === 'chefe' && 'Contexto para o Chefe de Setor saber deliberar para a Coordenadoria ou solicitar nova Fiscalização.'}
+                                </p>
+                            </div>
+                        )}
 
-            {confirmandoVolta && (
-                <ModalConfirm
-                    titulo="Mandar a equipe voltar ao ponto?"
-                    mensagem={
-                        <>
-                            {contar(selecionados.length, 'registro', 'registros')}{' '}
-                            {plural(selecionados.length, 'volta', 'voltam')} para a
-                            equipe com a sua justificativa. Isso gasta o trabalho dela
-                            outra vez — confirme se é mesmo caso de nova ida.
-                        </>
-                    }
-                    rotuloConfirmar="Determinar nova vistoria"
-                    iconeConfirmar={<RotateCcw size={16} aria-hidden />}
-                    processando={enviando === 'nova-vistoria'}
-                    onCancelar={() => setConfirmandoVolta(false)}
-                    onConfirmar={mandarVoltar}
-                />
+                        <div className="sobreposicao-acoes">
+                            <button type="button" className="btn btn-secondary btn-sm" disabled={ocupado} onClick={() => setDecisao(null)}>
+                                Voltar
+                            </button>
+                            <BotaoAcao
+                                carregando={enviando === decisao}
+                                ocupado={ocupado}
+                                disabled={(decisao === 'voltar' || decisao === 'chefe') && texto.trim().length < 15}
+                                rotuloCarregando="Registrando…"
+                                onClick={confirmar}
+                            >
+                                Confirmar
+                            </BotaoAcao>
+                        </div>
+                    </div>
+                </Sobreposicao>
             )}
         </>
     );

@@ -101,6 +101,16 @@ class DemandaParaTela
             'situacao_resumida' => $demanda->situacaoResumida(),
             'respondida' => $demanda->respondida(),
             'passou_por_fiscalizacao' => $demanda->passouPorFiscalizacao(),
+            /*
+             * As FISCALIZAÇÕES desta demanda — uma por encaminhamento do chefe ao
+             * líder —, com o caminho para abrir cada uma: todo o vai e vem do
+             * processo fica consultável daqui, vistorias, fotos e documentos.
+             */
+            'fiscalizacoes' => $demanda->ciclos
+                ->each(static fn ($c) => $c->setRelation('demanda', $demanda))
+                ->map(CicloParaTela::resumo(...))
+                ->values()
+                ->all(),
             'retorno_ao_canal' => RetornoAoCanal::tipoDe($demanda),
             'retorno_em' => config("demandas.canais.{$demanda->canal}.retorno_em"),
             'resposta_ao_canal' => $demanda->respondida_ao_canal_em === null ? null : [

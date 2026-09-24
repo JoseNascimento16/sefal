@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Rules\NomeDeCadastro;
 use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\OperacaoParaTela;
+use App\Support\CiclosDeFiscalizacao;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use App\Support\Papel;
@@ -327,6 +328,9 @@ class DenunciasController extends Controller
                 'Equipe' => $equipe->codigo,
             ],
         ]);
+
+        // Já na mesa do líder: a FISCALIZAÇÃO nasce junto, para ele enviar à equipe.
+        CiclosDeFiscalizacao::abrirParaDemanda($demanda, $usuario);
 
         return back()->with(
             'flash.sucesso',
@@ -848,6 +852,7 @@ class DenunciasController extends Controller
                 'tramites.fiscalizacao.fotos',
                 'tramites.fiscalizacao.documento',
                 'anexos', 'area', 'equipe', 'operacao', 'agregadas',
+                'ciclos.equipe', 'ciclos.vistorias.fotos', 'ciclos.vistorias.documento',
             ])
             ->orderByDesc('recebida_em')
             ->orderByDesc('id');

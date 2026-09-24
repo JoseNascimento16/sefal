@@ -49,7 +49,7 @@ use Illuminate\Support\Carbon;
  * @property-read DocumentoCampo|null $documento
  */
 #[Fillable([
-    'protocolo', 'client_id', 'origem', 'demanda_id', 'operacao_id', 'equipe_id', 'fiscal_id',
+    'ciclo_id', 'protocolo', 'client_id', 'origem', 'demanda_id', 'operacao_id', 'equipe_id', 'fiscal_id',
     'ambulante_id', 'alvo', 'equipamento',
     'logradouro', 'numero', 'bairro', 'ponto_de_referencia',
     'latitude', 'longitude', 'precisao_m', 'gps_em',
@@ -160,7 +160,8 @@ class Fiscalizacao extends Model
 
     public const NOVA_VISTORIA = 'Nova vistoria determinada';
 
-    public const DEVOLVIDA = 'Devolvida à coordenação';
+    /** O líder encaminhou o resultado ao Chefe de Setor (era "Devolvida à coordenação"). */
+    public const DEVOLVIDA = 'Encaminhada ao Chefe de Setor';
 
     /** @var list<string> */
     public const SITUACOES = [
@@ -193,6 +194,17 @@ class Fiscalizacao extends Model
     }
 
     // ── Relações ────────────────────────────────────────────────────────────
+
+    /**
+     * A FISCALIZAÇÃO (o ciclo) a que esta vistoria pertence — ver
+     * {@see CicloDeFiscalizacao}. Cada ida ao ponto é uma vistoria; o ciclo as agrupa.
+     *
+     * @return BelongsTo<CicloDeFiscalizacao, $this>
+     */
+    public function ciclo(): BelongsTo
+    {
+        return $this->belongsTo(CicloDeFiscalizacao::class, 'ciclo_id');
+    }
 
     /** @return BelongsTo<Demanda, $this> */
     public function demanda(): BelongsTo

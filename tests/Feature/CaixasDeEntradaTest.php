@@ -125,8 +125,10 @@ it('a situação vem RESUMIDA em três palavras, e o que fechou vai para Respond
         ->and($respondida->respondida())->toBeTrue()
         ->and($arquivada->respondida())->toBeTrue();
 
-    // No Fala Salvador quem responde é o líder, no canal: concluída = respondida.
-    expect(demandaDo(Demanda::CANAL_FALA_SALVADOR, ['situacao' => Demanda::CONCLUIDA])->respondida())->toBeTrue();
+    // O Fala Salvador também volta à origem pelo chefe (24/09/2026): concluída não
+    // basta; respondida é quando o retorno foi registrado.
+    expect(demandaDo(Demanda::CANAL_FALA_SALVADOR, ['situacao' => Demanda::CONCLUIDA])->respondida())->toBeFalse()
+        ->and(demandaDo(Demanda::CANAL_FALA_SALVADOR, ['situacao' => Demanda::CONCLUIDA, 'respondida_ao_canal_em' => Date::now()])->respondida())->toBeTrue();
 
     // A avulsa que fechou se chama Encerrada.
     expect(demandaDo(Demanda::CANAL_AVULSA, ['situacao' => Demanda::CONCLUIDA, 'respondida_ao_canal_em' => Date::now()])

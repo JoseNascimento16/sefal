@@ -107,6 +107,10 @@ class TriagemDeDemandas
                 ],
             );
 
+            // Cada encaminhamento do chefe ao líder abre uma FISCALIZAÇÃO — irmã
+            // das anteriores, se o processo já passou por outra.
+            CiclosDeFiscalizacao::abrirParaDemanda($demanda->fresh(), $this->autor);
+
             $this->contar($equipe->rotulo());
         }
 

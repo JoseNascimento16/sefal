@@ -152,16 +152,23 @@ it('o retorno é um só: a segunda tentativa é recusada dizendo quando foi a pr
         ->and($demanda->fresh()->tramites()->count())->toBe(1);
 });
 
-it('o Fala Salvador não recebe retorno pelo sistema — o líder responde no próprio canal', function () {
-    $demanda = concluida(['canal' => Demanda::CANAL_FALA_SALVADOR, 'entrada' => Demanda::ENTRADA_BALCAO]);
+it('o Fala Salvador também volta à origem: o chefe registra aqui, e a resposta ao cidadão é feita no canal', function () {
+    // Até 24/09/2026 o Fala Salvador fechava na conclusão; o dono o incluiu entre
+    // as origens para onde o chefe devolve o processo. Sem API: registrado aqui.
+    config(['esalvador.ligada' => true]);
+    $demanda = concluida(['canal' => Demanda::CANAL_FALA_SALVADOR, 'entrada' => Demanda::ENTRADA_BALCAO, 'numero_origem' => '156-2026-000123']);
 
     $this->actingAs(pessoaCom('chefe-de-setor'))
         ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), [
-            'texto' => 'Resposta que não cabe neste canal, por definição.',
+            'texto' => 'Ponto vistoriado e regularizado; responder ao cidadão no Fala Salvador.',
         ])
-        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'Fala Salvador'));
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('flash.sucesso', fn (string $r): bool => str_contains($r, 'Fala Salvador'));
 
-    expect(RetornoAoCanal::tipoDe($demanda))->toBeNull();
+    expect(RetornoAoCanal::tipoDe($demanda))->toBe(RetornoAoCanal::TRAMITE)
+        ->and($demanda->fresh()->ultimoTramite()->acao)->toBe('Resposta registrada no Fala Salvador');
+
+    Http::assertNothingSent();
 });
 
 it('o líder não responde ao canal: o ato é do chefe', function () {

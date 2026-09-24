@@ -420,12 +420,26 @@ export function PainelDeDenuncias({
 
     /** A aba de partida — a primeira que a caixa declara, ou a lista única. */
     const abaPrincipal: Aba = abas[0] ?? 'lista';
-    const [aba, setAba] = useState<Aba>(abaPrincipal);
 
     /** Tudo o que esta tela recebeu — o canal da tela e, no e-Salvador, as licenças. */
     const todas = useMemo(() => [...denuncias, ...licencas], [denuncias, licencas]);
+
+    /*
+     * A demanda que veio no LINK (`?demanda=ID` — a tela Fiscalizações aponta
+     * para cá): ela abre direto. Número, e não protocolo: o WAF barra texto na URL.
+     */
+    const doLink = (() => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        const id = Number(new URLSearchParams(window.location.search).get('demanda'));
+
+        return Number.isFinite(id) && id > 0 && todas.some((d) => d.id === id) ? id : null;
+    })();
+    const [aba, setAba] = useState<Aba>(doLink !== null ? 'detalhe' : abaPrincipal);
     const [busca, setBusca] = useState('');
-    const [abertaId, setAbertaId] = useState<number | null>(null);
+    const [abertaId, setAbertaId] = useState<number | null>(doLink);
     const [selecionadas, setSelecionadas] = useState<number[]>([]);
     const [decisao, setDecisao] = useState<Decisao>(null);
     /** Os identificadores que a decisão em curso alcança — lote ou um só. */
@@ -1272,30 +1286,7 @@ export function PainelDeDenuncias({
                                 </>
                             )}
 
-                            {emLote && direciona && (
-                                <>
-                                    <BotaoAcao
-                                        icone={<Send size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        disabled={aDirecionar.length === 0}
-                                        title={aDirecionar.length === 0 ? 'Marque demandas encaminhadas ao líder para direcionar' : undefined}
-                                        onClick={() => abrirDecisao('direcionar', aDirecionar)}
-                                    >
-                                        Direcionar aos fiscais
-                                        {aDirecionar.length > 0 ? ` (${aDirecionar.length})` : ''}
-                                    </BotaoAcao>
-
-                                    <BotaoAcao
-                                        className="btn btn-secondary btn-sm"
-                                        icone={<Siren size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        disabled={aDirecionar.length === 0}
-                                        onClick={() => abrirDecisao('operacao', aDirecionar)}
-                                    >
-                                        Incluir em operação
-                                    </BotaoAcao>
-                                </>
-                            )}
+                            {/* O líder envia à equipe na tela Fiscalizações (dono, 24/09/2026). */}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar
@@ -1634,6 +1625,54 @@ export function PainelDeDenuncias({
                             prova que a denúncia veio de fora.
                         </p>
 
+                        {(aberta.fiscalizacoes ?? []).length > 0 && (
+                            <>
+                                <h3 className="card-titulo" style={{ marginTop: 22 }}>
+                                    Fiscalizações desta demanda ({aberta.fiscalizacoes.length})
+                                </h3>
+                                <p className="card-sub">
+                                    Uma por encaminhamento ao líder. Cada uma guarda as vistorias, as
+                                    fotos e os documentos lavrados — abra para ver tudo.
+                                </p>
+                                <div className="table-wrap" style={{ marginBottom: 18 }}>
+                                    <table className="data-table enxuta">
+                                        <thead>
+                                            <tr>
+                                                <th>Fiscalização</th>
+                                                <th>Aberta em</th>
+                                                <th>Equipe</th>
+                                                <th>Desfecho</th>
+                                                <th>Posse atual</th>
+                                                <th>Vistorias</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {aberta.fiscalizacoes.map((f) => (
+                                                <tr key={f.id}>
+                                                    <td>
+                                                        <a href={f.url}>{f.protocolo}</a>
+                                                    </td>
+                                                    <td>{dataBR(f.aberto_em)}</td>
+                                                    <td>{f.equipe || VAZIO}</td>
+                                                    <td>
+                                                        {f.desfecho}
+                                                        {f.documentos.length > 0 && (
+                                                            <div style={{ color: 'var(--sm-texto-fraco)' }}>{f.documentos.join(', ')}</div>
+                                                        )}
+                                                    </td>
+                                                    <td>{f.aba === 'arquivo' ? 'Arquivada' : f.posse}</td>
+                                                    <td>
+                                                        {f.total_vistorias}
+                                                        {f.total_fotos > 0 ? ` · ${contar(f.total_fotos, 'foto', 'fotos')}` : ''}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
+
                         <TramiteDeDenuncia
                             tramites={aberta.tramites}
                             proximoPasso={proximoPassoDe(aberta)}
@@ -1684,34 +1723,23 @@ export function PainelDeDenuncias({
                         )}
 
                         {direciona && AGUARDANDO_DIRECIONAMENTO.includes(aberta.situacao) && (
-                            <>
-                                <hr className="rt-regua" />
-                                <h3 className="card-titulo">Direcionamento desta denúncia</h3>
-                                <p className="card-sub">
-                                    Duas saídas: mandar os fiscais da sua equipe ao
-                                    ponto, ou incluir numa operação já planejada para
-                                    a região.
-                                </p>
-
-                                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                    <BotaoAcao
-                                        icone={<Send size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        onClick={() => abrirDecisao('direcionar', [aberta.id])}
-                                    >
-                                        Direcionar aos fiscais
-                                    </BotaoAcao>
-
-                                    <BotaoAcao
-                                        className="btn btn-secondary btn-sm"
-                                        icone={<Siren size={16} aria-hidden />}
-                                        ocupado={ocupado}
-                                        onClick={() => abrirDecisao('operacao', [aberta.id])}
-                                    >
-                                        Incluir em operação
-                                    </BotaoAcao>
+                            <div className="rt-sugestao" style={{ marginTop: 14 }}>
+                                <Info size={16} aria-hidden />
+                                <div>
+                                    Esta demanda está com o líder da equipe. Enviar aos fiscais,
+                                    incluir em operação, mandar voltar e encaminhar o resultado ao
+                                    chefe se faz na tela <strong>Fiscalizações</strong>
+                                    {(aberta.fiscalizacoes ?? []).length > 0 && (
+                                        <>
+                                            {' '}—{' '}
+                                            <a href={aberta.fiscalizacoes[aberta.fiscalizacoes.length - 1].url}>
+                                                abrir a {aberta.fiscalizacoes[aberta.fiscalizacoes.length - 1].protocolo}
+                                            </a>
+                                        </>
+                                    )}
+                                    .
                                 </div>
-                            </>
+                            </div>
                         )}
 
                         <hr className="rt-regua" />

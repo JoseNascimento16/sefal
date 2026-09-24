@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Models\CicloDeFiscalizacao;
 use App\Models\Fiscalizacao;
-use App\Support\Apresentacao\FiscalizacaoParaTela;
+use App\Models\Operacao;
+use App\Support\Apresentacao\CicloParaTela;
+use App\Support\Apresentacao\OperacaoParaTela;
+use App\Support\CiclosDeFiscalizacao;
 use App\Support\DecisaoDaChefia;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
@@ -112,118 +116,42 @@ class FiscalizacoesController extends Controller
         $comRecorte = Papel::recorta($usuario);
 
         return Inertia::render('Retaguarda/Fiscalizacao/Fiscalizacoes', [
-            // O recorte é feito AQUI, e não na tela: filtro de front esconde, não
-            // protege, e o acervo inteiro teria viajado até o navegador de quem não
-            // deve vê-lo — com o relato do fiscal, as fotos e o número do documento
-            // dentro.
-            'registros' => $this->registros($comRecorte ? $equipes : null),
-            // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige e
-            // que a busca reconhece como faceta. Escritos também na tela, um dia
-            // discordariam — e a tela ofereceria um estado que o servidor recusa.
-            'estados' => [
-                Fiscalizacao::AGUARDANDO_LEITURA,
-                Fiscalizacao::CIENTE,
-                Fiscalizacao::NOVA_VISTORIA,
-                Fiscalizacao::DEVOLVIDA,
-            ],
+            /*
+             * As FISCALIZAÇÕES (ciclos) — uma por encaminhamento do chefe ao líder,
+             * cada uma com as vistorias dela. O recorte é feito AQUI, e não na
+             * tela: filtro de front esconde, não protege, e o acervo inteiro
+             * teria viajado até o navegador de quem não deve vê-lo — com o relato
+             * do fiscal, as fotos e o número do documento dentro.
+             */
+            'fiscalizacoes' => $this->ciclos($comRecorte ? $equipes : null),
+            // A Fiscalização a abrir, quando se chega por um link (a demanda da
+            // Caixa de Entrada aponta para cá). Número: o WAF barra texto na URL.
+            'abrir' => $request->integer('fiscalizacao') ?: null,
             'desfechos' => Fiscalizacao::DESFECHOS,
-            // O catálogo de recomendações na redação EXPLÍCITA — o registro traz
-            // a CHAVE (`retorno`, `sgci`…), que é o que o aplicativo do fiscal
-            // grava, e a chefia lê a frase inteira. A pílula curta é do celular;
-            // aqui a frase é lida com atenção por quem decide, e "Sugerir
-            // retorno da equipe" não diz QUANDO voltar. O mapa vem do servidor
-            // porque a tela também precisa da lista inteira: recomendação é
-            // faceta da busca, e a exportação leva a frase, não a chave.
             'recomendacoesDoFiscal' => RecomendacoesDoFiscal::explicitos(),
-            // As origens EM PALAVRAS, derivadas das chaves gravadas: é assim que
-            // a busca reconhece "ronda" e "operação" como faceta.
-            'origens' => ['Denúncia direcionada', 'Operação planejada', 'Ronda da equipe'],
-            // Quem lidera cada equipe — é o que o Chefe de Setor precisa ver ao
-            // acompanhar: "é da C2" só diz metade; a outra metade é de quem.
             'lideres' => Estrutura::lideresPorEquipe(),
-            // O que esta pessoa exerce nesta tela, e sobre o que. A tela usa para
-            // dizer qual é a sua equipe no selo e para explicar que a lista não é
-            // o universo — e a MESMA resposta governa a recusa no servidor.
-            'decide' => Papel::decide($usuario),
+            // Quem conduz a Fiscalização com a equipe: o líder (e o administrador).
+            'conduz' => Papel::ehLider($usuario) || ($usuario?->ehAdmin() ?? false),
+            // Quem arquiva a Fiscalização sem processo atrás: o chefe (e o administrador).
+            'arquiva' => Papel::ehChefe($usuario) || ($usuario?->ehAdmin() ?? false),
             'equipesDoLider' => $equipes,
             'recorteDeEquipe' => $comRecorte,
-            // As COLUNAS da grade e as do arquivo — uma listagem por aba, porque
-            // a aba troca a fonte dos dados. Ver docs/padroes/listagem-clean.md.
-            //
-            // A coluna de EQUIPE é condicional e quem resolve é aqui: para o
-            // líder de uma equipe só ela repetiria a mesma palavra em toda linha
-            // (gasto de largura sem informação); para quem varre várias, ela é o
-            // que torna a fila navegável. A conta usa a MESMA resposta do
-            // recorte, e não uma segunda regra de tela.
-            'listagens' => ListagensDaRetaguarda::para(
-                ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo'],
-                ['varias-areas' => ! $comRecorte || count($equipes) > 1],
-            ),
+            // As operações abertas — o líder pode incluir a demanda numa delas.
+            'operacoes' => Operacao::abertas()->with(['area', 'equipes', 'bairros'])
+                ->orderBy('nome')->get()->map(OperacaoParaTela::completa(...))->all(),
+            'listagens' => ListagensDaRetaguarda::para(['fiscalizacoes.ciclos']),
         ]);
     }
 
     /**
-     * CIÊNCIA — a chefia leu o retorno e o que era dela está encerrado.
+     * MANDAR A EQUIPE VOLTAR — nova vistoria, na MESMA Fiscalização.
      *
-     * A observação é opcional: o ato de ler já é a informação, e exigir texto
-     * para dar ciência de seis registros de uma vez faria a chefia escrever seis
-     * frases vazias — o que estraga justamente o campo em que ela escreveria algo
-     * quando tem algo a dizer.
-     */
-    public function ciencia(Request $request): RedirectResponse
-    {
-        if (($recusa = $this->exigirDecisao($request)) !== null) {
-            return $recusa;
-        }
-
-        /*
-         * O LÍDER não encerra (decisão do dono, 24/09/2026): ele decide o que o
-         * retorno pede — a equipe voltar, ou o caso subir ao Chefe de Setor —, e
-         * a tela dele já não oferece a ciência. A recusa aqui é a fronteira: sem
-         * ela, bastaria montar a requisição para arquivar a demanda.
-         */
-        if (Papel::recorta($request->user())) {
-            return back()->with(
-                'flash.erro',
-                'O líder de equipe não encerra o retorno: mande a equipe voltar ao ponto ou encaminhe o caso ao '
-                .'Chefe de Setor para ele deliberar. Nada foi alterado.',
-            );
-        }
-
-        $dados = $request->validate([
-            'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
-            'ids.*' => ['required', 'integer'],
-            'observacao' => ['nullable', 'string', 'max:1000'],
-        ], [
-            'ids.required' => 'Escolha ao menos um registro para dar ciência.',
-        ]);
-
-        $ids = array_map('intval', $dados['ids']);
-
-        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
-            return $recusa;
-        }
-
-        $efeito = $this->decisao($request)->darCiencia($ids, $dados['observacao'] ?? null);
-
-        return back()->with(...$this->recado(
-            $efeito,
-            'retorno lido — sai da fila da sua equipe e fica no acervo',
-            'retornos lidos — saem da fila da sua equipe e ficam no acervo',
-        ));
-    }
-
-    /**
-     * NOVA VISTORIA — a chefia manda a equipe voltar ao ponto.
-     *
-     * A justificativa é obrigatória, e com tamanho mínimo, no SERVIDOR: mandar a
-     * equipe de volta gasta o trabalho dela outra vez, e "voltar lá" não conta a
-     * ela o que deve procurar desta vez. Esconder o campo na tela não impede
-     * ninguém de mandar a requisição sem ele.
+     * A justificativa é obrigatória no SERVIDOR: mandar a equipe de volta consome
+     * tempo de trabalho, e "voltar lá" não diz o que procurar.
      */
     public function novaVistoria(Request $request): RedirectResponse
     {
-        if (($recusa = $this->exigirDecisao($request)) !== null) {
+        if (($recusa = $this->exigirConducao($request)) !== null) {
             return $recusa;
         }
 
@@ -232,11 +160,9 @@ class FiscalizacoesController extends Controller
             'ids.*' => ['required', 'integer'],
             'justificativa' => ['required', 'string', 'min:15', 'max:1000'],
         ], [
-            'ids.required' => 'Escolha ao menos um registro.',
-            'justificativa.required' => 'Escreva a justificativa: a equipe precisa saber o que '
-                .'procurar desta vez.',
-            'justificativa.min' => 'A justificativa está curta demais para orientar a equipe na '
-                .'volta ao ponto.',
+            'ids.required' => 'Escolha ao menos uma Fiscalização.',
+            'justificativa.required' => 'Escreva a justificativa: a equipe precisa saber o que procurar desta vez.',
+            'justificativa.min' => 'A justificativa está curta demais para orientar a equipe na volta ao ponto.',
         ]);
 
         $ids = array_map('intval', $dados['ids']);
@@ -245,26 +171,29 @@ class FiscalizacoesController extends Controller
             return $recusa;
         }
 
-        $efeito = $this->decisao($request)->pedirNovaVistoria($ids, (string) $dados['justificativa']);
+        // A decisão é sobre a VISTORIA que voltou da rua — a pendente de cada Fiscalização.
+        $vistorias = CicloDeFiscalizacao::with('vistorias')->whereIn('id', $ids)->get()
+            ->map(static fn (CicloDeFiscalizacao $c): ?int => $c->vistoriaPendente()?->id)
+            ->filter()->values()->all();
+
+        $efeito = $this->decisao($request)->pedirNovaVistoria($vistorias, (string) $dados['justificativa']);
+        $efeito['ignorados'] += count($ids) - count($vistorias);
 
         return back()->with(...$this->recado(
             $efeito,
-            'devolvido à equipe para nova vistoria',
-            'devolvidos à equipe para nova vistoria',
+            'Fiscalização com a equipe mandada de volta ao ponto',
+            'Fiscalizações com a equipe mandada de volta ao ponto',
         ));
     }
 
     /**
-     * DEVOLVER AO CHEFE DE SETOR — o líder diz que o caso não é da equipe dele.
-     *
-     * Terceira saída da leitura, ao lado da ciência e da nova vistoria (ordem do
-     * dono, 10/09/2026): fecha o ciclo, porque quem re-encaminha é o chefe. O
-     * motivo é obrigatório no SERVIDOR — devolver calado joga o caso de volta na
-     * mesa do chefe sem nada com que decidir.
+     * ENCAMINHAR AO CHEFE DE SETOR — o líder devolve a Fiscalização com o
+     * resultado, e ela vai para a aba "Encaminhadas". Não existe "dar ciência"
+     * (dono, 24/09/2026): o líder decide, e o que decide sai da mão dele.
      */
-    public function devolver(Request $request): RedirectResponse
+    public function encaminharAoChefe(Request $request): RedirectResponse
     {
-        if (($recusa = $this->exigirDecisao($request)) !== null) {
+        if (($recusa = $this->exigirConducao($request)) !== null) {
             return $recusa;
         }
 
@@ -273,10 +202,9 @@ class FiscalizacoesController extends Controller
             'ids.*' => ['required', 'integer'],
             'motivo' => ['required', 'string', 'min:15', 'max:1000'],
         ], [
-            'ids.required' => 'Escolha ao menos um registro.',
-            'motivo.required' => 'Escreva o motivo: o Chefe de Setor precisa saber por que o caso '
-                .'voltou para ele.',
-            'motivo.min' => 'O motivo está curto demais para o Chefe de Setor re-encaminhar o caso.',
+            'ids.required' => 'Escolha ao menos uma Fiscalização.',
+            'motivo.required' => 'Escreva o motivo: é o contexto para o Chefe de Setor deliberar.',
+            'motivo.min' => 'O motivo está curto demais para o Chefe de Setor deliberar.',
         ]);
 
         $ids = array_map('intval', $dados['ids']);
@@ -285,65 +213,88 @@ class FiscalizacoesController extends Controller
             return $recusa;
         }
 
-        $efeito = $this->decisao($request)->devolverAoChefe($ids, (string) $dados['motivo']);
+        $efeito = (new CiclosDeFiscalizacao($request->user()))->encaminharAoChefe($ids, (string) $dados['motivo']);
 
         return back()->with(...$this->recado(
             $efeito,
-            'devolvido ao Chefe de Setor',
-            'devolvidos ao Chefe de Setor',
+            'Fiscalização encaminhada ao Chefe de Setor',
+            'Fiscalizações encaminhadas ao Chefe de Setor',
         ));
     }
 
     /**
-     * A fila do retorno de campo, já na forma que a tela lê.
+     * ARQUIVAR — o chefe encerra a Fiscalização sem processo atrás (ronda,
+     * operação). A que tem demanda vai ao Arquivo quando o processo volta à origem.
+     */
+    public function arquivar(Request $request): RedirectResponse
+    {
+        $usuario = $request->user();
+
+        if (! Papel::ehChefe($usuario) && ! ($usuario?->ehAdmin() ?? false)) {
+            return back()->with('flash.erro', 'Arquivar a Fiscalização é do Chefe de Setor.');
+        }
+
+        $dados = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
+            'ids.*' => ['required', 'integer'],
+        ]);
+
+        $efeito = (new CiclosDeFiscalizacao($usuario))->arquivar(array_map('intval', $dados['ids']));
+
+        if ($efeito['alterados'] === 0) {
+            return back()->with(
+                'flash.erro',
+                'Só se arquiva aqui a Fiscalização SEM processo (ronda, operação) que já foi encaminhada. '
+                .'A que tem demanda vai ao Arquivo quando o processo volta à origem, pela Caixa de Entrada.',
+            );
+        }
+
+        return back()->with(...$this->recado($efeito, 'Fiscalização arquivada', 'Fiscalizações arquivadas'));
+    }
+
+    /**
+     * As Fiscalizações, já na forma que a tela lê — as mais recentes primeiro.
      *
-     * Só o que foi DESPACHADO pelo fiscal entra: o que ainda está em campo é
-     * rascunho no aparelho dele, e mostrá-lo aqui faria a chefia decidir sobre
-     * vistoria que não terminou.
-     *
-     * O recorte por equipe é feito AQUI, e não na tela: filtro de front esconde,
-     * não protege, e o acervo inteiro teria viajado até o navegador de quem não
-     * deve vê-lo — com o relato do fiscal, as fotos e o número do documento
-     * dentro. `$equipes` nulo significa "sem recorte".
-     *
-     * @param  list<string>|null  $equipes  códigos
+     * @param  list<string>|null  $equipes  códigos; nulo = sem recorte
      * @return list<array<string, mixed>>
      */
-    private function registros(?array $equipes): array
+    private function ciclos(?array $equipes): array
     {
-        $consulta = Fiscalizacao::despachadas()
-            ->with([
-                'demanda.tramites', 'operacao', 'equipe.area', 'fiscal',
-                'ambulante', 'fotos', 'recomendacoes', 'documento',
-            ])
-            ->orderByDesc('concluida_em')
+        $consulta = CicloDeFiscalizacao::with([
+            'demanda.ciclos.vistorias.fotos', 'demanda.ciclos.vistorias.documento', 'demanda.ciclos.equipe',
+            'equipe.area', 'equipe.lider', 'encaminhadoPor',
+            'vistorias.demanda.tramites', 'vistorias.operacao', 'vistorias.equipe.area', 'vistorias.fiscal',
+            'vistorias.ambulante', 'vistorias.fotos', 'vistorias.recomendacoes', 'vistorias.documento',
+        ])
+            ->orderByDesc('aberto_em')
             ->orderByDesc('id');
 
         if ($equipes !== null) {
             $consulta->whereHas('equipe', static fn ($q) => $q->whereIn('codigo', $equipes));
         }
 
-        return $consulta->get()->map(FiscalizacaoParaTela::completa(...))->all();
+        return $consulta->get()->map(CicloParaTela::completo(...))->all();
     }
 
     /**
-     * Recusa a decisão de quem apenas ACOMPANHA a fila.
+     * Recusa quem não CONDUZ a Fiscalização com a equipe.
      *
      * Isto é papel, e não permissão de tela: a permissão (slug `fiscalizacoes`)
-     * diz quem entra; isto diz de quem é a decisão. As duas conferências existem,
-     * e nenhuma substitui a outra — e é esta que barra o FISCAL, que entra para
-     * consultar o próprio trabalho e não pode dar ciência dele.
+     * diz quem entra; isto diz quem decide o que a equipe faz. O chefe acompanha
+     * aqui e delibera pela Caixa de Entrada; o fiscal consulta.
      */
-    private function exigirDecisao(Request $request): ?RedirectResponse
+    private function exigirConducao(Request $request): ?RedirectResponse
     {
-        if (Papel::decide($request->user())) {
+        $usuario = $request->user();
+
+        if (Papel::ehLider($usuario) || ($usuario?->ehAdmin() ?? false)) {
             return null;
         }
 
         return back()->with(
             'flash.erro',
-            'A leitura do retorno de campo é do líder da equipe (ou do Chefe de Setor) — é ele que '
-            .'decide se a equipe volta ao ponto. Você consulta o que a fiscalização registrou.',
+            'Conduzir a Fiscalização com a equipe é do líder: é ele que manda a equipe ao ponto, a manda voltar '
+            .'e encaminha o resultado ao Chefe de Setor. O chefe delibera pela Caixa de Entrada.',
         );
     }
 
@@ -404,11 +355,11 @@ class FiscalizacoesController extends Controller
         $deFora = [];
 
         foreach ($ids as $id) {
-            $registro = Fiscalizacao::with('equipe')->find($id);
-            $equipe = $registro?->equipe?->codigo;
+            $ciclo = CicloDeFiscalizacao::with('equipe')->find($id);
+            $equipe = $ciclo?->equipe?->codigo;
 
             if ($equipe === null || ! in_array($equipe, $minhas, true)) {
-                $deFora[] = $registro->protocolo ?? "#{$id}";
+                $deFora[] = $ciclo->protocolo ?? "#{$id}";
             }
         }
 
@@ -419,7 +370,7 @@ class FiscalizacoesController extends Controller
         return back()->with(
             'flash.erro',
             'Você lidera '.(count($minhas) === 1 ? 'a Equipe ' : 'as Equipes ').implode(', ', $minhas).', e '
-            .(count($deFora) === 1 ? 'o registro ' : 'os registros ')
+            .(count($deFora) === 1 ? 'a Fiscalização ' : 'as Fiscalizações ')
             .implode(', ', $deFora)
             .(count($deFora) === 1 ? ' não é dessa equipe' : ' não são dessa equipe')
             .'. Nada foi alterado — recarregue a fila.',
@@ -443,7 +394,7 @@ class FiscalizacoesController extends Controller
         if ($efeito['alterados'] === 0) {
             return [
                 'flash.erro',
-                'Nenhum dos registros escolhidos está mais disponível. Recarregue a fila.',
+                'Nenhuma das Fiscalizações escolhidas está mais disponível para isso. Recarregue a tela.',
             ];
         }
 

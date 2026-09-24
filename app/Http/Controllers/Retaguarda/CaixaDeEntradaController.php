@@ -10,6 +10,7 @@ use App\Models\SugestaoAgrupamento;
 use App\Rules\NomeDeCadastro;
 use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\SugestaoParaTela;
+use App\Support\CiclosDeFiscalizacao;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use App\Support\Papel;
@@ -382,6 +383,8 @@ class CaixaDeEntradaController extends Controller
                 'operacao_id' => null,
             ],
         );
+
+        CiclosDeFiscalizacao::abrirParaDemanda($demanda->fresh(), Auth::user());
     }
 
     private function devolverDemanda(Demanda $demanda, string $motivo, string $justificativa, string $destinoRetorno): void
