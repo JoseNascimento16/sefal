@@ -105,13 +105,13 @@ it('a avulsa vira processo: o chefe registra a abertura, e o número do processo
 
     // Sem o número: com a integração desligada, é ele que prova a abertura.
     $this->actingAs($chefe)
-        ->post(route('retaguarda.caixa-de-entrada.responder-ao-canal', $demanda), ['texto' => $texto])
+        ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), ['texto' => $texto])
         ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'número do processo'));
 
     expect($demanda->fresh()->respondida_ao_canal_em)->toBeNull();
 
     $this->actingAs($chefe)
-        ->post(route('retaguarda.caixa-de-entrada.responder-ao-canal', $demanda), [
+        ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), [
             'texto' => $texto,
             'processo' => '215.5382.004567/2026',
         ])
@@ -133,7 +133,7 @@ it('só o que foi CONCLUÍDO volta ao canal', function () {
         ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), [
             'texto' => 'Tentativa de responder antes do resultado da fiscalização.',
         ])
-        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'CONCLUÍDO'));
+        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'CONCLUIU'));
 
     expect($demanda->fresh()->respondida_ao_canal_em)->toBeNull()
         ->and($demanda->fresh()->tramites()->count())->toBe(0);
@@ -214,4 +214,55 @@ it('o detalhe da demanda leva à tela o tipo de retorno do canal e o que já foi
             ->where('denuncias.0.resposta_ao_canal.processo', '215.5382.000123/2026')
             ->where('denuncias.0.resposta_ao_canal.enviado', false)
             ->where('denuncias.0.resposta_ao_canal.por', $chefe->name));
+});
+
+it('a avulsa pode terminar só na fiscalização: o chefe encerra sem processo', function () {
+    $demanda = concluida(['canal' => Demanda::CANAL_AVULSA, 'entrada' => Demanda::ENTRADA_BALCAO]);
+
+    $this->actingAs(pessoaCom('chefe-de-setor'))
+        ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), [
+            'texto' => 'Vistoria confirmou a regularização; não cabe processo no e-Salvador.',
+            'sem_processo' => true,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('flash.sucesso', fn (string $r): bool => str_contains($r, 'sem processo'));
+
+    $demanda->refresh();
+
+    expect($demanda->respondida_ao_canal_em)->not->toBeNull()
+        ->and($demanda->processo_esalvador)->toBeNull()
+        ->and($demanda->situacaoResumida())->toBe('Encerrada')
+        ->and($demanda->ultimoTramite()->acao)->toBe('Encerrada com a fiscalização, sem processo');
+
+    Http::assertNothingSent();
+});
+
+it('encerrar sem processo é só da avulsa: a demanda de canal é respondida no canal', function () {
+    $demanda = concluida();
+
+    $this->actingAs(pessoaCom('chefe-de-setor'))
+        ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), [
+            'texto' => 'Tentando encerrar sem responder ao requerente do e-Salvador.',
+            'sem_processo' => true,
+        ])
+        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'avulsa'));
+
+    expect($demanda->fresh()->respondida_ao_canal_em)->toBeNull();
+});
+
+it('o e-Protocolo é respondido e registrado aqui, sem chamar a API do e-Salvador', function () {
+    config(['esalvador.ligada' => true]);
+    $demanda = concluida(['canal' => Demanda::CANAL_E_PROTOCOLO, 'entrada' => Demanda::ENTRADA_BALCAO, 'numero_origem' => 'EP-2026-0042']);
+
+    $this->actingAs(pessoaCom('chefe-de-setor'))
+        ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), [
+            'texto' => 'Atendido: a equipe vistoriou e o ponto foi regularizado no local.',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('flash.sucesso', fn (string $r): bool => str_contains($r, 'e-Protocolo'));
+
+    // Mesmo com a integração do e-Salvador LIGADA: o e-Protocolo não passa por ela.
+    expect($demanda->fresh()->ultimoTramite()->acao)->toBe('Resposta registrada no e-Protocolo');
+
+    Http::assertNothingSent();
 });

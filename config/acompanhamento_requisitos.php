@@ -497,14 +497,16 @@ return [
         ],
 
         [
-            'modulo' => 'Fiscalização',
-            'tela' => 'Caixa de Entrada (mesa do Chefe de Setor)',
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'Mesa antiga do Chefe de Setor (fora do menu)',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.caixa-de-entrada.index',
-            'breadcrumb' => 'Fiscalização › Caixa de Entrada',
+            'breadcrumb' => 'fora do menu desde 24/09/2026',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemPrototipo.' Porta por onde a demanda entra FORA DA INTEGRAÇÃO: papel do '
+            'nota' => $origemPrototipo.' ⚠️ FORA DO MENU desde 24/09/2026: as quatro caixas de canal '
+                .'substituíram esta tela. Ela continua existindo, só para o chefe, porque guarda a '
+                .'PRÉ-TRIAGEM escondida (dono incerto sobre a necessidade) — sai quando isso for decidido. Porta por onde a demanda entra FORA DA INTEGRAÇÃO: papel do '
                 .'e-Salvador, pedido de nova licença, ofício e a AVULSA (ligação ou e-mail de superior ao '
                 .'chefe, canal criado em 22/09/2026) são digitados aqui pelo Chefe de Setor. O Fala Salvador '
                 .'NÃO entra por aqui — é digitado pelo líder, na tela do canal. '
@@ -523,28 +525,28 @@ return [
         ],
 
         [
-            'modulo' => 'Denúncias',
-            'tela' => 'Denúncias do e-Salvador',
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'e-Salvador',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.denuncias.e-salvador.index',
-            'breadcrumb' => 'Denúncias › e-Salvador',
+            'breadcrumb' => 'Caixa de Entrada › e-Salvador',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemDenuncias.' As denúncias que o portal e-Salvador (Ouvidoria Geral do '
-                .'Município) entrega ao SEFAL por INTEGRAÇÃO — ninguém as digita: a tela não tem botão de '
-                .'cadastrar, e cada denúncia carrega o número que o canal lhe deu e a hora em que a '
-                .'integração a entregou. O que chega em papel ao balcão continua sendo assunto da Caixa '
-                .'de Entrada. Como o cidadão abre a denúncia autenticado, o requerente vem SEMPRE '
-                .'identificado (nome, CPF, e-mail, telefone), o endereço vem estruturado e ele pode '
-                .'anexar foto e documento. '.$fluxoDenuncias,
+            'nota' => $origemDenuncias.' Caixa do e-Salvador (reorganizada em 24/09/2026), com TRÊS abas: '
+                .'DENÚNCIAS (assunto 215), LICENÇAS (a licença chega pelo e-Salvador, assunto 216) e '
+                .'RESPONDIDAS (o que o chefe já respondeu ao processo, ou saiu do fluxo). Grade única: '
+                .'seleção múltipla, protocolo, recebida, bairro, situação em três palavras (Recebida, '
+                .'Encaminhada ao líder, Em fiscalização) e prazo. Enquanto a integração não lê, o chefe '
+                .'cadastra aqui o que chega em papel (denúncia ou licença). Como o cidadão abre a denúncia '
+                .'autenticado, o requerente vem SEMPRE identificado. '.$fluxoDenuncias,
         ],
 
         [
-            'modulo' => 'Denúncias',
-            'tela' => 'Denúncias do Fala Salvador',
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'Fala Salvador',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.denuncias.fala-salvador.index',
-            'breadcrumb' => 'Denúncias › Fala Salvador',
+            'breadcrumb' => 'Caixa de Entrada › Fala Salvador',
             'hu_status' => 'nao',
             'hus' => [],
             'nota' => $origemDenuncias.' O canal telefônico da Prefeitura (156) — era "Salvador Digital" até '
@@ -558,6 +560,35 @@ return [
                 .'fluxo; o específico do canal vem depois (PEND-023). O que o telefone muda no dado: a '
                 .'denúncia pode ser ANÔNIMA, o relato é a transcrição do que o atendente ouviu, e não há '
                 .'anexo. '.$fluxoDenuncias,
+        ],
+
+        [
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'e-Protocolo',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.denuncias.e-protocolo.index',
+            'breadcrumb' => 'Caixa de Entrada › e-Protocolo',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemDenuncias.' A quarta frente (24/09/2026): o atendimento PRESENCIAL na sede da '
+                .'SEFAL, protocolado no sistema e-Protocolo. Sem integração: o Chefe de Setor cadastra. Ainda '
+                .'não se sabe se o protocolo passa pelo e-Salvador antes de chegar ao chefe — por isso a caixa '
+                .'é própria, e a resposta fica registrada aqui. Abas DENÚNCIAS e RESPONDIDAS. '.$fluxoDenuncias,
+        ],
+
+        [
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'Avulsas',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.denuncias.avulsas.index',
+            'breadcrumb' => 'Caixa de Entrada › Avulsas',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemDenuncias.' O pedido que chega ao Chefe de Setor por ligação ou e-mail de um '
+                .'superior. Lista única, sem abas. O chefe cadastra (o número de origem é opcional: foi uma '
+                .'ligação), encaminha à equipe e, concluída a fiscalização, DELIBERA: abre processo no '
+                .'e-Salvador com o resultado (registrado aqui, feito à mão lá — a escrita na API está '
+                .'proibida) ou encerra só com a fiscalização, sem processo. '.$fluxoDenuncias,
         ],
 
         [

@@ -39,9 +39,10 @@ test('o lider ganha, pela migration, exatamente as telas que o menu declara para
 
     expect($gravadas)->toBe($esperadas)
         // As telas do fluxo dele — sem elas o papel não existe na prática.
-        ->and($gravadas)->toContain('denuncias', 'fiscalizacoes', 'operacoes')
-        // A Caixa é do chefe: o líder não a recebe.
-        ->and($gravadas)->not->toContain('caixa-de-entrada');
+        // As caixas de canal (desde 24/09/2026 sob `caixa-de-entrada`), as
+        // fiscalizações e as operações.
+        ->and($gravadas)->toContain('caixa-de-entrada', 'fiscalizacoes', 'operacoes')
+        ->and($gravadas)->not->toContain('denuncias');
 
     // As flags são as da semente, não escritas à mão.
     $operacoes = (array) DB::table('permissoes_setor')->where('setor', 'lider-de-equipe')->where('slug', 'operacoes')->first();

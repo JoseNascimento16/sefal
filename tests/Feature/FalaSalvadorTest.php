@@ -70,7 +70,7 @@ it('o líder registra o que recebeu no Fala Salvador, e o caso nasce na mesa del
     [$equipe, $lider] = equipeComLider();
 
     $this->actingAs($lider)
-        ->post(route('retaguarda.denuncias.fala-salvador.registrar'), ligacao())
+        ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao())
         ->assertSessionHasNoErrors()
         ->assertSessionHas('flash.sucesso');
 
@@ -95,7 +95,7 @@ it('o líder registra o que recebeu no Fala Salvador, e o caso nasce na mesa del
 it('o registro aparece na tela do canal, para o próprio líder direcionar', function () {
     [, $lider] = equipeComLider();
 
-    $this->actingAs($lider)->post(route('retaguarda.denuncias.fala-salvador.registrar'), ligacao());
+    $this->actingAs($lider)->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao());
 
     $this->actingAs($lider)
         ->get(route('retaguarda.denuncias.fala-salvador.index'))
@@ -119,7 +119,7 @@ it('o Chefe de Setor não registra o Fala Salvador — o canal é dos líderes',
         ->assertInertia(fn ($p) => $p->where('registra', false));
 
     $this->actingAs($chefe)
-        ->post(route('retaguarda.denuncias.fala-salvador.registrar'), ligacao())
+        ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao())
         ->assertRedirect()
         ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'líder'));
 
@@ -135,16 +135,16 @@ it('quem lidera mais de uma equipe escolhe para qual é — e só entre as suas'
 
     // Sem dizer qual: recusado com o motivo no campo.
     $this->actingAs($lider->fresh())
-        ->post(route('retaguarda.denuncias.fala-salvador.registrar'), ligacao())
+        ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao())
         ->assertSessionHasErrors('equipe');
 
     // Equipe que não é dele: recusada.
     $this->actingAs($lider->fresh())
-        ->post(route('retaguarda.denuncias.fala-salvador.registrar'), ligacao(['equipe' => 'A1']))
+        ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao(['equipe' => 'A1']))
         ->assertSessionHasErrors('equipe');
 
     $this->actingAs($lider->fresh())
-        ->post(route('retaguarda.denuncias.fala-salvador.registrar'), ligacao(['equipe' => 'C2']))
+        ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao(['equipe' => 'C2']))
         ->assertSessionHasNoErrors();
 
     expect(Demanda::firstOrFail()->equipe_id)->toBe($c2->id);
@@ -154,7 +154,7 @@ it('denúncia identificada exige quem ligou; anônima é escolha explícita', fu
     [, $lider] = equipeComLider();
 
     $this->actingAs($lider)
-        ->post(route('retaguarda.denuncias.fala-salvador.registrar'), ligacao(['anonima' => false]))
+        ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao(['anonima' => false]))
         ->assertSessionHasErrors('requerente');
 
     expect(Demanda::count())->toBe(0);

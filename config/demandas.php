@@ -69,6 +69,8 @@ return [
              * e feito à mão lá.
              */
             'retorno' => 'tramite',
+            // Onde o retorno é feito — o nome que a tela escreve ("Resposta ao …").
+            'retorno_em' => 'e-Salvador',
         ],
 
         Demanda::CANAL_FALA_SALVADOR => [
@@ -99,6 +101,12 @@ return [
             // Pedido de licença é de UM requerente para UM ponto: agrupar não faz sentido.
             'agrupa' => false,
             'registro' => 'chefe',
+            /*
+             * A licença chega pelo e-Salvador (assunto 216) e é respondida lá. Na
+             * tela, é a aba "Licenças" da caixa do e-Salvador (dono, 24/09/2026).
+             */
+            'retorno' => 'tramite',
+            'retorno_em' => 'e-Salvador',
         ],
 
         Demanda::CANAL_OFICIO => [
@@ -114,7 +122,9 @@ return [
 
         Demanda::CANAL_AVULSA => [
             'nome' => 'Avulsa',
-            'sistema' => 'Ligação ou e-mail de superior ao Chefe de Setor',
+            // O nome da CAIXA (a tela), no plural — o `nome` é o de cada demanda.
+            'titulo' => 'Avulsas',
+            'sistema' => 'ligação ou e-mail de superior ao Chefe de Setor',
             'artigo' => 'a',
             'entrada_padrao' => Demanda::ENTRADA_BALCAO,
             // Quem pede é um superior identificado; o "requerente" é ele.
@@ -124,8 +134,31 @@ return [
             // Um pedido, uma ação: agrupar não faz sentido.
             'agrupa' => false,
             'registro' => 'chefe',
-            // Concluída, vira PROCESSO no e-Salvador: o resultado precisa de um dono formal.
+            /*
+             * Concluída, o chefe DELIBERA: abre processo no e-Salvador com o
+             * resultado, ou encerra só com a fiscalização (dono, 24/09/2026).
+             */
             'retorno' => 'processo',
+            'retorno_em' => 'e-Salvador',
+        ],
+
+        Demanda::CANAL_E_PROTOCOLO => [
+            'nome' => 'e-Protocolo',
+            'sistema' => 'e-Protocolo — atendimento presencial na sede da SEFAL',
+            'artigo' => 'o',
+            /*
+             * O cidadão vai à sede e o atendimento é protocolado no e-Protocolo.
+             * Sem integração: o chefe digita. Ainda não se sabe se o protocolo
+             * passa pelo e-Salvador antes de chegar a ele (dono, 24/09/2026) — por
+             * isso a caixa é própria, e a resposta fica registrada aqui.
+             */
+            'entrada_padrao' => Demanda::ENTRADA_BALCAO,
+            'admite_anonima' => false,
+            'tem_anexo' => true,
+            'agrupa' => false,
+            'registro' => 'chefe',
+            'retorno' => 'tramite',
+            'retorno_em' => 'e-Protocolo',
         ],
     ],
 

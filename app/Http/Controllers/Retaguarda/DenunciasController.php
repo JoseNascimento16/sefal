@@ -97,14 +97,137 @@ class DenunciasController extends Controller
     /** Quantos itens o lote aceita de uma vez — o mesmo teto da página da grade. */
     private const MAX_LOTE = 200;
 
+    /**
+     * As ABAS de cada caixa (dono, 24/09/2026). A chave diz a fonte: `denuncias`
+     * e `licencas` são as abertas do canal; `respondidas`, as que fecharam.
+     * A caixa das Avulsas não tem abas — é uma lista só.
+     */
+    private const ABAS = [
+        Demanda::CANAL_E_SALVADOR => ['denuncias', 'licencas', 'respondidas'],
+        Demanda::CANAL_FALA_SALVADOR => ['denuncias', 'respondidas'],
+        Demanda::CANAL_E_PROTOCOLO => ['denuncias', 'respondidas'],
+        Demanda::CANAL_AVULSA => [],
+    ];
+
     public function eSalvador(Request $request): Response
     {
-        return $this->tela($request, 'e-salvador', 'ESalvador');
+        return $this->tela($request, Demanda::CANAL_E_SALVADOR, 'ESalvador');
     }
 
     public function falaSalvador(Request $request): Response
     {
         return $this->tela($request, Demanda::CANAL_FALA_SALVADOR, 'FalaSalvador');
+    }
+
+    public function eProtocolo(Request $request): Response
+    {
+        return $this->tela($request, Demanda::CANAL_E_PROTOCOLO, 'EProtocolo');
+    }
+
+    public function avulsas(Request $request): Response
+    {
+        return $this->tela($request, Demanda::CANAL_AVULSA, 'Avulsas');
+    }
+
+    /**
+     * CADASTRO manual de uma demanda, pelo canal.
+     *
+     * Quem digita depende do canal (`registro` em `config/demandas.php`): o
+     * Fala Salvador é do LÍDER — só ele acessa o canal, e o caso nasce na mesa
+     * dele; os demais são do CHEFE — o papel do e-Salvador enquanto a integração
+     * não lê, a licença, o atendimento presencial do e-Protocolo e a avulsa —, e
+     * nascem `Recebida`, esperando o encaminhamento dele.
+     */
+    public function registrar(Request $request, string $canal): RedirectResponse
+    {
+        $configuracao = (array) config("demandas.canais.{$canal}", []);
+
+        if (($configuracao['registro'] ?? null) === 'lider') {
+            return $this->registrarFalaSalvador($request);
+        }
+
+        $usuario = $request->user();
+
+        if (! Papel::ehChefe($usuario) && ! ($usuario?->ehAdmin() ?? false)) {
+            return back()->with(
+                'flash.erro',
+                'O cadastro deste canal é do Chefe de Setor: é a ele que a demanda chega. '
+                .'O líder recebe o caso já encaminhado.',
+            );
+        }
+
+        $avulsa = $canal === Demanda::CANAL_AVULSA;
+        $admiteAnonima = (bool) ($configuracao['admite_anonima'] ?? false);
+
+        $dados = $request->validate([
+            // A avulsa pode não ter número nenhum: foi uma ligação.
+            'documento_origem' => [
+                $avulsa ? 'nullable' : 'required', 'string', 'max:40',
+                Rule::unique('demandas', 'numero_origem')->where('canal', $canal),
+            ],
+            'recebida_em' => ['required', 'date', 'before_or_equal:today'],
+            // `declined` aceita false/0: o canal que não admite anônima exige quem pediu.
+            'anonima' => array_values(array_filter(['required', 'boolean', $admiteAnonima ? null : 'declined'])),
+            'requerente' => ['exclude_if:anonima,true', 'required', 'string', 'max:150', new NomeDeCadastro],
+            'contato' => ['exclude_if:anonima,true', 'nullable', 'string', 'max:80'],
+            'assunto' => ['required', 'string', 'max:180'],
+            'endereco' => ['required', 'string', 'max:200'],
+            'bairro' => ['required', 'string', 'max:80'],
+            'descricao' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'documento_origem.required' => 'Informe o número do documento no canal de origem.',
+            'documento_origem.unique' => 'Já existe uma demanda deste canal com esse número — ela não entra duas vezes.',
+            'anonima.declined' => 'Este canal não recebe demanda anônima: informe quem pediu.',
+            'requerente.required' => $avulsa ? 'Informe quem pediu a ação.' : 'Informe o requerente — ou marque como anônima.',
+            'assunto.required' => 'Descreva em uma linha o que foi pedido.',
+            'endereco.required' => 'Informe onde é: sem endereço não há a quem mandar.',
+            'bairro.required' => 'Informe o bairro: é ele que sugere a equipe.',
+        ]);
+
+        $recebida = Date::parse((string) $dados['recebida_em']);
+        $protocolo = Protocolo::proximo('DEM', modelClass: Demanda::class);
+        $nome = (string) ($configuracao['nome'] ?? $canal);
+
+        $demanda = Demanda::create([
+            'protocolo' => $protocolo,
+            'canal' => $canal,
+            'entrada' => Demanda::ENTRADA_BALCAO,
+            // Sem número (a ligação da avulsa), o próprio protocolo ocupa o lugar:
+            // a unicidade é por canal e número, e dois vazios colidiriam no Oracle.
+            'numero_origem' => $dados['documento_origem'] ?? $protocolo,
+            'recebida_em' => $recebida,
+            'prazo_em' => $recebida->copy()->addDays((int) config('demandas.prazo_padrao_em_dias', 10)),
+            'anonima' => (bool) $dados['anonima'],
+            'requerente' => $dados['requerente'] ?? null,
+            'telefone' => $dados['contato'] ?? null,
+            'assunto' => $dados['assunto'],
+            'relato' => $dados['descricao'] ?? null,
+            'logradouro' => $dados['endereco'],
+            'bairro' => $dados['bairro'],
+            'situacao' => Demanda::RECEBIDA,
+            'area_id' => Area::sugeridaParaBairro((string) $dados['bairro'])?->id,
+            'criada_por_id' => Auth::id(),
+        ]);
+
+        $demanda->tramites()->create([
+            'ordem' => 1,
+            'ocorrida_em' => $recebida,
+            'user_id' => Auth::id(),
+            'papel' => DemandaTramite::PAPEL_CHEFE_DE_SETOR,
+            'autor' => Auth::user()?->name,
+            'acao' => 'Demanda cadastrada',
+            'detalhe' => "Registrada pelo Chefe de Setor, com origem {$nome}.",
+            'situacao' => Demanda::RECEBIDA,
+            'campos' => array_filter([
+                'Origem do documento' => $nome,
+                'Número na origem' => $dados['documento_origem'] ?? null,
+            ]),
+        ]);
+
+        return back()->with(
+            'flash.sucesso',
+            "Demanda {$demanda->protocolo} registrada — {$nome}. Encaminhe à equipe quando for a hora.",
+        );
     }
 
     /**
@@ -119,7 +242,7 @@ class DenunciasController extends Controller
      *
      * Quem lidera mais de uma equipe escolhe; quem lidera uma não precisa dizer.
      */
-    public function registrarFalaSalvador(Request $request): RedirectResponse
+    private function registrarFalaSalvador(Request $request): RedirectResponse
     {
         $usuario = $request->user();
 
@@ -470,8 +593,31 @@ class DenunciasController extends Controller
              * administrador, que cobre a ausência. O chefe não: o que chega a ele
              * entra pela Caixa.
              */
-            'registra' => ($configuracao['registro'] ?? null) === 'lider'
-                && (Papel::ehLider($usuario) || ($usuario?->ehAdmin() ?? false)),
+            'registra' => self::registra($usuario, $canal),
+            /*
+             * Em que canais o formulário de cadastro desta tela grava. A caixa do
+             * e-Salvador cadastra denúncia E licença — a licença chega pelo
+             * e-Salvador e mora na aba própria dela.
+             */
+            'registroEm' => array_values(array_map(
+                static fn (string $c): array => [
+                    'slug' => $c,
+                    'nome' => (string) config("demandas.canais.{$c}.nome"),
+                    'admite_anonima' => (bool) config("demandas.canais.{$c}.admite_anonima"),
+                    'registro' => config("demandas.canais.{$c}.registro"),
+                ],
+                array_filter(
+                    $canal === Demanda::CANAL_E_SALVADOR
+                        ? [Demanda::CANAL_E_SALVADOR, Demanda::CANAL_NOVA_LICENCA]
+                        : [$canal],
+                    static fn (string $c): bool => self::registra($usuario, $c),
+                ),
+            )),
+            // As abas desta caixa, e a fonte da aba Licenças (só no e-Salvador).
+            'abas' => self::ABAS[$canal] ?? ['denuncias', 'respondidas'],
+            'licencas' => $canal === Demanda::CANAL_E_SALVADOR
+                ? $this->doCanal(Demanda::CANAL_NOVA_LICENCA, $comRecorte ? $equipesDoLider : null)
+                : [],
             // Quem RESPONDE ao canal, concluído o trabalho: o chefe (e o administrador).
             'decide' => Papel::ehChefe($usuario) || ($usuario?->ehAdmin() ?? false),
             'bairros' => Estrutura::bairros(),
@@ -524,12 +670,25 @@ class DenunciasController extends Controller
             // As COLUNAS de cada aba — da grade e do arquivo. Uma listagem por
             // aba porque a aba é uma ETAPA do fluxo, e cada etapa se decide
             // olhando um dado diferente. Ver docs/padroes/listagem-clean.md.
-            'listagens' => ListagensDaRetaguarda::para([
-                'denuncias.encaminhamento',
-                'denuncias.direcionamento',
-                'denuncias.todas',
-            ]),
+            // UMA grade para todas as abas (dono, 24/09/2026): protocolo, recebida,
+            // bairro, situação e prazo — com a situação em três palavras.
+            'listagens' => ListagensDaRetaguarda::para(['denuncias.todas']),
         ]);
+    }
+
+    /**
+     * Esta pessoa CADASTRA neste canal? O líder, no canal que é dele (o Fala
+     * Salvador); o chefe, nos demais; o administrador, em todos.
+     */
+    private static function registra(?User $usuario, string $canal): bool
+    {
+        if ($usuario?->ehAdmin() ?? false) {
+            return true;
+        }
+
+        return config("demandas.canais.{$canal}.registro") === 'lider'
+            ? Papel::ehLider($usuario)
+            : Papel::ehChefe($usuario);
     }
 
     /**

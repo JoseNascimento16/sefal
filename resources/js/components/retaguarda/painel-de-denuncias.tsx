@@ -1,5 +1,4 @@
 import {
-    ArrowRightCircle,
     CornerUpLeft,
     FileText,
     Info,
@@ -17,13 +16,14 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
-import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
+import { RegistroDeDemanda } from '@/components/retaguarda/registro-de-demanda';
+import type { CanalDeRegistro } from '@/components/retaguarda/registro-de-demanda';
+import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
-import { TramiteDeDenuncia } from '@/components/retaguarda/tramite-de-denuncia';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
@@ -31,6 +31,8 @@ import {
     useOrdenacao,
     usePaginacao,
 } from '@/components/retaguarda/th-ordenavel';
+import { TramiteDeDenuncia } from '@/components/retaguarda/tramite-de-denuncia';
+import type { Sugestao } from '@/dados-prototipo/administrativo';
 import type {
     Canal,
     Denuncia,
@@ -97,7 +99,17 @@ import {
 
 interface Props {
     canal: Canal;
+    /** As demandas do canal da tela — abertas e fechadas; a aba separa. */
     denuncias: Denuncia[];
+    /** As licenças — só a caixa do e-Salvador as recebe (aba própria). */
+    licencas: Denuncia[];
+    /** As abas desta caixa; vazio = lista única (a caixa das Avulsas). */
+    abas: AbaDaCaixa[];
+    /** Esta pessoa cadastra nesta caixa? E em quais canais. Quem responde é o servidor. */
+    registra: boolean;
+    registroEm: CanalDeRegistro[];
+    bairros: string[];
+    sugestoes: Record<string, Sugestao>;
     situacoes: string[];
     /** Os desfechos que uma vistoria pode ter — catálogo do servidor. */
     desfechos: string[];
@@ -129,7 +141,34 @@ interface Props {
     listagens: Listagens;
 }
 
-type Aba = 'encaminhamento' | 'direcionamento' | 'todas' | 'detalhe';
+/** As abas que o servidor declara para cada caixa (dono, 24/09/2026). */
+type AbaDaCaixa = 'denuncias' | 'licencas' | 'respondidas';
+
+/** `lista` é a lista única da caixa sem abas; `detalhe`, a demanda aberta. */
+type Aba = AbaDaCaixa | 'lista' | 'detalhe';
+
+const ROTULO_DA_ABA: Record<Aba, string> = {
+    denuncias: 'Denúncias',
+    licencas: 'Licenças',
+    respondidas: 'Respondidas',
+    lista: 'Todas',
+    detalhe: 'Detalhe',
+};
+
+/**
+ * O tom do selo da situação RESUMIDA — a que a grade mostra. O que espera
+ * alguém da SEFAL agir é aviso; o que já está com o líder, informação; o que
+ * está em campo, andamento; o que fechou, neutro.
+ */
+const TOM_DO_RESUMO: Record<string, string> = {
+    Recebida: 'selo-aviso',
+    'Encaminhada ao líder': 'selo-info',
+    'Em fiscalização': 'selo-ok',
+    Respondida: 'selo-neutro',
+    Encerrada: 'selo-neutro',
+    Devolvida: 'selo-neutro',
+    Arquivada: 'selo-neutro',
+};
 
 /** Qual decisão está sendo tomada na folha sobreposta. */
 type Decisao = 'encaminhar' | 'devolver' | 'direcionar' | 'operacao' | null;
@@ -339,6 +378,12 @@ function FolhaDeDecisao({
 export function PainelDeDenuncias({
     canal,
     denuncias,
+    licencas,
+    abas,
+    registra,
+    registroEm,
+    bairros,
+    sugestoes,
     situacoes,
     desfechos,
     recomendacoesDoFiscal,
@@ -373,9 +418,12 @@ export function PainelDeDenuncias({
         return nome.trim() === '' ? null : nome;
     };
 
-    const [aba, setAba] = useState<Aba>(
-        encaminha ? 'encaminhamento' : direciona ? 'direcionamento' : 'todas',
-    );
+    /** A aba de partida — a primeira que a caixa declara, ou a lista única. */
+    const abaPrincipal: Aba = abas[0] ?? 'lista';
+    const [aba, setAba] = useState<Aba>(abaPrincipal);
+
+    /** Tudo o que esta tela recebeu — o canal da tela e, no e-Salvador, as licenças. */
+    const todas = useMemo(() => [...denuncias, ...licencas], [denuncias, licencas]);
     const [busca, setBusca] = useState('');
     const [abertaId, setAbertaId] = useState<number | null>(null);
     const [selecionadas, setSelecionadas] = useState<number[]>([]);
@@ -481,20 +529,31 @@ export function PainelDeDenuncias({
 
     const daEtapa = useMemo(
         () => ({
-            encaminhamento: denuncias.filter((d) => AGUARDANDO_ENCAMINHAMENTO.includes(d.situacao)),
-            direcionamento: denuncias.filter((d) =>
-                AGUARDANDO_DIRECIONAMENTO.includes(d.situacao),
-            ),
+            encaminhamento: todas.filter((d) => AGUARDANDO_ENCAMINHAMENTO.includes(d.situacao)),
+            direcionamento: todas.filter((d) => AGUARDANDO_DIRECIONAMENTO.includes(d.situacao)),
         }),
-        [denuncias],
+        [todas],
+    );
+
+    /*
+     * A FONTE de cada aba. "Denúncias" e "Licenças" são as ABERTAS do canal;
+     * "Respondidas", o que fechou — respondido ao canal, devolvido ou arquivado.
+     * Quem decide o que é "respondida" é o servidor (`respondida`), porque a
+     * regra muda por canal: no Fala Salvador quem responde é o líder, no canal.
+     */
+    const porAba = useMemo(
+        () => ({
+            denuncias: denuncias.filter((d) => !d.respondida),
+            licencas: licencas.filter((d) => !d.respondida),
+            respondidas: todas.filter((d) => d.respondida),
+        }),
+        [denuncias, licencas, todas],
     );
 
     const fonte =
-        aba === 'encaminhamento'
-            ? daEtapa.encaminhamento
-            : aba === 'direcionamento'
-              ? daEtapa.direcionamento
-              : denuncias;
+        aba === 'denuncias' || aba === 'licencas' || aba === 'respondidas'
+            ? porAba[aba]
+            : denuncias;
 
     const filtradas = useMemo(() => {
         const { facetas: achadas, termos } = parseConsulta<Faceta>(busca, facetas);
@@ -567,6 +626,7 @@ export function PainelDeDenuncias({
                 d.equipe,
                 d.operacao,
                 d.situacao,
+                d.situacao_resumida,
                 d.desfecho,
                 d.motivo,
             ]);
@@ -587,21 +647,21 @@ export function PainelDeDenuncias({
     // consulta —, então não há como discordarem do que está logo abaixo.
     const numeros = useMemo(
         () => ({
-            total: denuncias.length,
+            total: todas.length,
             triar: daEtapa.encaminhamento.length,
             direcionar: daEtapa.direcionamento.length,
-            emCampo: denuncias.filter((d) => EM_TRABALHO.includes(d.situacao)).length,
-            retornadas: denuncias.filter((d) =>
+            emCampo: todas.filter((d) => EM_TRABALHO.includes(d.situacao)).length,
+            retornadas: todas.filter((d) =>
                 ['Devolvida', 'Arquivada'].includes(d.situacao),
             ).length,
-            vencidas: denuncias.filter(
+            vencidas: todas.filter(
                 (d) => d.prazo < hoje && AGUARDANDO_ENCAMINHAMENTO.concat(AGUARDANDO_DIRECIONAMENTO).includes(d.situacao),
             ).length,
         }),
-        [denuncias, daEtapa, hoje],
+        [todas, daEtapa, hoje],
     );
 
-    const aberta = denuncias.find((d) => d.id === abertaId) ?? null;
+    const aberta = todas.find((d) => d.id === abertaId) ?? null;
 
     /*
      * Toda resposta do servidor traz a lista nova, e a seleção antiga passa a
@@ -612,7 +672,7 @@ export function PainelDeDenuncias({
         setSelecionadas([]);
         setDecisao(null);
         setAlvos([]);
-    }, [denuncias]);
+    }, [denuncias, licencas]);
 
     function trocarAba(nova: Aba) {
         setAba(nova);
@@ -629,15 +689,8 @@ export function PainelDeDenuncias({
      * isto o Chefe de Setor clicava em "a triar" e chegava numa lista sem aba
      * selecionada e sem ação nenhuma: um estado que a tela não sabe explicar.
      */
-    function irParaEtapa(etapa: Aba, exerce: boolean, situacao: string) {
-        if (exerce) {
-            setBusca('');
-            trocarAba(etapa);
-
-            return;
-        }
-
-        trocarAba('todas');
+    function irParaEtapa(situacao: string) {
+        trocarAba(abaPrincipal);
         setBusca(situacao);
     }
 
@@ -655,9 +708,23 @@ export function PainelDeDenuncias({
         setSelecionadas(todasMarcadas ? [] : idsVisiveis);
     }
 
-    /** A aba mostra caixas de seleção? Só onde há decisão a tomar. */
-    const emLote =
-        (aba === 'encaminhamento' && encaminha) || (aba === 'direcionamento' && direciona);
+    /*
+     * A aba mostra caixas de seleção? Só onde há decisão a tomar — nas abertas,
+     * para quem encaminha ou direciona. Em "Respondidas" não há o que decidir.
+     */
+    const emLote = (encaminha || direciona) && aba !== 'respondidas' && aba !== 'detalhe';
+
+    /*
+     * Do que foi marcado, o que cada ação ALCANÇA: encaminhar serve à recebida;
+     * direcionar, à que já está com o líder. A grade mistura as duas (é uma lista
+     * só), então o botão diz quantas ele vai levar — e o servidor ignora o resto.
+     */
+    const aEncaminhar = selecionadas.filter((id) =>
+        AGUARDANDO_ENCAMINHAMENTO.includes(todas.find((d) => d.id === id)?.situacao ?? ''),
+    );
+    const aDirecionar = selecionadas.filter((id) =>
+        AGUARDANDO_DIRECIONAMENTO.includes(todas.find((d) => d.id === id)?.situacao ?? ''),
+    );
 
     function abrirDecisao(qual: Decisao, ids: number[]) {
         setAlvos(ids);
@@ -688,7 +755,7 @@ export function PainelDeDenuncias({
         foco: '',
     });
 
-    const escolhidas = denuncias.filter((d) => alvos.includes(d.id));
+    const escolhidas = todas.filter((d) => alvos.includes(d.id));
 
     /** O resumo do lote: quantas vão para cada equipe. */
     const resumoPorEquipe = useMemo(() => {
@@ -703,7 +770,7 @@ export function PainelDeDenuncias({
         // `escolhidas` e `equipePorId` são o que muda o resumo; `equipeDe` é
         // derivada dos dois e recriada a cada render.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [alvos, denuncias, equipePorId]);
+    }, [alvos, todas, equipePorId]);
 
     const semEquipe = escolhidas.filter((d) => equipeDe(d) === '');
 
@@ -765,26 +832,18 @@ export function PainelDeDenuncias({
      * definida; e "Todas" olha a SITUAÇÃO. Requerente, assunto e destino ficam no clique — e
      * continuam no arquivo exportado.
      */
-    const listagem =
-        listagens[
-            aba === 'encaminhamento'
-                ? 'denuncias.encaminhamento'
-                : aba === 'direcionamento'
-                  ? 'denuncias.direcionamento'
-                  : 'denuncias.todas'
-        ];
+    // UMA grade para todas as abas (dono, 24/09/2026).
+    const listagem = listagens['denuncias.todas'];
 
     /** Como ORDENAR por cada coluna. Sem entrada, a coluna não ordena. */
     const acessores: Record<string, AcessorOrd<Denuncia> | undefined> = {
         protocolo: 'protocolo',
         recebida: 'recebida_em_hora',
         bairro: 'bairro',
-        situacao: 'situacao',
+        situacao: 'situacao_resumida',
         prazo: 'prazo',
         area: (d: Denuncia) => areaDe(d),
-        // No encaminhamento a célula é um seletor: ordenar por ela ordenaria pela
-        // sugestão, que é o que a pessoa está ali para trocar.
-        equipe: aba === 'encaminhamento' ? undefined : (d: Denuncia) => equipeDe(d),
+        equipe: (d: Denuncia) => equipeDe(d),
     };
 
     /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
@@ -840,15 +899,11 @@ export function PainelDeDenuncias({
         }
 
         if (chave === 'situacao') {
+            // A situação em TRÊS palavras (com quem está); a completa vai na dica.
             return {
                 conteudo: (
-                    <span
-                        className={cn(
-                            'selo',
-                            TOM_DA_SITUACAO[d.situacao] ?? 'selo-neutro',
-                        )}
-                    >
-                        {d.situacao}
+                    <span className={cn('selo', TOM_DO_RESUMO[d.situacao_resumida] ?? 'selo-neutro')}>
+                        {d.situacao_resumida}
                     </span>
                 ),
                 dica: `${d.situacao} · ${destinoAtual(d)}`,
@@ -880,70 +935,15 @@ export function PainelDeDenuncias({
             };
         }
 
-        // A EQUIPE. No encaminhamento ela é editável na própria linha — é assim
-        // que o lote deixa de ser "manda tudo para o mesmo lugar".
-        if (!(emLote && aba === 'encaminhamento')) {
-            const equipe = equipeDe(d);
-
-            return {
-                conteudo: equipe === '' ? <span style={fraco}>{VAZIO}</span> : `Equipe ${equipe}`,
-                dica:
-                    equipe === ''
-                        ? 'Sem equipe definida'
-                        : `Equipe ${equipe}${liderDa(equipe) === null ? '' : ` · ${liderDa(equipe)}`}`,
-            };
-        }
-
-        const sugerida = d.area_sugerida;
+        // A EQUIPE, como texto. Quem encaminha a escolhe na folha de encaminhamento.
+        const equipe = equipeDe(d);
 
         return {
-            interativa: true,
-            conteudo: (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <select
-                        className="form-control"
-                        style={{ minWidth: 170 }}
-                        value={equipeDe(d)}
-                        aria-label={`Equipe da denúncia ${d.protocolo}`}
-                        onChange={(e) =>
-                            setEquipePorId((atual) => ({
-                                ...atual,
-                                [d.id]: e.target.value,
-                            }))
-                        }
-                    >
-                        <option value="">Escolha a equipe…</option>
-                        {/* O nome do LÍDER vai na opção: encaminhar é entregar
-                            trabalho a alguém, e "C2" não diz a quem. Vai aqui, e
-                            não numa linha extra, para não dobrar a altura da
-                            grade. */}
-                        {equipes.map((e) => (
-                            <option key={e.equipe} value={e.equipe}>
-                                {`${e.equipe} · ${e.area}`}
-                                {liderDa(e.equipe) === null ? '' : ` — ${liderDa(e.equipe)}`}
-                            </option>
-                        ))}
-                    </select>
-
-                    {/* Bairro que pertence a duas áreas: o aviso vira ÍCONE com
-                        dica, e não o chip que antes ia embaixo do seletor —
-                        empilhado, ele dobrava a altura justamente da aba em que
-                        se varrem trinta linhas. */}
-                    {sugerida != null && sugerida.alternativas.length > 0 && (
-                        <Info
-                            size={14}
-                            aria-hidden
-                            style={{ color: 'var(--sm-info)', flexShrink: 0 }}
-                        />
-                    )}
-                </span>
-            ),
+            conteudo: equipe === '' ? <span style={fraco}>{VAZIO}</span> : `Equipe ${equipe}`,
             dica:
-                sugerida != null && sugerida.alternativas.length > 0
-                    ? `O bairro ${d.bairro} também é coberto pela ${sugerida.alternativas
-                          .map((a) => `Equipe ${a.equipe} (${a.area})`)
-                          .join(', ')}`
-                    : undefined,
+                equipe === ''
+                    ? 'Sem equipe definida'
+                    : `Equipe ${equipe}${liderDa(equipe) === null ? '' : ` · ${liderDa(equipe)}`}`,
         };
     }
 
@@ -961,35 +961,29 @@ export function PainelDeDenuncias({
         bairro: d.bairro,
         area: d.area ?? d.area_sugerida?.area ?? VAZIO,
         destino: destinoAtual(d),
-        situacao: d.situacao,
+        situacao: `${d.situacao_resumida} (${d.situacao})`,
         // O desfecho é o que o documento exportado precisa dizer: "Concluída"
         // sozinha não conta se houve orientação, notificação ou apreensão.
         desfecho: d.desfecho ?? VAZIO,
         prazo: dataBR(d.prazo),
     }));
 
-    const rotuloDaAba: Record<string, string> = {
-        encaminhamento: 'A encaminhar',
-        direcionamento: 'A direcionar',
-        todas: 'Todas',
-        detalhe: 'Detalhe',
-    };
 
     return (
         <>
             <div className="rt-page-head">
                 <div>
-                    <p className="sobrancelha">Denúncias</p>
-                    <h1>{canal.nome}</h1>
+                    <p className="sobrancelha">Caixa de Entrada</p>
+                    <h1>{canal.titulo ?? canal.nome}</h1>
                     <p>
                         {/* O artigo vem do CANAL, não escrito aqui: "o portal
                             e-Salvador" e "a central Fala Salvador" não aceitam o
                             mesmo artigo, e um fixo erraria em um dos dois. */}
                         {canal.registro === 'lider' ? (
                             <>
-                                Denúncias que {canal.artigo}{' '}
+                                O que {canal.artigo}{' '}
                                 <strong>{canal.sistema}</strong> entregou aos{' '}
-                                <strong>líderes de equipe</strong>, registradas aqui
+                                <strong>líderes de equipe</strong>, registrado aqui
                                 por eles: o canal não tem integração, e a resposta
                                 ao cidadão continua nele. O{' '}
                                 <strong>líder direciona</strong> aos fiscais ou
@@ -997,15 +991,13 @@ export function PainelDeDenuncias({
                             </>
                         ) : (
                             <>
-                                Denúncias que {canal.artigo}{' '}
-                                <strong>{canal.sistema}</strong> entrega ao SEFAL
-                                {canal.entrada_padrao === 'balcao'
-                                    ? ' em papel, registradas na Caixa de Entrada'
-                                    : ' por integração'}
-                                . O Chefe de Setor{' '}
+                                O que chega {canal.slug === 'avulsa' ? 'por' : 'pelo'}{' '}
+                                <strong>{canal.sistema}</strong>. Toda demanda daqui
+                                pode gerar uma fiscalização: o Chefe de Setor{' '}
                                 <strong>encaminha à equipe</strong> sugerida pelo
-                                bairro; o <strong>líder da equipe direciona</strong>{' '}
-                                aos fiscais ou inclui numa operação.
+                                bairro, o <strong>líder direciona</strong> aos
+                                fiscais, o retorno volta ao líder e ao chefe — e o
+                                chefe responde ao canal.
                             </>
                         )}
                     </p>
@@ -1065,7 +1057,7 @@ export function PainelDeDenuncias({
                         }
                         onClick={() => {
                             setBusca('');
-                            trocarAba('todas');
+                            trocarAba(abaPrincipal);
                         }}
                     >
                         <strong>{numeros.total}</strong>
@@ -1083,7 +1075,7 @@ export function PainelDeDenuncias({
                                 type="button"
                                 className="rt-numero alerta"
                                 title="Ver as que aguardam o encaminhamento"
-                                onClick={() => irParaEtapa('encaminhamento', encaminha, 'recebida')}
+                                onClick={() => irParaEtapa('recebida')}
                             >
                                 <strong>{numeros.triar}</strong>
                                 <span>a encaminhar</span>
@@ -1095,7 +1087,7 @@ export function PainelDeDenuncias({
                         type="button"
                         className="rt-numero info"
                         title="Ver as que aguardam o líder da equipe"
-                        onClick={() => irParaEtapa('direcionamento', direciona, 'encaminhada')}
+                        onClick={() => irParaEtapa('encaminhada')}
                     >
                         <strong>{numeros.direcionar}</strong>
                         <span>a direcionar</span>
@@ -1106,7 +1098,7 @@ export function PainelDeDenuncias({
                         className="rt-numero ok"
                         title="Ver as que já viraram trabalho de campo"
                         onClick={() => {
-                            trocarAba('todas');
+                            trocarAba(abaPrincipal);
                             setBusca('em trabalho');
                         }}
                     >
@@ -1129,6 +1121,16 @@ export function PainelDeDenuncias({
                 encaminhar, direcionar ou devolver{' '}
                 <strong>é gravado de verdade</strong> e fica no trâmite da denúncia.
             </SeloPrototipo>
+
+            {registra && registroEm.length > 0 && (
+                <RegistroDeDemanda
+                    canais={registroEm}
+                    bairros={bairros}
+                    sugestoes={sugestoes}
+                    equipes={equipes}
+                    equipesDoLider={equipesDoLider}
+                />
+            )}
 
             {/* De ONDE a denúncia veio (integração, papel, balcão) não interessa a
                 quem trabalha aqui: para o líder tudo chega igual, pelo
@@ -1157,49 +1159,29 @@ export function PainelDeDenuncias({
             )}
 
             <div className="card-premium">
-                <div className="abas" role="tablist" aria-label={`Denúncias do ${canal.nome}`}>
-                    {encaminha && (
+                <div className="abas" role="tablist" aria-label={`Caixa do ${canal.nome}`}>
+                    {/* A caixa sem abas (Avulsas) ainda precisa de uma "aba" para
+                        voltar da demanda aberta: é a lista única. */}
+                    {(abas.length > 0 ? abas : (['lista'] as Aba[])).map((a) => (
                         <button
+                            key={a}
                             type="button"
                             role="tab"
                             className="aba"
-                            aria-selected={aba === 'encaminhamento'}
-                            onClick={() => trocarAba('encaminhamento')}
+                            aria-selected={aba === a}
+                            onClick={() => trocarAba(a)}
                         >
-                            <Inbox size={16} aria-hidden />
+                            {a === 'respondidas' ? (
+                                <ListChecks size={16} aria-hidden />
+                            ) : (
+                                <Inbox size={16} aria-hidden />
+                            )}
                             <span className="aba-rotulo">
-                                A encaminhar ({daEtapa.encaminhamento.length})
+                                {a === 'lista' ? (canal.titulo ?? canal.nome) : ROTULO_DA_ABA[a]} (
+                                {a === 'lista' ? denuncias.length : porAba[a as AbaDaCaixa].length})
                             </span>
                         </button>
-                    )}
-
-                    {direciona && (
-                        <button
-                            type="button"
-                            role="tab"
-                            className="aba"
-                            aria-selected={aba === 'direcionamento'}
-                            onClick={() => trocarAba('direcionamento')}
-                        >
-                            <ArrowRightCircle size={16} aria-hidden />
-                            <span className="aba-rotulo">
-                                A direcionar ({daEtapa.direcionamento.length})
-                            </span>
-                        </button>
-                    )}
-
-                    <button
-                        type="button"
-                        role="tab"
-                        className="aba"
-                        aria-selected={aba === 'todas'}
-                        onClick={() => trocarAba('todas')}
-                    >
-                        <ListChecks size={16} aria-hidden />
-                        <span className="aba-rotulo">
-                            Todas ({denuncias.length})
-                        </span>
-                    </button>
+                    ))}
 
                     {aberta !== null && (
                         <button
@@ -1265,61 +1247,62 @@ export function PainelDeDenuncias({
                                 marginBottom: 10,
                             }}
                         >
-                            {emLote && aba === 'encaminhamento' && (
+                            {emLote && encaminha && (
                                 <>
                                     <BotaoAcao
                                         icone={<Send size={16} aria-hidden />}
                                         ocupado={ocupado}
-                                        disabled={selecionadas.length === 0}
-                                        onClick={() => abrirDecisao('encaminhar', selecionadas)}
+                                        disabled={aEncaminhar.length === 0}
+                                        title={aEncaminhar.length === 0 ? 'Marque demandas recebidas para encaminhar' : undefined}
+                                        onClick={() => abrirDecisao('encaminhar', aEncaminhar)}
                                     >
-                                        Encaminhar selecionadas
-                                        {selecionadas.length > 0 ? ` (${selecionadas.length})` : ''}
+                                        Encaminhar à equipe
+                                        {aEncaminhar.length > 0 ? ` (${aEncaminhar.length})` : ''}
                                     </BotaoAcao>
 
                                     <BotaoAcao
                                         className="btn btn-secondary btn-sm"
                                         icone={<CornerUpLeft size={16} aria-hidden />}
                                         ocupado={ocupado}
-                                        disabled={selecionadas.length === 0}
-                                        onClick={() => abrirDecisao('devolver', selecionadas)}
+                                        disabled={aEncaminhar.length === 0}
+                                        onClick={() => abrirDecisao('devolver', aEncaminhar)}
                                     >
                                         Devolver ou arquivar
                                     </BotaoAcao>
                                 </>
                             )}
 
-                            {emLote && aba === 'direcionamento' && (
+                            {emLote && direciona && (
                                 <>
                                     <BotaoAcao
                                         icone={<Send size={16} aria-hidden />}
                                         ocupado={ocupado}
-                                        disabled={selecionadas.length === 0}
-                                        onClick={() => abrirDecisao('direcionar', selecionadas)}
+                                        disabled={aDirecionar.length === 0}
+                                        title={aDirecionar.length === 0 ? 'Marque demandas encaminhadas ao líder para direcionar' : undefined}
+                                        onClick={() => abrirDecisao('direcionar', aDirecionar)}
                                     >
                                         Direcionar aos fiscais
-                                        {selecionadas.length > 0 ? ` (${selecionadas.length})` : ''}
+                                        {aDirecionar.length > 0 ? ` (${aDirecionar.length})` : ''}
                                     </BotaoAcao>
 
                                     <BotaoAcao
                                         className="btn btn-secondary btn-sm"
                                         icone={<Siren size={16} aria-hidden />}
                                         ocupado={ocupado}
-                                        disabled={selecionadas.length === 0}
-                                        onClick={() => abrirDecisao('operacao', selecionadas)}
+                                        disabled={aDirecionar.length === 0}
+                                        onClick={() => abrirDecisao('operacao', aDirecionar)}
                                     >
                                         Incluir em operação
                                     </BotaoAcao>
                                 </>
                             )}
 
-
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar
-                                    titulo={`Denúncias — ${canal.nome}`}
-                                    subtitulo={`Denúncias › ${canal.nome}`}
+                                    titulo={`Caixa de Entrada — ${canal.nome}`}
+                                    subtitulo={`Caixa de Entrada › ${canal.nome}`}
                                     contexto={
-                                        `Aba: ${rotuloDaAba[aba]}`
+                                        `Aba: ${aba === 'lista' ? canal.nome : ROTULO_DA_ABA[aba]}`
                                         + (busca.trim() ? ` · busca: "${busca.trim()}"` : '')
                                     }
                                     colunas={listagem.exportacao}
@@ -1333,8 +1316,8 @@ export function PainelDeDenuncias({
                                 Clique numa linha — ou tecle Enter sobre ela — para
                                 abrir a denúncia, o requerente, o assunto, o relato e
                                 o trâmite dela.
-                                {emLote && aba === 'encaminhamento'
-                                    ? ' A equipe vem sugerida pelo bairro: confira e troque na própria linha antes de encaminhar.'
+                                {emLote && encaminha
+                                    ? ' Ao encaminhar, a equipe vem sugerida pelo bairro e você confirma cada uma.'
                                     : ''}
                             </p>
                         )}
@@ -1372,12 +1355,12 @@ export function PainelDeDenuncias({
                                         <tr>
                                             <td colSpan={colunas} className="tabela-vazia">
                                                 {fonte.length === 0
-                                                    ? aba === 'encaminhamento'
-                                                        ? 'Nada a encaminhar: toda denúncia recebida deste canal já foi encaminhada ou retornada.'
-                                                        : aba === 'direcionamento'
-                                                          ? 'Nada a direcionar: nenhuma denúncia deste canal está esperando o líder da equipe.'
-                                                          : 'Nenhuma denúncia recebida deste canal.'
-                                                    : 'Nenhuma denúncia casa com a busca. Limpe o campo para ver a lista inteira.'}
+                                                    ? aba === 'respondidas'
+                                                        ? 'Nada respondido ainda neste canal.'
+                                                        : aba === 'licencas'
+                                                          ? 'Nenhuma licença em aberto.'
+                                                          : 'Nada em aberto nesta caixa.'
+                                                    : 'Nenhuma demanda casa com a busca. Limpe o campo para ver a lista inteira.'}
                                             </td>
                                         </tr>
                                     )}
@@ -1736,9 +1719,9 @@ export function PainelDeDenuncias({
                         <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            onClick={() => trocarAba(encaminha ? 'encaminhamento' : direciona ? 'direcionamento' : 'todas')}
+                            onClick={() => trocarAba(abaPrincipal)}
                         >
-                            <X size={15} aria-hidden /> Fechar a denúncia
+                            <X size={15} aria-hidden /> Fechar a demanda
                         </button>
                     </>
                 )}
@@ -1759,16 +1742,61 @@ export function PainelDeDenuncias({
                     processando={enviando === 'encaminhar'}
                     impedimento={
                         semEquipe.length > 0
-                            ? `${contar(semEquipe.length, 'denúncia', 'denúncias')} sem equipe escolhida. Volte à listagem e confirme a equipe de cada uma.`
+                            ? `${contar(semEquipe.length, 'demanda', 'demandas')} sem equipe escolhida. Escolha a equipe de cada uma abaixo.`
                             : null
                     }
                     onCancelar={() => setDecisao(null)}
                     onConfirmar={encaminhar}
                 >
                     <p className="sobreposicao-texto" style={{ marginBottom: 12 }}>
-                        Cada denúncia vai para a equipe do bairro dela, e passa a
-                        esperar o <strong>líder daquela equipe</strong>, que direciona
-                        aos fiscais ou inclui numa operação. Confira o resumo:
+                        Cada demanda vai para a equipe escolhida — a sugestão vem do
+                        bairro — e passa a esperar o <strong>líder daquela equipe</strong>,
+                        que direciona aos fiscais ou inclui numa operação.
+                    </p>
+
+                    {/* A equipe de CADA uma, aqui na folha: a grade da caixa mostra
+                        só protocolo, recebida, bairro, situação e prazo. */}
+                    <div className="table-wrap" style={{ marginBottom: 14, maxHeight: 280, overflowY: 'auto' }}>
+                        <table className="data-table enxuta">
+                            <thead>
+                                <tr>
+                                    <th>Protocolo</th>
+                                    <th>Bairro</th>
+                                    <th>Equipe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {escolhidas.map((d) => (
+                                    <tr key={d.id}>
+                                        <td>{d.protocolo}</td>
+                                        <td>{d.bairro}</td>
+                                        <td>
+                                            <select
+                                                className="form-control"
+                                                style={{ minWidth: 200 }}
+                                                value={equipeDe(d)}
+                                                aria-label={`Equipe da demanda ${d.protocolo}`}
+                                                onChange={(e) =>
+                                                    setEquipePorId((atual) => ({ ...atual, [d.id]: e.target.value }))
+                                                }
+                                            >
+                                                <option value="">Escolha a equipe…</option>
+                                                {equipes.map((e) => (
+                                                    <option key={e.equipe} value={e.equipe}>
+                                                        {`${e.equipe} · ${e.area}`}
+                                                        {liderDa(e.equipe) === null ? '' : ` — ${liderDa(e.equipe)}`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p className="sobreposicao-texto" style={{ marginBottom: 8 }}>
+                        Resumo:
                     </p>
 
                     <ul className="rt-chips" style={{ marginBottom: 14 }}>

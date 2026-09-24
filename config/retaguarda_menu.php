@@ -107,49 +107,62 @@ return [
         ],
 
         /*
-         * CAIXA DE ENTRADA — tudo o que CHEGA de fora, num lugar só (ordem do
-         * dono, 10/09/2026).
+         * CAIXA DE ENTRADA — tudo o que CHEGA de fora, uma caixa por canal (ordem
+         * do dono, 24/09/2026).
          *
-         * Antes a demanda em papel morava na Fiscalização e as ouvidorias tinham
-         * seção própria: quem tria tinha de procurar em dois cantos do menu o
-         * mesmo tipo de trabalho — coisa que entrou e espera decisão. "Geral" é o
-         * que chega ao balcão (ofício, nova licença); a pasta Denúncias são os
-         * canais das ouvidorias.
+         * Eram "Geral" (o que o chefe digitava) e a pasta "Denúncias" (o que os
+         * canais entregavam): dois cantos do menu para o mesmo trabalho, coisa
+         * que entrou e espera decisão. Agora são as QUATRO frentes — e-Salvador
+         * (denúncias e licenças), Fala Salvador, e-Protocolo (atendimento
+         * presencial na sede) e Avulsas —, cada uma com o mesmo fluxo: o chefe
+         * encaminha à equipe, o líder direciona aos fiscais, o retorno sobe ao
+         * líder e ao chefe, e o chefe responde ao canal.
+         *
+         * As quatro declaram o MESMO slug (`caixa-de-entrada`, o primeiro trecho
+         * do caminho): a permissão é UMA, e aparece no Modo Gerente com o nome da
+         * seção. O líder entra — é na caixa que ele recebe o que foi encaminhado
+         * e registra o Fala Salvador. O fiscal não: a demanda chega a ele pelo
+         * aplicativo, já dirigida.
          */
         [
             'rotulo' => 'Caixa de Entrada',
             'vazio' => 'O que chega de fora aparece aqui quando você tiver acesso a essas telas.',
             'itens' => [
                 [
-                    'rotulo' => 'Geral',
-                    'rota' => 'retaguarda.caixa-de-entrada.index',
+                    'rotulo' => 'Caixa de Entrada',
                     'icone' => 'caixa',
-                    'slug' => 'caixa-de-entrada',
                     'curto' => 'ENTRADA',
-                    // A mesa do CHEFE DE SETOR: pré-triagem, encaminhamento e
-                    // devolução. O líder de equipe não entra — o que é dele chega
-                    // pelas Denúncias, já encaminhado.
-                    'setores' => ['administrador', 'chefe-de-setor'],
-                ],
-                [
-                    'rotulo' => 'Denúncias',
-                    'icone' => 'denuncias',
-                    'curto' => 'DENÚNCIA',
                     'filhos' => [
                         [
                             'rotulo' => 'e-Salvador',
                             'rota' => 'retaguarda.denuncias.e-salvador.index',
-                            'icone' => 'denuncias',
-                            'slug' => 'denuncias',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
                             'curto' => 'E-SALV',
                             'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                         ],
                         [
                             'rotulo' => 'Fala Salvador',
                             'rota' => 'retaguarda.denuncias.fala-salvador.index',
-                            'icone' => 'denuncias',
-                            'slug' => 'denuncias',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
                             'curto' => 'FALA',
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
+                        ],
+                        [
+                            'rotulo' => 'e-Protocolo',
+                            'rota' => 'retaguarda.denuncias.e-protocolo.index',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
+                            'curto' => 'E-PROT',
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
+                        ],
+                        [
+                            'rotulo' => 'Avulsas',
+                            'rota' => 'retaguarda.denuncias.avulsas.index',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
+                            'curto' => 'AVULSA',
                             'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                         ],
                     ],
@@ -173,38 +186,6 @@ return [
                 ],
             ],
         ],
-
-        /*
-         * Denúncias — o que as ouvidorias da Prefeitura entregam por INTEGRAÇÃO.
-         *
-         * Vem ANTES de Fiscalização porque é o começo da cadeia: a denúncia chega
-         * de fora, é encaminhada pelo Chefe de Setor a uma equipe e direcionada
-         * aos fiscais pelo líder dela — e só então vira trabalho de rua. O menu
-         * desenha a ordem do trabalho.
-         *
-         * Seção PRÓPRIA, e não itens dentro de Fiscalização, porque estas telas
-         * não são trabalho de campo nem cadastro: são o ciclo ADMINISTRATIVO que
-         * antecede o campo, com dois papéis decidindo em sequência. E são seção
-         * separada da Caixa de Entrada de propósito — lá o Chefe de Setor pré-tria
-         * e DIGITA o que chegou por ligação ou e-mail; aqui ninguém digita nada, a
-         * denúncia chega já entendida.
-         *
-         * ── As duas declaram o MESMO slug, e isso é deliberado ───────────────
-         *
-         * Elas moram sob o mesmo primeiro trecho do caminho
-         * (`/retaguarda/denuncias/…`), que é de onde as guardas deduzem a tela: a
-         * permissão é UMA, para o módulo, e aparece no Modo Gerente com o nome da
-         * seção. Separar a permissão do e-Salvador da do Fala Salvador seria uma
-         * decisão que ninguém precisa tomar — quem cuida de denúncia cuida das
-         * duas origens.
-         *
-         * Concessão inicial: administrador, Chefe de Setor e líder de equipe, que
-         * são justamente os papéis do fluxo (o chefe encaminha; o líder
-         * direciona). O FISCAL
-         * não entra — deixá-lo aqui permitiria escolher o próprio trabalho e
-         * arquivar o que não quisesse atender; a denúncia chega a ele pelo
-         * aplicativo, já dirigida.
-         */
 
         /*
          * Fiscalização — o trabalho em si.
@@ -249,24 +230,6 @@ return [
                  * abre — impedimento nunca em silêncio.
                  */
 
-                /*
-                 * Caixa de Entrada do Administrativo — PROTÓTIPO (reunião com o
-                 * cliente, 02/09/2026).
-                 *
-                 * Vem ANTES de "Fiscalizações" porque é o começo da cadeia: a
-                 * demanda de fora (e-Salvador, Fala Salvador, pedido de nova
-                 * licença, ofício) entra por aqui, é triada e só então vira
-                 * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
-                 *
-                 * Concessão inicial: administrador e Chefe de Setor. O CHEFE é o dono
-                 * do trabalho — pré-triar o que chega, registrar o que vem por
-                 * ligação ou e-mail, encaminhar e devolver com justificativa são
-                 * atos dele (decisão do dono, 22/09/2026). O líder de equipe não
-                 * entra: o que é dele chega pelas Denúncias, já encaminhado. O
-                 * FISCAL também não — a demanda chega a ele pelo aplicativo, já
-                 * dirigida; dar-lhe a caixa permitiria escolher o próprio trabalho
-                 * e arquivar o que não quisesse atender.
-                 */
                 /*
                  * Fiscalizações — TUDO o que a equipe concluiu em rua, numa tela
                  * só (PROTÓTIPO, decisão do dono 09/09/2026).

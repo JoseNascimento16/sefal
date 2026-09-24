@@ -51,9 +51,9 @@ import {
     devolver as rotaDevolver,
     encaminhar as rotaEncaminhar,
     index,
-    responderAoCanal as rotaResponderAoCanal,
     store,
 } from '@/routes/retaguarda/caixa-de-entrada';
+import { responderAoCanal as rotaResponderAoCanal } from '@/routes/retaguarda/denuncias';
 
 /**
  * Caixa de Entrada do Coordenador — PROTÓTIPO.

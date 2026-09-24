@@ -23,6 +23,9 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
 use App\Http\Controllers\Retaguarda\RetornoAoCanalController;
+use App\Http\Middleware\SoChefeDeSetor;
+use App\Models\Demanda;
+use Illuminate\Routing\RedirectController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -193,80 +196,78 @@ Route::middleware(['auth'])->group(function () {
      * O identificador vai como NÚMERO: o WAF da Prefeitura barra assinatura de
      * SQL na URL, e protocolo é texto.
      */
-    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.caixa-de-entrada.')->group(function () {
-        Route::get('/', [CaixaDeEntradaController::class, 'index'])->name('index');
-        Route::post('/', [CaixaDeEntradaController::class, 'store'])->name('store');
-        Route::post('{demanda}/encaminhar', [CaixaDeEntradaController::class, 'encaminhar'])
-            ->name('encaminhar')->whereNumber('demanda');
-        Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
-            ->name('devolver')->whereNumber('demanda');
-        // A avulsa concluída vira PROCESSO no e-Salvador: o chefe registra a abertura aqui.
-        Route::post('{demanda}/responder-ao-canal', [RetornoAoCanalController::class, 'store'])
-            ->name('responder-ao-canal')->whereNumber('demanda');
+    // A mesa antiga do chefe (cadastro com encaminhamento, pré-triagem): fora
+    // do menu desde 24/09/2026 e SÓ do chefe — ver App\Http\Middleware\SoChefeDeSetor.
+    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.caixa-de-entrada.')
+        ->middleware(SoChefeDeSetor::class)->group(function () {
+            Route::get('/', [CaixaDeEntradaController::class, 'index'])->name('index');
+            Route::post('/', [CaixaDeEntradaController::class, 'store'])->name('store');
+            Route::post('{demanda}/encaminhar', [CaixaDeEntradaController::class, 'encaminhar'])
+                ->name('encaminhar')->whereNumber('demanda');
+            Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
+                ->name('devolver')->whereNumber('demanda');
 
-        /*
-         * A PRÉ-TRIAGEM: dez denúncias que são um fato.
-         *
-         * As mesmas quatro ações existem sob os dois caminhos (aqui e em
-         * `denuncias`), apontando para o MESMO controller. É de propósito: a
-         * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
-         * porta herda a permissão da tela onde o chefe já está — em vez de
-         * a pré-triagem virar uma terceira tela, com uma terceira concessão para
-         * alguém esquecer de dar.
-         */
-        Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
-            ->name('agrupamento.varrer');
-        Route::post('agrupamento/liberar', [AgrupamentoDeDemandasController::class, 'liberar'])
-            ->name('agrupamento.liberar');
-        Route::post('agrupamento/juntar', [AgrupamentoDeDemandasController::class, 'juntar'])
-            ->name('agrupamento.juntar');
-        Route::post('agrupamento/juntar', [AgrupamentoDeDemandasController::class, 'juntar'])
-            ->name('agrupamento.juntar');
-        Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
-            ->name('agrupamento.aceitar')->whereNumber('sugestao');
-        Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])
-            ->name('agrupamento.recusar')->whereNumber('sugestao');
-        Route::post('agrupamento/{demanda}/agrupar', [AgrupamentoDeDemandasController::class, 'agrupar'])
-            ->name('agrupamento.agrupar')->whereNumber('demanda');
-        Route::post('agrupamento/{demanda}/desagrupar', [AgrupamentoDeDemandasController::class, 'desagrupar'])
-            ->name('agrupamento.desagrupar')->whereNumber('demanda');
-    });
+            /*
+             * A PRÉ-TRIAGEM: dez denúncias que são um fato.
+             *
+             * As mesmas quatro ações existem sob os dois caminhos (aqui e em
+             * `denuncias`), apontando para o MESMO controller. É de propósito: a
+             * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
+             * porta herda a permissão da tela onde o chefe já está — em vez de
+             * a pré-triagem virar uma terceira tela, com uma terceira concessão para
+             * alguém esquecer de dar.
+             */
+            Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
+                ->name('agrupamento.varrer');
+            Route::post('agrupamento/liberar', [AgrupamentoDeDemandasController::class, 'liberar'])
+                ->name('agrupamento.liberar');
+            Route::post('agrupamento/juntar', [AgrupamentoDeDemandasController::class, 'juntar'])
+                ->name('agrupamento.juntar');
+            Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
+                ->name('agrupamento.aceitar')->whereNumber('sugestao');
+            Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])
+                ->name('agrupamento.recusar')->whereNumber('sugestao');
+            Route::post('agrupamento/{demanda}/agrupar', [AgrupamentoDeDemandasController::class, 'agrupar'])
+                ->name('agrupamento.agrupar')->whereNumber('demanda');
+            Route::post('agrupamento/{demanda}/desagrupar', [AgrupamentoDeDemandasController::class, 'desagrupar'])
+                ->name('agrupamento.desagrupar')->whereNumber('demanda');
+        });
 
     /*
-     * Denúncias das ouvidorias — PROTÓTIPO.
+     * As CAIXAS DE ENTRADA por canal — as quatro frentes (decisão do dono,
+     * 24/09/2026): e-Salvador (denúncias e licenças), Fala Salvador, e-Protocolo
+     * (atendimento presencial na sede da SEFAL) e Avulsas.
      *
-     * Duas telas, uma por canal (e-Salvador e Fala Salvador), e as mutações do
-     * fluxo de duas etapas: o Chefe de Setor encaminha à EQUIPE ou devolve/
-     * arquiva; o líder da equipe direciona aos FISCAIS ou anexa a uma OPERAÇÃO.
+     * Eram duas seções que faziam o mesmo trabalho — a Caixa de Entrada (o que o
+     * chefe digitava) e as Denúncias (o que chegava pelos canais). Agora cada
+     * canal é uma tela, com o mesmo fluxo: o chefe encaminha à equipe, o líder
+     * direciona aos fiscais, o retorno volta ao líder e ao chefe, e o chefe
+     * responde ao canal.
      *
-     * As duas telas dividem o primeiro trecho do caminho (`denuncias`), e é
-     * dele que as guardas deduzem a permissão: a concessão é UMA, para o
-     * módulo, que é o que "quem cuida de denúncia" quer dizer. Separar a
-     * permissão do e-Salvador da do Fala Salvador seria uma decisão que ninguém
-     * precisa tomar e uma linha a mais na matriz.
-     *
-     * Não há rota de INCLUSÃO, e isso é deliberado: a denúncia entra por
-     * integração, ninguém a digita aqui. Ver o cabeçalho do controller.
+     * Moram sob `caixa-de-entrada` porque é desse primeiro trecho que as guardas
+     * deduzem a permissão: UMA concessão para as quatro. Os NOMES das rotas
+     * continuam `retaguarda.denuncias.*` — é o nome do módulo no código, e é o
+     * que o front importa.
      *
      * As mutações vão no corpo do POST porque carregam lista de identificadores
-     * e texto livre de justificativa — em query string o WAF da Prefeitura
-     * barraria, e a falha voltaria disfarçada de erro de CORS.
+     * e texto livre — em query string o WAF da Prefeitura barraria, e a falha
+     * voltaria disfarçada de erro de CORS.
      */
-    Route::prefix('retaguarda/denuncias')->name('retaguarda.denuncias.')->group(function () {
+    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.denuncias.')->group(function () {
         Route::get('e-salvador', [DenunciasController::class, 'eSalvador'])->name('e-salvador.index');
         Route::get('fala-salvador', [DenunciasController::class, 'falaSalvador'])->name('fala-salvador.index');
+        Route::get('e-protocolo', [DenunciasController::class, 'eProtocolo'])->name('e-protocolo.index');
+        Route::get('avulsas', [DenunciasController::class, 'avulsas'])->name('avulsas.index');
+
         /*
-         * O REGISTRO manual do Fala Salvador, pelo líder. Não há API: o líder
-         * digita aqui o que recebeu lá, e o caso nasce já na mesa dele. Vive sob
-         * `denuncias` para herdar a permissão da tela em que ele já está.
+         * O CADASTRO manual, por canal: o chefe digita o que chega a ele (papel
+         * do e-Salvador, licença, e-Protocolo, avulsa); o líder digita o Fala
+         * Salvador, que só ele acessa. Quem pode o quê é regra do controller.
          */
-        Route::post('fala-salvador/registrar', [DenunciasController::class, 'registrarFalaSalvador'])
-            ->name('fala-salvador.registrar');
-        /*
-         * O RETORNO AO CANAL — o chefe responde, no processo do e-Salvador, o
-         * que a fiscalização apurou. Mesmo controller sob `caixa-de-entrada`
-         * (a avulsa, que vira processo): cada porta herda a permissão da tela.
-         */
+        Route::post('{canal}/registrar', [DenunciasController::class, 'registrar'])
+            ->name('registrar')->whereIn('canal', Demanda::CANAIS);
+
+        // O RETORNO AO CANAL — o chefe responde (ou abre o processo da avulsa).
         Route::post('{demanda}/responder-ao-canal', [RetornoAoCanalController::class, 'store'])
             ->name('responder-ao-canal')->whereNumber('demanda');
 
@@ -274,31 +275,19 @@ Route::middleware(['auth'])->group(function () {
         Route::post('devolver', [DenunciasController::class, 'devolver'])->name('devolver');
         Route::post('direcionar', [DenunciasController::class, 'direcionar'])->name('direcionar');
         Route::post('operacao', [DenunciasController::class, 'operacao'])->name('operacao');
-
-        /*
-         * A PRÉ-TRIAGEM: dez denúncias que são um fato.
-         *
-         * As mesmas quatro ações existem sob os dois caminhos (aqui e em
-         * `denuncias`), apontando para o MESMO controller. É de propósito: a
-         * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
-         * porta herda a permissão da tela onde o chefe já está — em vez de
-         * a pré-triagem virar uma terceira tela, com uma terceira concessão para
-         * alguém esquecer de dar.
-         */
-        Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
-            ->name('agrupamento.varrer');
-        Route::post('agrupamento/liberar', [AgrupamentoDeDemandasController::class, 'liberar'])
-            ->name('agrupamento.liberar');
-        Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
-            ->name('agrupamento.aceitar')->whereNumber('sugestao');
-        Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])
-            ->name('agrupamento.recusar')->whereNumber('sugestao');
-        Route::post('agrupamento/{demanda}/agrupar', [AgrupamentoDeDemandasController::class, 'agrupar'])
-            ->name('agrupamento.agrupar')->whereNumber('demanda');
-        Route::post('agrupamento/{demanda}/desagrupar', [AgrupamentoDeDemandasController::class, 'desagrupar'])
-            ->name('agrupamento.desagrupar')->whereNumber('demanda');
-
     });
+
+    /*
+     * Endereços antigos das telas de canal (até 24/09/2026): quem tinha o link
+     * salvo cai na tela nova, e não num 404.
+     */
+    // Só GET: `Route::redirect` responde a qualquer verbo, e uma "mutação" sem
+    // permissão mapeada é justamente o que a cobertura de ações barra.
+    foreach (['e-salvador', 'fala-salvador'] as $antigo) {
+        Route::get("retaguarda/denuncias/{$antigo}", RedirectController::class)
+            ->defaults('destination', "/retaguarda/caixa-de-entrada/{$antigo}")
+            ->defaults('status', 302);
+    }
 
     /*
      * Fiscalizações — TODO registro de fiscalização concluído. PROTÓTIPO.

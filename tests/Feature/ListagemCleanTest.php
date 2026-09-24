@@ -269,8 +269,11 @@ function liderDeUmaEquipeSo(): User
 
 dataset('telas com listagem', [
     'Fiscalizações' => ['/retaguarda/fiscalizacoes', ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo']],
-    'Denúncias do e-Salvador' => ['/retaguarda/denuncias/e-salvador', ['denuncias.encaminhamento', 'denuncias.direcionamento', 'denuncias.todas']],
-    'Denúncias do Fala Salvador' => ['/retaguarda/denuncias/fala-salvador', ['denuncias.encaminhamento', 'denuncias.direcionamento', 'denuncias.todas']],
+    // As quatro caixas de canal têm UMA grade (dono, 24/09/2026).
+    'Caixa do e-Salvador' => ['/retaguarda/caixa-de-entrada/e-salvador', ['denuncias.todas']],
+    'Caixa do Fala Salvador' => ['/retaguarda/caixa-de-entrada/fala-salvador', ['denuncias.todas']],
+    'Caixa do e-Protocolo' => ['/retaguarda/caixa-de-entrada/e-protocolo', ['denuncias.todas']],
+    'Caixa das Avulsas' => ['/retaguarda/caixa-de-entrada/avulsas', ['denuncias.todas']],
     'Cadastro de Operação' => ['/retaguarda/operacoes', ['operacoes']],
     'Ambulantes' => ['/retaguarda/ambulantes', ['ambulantes']],
     'Caixa de Entrada' => ['/retaguarda/caixa-de-entrada', ['caixa-de-entrada']],

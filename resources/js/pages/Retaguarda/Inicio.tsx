@@ -6,7 +6,6 @@ import {
     LayoutGrid,
     Map as MapIcon,
     MapPinned,
-    Megaphone,
     Siren,
     Store,
     UserRound,
@@ -38,12 +37,12 @@ const ICONES: Record<string, LucideIcon> = {
     perfil: UserRound,
     ambulantes: Store,
     operacoes: Siren,
-    // Os dois canais de denúncia usam o MESMO ícone do menu, cada um com a sua
-    // chave: o cartão e o item da barra têm de ser reconhecíveis como a mesma
-    // coisa, e as duas telas são a mesma coisa vinda de origens diferentes.
-    'denuncias-e-salvador': Megaphone,
-    'denuncias-fala-salvador': Megaphone,
-    caixa: Inbox,
+    // As quatro caixas usam o MESMO ícone do menu: o cartão e o item da barra
+    // têm de ser reconhecíveis como a mesma coisa vinda de canais diferentes.
+    'caixa-e-salvador': Inbox,
+    'caixa-fala-salvador': Inbox,
+    'caixa-e-protocolo': Inbox,
+    'caixa-avulsas': Inbox,
     areas: MapIcon,
     fiscalizacoes: ClipboardCheck,
     mapa: MapPinned,
