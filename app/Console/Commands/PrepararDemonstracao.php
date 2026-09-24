@@ -10,6 +10,8 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemonstracaoSeeder;
 use Database\Seeders\EstruturaSeeder;
+use Database\Seeders\ParametrizacaoFiscalizacaoSeeder;
+use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\App;
@@ -93,6 +95,21 @@ class PrepararDemonstracao extends Command
         // áreas e equipes. Todos idempotentes, e é o que faz a guarda de acesso
         // existir.
         $this->components->task('Estrutura do sistema', function () {
+            /*
+             * Na demonstração enxuta com a estrutura já no banco, a ESTRUTURA não
+             * é semeada de novo: o `EstruturaSeeder` recriaria ~40 contas (líderes
+             * por equipe e fiscais), cada uma com bcrypt, só para o enxugamento
+             * apagá-las em seguida — minutos de CPU no boot do Render, o bastante
+             * para o deploy estourar o tempo (aconteceu em 24/09/2026). Permissões
+             * e listas de escolha continuam: são baratas e trazem tela nova.
+             */
+            if ($this->option('so-estas-contas') && Equipe::query()->exists()) {
+                Artisan::call('db:seed', ['--class' => PermissoesSetorSeeder::class, '--force' => true]);
+                Artisan::call('db:seed', ['--class' => ParametrizacaoFiscalizacaoSeeder::class, '--force' => true]);
+
+                return true;
+            }
+
             Artisan::call('db:seed', ['--class' => DatabaseSeeder::class, '--force' => true]);
 
             return true;
