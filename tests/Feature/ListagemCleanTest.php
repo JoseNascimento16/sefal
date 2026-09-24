@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Area;
+use App\Models\Equipe;
 use App\Models\Setor;
 use App\Models\User;
+use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
@@ -247,18 +250,27 @@ function administradorDaListagem(): User
 }
 
 /** Um Chefe de Setor de UMA área — para conferir a coluna condicional. */
-function chefeDeUmaAreaSo(string $matricula): User
+/**
+ * Um líder com UMA equipe — o papel recortado. A conta é ligada à equipe por
+ * `equipes.lider_id` (é assim que a estrutura sabe de quem é a fila), e a
+ * árvore em memória é esquecida para enxergar o vínculo recém-nascido.
+ */
+function liderDeUmaEquipeSo(): User
 {
-    $u = User::factory()->create(['login' => $matricula, 'admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+    $u = User::factory()->create(['login' => 'lider-z1', 'admin' => false, 'ativo' => true]);
+    $u->setores()->attach(Setor::where('slug', 'lider-de-equipe')->firstOrFail());
+
+    $area = Area::create(['nome' => 'Área Z', 'regiao' => 'Teste']);
+    Equipe::create(['codigo' => 'Z1', 'nome' => 'Equipe Z1', 'area_id' => $area->id, 'lider_id' => $u->id]);
+    Estrutura::esquecer();
 
     return $u->fresh();
 }
 
 dataset('telas com listagem', [
     'Fiscalizações' => ['/retaguarda/fiscalizacoes', ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo']],
-    'Denúncias do e-Salvador' => ['/retaguarda/denuncias/e-salvador', ['denuncias.triagem', 'denuncias.direcionamento', 'denuncias.todas']],
-    'Denúncias do Salvador Digital' => ['/retaguarda/denuncias/salvador-digital', ['denuncias.triagem', 'denuncias.direcionamento', 'denuncias.todas']],
+    'Denúncias do e-Salvador' => ['/retaguarda/denuncias/e-salvador', ['denuncias.encaminhamento', 'denuncias.direcionamento', 'denuncias.todas']],
+    'Denúncias do Fala Salvador' => ['/retaguarda/denuncias/fala-salvador', ['denuncias.encaminhamento', 'denuncias.direcionamento', 'denuncias.todas']],
     'Cadastro de Operação' => ['/retaguarda/operacoes', ['operacoes']],
     'Ambulantes' => ['/retaguarda/ambulantes', ['ambulantes']],
     'Caixa de Entrada' => ['/retaguarda/caixa-de-entrada', ['caixa-de-entrada']],
@@ -370,17 +382,17 @@ it('não gasta coluna de ÁREA com quem responde por uma área só', function ()
     // Quem varre cinco áreas precisa da coluna para navegar a fila; para quem
     // tem uma, ela repetiria a mesma palavra em toda linha. É o exemplo que o
     // dono deu, e a única coluna condicional do catálogo hoje.
-    $this->actingAs(chefeDeUmaAreaSo('gestor1'))
+    $this->actingAs(liderDeUmaEquipeSo())
         ->get('/retaguarda/fiscalizacoes')
         ->assertOk()
         ->assertInertia(function ($p) {
             $dados = $p->toArray()['props'];
 
-            $this->assertTrue($dados['recorteDeArea']);
+            $this->assertTrue($dados['recorteDeEquipe']);
             $this->assertNotContains(
                 'area',
                 chavesDaListagem($dados['listagens']['fiscalizacoes.a-decidir']['grade']),
-                'O Chefe de Setor de uma área só recebeu a coluna de área — ela '
+                'O líder de uma equipe só recebeu a coluna de área — ela '
                 .'repetiria a mesma palavra em toda linha.'
             );
 
@@ -395,7 +407,7 @@ it('não gasta coluna de ÁREA com quem responde por uma área só', function ()
                 'area',
                 chavesDaListagem($p->toArray()['props']['listagens']['fiscalizacoes.a-decidir']['grade']),
                 'Quem varre várias áreas ficou sem a coluna de área — sem ela a '
-                .'fila do Coordenador não é navegável.'
+                .'fila do Chefe de Setor não é navegável.'
             );
 
             return $p;

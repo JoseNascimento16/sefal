@@ -11,8 +11,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * A estrutura de trabalho — áreas, bairros, equipes e fiscais — saindo do
- * arquivo de protótipo e virando banco.
+ * A estrutura de trabalho — áreas, bairros, equipes, líderes e fiscais — saindo
+ * do arquivo de protótipo e virando banco.
  *
  * A fonte é `config/prototipo_estrutura.php`, o mesmo arquivo que as telas liam.
  * Semear a partir dele (em vez de redigitar) tem uma razão prática: a
@@ -20,12 +20,32 @@ use Illuminate\Support\Facades\Hash;
  * qualquer diferença entre o que ele viu e o que o sistema faz agora é DEFEITO,
  * não "mudança da migração".
  *
- * ## Os fiscais viram CONTA de verdade
+ * ## O LÍDER DE EQUIPE vira conta de verdade (22/09/2026)
+ *
+ * O documento do cliente nomeia o "encarregado" de cada equipe. Depois da
+ * conversa com coordenadores, chefe de setor e líderes, ficou claro que essa
+ * pessoa é o **líder de equipe**: é ela que recebe o que o Chefe de Setor
+ * encaminha à equipe, direciona aos fiscais e lê o que volta da rua. Então ela
+ * entra no sistema — `users` com o setor `lider-de-equipe`, ligada à equipe por
+ * `equipes.lider_id`.
+ *
+ * A matrícula é `lider-<código da equipe>` (minúsculo) até o cliente informar
+ * as reais: matrícula identifica gente, e trocá-la depois não mexe no vínculo,
+ * que é por id. O nome em texto (`encarregado`) FICA na equipe — é o dado do
+ * documento, e é o que a tela mostra se a conta não existir.
+ *
+ * ## Os fiscais também são conta
  *
  * No protótipo o fiscal era um nome com matrícula dentro de um array. Aqui ele é
  * `users` com o setor `fiscal` — porque é ele que vai entrar no aplicativo, e é
- * o `user_id` dele que assina a fiscalização. Sem conta, "quem fez a vistoria"
- * seria texto solto, e o registro não teria autor que sobrevivesse a nada.
+ * o `user_id` dele que assina a fiscalização.
+ *
+ * ## O que NÃO se semeia mais: um chefe por área
+ *
+ * Até 22/09 cada área ganhava um `chefe_de_setor_id`. O Chefe de Setor é um só
+ * e responde por tudo, então o vínculo por área deixou de existir — a chave
+ * `chefe_de_setor` do arquivo de protótipo é ignorada. A conta do chefe é de
+ * demonstração e nasce em `sefal:preparar-demonstracao`, não aqui.
  *
  * A senha de demonstração é a própria matrícula em minúsculo — vale para o
  * ambiente de demonstração e **nunca** para produção, onde o primeiro acesso é
@@ -42,7 +62,7 @@ class EstruturaSeeder extends Seeder
     public function run(): void
     {
         $setorFiscal = Setor::where('slug', 'fiscal')->first();
-        $setorChefe = Setor::where('slug', 'chefe-de-setor')->first();
+        $setorLider = Setor::where('slug', 'lider-de-equipe')->first();
 
         foreach ((array) config('prototipo_estrutura.areas', []) as $dados) {
             $area = Area::updateOrCreate(
@@ -55,7 +75,6 @@ class EstruturaSeeder extends Seeder
                 ],
             );
 
-            $this->ligarChefeDeSetor($area, (array) ($dados['chefe_de_setor'] ?? []), $setorChefe);
             $this->semearBairros($area, (array) ($dados['bairros'] ?? []));
 
             $equipe = Equipe::updateOrCreate(
@@ -69,36 +88,38 @@ class EstruturaSeeder extends Seeder
                 ],
             );
 
+            $this->ligarLider($equipe, $setorLider);
             $this->semearFiscais($equipe, (array) ($dados['fiscais'] ?? []), $setorFiscal);
         }
     }
 
     /**
-     * O Chefe de Setor só vira vínculo quando tem MATRÍCULA.
+     * O encarregado do documento vira o líder da equipe, com conta.
      *
-     * Área cujo chefe é apenas um nome (sem conta de demonstração) fica com
-     * `chefe_de_setor_id` nulo de propósito: inventar uma conta para ele faria o
-     * sistema prometer um acesso que ninguém tem, e o recorte por área passaria
-     * a funcionar na demonstração e a falhar na vida real.
+     * Só quando há NOME: equipe sem encarregado no documento fica sem líder, e a
+     * tela diz isso — inventar uma conta prometeria um acesso que ninguém tem.
      *
-     * @param  array<string, mixed>  $chefe
+     * `lider_id` só é PREENCHIDO quando está vazio: se quem administra já trocou
+     * o líder pela tela, o seeder não desfaz decisão de gente.
      */
-    private function ligarChefeDeSetor(Area $area, array $chefe, ?Setor $setorChefe): void
+    private function ligarLider(Equipe $equipe, ?Setor $setorLider): void
     {
-        $matricula = $chefe['matricula'] ?? null;
+        $nome = trim((string) ($equipe->encarregado ?? ''));
 
-        if ($matricula === null) {
+        if ($nome === '') {
             return;
         }
 
-        $usuario = $this->conta((string) $matricula, (string) ($chefe['nome'] ?? $matricula));
+        $usuario = $this->conta('lider-'.mb_strtolower($equipe->codigo), $nome);
 
-        if ($setorChefe !== null) {
-            $usuario->setores()->syncWithoutDetaching([$setorChefe->id]);
+        if ($setorLider !== null) {
+            $usuario->setores()->syncWithoutDetaching([$setorLider->id]);
         }
 
-        $area->chefe_de_setor_id = $usuario->id;
-        $area->save();
+        if ($equipe->lider_id === null) {
+            $equipe->lider_id = $usuario->id;
+            $equipe->save();
+        }
     }
 
     /** @param  list<string>  $bairros */
@@ -109,7 +130,7 @@ class EstruturaSeeder extends Seeder
              * A chave é o PAR. Semear pelo nome do bairro só faria o último
              * arquivo vencer, e os três bairros que pertencem a duas áreas
              * perderiam uma delas em silêncio — junto com o aviso de divisa que
-             * a tela mostra ao coordenador.
+             * a tela mostra a quem encaminha.
              */
             $vinculo = AreaBairro::firstOrCreate([
                 'area_id' => $area->id,
@@ -158,11 +179,10 @@ class EstruturaSeeder extends Seeder
     /**
      * A conta da pessoa, criada se ainda não existir.
      *
-     * ⚠️ `firstOrCreate`, e não `updateOrCreate`: as contas de demonstração que já
-     * existem (`gestor1`, `coordenador`, `admin`) têm e-mail e SENHA definidos por
-     * quem administra. Um seeder que "atualiza" esses campos trocaria a senha de
-     * quem já usa o sistema toda vez que alguém semeasse a estrutura — e o dono
-     * descobriria isso tentando entrar.
+     * ⚠️ `firstOrCreate`, e não `updateOrCreate`: as contas que já existem têm
+     * e-mail e SENHA definidos por quem administra. Um seeder que "atualiza"
+     * esses campos trocaria a senha de quem já usa o sistema toda vez que alguém
+     * semeasse a estrutura — e o dono descobriria isso tentando entrar.
      */
     private function conta(string $matricula, string $nome): User
     {

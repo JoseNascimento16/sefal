@@ -17,6 +17,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
+import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
@@ -39,7 +40,7 @@ import type {
 } from '@/dados-prototipo/denuncias';
 import {
     AGUARDANDO_DIRECIONAMENTO,
-    AGUARDANDO_TRIAGEM,
+    AGUARDANDO_ENCAMINHAMENTO,
     TOM_DA_SITUACAO,
 } from '@/dados-prototipo/denuncias';
 import { useEnvio } from '@/hooks/use-envio';
@@ -51,6 +52,7 @@ import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
 import { cn } from '@/lib/utils';
 import {
     devolver as rotaDevolver,
+    responderAoCanal as rotaResponderAoCanal,
     direcionar as rotaDirecionar,
     encaminhar as rotaEncaminhar,
     operacao as rotaOperacao,
@@ -59,7 +61,7 @@ import {
 /**
  * Denúncias das ouvidorias — PROTÓTIPO. O miolo das DUAS telas do módulo.
  *
- * As telas de canal (`e-Salvador` e `Salvador Digital`) são cascas de vinte linhas
+ * As telas de canal (`e-Salvador` e `Fala Salvador`) são cascas de vinte linhas
  * que só declaram título e trilha: a mecânica é a mesma, e escrevê-la duas vezes
  * daria dois donos à mesma regra — um dia só uma das telas ganharia o campo
  * novo. O que varia entre os canais é declarado no servidor
@@ -67,12 +69,17 @@ import {
  *
  * ── A tela é o fluxo, e o fluxo tem duas etapas com dois donos ───────────────
  *
- *   Triagem (Coordenador)         → aba "A triar": encaminha à ÁREA derivada do
- *                                   bairro (sugestão editável, porque bairro
- *                                   compartilhado tem duas respostas certas) ou
- *                                   devolve/arquiva com justificativa.
- *   Direcionamento (Chefe de Setor) → aba "A direcionar": manda à EQUIPE ou anexa
- *                                   a uma OPERAÇÃO.
+ *   Encaminhamento (Chefe de Setor) → aba "A encaminhar": manda à EQUIPE sugerida
+ *                                   pelo bairro (sugestão editável, porque bairro
+ *                                   compartilhado tem duas respostas certas) — e,
+ *                                   portanto, ao LÍDER dela — ou devolve/arquiva
+ *                                   com justificativa.
+ *   Direcionamento (líder de equipe) → aba "A direcionar": manda os FISCAIS da
+ *                                   própria equipe ao ponto, ou anexa a uma
+ *                                   OPERAÇÃO.
+ *
+ * Até 22/09/2026 a primeira etapa era do coordenador e escolhia uma ÁREA; os
+ * coordenadores trabalham no e-Salvador e não entram aqui.
  *
  * As abas aparecem conforme a ETAPA de quem entrou, e o selo em cima diz qual é
  * a sua — o dono demonstra o fluxo entrando com perfis diferentes. Quem exerce
@@ -104,15 +111,17 @@ interface Props {
     destinos: string[];
     equipes: EquipeResumo[];
     areas: string[];
-    /** Quem responde por cada área — quem tria precisa ver para QUEM encaminha. */
-    chefias: Record<string, { nome: string; matricula: string | null }>;
+    /** Quem lidera cada equipe — quem encaminha precisa ver para QUEM está mandando. */
+    lideres: Record<string, { nome: string; matricula: string | null }>;
     operacoes: Operacao[];
     /** As etapas do fluxo que esta pessoa exerce — quem responde é o servidor. */
     etapas: Etapa[];
-    /** As áreas que esta pessoa responde como Chefe de Setor (vazio para quem não é). */
-    areasDoChefe: string[];
-    /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
-    recorteDeArea: boolean;
+    /** As equipes que esta pessoa lidera (vazio para quem não lidera nenhuma). */
+    equipesDoLider: string[];
+    /** A listagem já veio recortada por essas equipes? Quem recorta é o servidor. */
+    recorteDeEquipe: boolean;
+    /** Esta pessoa responde ao canal, concluído o trabalho (chefe ou administrador)? */
+    decide: boolean;
     /**
      * As colunas de cada aba — da grade e do arquivo —, declaradas no servidor.
      * Ver `docs/padroes/listagem-clean.md`.
@@ -120,7 +129,7 @@ interface Props {
     listagens: Listagens;
 }
 
-type Aba = 'triagem' | 'direcionamento' | 'todas' | 'detalhe';
+type Aba = 'encaminhamento' | 'direcionamento' | 'todas' | 'detalhe';
 
 /** Qual decisão está sendo tomada na folha sobreposta. */
 type Decisao = 'encaminhar' | 'devolver' | 'direcionar' | 'operacao' | null;
@@ -151,7 +160,7 @@ type Faceta =
  * que alguém tem de voltar ao ponto.
  */
 const EM_TRABALHO = [
-    'Direcionada à equipe',
+    'Direcionada aos fiscais',
     'Em operação',
     'Em campo',
     'Aguardando regularização',
@@ -192,7 +201,7 @@ function proximoPassoDe(
 ): { o_que: string; quem: string; detalhe: string } | null {
     const equipe = `Equipe ${d.equipe ?? VAZIO}`;
 
-    if (['Direcionada à equipe', 'Em operação'].includes(d.situacao)) {
+    if (['Direcionada aos fiscais', 'Em operação'].includes(d.situacao)) {
         return {
             o_que: 'Vistoria em campo',
             quem: equipe,
@@ -228,9 +237,9 @@ function proximoPassoDe(
     if (d.situacao === 'Retorno vencido') {
         return {
             o_que: 'Próxima medida',
-            quem: d.area === null ? 'Chefia da área' : `Chefia da ${d.area}`,
+            quem: d.equipe === null ? 'Líder da equipe' : `Líder da Equipe ${d.equipe}`,
             detalhe:
-                'O prazo venceu com a situação mantida: cabe ao Chefe de Setor da área decidir a medida seguinte.',
+                'O prazo venceu com a situação mantida: cabe ao líder da equipe decidir a medida seguinte.',
         };
     }
 
@@ -337,34 +346,35 @@ export function PainelDeDenuncias({
     destinos,
     equipes,
     areas,
-    chefias,
+    lideres,
     operacoes,
     etapas,
-    areasDoChefe,
-    recorteDeArea,
+    equipesDoLider,
+    recorteDeEquipe,
+    decide,
     listagens,
 }: Props) {
     const { enviando, ocupado, enviar } = useEnvio();
 
-    const tria = etapas.includes('triagem');
+    const encaminha = etapas.includes('encaminhamento');
     const direciona = etapas.includes('direcionamento');
 
-    /** "Área 5 — Boca do Rio", como o selo da etapa e os avisos a nomeiam. */
-    const nomeDaArea = (area: string): string => {
-        const equipe = equipes.find((e) => e.area === area);
+    /** "Equipe C2 — Área 1", como o selo da etapa e os avisos a nomeiam. */
+    const nomeDaEquipe = (codigo: string): string => {
+        const equipe = equipes.find((e) => e.equipe === codigo);
 
-        return equipe === undefined ? area : `${area} — ${equipe.regiao}`;
+        return equipe === undefined ? `Equipe ${codigo}` : `Equipe ${codigo} — ${equipe.area}`;
     };
 
-    /** O Chefe de Setor de uma área, ou null quando a estrutura não registra nenhum. */
-    const chefeDa = (area: string): string | null => {
-        const nome = chefias[area]?.nome ?? '';
+    /** O líder de uma equipe, ou null quando a estrutura não registra nenhum. */
+    const liderDa = (codigo: string): string | null => {
+        const nome = lideres[codigo]?.nome ?? '';
 
         return nome.trim() === '' ? null : nome;
     };
 
     const [aba, setAba] = useState<Aba>(
-        tria ? 'triagem' : direciona ? 'direcionamento' : 'todas',
+        encaminha ? 'encaminhamento' : direciona ? 'direcionamento' : 'todas',
     );
     const [busca, setBusca] = useState('');
     const [abertaId, setAbertaId] = useState<number | null>(null);
@@ -378,15 +388,18 @@ export function PainelDeDenuncias({
     const hoje = hojeISO();
 
     /*
-     * A área CONFIRMADA de cada denúncia na triagem. Começa vazia: o valor
-     * mostrado é a sugestão do bairro, e só entra aqui o que a pessoa trocou —
-     * assim a sugestão continua acompanhando um ajuste na estrutura de áreas em
-     * vez de ficar congelada no que a tela viu primeiro.
+     * A equipe CONFIRMADA de cada denúncia no encaminhamento. Começa vazia: o
+     * valor mostrado é a sugestão do bairro, e só entra aqui o que a pessoa
+     * trocou — assim a sugestão continua acompanhando um ajuste na estrutura
+     * em vez de ficar congelada no que a tela viu primeiro.
      */
-    const [areaPorId, setAreaPorId] = useState<Record<number, string>>({});
+    const [equipePorId, setEquipePorId] = useState<Record<number, string>>({});
 
-    const areaDe = (d: Denuncia): string =>
-        areaPorId[d.id] ?? d.area ?? d.area_sugerida?.area ?? '';
+    const equipeDe = (d: Denuncia): string =>
+        equipePorId[d.id] ?? d.equipe ?? d.area_sugerida?.equipe ?? '';
+
+    /** A área da denúncia como texto — gravada, ou a sugerida pelo bairro. */
+    const areaDe = (d: Denuncia): string => d.area ?? d.area_sugerida?.area ?? '';
 
     // ── Busca ───────────────────────────────────────────────────────────────
 
@@ -443,11 +456,11 @@ export function PainelDeDenuncias({
         // "encaminhada" sozinha (sem "à área") é como as pessoas falam.
         lista.push({
             expressao: /\bencaminhad\w*\b/,
-            valor: { tipo: 'situacao', valor: 'Encaminhada à área' },
+            valor: { tipo: 'situacao', valor: 'Encaminhada ao líder' },
         });
         lista.push({
             expressao: /\bdirecionad\w*\b/,
-            valor: { tipo: 'situacao', valor: 'Direcionada à equipe' },
+            valor: { tipo: 'situacao', valor: 'Direcionada aos fiscais' },
         });
 
         for (const equipe of equipes) {
@@ -468,7 +481,7 @@ export function PainelDeDenuncias({
 
     const daEtapa = useMemo(
         () => ({
-            triagem: denuncias.filter((d) => AGUARDANDO_TRIAGEM.includes(d.situacao)),
+            encaminhamento: denuncias.filter((d) => AGUARDANDO_ENCAMINHAMENTO.includes(d.situacao)),
             direcionamento: denuncias.filter((d) =>
                 AGUARDANDO_DIRECIONAMENTO.includes(d.situacao),
             ),
@@ -477,8 +490,8 @@ export function PainelDeDenuncias({
     );
 
     const fonte =
-        aba === 'triagem'
-            ? daEtapa.triagem
+        aba === 'encaminhamento'
+            ? daEtapa.encaminhamento
             : aba === 'direcionamento'
               ? daEtapa.direcionamento
               : denuncias;
@@ -575,14 +588,14 @@ export function PainelDeDenuncias({
     const numeros = useMemo(
         () => ({
             total: denuncias.length,
-            triar: daEtapa.triagem.length,
+            triar: daEtapa.encaminhamento.length,
             direcionar: daEtapa.direcionamento.length,
             emCampo: denuncias.filter((d) => EM_TRABALHO.includes(d.situacao)).length,
             retornadas: denuncias.filter((d) =>
                 ['Devolvida', 'Arquivada'].includes(d.situacao),
             ).length,
             vencidas: denuncias.filter(
-                (d) => d.prazo < hoje && AGUARDANDO_TRIAGEM.concat(AGUARDANDO_DIRECIONAMENTO).includes(d.situacao),
+                (d) => d.prazo < hoje && AGUARDANDO_ENCAMINHAMENTO.concat(AGUARDANDO_DIRECIONAMENTO).includes(d.situacao),
             ).length,
         }),
         [denuncias, daEtapa, hoje],
@@ -644,7 +657,7 @@ export function PainelDeDenuncias({
 
     /** A aba mostra caixas de seleção? Só onde há decisão a tomar. */
     const emLote =
-        (aba === 'triagem' && tria) || (aba === 'direcionamento' && direciona);
+        (aba === 'encaminhamento' && encaminha) || (aba === 'direcionamento' && direciona);
 
     function abrirDecisao(qual: Decisao, ids: number[]) {
         setAlvos(ids);
@@ -664,7 +677,7 @@ export function PainelDeDenuncias({
         justificativa: '',
         destino: destinos[0] ?? '',
     });
-    const [envio, setEnvio] = useState({ equipe: '', justificativa: '' });
+    const [envio, setEnvio] = useState({ orientacao: '' });
     const [operacaoForm, setOperacaoForm] = useState({
         nova: false,
         operacao: operacoes[0]?.nome ?? '',
@@ -677,51 +690,31 @@ export function PainelDeDenuncias({
 
     const escolhidas = denuncias.filter((d) => alvos.includes(d.id));
 
-    /** O resumo do lote: quantas vão para cada área. */
-    const resumoPorArea = useMemo(() => {
+    /** O resumo do lote: quantas vão para cada equipe. */
+    const resumoPorEquipe = useMemo(() => {
         const contagem: Record<string, number> = {};
 
         for (const d of escolhidas) {
-            const area = areaDe(d) || 'sem área definida';
-            contagem[area] = (contagem[area] ?? 0) + 1;
+            const equipe = equipeDe(d) || 'sem equipe definida';
+            contagem[equipe] = (contagem[equipe] ?? 0) + 1;
         }
 
         return Object.entries(contagem);
-        // `escolhidas` e `areaPorId` são o que muda o resumo; `areaDe` é derivada
-        // dos dois e recriada a cada render.
+        // `escolhidas` e `equipePorId` são o que muda o resumo; `equipeDe` é
+        // derivada dos dois e recriada a cada render.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [alvos, denuncias, areaPorId]);
+    }, [alvos, denuncias, equipePorId]);
 
-    const semArea = escolhidas.filter((d) => areaDe(d) === '');
-
-    /** A equipe própria da área de cada denúncia escolhida — para avisar a troca. */
-    const equipeDaArea = useMemo(() => {
-        const mapa: Record<string, string> = {};
-
-        for (const e of equipes) {
-            mapa[e.area] = e.equipe;
-        }
-
-        return mapa;
-    }, [equipes]);
-
-    const trocandoDeEquipe =
-        envio.equipe !== '' &&
-        escolhidas.some(
-            (d) =>
-                d.area !== null &&
-                equipeDaArea[d.area] !== undefined &&
-                equipeDaArea[d.area] !== envio.equipe,
-        );
+    const semEquipe = escolhidas.filter((d) => equipeDe(d) === '');
 
     function encaminhar() {
         enviar('encaminhar', rotaEncaminhar().url, {
-            destinos: escolhidas.map((d) => ({ id: d.id, area: areaDe(d) })),
+            destinos: escolhidas.map((d) => ({ id: d.id, equipe: equipeDe(d) })),
             observacao: observacao.trim() === '' ? null : observacao.trim(),
         }, {
             onSuccess: () => {
                 setObservacao('');
-                setAreaPorId({});
+                setEquipePorId({});
             },
         });
     }
@@ -740,10 +733,9 @@ export function PainelDeDenuncias({
     function direcionar() {
         enviar('direcionar', rotaDirecionar().url, {
             ids: alvos,
-            equipe: envio.equipe,
-            justificativa: envio.justificativa.trim() === '' ? null : envio.justificativa.trim(),
+            orientacao: envio.orientacao.trim() === '' ? null : envio.orientacao.trim(),
         }, {
-            onSuccess: () => setEnvio({ equipe: '', justificativa: '' }),
+            onSuccess: () => setEnvio({ orientacao: '' }),
         });
     }
 
@@ -768,15 +760,15 @@ export function PainelDeDenuncias({
      * denúncia, altura fixa, cinco colunas, e o ASSUNTO (texto livre, que era o
      * que esticava a linha) fora da grade.
      *
-     * Cada aba mostra o dado com que a etapa dela se decide: a triagem olha o
-     * BAIRRO e confirma a ÁREA; o direcionamento olha a área já definida; e
-     * "Todas" olha a SITUAÇÃO. Requerente, assunto e destino ficam no clique — e
+     * Cada aba mostra o dado com que a etapa dela se decide: o encaminhamento
+     * olha o BAIRRO e confirma a EQUIPE; o direcionamento olha a área já
+     * definida; e "Todas" olha a SITUAÇÃO. Requerente, assunto e destino ficam no clique — e
      * continuam no arquivo exportado.
      */
     const listagem =
         listagens[
-            aba === 'triagem'
-                ? 'denuncias.triagem'
+            aba === 'encaminhamento'
+                ? 'denuncias.encaminhamento'
                 : aba === 'direcionamento'
                   ? 'denuncias.direcionamento'
                   : 'denuncias.todas'
@@ -789,9 +781,10 @@ export function PainelDeDenuncias({
         bairro: 'bairro',
         situacao: 'situacao',
         prazo: 'prazo',
-        // Na triagem a célula é um seletor: ordenar por ela ordenaria pela
+        area: (d: Denuncia) => areaDe(d),
+        // No encaminhamento a célula é um seletor: ordenar por ela ordenaria pela
         // sugestão, que é o que a pessoa está ali para trocar.
-        area: aba === 'triagem' ? undefined : (d: Denuncia) => areaDe(d),
+        equipe: aba === 'encaminhamento' ? undefined : (d: Denuncia) => equipeDe(d),
     };
 
     /** Cinza de apoio — o mesmo em toda célula que diz "isto não existe". */
@@ -877,17 +870,27 @@ export function PainelDeDenuncias({
             };
         }
 
-        // A ÁREA. Na triagem ela é editável na própria linha — é assim que o
-        // lote deixa de ser "manda tudo para o mesmo lugar".
-        if (!(emLote && aba === 'triagem')) {
-            const area = d.area ?? d.area_sugerida?.area ?? '';
+        // A ÁREA: texto, gravada ou sugerida pelo bairro.
+        if (chave === 'area') {
+            const area = areaDe(d);
 
             return {
                 conteudo: area === '' ? <span style={fraco}>{VAZIO}</span> : area,
+                dica: area === '' ? 'Sem área definida' : area,
+            };
+        }
+
+        // A EQUIPE. No encaminhamento ela é editável na própria linha — é assim
+        // que o lote deixa de ser "manda tudo para o mesmo lugar".
+        if (!(emLote && aba === 'encaminhamento')) {
+            const equipe = equipeDe(d);
+
+            return {
+                conteudo: equipe === '' ? <span style={fraco}>{VAZIO}</span> : `Equipe ${equipe}`,
                 dica:
-                    area === ''
-                        ? 'Sem área definida'
-                        : `${area}${chefeDa(area) === null ? '' : ` · ${chefeDa(area)}`}`,
+                    equipe === ''
+                        ? 'Sem equipe definida'
+                        : `Equipe ${equipe}${liderDa(equipe) === null ? '' : ` · ${liderDa(equipe)}`}`,
             };
         }
 
@@ -899,24 +902,25 @@ export function PainelDeDenuncias({
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     <select
                         className="form-control"
-                        style={{ minWidth: 150 }}
-                        value={areaDe(d)}
-                        aria-label={`Área da denúncia ${d.protocolo}`}
+                        style={{ minWidth: 170 }}
+                        value={equipeDe(d)}
+                        aria-label={`Equipe da denúncia ${d.protocolo}`}
                         onChange={(e) =>
-                            setAreaPorId((atual) => ({
+                            setEquipePorId((atual) => ({
                                 ...atual,
                                 [d.id]: e.target.value,
                             }))
                         }
                     >
-                        <option value="">Escolha a área…</option>
-                        {/* O nome do CHEFE DE SETOR vai na opção: encaminhar é
-                            entregar trabalho a alguém, e "Área 5" não diz a
-                            quem. Vai aqui, e não numa linha extra, para não
-                            dobrar a altura da grade. */}
-                        {areas.map((a) => (
-                            <option key={a} value={a}>
-                                {chefeDa(a) === null ? a : `${a} — ${chefeDa(a)}`}
+                        <option value="">Escolha a equipe…</option>
+                        {/* O nome do LÍDER vai na opção: encaminhar é entregar
+                            trabalho a alguém, e "C2" não diz a quem. Vai aqui, e
+                            não numa linha extra, para não dobrar a altura da
+                            grade. */}
+                        {equipes.map((e) => (
+                            <option key={e.equipe} value={e.equipe}>
+                                {`${e.equipe} · ${e.area}`}
+                                {liderDa(e.equipe) === null ? '' : ` — ${liderDa(e.equipe)}`}
                             </option>
                         ))}
                     </select>
@@ -925,7 +929,7 @@ export function PainelDeDenuncias({
                         dica, e não o chip que antes ia embaixo do seletor —
                         empilhado, ele dobrava a altura justamente da aba em que
                         se varrem trinta linhas. */}
-                    {sugerida !== null && sugerida.alternativas.length > 0 && (
+                    {sugerida != null && sugerida.alternativas.length > 0 && (
                         <Info
                             size={14}
                             aria-hidden
@@ -935,9 +939,9 @@ export function PainelDeDenuncias({
                 </span>
             ),
             dica:
-                sugerida !== null && sugerida.alternativas.length > 0
-                    ? `O bairro ${d.bairro} também é coberto por ${sugerida.alternativas
-                          .map((a) => a.area)
+                sugerida != null && sugerida.alternativas.length > 0
+                    ? `O bairro ${d.bairro} também é coberto pela ${sugerida.alternativas
+                          .map((a) => `Equipe ${a.equipe} (${a.area})`)
                           .join(', ')}`
                     : undefined,
         };
@@ -965,7 +969,7 @@ export function PainelDeDenuncias({
     }));
 
     const rotuloDaAba: Record<string, string> = {
-        triagem: 'A triar',
+        encaminhamento: 'A encaminhar',
         direcionamento: 'A direcionar',
         todas: 'Todas',
         detalhe: 'Detalhe',
@@ -979,53 +983,70 @@ export function PainelDeDenuncias({
                     <h1>{canal.nome}</h1>
                     <p>
                         {/* O artigo vem do CANAL, não escrito aqui: "o portal
-                            e-Salvador" e "a central Salvador Digital" não aceitam o
+                            e-Salvador" e "a central Fala Salvador" não aceitam o
                             mesmo artigo, e um fixo erraria em um dos dois. */}
-                        Denúncias que {canal.artigo}{' '}
-                        <strong>{canal.sistema}</strong> entrega ao SEFAL por
-                        integração. O Coordenador{' '}
-                        <strong>tria e encaminha à área</strong> do bairro; o{' '}
-                        <strong>Chefe de Setor da área direciona</strong> à equipe
-                        ou inclui numa operação.
+                        {canal.registro === 'lider' ? (
+                            <>
+                                Denúncias que {canal.artigo}{' '}
+                                <strong>{canal.sistema}</strong> entregou aos{' '}
+                                <strong>líderes de equipe</strong>, registradas aqui
+                                por eles: o canal não tem integração, e a resposta
+                                ao cidadão continua nele. O{' '}
+                                <strong>líder direciona</strong> aos fiscais ou
+                                inclui numa operação.
+                            </>
+                        ) : (
+                            <>
+                                Denúncias que {canal.artigo}{' '}
+                                <strong>{canal.sistema}</strong> entrega ao SEFAL
+                                {canal.entrada_padrao === 'balcao'
+                                    ? ' em papel, registradas na Caixa de Entrada'
+                                    : ' por integração'}
+                                . O Chefe de Setor{' '}
+                                <strong>encaminha à equipe</strong> sugerida pelo
+                                bairro; o <strong>líder da equipe direciona</strong>{' '}
+                                aos fiscais ou inclui numa operação.
+                            </>
+                        )}
                     </p>
 
                     {/* Qual é a SUA etapa — o selo que o dono usa para mostrar
                         que a mesma tela serve dois papéis. */}
                     <ul className="rt-chips">
-                        {tria && (
+                        {encaminha && (
                             <li className="rt-chip" style={{ color: 'var(--sm-aviso)' }}>
                                 <span className="rt-chip-dot" />
-                                Sua etapa: triagem — você encaminha à área
+                                Sua etapa: encaminhamento — você escolhe a equipe
                             </li>
                         )}
                         {direciona && (
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
                                 <span className="rt-chip-dot" />
-                                {/* A ÁREA vai no selo: "sua etapa é direcionamento"
-                                    sem dizer de onde deixaria a chefia sem saber
+                                {/* A EQUIPE vai no selo: "sua etapa é direcionamento"
+                                    sem dizer de qual deixaria o líder sem saber
                                     por que a lista dele é curta. */}
                                 Sua etapa: direcionamento
-                                {areasDoChefe.length > 0
-                                    ? ` · ${areasDoChefe.map(nomeDaArea).join(' e ')}`
+                                {equipesDoLider.length > 0
+                                    ? ` · ${equipesDoLider.map(nomeDaEquipe).join(' e ')}`
                                     : ''}{' '}
-                                — você escolhe equipe ou operação
+                                — você manda os fiscais ao ponto ou inclui em operação
                             </li>
                         )}
 
-                        {/* Chefe de Setor sem área vinculada: ele exerce a etapa e não tem
+                        {/* Líder sem equipe vinculada: ele exerce a etapa e não tem
                             de onde. Dito na cara, e não em lista vazia sem
                             explicação — a lista vazia parece sistema quebrado. */}
-                        {direciona && areasDoChefe.length === 0 && (
+                        {direciona && recorteDeEquipe && equipesDoLider.length === 0 && (
                             <li className="rt-chip" style={{ color: 'var(--sm-perigo)' }}>
                                 <span className="rt-chip-dot" />
-                                Sua conta não está vinculada a nenhuma área — procure quem
+                                Sua conta não está vinculada a nenhuma equipe — procure quem
                                 administra o sistema
                             </li>
                         )}
-                        {!tria && !direciona && (
+                        {!encaminha && !direciona && (
                             <li className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                Você acompanha o fluxo; as decisões são do Coordenador e do Chefe de Setor
+                                Você acompanha o fluxo; as decisões são do Chefe de Setor e dos líderes de equipe
                             </li>
                         )}
                     </ul>
@@ -1038,8 +1059,8 @@ export function PainelDeDenuncias({
                         type="button"
                         className="rt-numero"
                         title={
-                            recorteDeArea
-                                ? 'Ver todas as denúncias da sua área neste canal'
+                            recorteDeEquipe
+                                ? 'Ver todas as denúncias da sua equipe neste canal'
                                 : 'Ver todas as denúncias deste canal'
                         }
                         onClick={() => {
@@ -1048,24 +1069,24 @@ export function PainelDeDenuncias({
                         }}
                     >
                         <strong>{numeros.total}</strong>
-                        <span>{recorteDeArea ? 'na sua área' : 'recebidas'}</span>
+                        <span>{recorteDeEquipe ? 'na sua equipe' : 'recebidas'}</span>
                     </button>
 
-                    {/* O número "a triar" só existe para quem TRIA. Para o Chefe de Setor
-                        ele apareceria em zero — a denúncia recebida ainda não tem
-                        área, então ela não está na lista dele —, e zero ali leria
-                        como "não há nada a triar", que é falso. */}
-                    {tria && (
+                    {/* O número "a encaminhar" só existe para quem ENCAMINHA. Para o
+                        líder ele apareceria em zero — a denúncia recebida ainda não
+                        tem equipe, então ela não está na lista dele —, e zero ali
+                        leria como "não há nada a encaminhar", que é falso. */}
+                    {encaminha && (
                         <>
                             <div className="rt-numeros-separador" />
                             <button
                                 type="button"
                                 className="rt-numero alerta"
-                                title="Ver as que aguardam triagem"
-                                onClick={() => irParaEtapa('triagem', tria, 'recebida')}
+                                title="Ver as que aguardam o encaminhamento"
+                                onClick={() => irParaEtapa('encaminhamento', encaminha, 'recebida')}
                             >
                                 <strong>{numeros.triar}</strong>
-                                <span>a triar</span>
+                                <span>a encaminhar</span>
                             </button>
                         </>
                     )}
@@ -1073,7 +1094,7 @@ export function PainelDeDenuncias({
                     <button
                         type="button"
                         className="rt-numero info"
-                        title="Ver as que aguardam o Chefe de Setor da área"
+                        title="Ver as que aguardam o líder da equipe"
                         onClick={() => irParaEtapa('direcionamento', direciona, 'encaminhada')}
                     >
                         <strong>{numeros.direcionar}</strong>
@@ -1110,27 +1131,26 @@ export function PainelDeDenuncias({
             </SeloPrototipo>
 
             {/* De ONDE a denúncia veio (integração, papel, balcão) não interessa a
-                quem trabalha aqui: para o Chefe de Setor tudo chega igual, pelo
-                DIRECIONAMENTO do Coordenador — ordem do dono, 10/09/2026. O aviso
-                antigo explicava a integração e virava ruído. Quem tria vê a
-                origem na própria ficha da denúncia. */}
+                quem trabalha aqui: para o líder tudo chega igual, pelo
+                ENCAMINHAMENTO do Chefe de Setor. Quem encaminha vê a origem na
+                própria ficha da denúncia. */}
 
-            {/* A lista do Chefe de Setor NÃO é o universo, e a tela diz isso. Sem o aviso,
+            {/* A lista do líder NÃO é o universo, e a tela diz isso. Sem o aviso,
                 ele contaria as denúncias, acharia o número baixo e concluiria que o
                 canal está parado. */}
-            {recorteDeArea && (
+            {recorteDeEquipe && (
                 <div className="rt-sugestao" style={{ marginBottom: 18 }}>
                     <Info size={16} aria-hidden />
                     <div>
                         <strong>
-                            Você está vendo só o que foi encaminhado a{' '}
-                            {areasDoChefe.map(nomeDaArea).join(' e ')}.
+                            Você está vendo só o que foi encaminhado à{' '}
+                            {equipesDoLider.map(nomeDaEquipe).join(' e à ')}.
                         </strong>
                         <div>
-                            As denúncias das outras áreas e as que ainda esperam a
-                            triagem do Coordenador não aparecem aqui — e a ação
-                            sobre denúncia de outra área é recusada pelo sistema, não
-                            só escondida.
+                            As denúncias das outras equipes e as que ainda esperam o
+                            encaminhamento do Chefe de Setor não aparecem aqui — e a
+                            ação sobre denúncia de outra equipe é recusada pelo
+                            sistema, não só escondida.
                         </div>
                     </div>
                 </div>
@@ -1138,17 +1158,17 @@ export function PainelDeDenuncias({
 
             <div className="card-premium">
                 <div className="abas" role="tablist" aria-label={`Denúncias do ${canal.nome}`}>
-                    {tria && (
+                    {encaminha && (
                         <button
                             type="button"
                             role="tab"
                             className="aba"
-                            aria-selected={aba === 'triagem'}
-                            onClick={() => trocarAba('triagem')}
+                            aria-selected={aba === 'encaminhamento'}
+                            onClick={() => trocarAba('encaminhamento')}
                         >
                             <Inbox size={16} aria-hidden />
                             <span className="aba-rotulo">
-                                A triar ({daEtapa.triagem.length})
+                                A encaminhar ({daEtapa.encaminhamento.length})
                             </span>
                         </button>
                     )}
@@ -1245,7 +1265,7 @@ export function PainelDeDenuncias({
                                 marginBottom: 10,
                             }}
                         >
-                            {emLote && aba === 'triagem' && (
+                            {emLote && aba === 'encaminhamento' && (
                                 <>
                                     <BotaoAcao
                                         icone={<Send size={16} aria-hidden />}
@@ -1277,7 +1297,7 @@ export function PainelDeDenuncias({
                                         disabled={selecionadas.length === 0}
                                         onClick={() => abrirDecisao('direcionar', selecionadas)}
                                     >
-                                        Direcionar à equipe
+                                        Direcionar aos fiscais
                                         {selecionadas.length > 0 ? ` (${selecionadas.length})` : ''}
                                     </BotaoAcao>
 
@@ -1313,8 +1333,8 @@ export function PainelDeDenuncias({
                                 Clique numa linha — ou tecle Enter sobre ela — para
                                 abrir a denúncia, o requerente, o assunto, o relato e
                                 o trâmite dela.
-                                {emLote && aba === 'triagem'
-                                    ? ' A área vem sugerida pelo bairro: confira e troque na própria linha antes de encaminhar.'
+                                {emLote && aba === 'encaminhamento'
+                                    ? ' A equipe vem sugerida pelo bairro: confira e troque na própria linha antes de encaminhar.'
                                     : ''}
                             </p>
                         )}
@@ -1352,10 +1372,10 @@ export function PainelDeDenuncias({
                                         <tr>
                                             <td colSpan={colunas} className="tabela-vazia">
                                                 {fonte.length === 0
-                                                    ? aba === 'triagem'
-                                                        ? 'Nada a triar: toda denúncia recebida deste canal já foi encaminhada ou retornada.'
+                                                    ? aba === 'encaminhamento'
+                                                        ? 'Nada a encaminhar: toda denúncia recebida deste canal já foi encaminhada ou retornada.'
                                                         : aba === 'direcionamento'
-                                                          ? 'Nada a direcionar: nenhuma denúncia deste canal está esperando o Chefe de Setor da área.'
+                                                          ? 'Nada a direcionar: nenhuma denúncia deste canal está esperando o líder da equipe.'
                                                           : 'Nenhuma denúncia recebida deste canal.'
                                                     : 'Nenhuma denúncia casa com a busca. Limpe o campo para ver a lista inteira.'}
                                             </td>
@@ -1365,7 +1385,7 @@ export function PainelDeDenuncias({
                                     {pag.visiveis.map((d) => {
                                         const vencida =
                                             d.prazo < hoje &&
-                                            AGUARDANDO_TRIAGEM.concat(AGUARDANDO_DIRECIONAMENTO).includes(
+                                            AGUARDANDO_ENCAMINHAMENTO.concat(AGUARDANDO_DIRECIONAMENTO).includes(
                                                 d.situacao,
                                             );
 
@@ -1525,14 +1545,14 @@ export function PainelDeDenuncias({
                                 <dt>Área</dt>
                                 <dd>
                                     {aberta.area ??
-                                        (aberta.area_sugerida === null
+                                        (aberta.area_sugerida == null
                                             ? 'sem área definida'
                                             : `${aberta.area_sugerida.area} (sugerida pelo bairro)`)}
-                                    {/* Quem responde pela área — a informação que
+                                    {/* Quem lidera a equipe — a informação que
                                         falta para "encaminhada" ter destinatário. */}
-                                    {aberta.area !== null && chefeDa(aberta.area) !== null && (
+                                    {aberta.equipe !== null && liderDa(aberta.equipe) !== null && (
                                         <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                            Chefe de Setor: {chefeDa(aberta.area)}
+                                            Líder da Equipe {aberta.equipe}: {liderDa(aberta.equipe)}
                                         </div>
                                     )}
                                 </dd>
@@ -1637,16 +1657,26 @@ export function PainelDeDenuncias({
                             recomendacoesDoFiscal={recomendacoesDoFiscal}
                         />
 
+                        {/* Concluída, a denúncia VOLTA ao canal: o chefe responde no
+                            processo de origem. Registrado aqui, feito à mão lá
+                            enquanto a escrita na API está proibida. */}
+                        <RetornoAoCanal
+                            demanda={aberta}
+                            decide={decide}
+                            rota={rotaResponderAoCanal({ demanda: aberta.id }).url}
+                        />
+
                         {/* A decisão de UM registro usa os MESMOS caminhos do lote:
                             o que muda é o tamanho da lista de alvos. */}
-                        {tria && AGUARDANDO_TRIAGEM.includes(aberta.situacao) && (
+                        {encaminha && AGUARDANDO_ENCAMINHAMENTO.includes(aberta.situacao) && (
                             <>
                                 <hr className="rt-regua" />
-                                <h3 className="card-titulo">Triagem desta denúncia</h3>
+                                <h3 className="card-titulo">Encaminhamento desta denúncia</h3>
                                 <p className="card-sub">
-                                    Encaminhe à área do bairro — a sugestão vem da
-                                    estrutura de áreas e você confirma — ou retire do
-                                    fluxo com o motivo por escrito.
+                                    Encaminhe à equipe do bairro — a sugestão vem da
+                                    estrutura de áreas e você confirma; quem recebe é o
+                                    líder dela — ou retire do fluxo com o motivo por
+                                    escrito.
                                 </p>
 
                                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -1655,7 +1685,7 @@ export function PainelDeDenuncias({
                                         ocupado={ocupado}
                                         onClick={() => abrirDecisao('encaminhar', [aberta.id])}
                                     >
-                                        Encaminhar à área
+                                        Encaminhar à equipe
                                     </BotaoAcao>
 
                                     <BotaoAcao
@@ -1675,8 +1705,8 @@ export function PainelDeDenuncias({
                                 <hr className="rt-regua" />
                                 <h3 className="card-titulo">Direcionamento desta denúncia</h3>
                                 <p className="card-sub">
-                                    Duas saídas: mandar a uma equipe para vistoria
-                                    avulsa, ou incluir numa operação já planejada para
+                                    Duas saídas: mandar os fiscais da sua equipe ao
+                                    ponto, ou incluir numa operação já planejada para
                                     a região.
                                 </p>
 
@@ -1686,7 +1716,7 @@ export function PainelDeDenuncias({
                                         ocupado={ocupado}
                                         onClick={() => abrirDecisao('direcionar', [aberta.id])}
                                     >
-                                        Direcionar à equipe
+                                        Direcionar aos fiscais
                                     </BotaoAcao>
 
                                     <BotaoAcao
@@ -1706,7 +1736,7 @@ export function PainelDeDenuncias({
                         <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            onClick={() => trocarAba(tria ? 'triagem' : direciona ? 'direcionamento' : 'todas')}
+                            onClick={() => trocarAba(encaminha ? 'encaminhamento' : direciona ? 'direcionamento' : 'todas')}
                         >
                             <X size={15} aria-hidden /> Fechar a denúncia
                         </button>
@@ -1720,56 +1750,56 @@ export function PainelDeDenuncias({
                 <FolhaDeDecisao
                     titulo={
                         alvos.length === 1
-                            ? 'Encaminhar a denúncia à área?'
-                            : `Encaminhar ${alvos.length} denúncias às áreas?`
+                            ? 'Encaminhar a denúncia à equipe?'
+                            : `Encaminhar ${alvos.length} denúncias às equipes?`
                     }
                     icone={<Send size={19} aria-hidden />}
                     rotulo="Encaminhar"
                     iconeConfirmar={<Send size={16} aria-hidden />}
                     processando={enviando === 'encaminhar'}
                     impedimento={
-                        semArea.length > 0
-                            ? `${contar(semArea.length, 'denúncia', 'denúncias')} sem área escolhida. Volte à listagem e confirme a área de cada uma.`
+                        semEquipe.length > 0
+                            ? `${contar(semEquipe.length, 'denúncia', 'denúncias')} sem equipe escolhida. Volte à listagem e confirme a equipe de cada uma.`
                             : null
                     }
                     onCancelar={() => setDecisao(null)}
                     onConfirmar={encaminhar}
                 >
                     <p className="sobreposicao-texto" style={{ marginBottom: 12 }}>
-                        Cada denúncia vai para a área do bairro dela, e passa a
-                        esperar o <strong>Chefe de Setor daquela área</strong>, que escolhe
-                        equipe ou operação. Confira o resumo:
+                        Cada denúncia vai para a equipe do bairro dela, e passa a
+                        esperar o <strong>líder daquela equipe</strong>, que direciona
+                        aos fiscais ou inclui numa operação. Confira o resumo:
                     </p>
 
                     <ul className="rt-chips" style={{ marginBottom: 14 }}>
-                        {resumoPorArea.map(([area, quantas]) => (
-                            <li key={area} className="rt-chip">
+                        {resumoPorEquipe.map(([equipe, quantas]) => (
+                            <li key={equipe} className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                {/* Área E chefia: é a última tela antes de o
-                                    trabalho sair da mão de quem tria, e é aqui que
-                                    ele confere para quem está entregando. */}
-                                {area}
-                                {chefeDa(area) === null ? '' : ` · ${chefeDa(area)}`}:{' '}
+                                {/* Equipe E líder: é a última tela antes de o
+                                    trabalho sair da mão de quem encaminha, e é aqui
+                                    que ele confere para quem está entregando. */}
+                                {equipe === 'sem equipe definida' ? equipe : nomeDaEquipe(equipe)}
+                                {liderDa(equipe) === null ? '' : ` · ${liderDa(equipe)}`}:{' '}
                                 {contar(quantas, 'denúncia', 'denúncias')}
                             </li>
                         ))}
                     </ul>
 
-                    {/* Área sem Chefe de Setor registrado na estrutura: a denúncia é
+                    {/* Equipe sem líder registrado na estrutura: a denúncia é
                         encaminhada e fica sem quem a receba. Aviso, não bloqueio —
-                        o cadastro da chefia é de fora desta tela. */}
-                    {resumoPorArea.some(([area]) => chefeDa(area) === null) && (
+                        o cadastro do líder é de fora desta tela. */}
+                    {resumoPorEquipe.some(([equipe]) => equipe !== 'sem equipe definida' && liderDa(equipe) === null) && (
                         <p className="form-erro" style={{ marginBottom: 12 }}>
-                            <TriangleAlert size={15} aria-hidden /> Há área sem Chefe de Setor
-                            registrado na estrutura: a denúncia chega lá e ninguém é
-                            avisado. Vale registrar o Chefe de Setor em Sistema › Áreas e
+                            <TriangleAlert size={15} aria-hidden /> Há equipe sem líder
+                            registrado no sistema: a denúncia chega lá e ninguém é
+                            avisado. Vale registrar o líder em Sistema › Áreas e
                             Equipes.
                         </p>
                     )}
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="encaminhar-observacao">
-                            Orientação ao Chefe de Setor
+                            Orientação ao líder da equipe
                         </label>
                         <input
                             id="encaminhar-observacao"
@@ -1808,7 +1838,7 @@ export function PainelDeDenuncias({
                     onConfirmar={devolver}
                 >
                     <p className="sobreposicao-texto" style={{ marginBottom: 12 }}>
-                        A denúncia <strong>não chega ao Chefe de Setor</strong>: fica
+                        A denúncia <strong>não chega a nenhuma equipe</strong>: fica
                         registrada como recusada, com o motivo e a justificativa no
                         trâmite. É ato administrativo — quem, quando, por quê.
                     </p>
@@ -1883,84 +1913,44 @@ export function PainelDeDenuncias({
                 <FolhaDeDecisao
                     titulo={
                         alvos.length === 1
-                            ? 'Direcionar a denúncia à equipe?'
-                            : `Direcionar ${alvos.length} denúncias à equipe?`
+                            ? 'Direcionar a denúncia aos fiscais?'
+                            : `Direcionar ${alvos.length} denúncias aos fiscais?`
                     }
                     icone={<Send size={19} aria-hidden />}
                     rotulo="Direcionar"
                     iconeConfirmar={<Send size={16} aria-hidden />}
                     processando={enviando === 'direcionar'}
-                    impedimento={
-                        envio.equipe === ''
-                            ? 'Escolha a equipe que vai vistoriar.'
-                            : trocandoDeEquipe && envio.justificativa.trim() === ''
-                              ? 'A equipe escolhida não é a da área da denúncia. Escreva por que o trabalho sai da equipe responsável.'
-                              : null
-                    }
+                    impedimento={null}
                     onCancelar={() => setDecisao(null)}
                     onConfirmar={direcionar}
                 >
                     <p className="sobreposicao-texto" style={{ marginBottom: 12 }}>
                         A denúncia vira <strong>trabalho dirigido</strong> e aparece
-                        no aplicativo dos fiscais da equipe escolhida.
+                        no aplicativo dos fiscais da sua equipe. A equipe já é a
+                        que o Chefe de Setor escolheu ao encaminhar — se ela veio
+                        para a equipe errada, o caminho é devolver ao chefe pela
+                        tela de Fiscalizações.
                     </p>
 
                     <div className="form-group">
-                        <label className="form-label" htmlFor="direcionar-equipe">
-                            Equipe
-                        </label>
-                        <select
-                            id="direcionar-equipe"
-                            className="form-control"
-                            value={envio.equipe}
-                            onChange={(e) => setEnvio((v) => ({ ...v, equipe: e.target.value }))}
-                        >
-                            <option value="">Escolha a equipe…</option>
-                            {equipes.map((e) => (
-                                <option key={e.equipe} value={e.equipe}>
-                                    Equipe {e.equipe} · {e.area} ({e.regiao}) — {e.encarregado}
-                                </option>
-                            ))}
-                        </select>
-                        <p className="form-ajuda">
-                            A equipe da própria área é o caminho normal. Outra equipe
-                            é decisão consciente — a Noturna, por exemplo, quando o
-                            flagrante só é possível de madrugada.
-                        </p>
-                    </div>
-
-                    {trocandoDeEquipe && (
-                        <div className="rt-sugestao">
-                            <Info size={16} aria-hidden />
-                            <div>
-                                <strong>
-                                    Ao menos uma das denúncias sai da equipe da própria
-                                    área.
-                                </strong>
-                                <div>
-                                    Tirar trabalho da equipe responsável precisa estar
-                                    escrito: a justificativa abaixo passa a ser
-                                    obrigatória.
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="direcionar-justificativa">
-                            Justificativa {trocandoDeEquipe ? '' : '(opcional)'}
+                        <label className="form-label" htmlFor="direcionar-orientacao">
+                            Orientação aos fiscais (opcional)
                         </label>
                         <textarea
-                            id="direcionar-justificativa"
+                            id="direcionar-orientacao"
                             className="form-control"
                             rows={3}
-                            value={envio.justificativa}
+                            value={envio.orientacao}
                             maxLength={1000}
-                            placeholder="Ex.: o flagrante só é possível depois do fechamento, então vai para a Noturna"
+                            placeholder="Ex.: ir depois das 18h — as mesas só saem para a calçada à noite"
                             onChange={(e) =>
-                                setEnvio((v) => ({ ...v, justificativa: e.target.value }))
+                                setEnvio((v) => ({ ...v, orientacao: e.target.value }))
                             }
                         />
+                        <p className="form-ajuda">
+                            Fica no trâmite e chega ao aparelho junto com a denúncia: é
+                            o que o fiscal lê antes de sair.
+                        </p>
                     </div>
                 </FolhaDeDecisao>
             )}

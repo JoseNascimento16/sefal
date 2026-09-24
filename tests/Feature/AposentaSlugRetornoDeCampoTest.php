@@ -118,35 +118,33 @@ test('o setor que tinha as DUAS perde a duplicata e MANTEM a concessao da tela q
         ->and((bool) concessao('chefe-de-setor', 'fiscalizacoes')['habilitado'])->toBeTrue();
 });
 
-test('o Coordenador ganha o Cadastro de Operacao em APENAS LEITURA', function () {
+test('a concessao de Operacao ao Coordenador nao sobrevive a aposentadoria do setor (22/09/2026)', function () {
     /*
-     * Concessão NOVA, e por isso ela precisa da migration: a lista `setores` do menu
-     * é a SEMENTE, aplicada uma vez — num banco já semeado, acrescentar um setor lá
-     * não cria linha nenhuma, e o Coordenador abriria a tela e seria mandado de
-     * volta por uma decisão que já havia sido tomada a favor dele.
+     * Esta migration concedia o Cadastro de Operação ao Coordenador em apenas
+     * leitura. Em 22/09/2026 o setor `coordenador` foi aposentado: os
+     * coordenadores trabalham no e-Salvador e não entram no SEFAL. A migration
+     * daquele dia apaga o setor, os vínculos e a matriz dele.
      *
-     * ⚠️ E ela é APENAS LEITURA: quem tria precisa saber que operação existe;
-     * montar operação é de quem responde pela área.
+     * O que se prova é a ORDEM: num banco novo as duas rodam em sequência, e o
+     * resultado final tem de ser "sem coordenador" — a concessão desta não pode
+     * ressuscitar um papel que a seguinte enterrou. E a de 22/09 é idempotente,
+     * porque no OKD o migrate é manual.
      */
-    DB::table('permissoes_setor')->where('setor', 'coordenador')->where('slug', 'operacoes')->delete();
-
     migrationDoSlug()->up();
 
-    $linha = concessao('coordenador', 'operacoes');
+    expect(concessao('coordenador', 'operacoes'))->not->toBeNull('a concessão histórica precisa nascer para o teste provar que ela morre');
 
-    expect($linha)->not->toBeNull()
-        ->and((bool) $linha['visivel'])->toBeTrue()
-        ->and((bool) $linha['apenas_leitura'])->toBeTrue()
-        ->and((bool) $linha['habilitado'])->toBeFalse()
-        ->and((bool) $linha['incluir'])->toBeFalse()
-        ->and((bool) $linha['excluir'])->toBeFalse()
-        // As flags saem do MESMO lugar que a semente usaria: escritas à mão na
-        // migration, um ajuste na declaração da tela deixaria as duas discordando.
-        ->and(array_map(
-            static fn (mixed $v): bool => (bool) $v,
-            array_intersect_key($linha, CatalogoFuncionalidades::acoesSemente('operacoes', 'coordenador')),
-        ))
-        ->toBe(CatalogoFuncionalidades::acoesSemente('operacoes', 'coordenador'));
+    $aposentadoria = require database_path(
+        'migrations/2026_09_22_090000_lider_de_equipe_e_fim_do_coordenador.php',
+    );
+    $aposentadoria->up();
+
+    expect(concessao('coordenador', 'operacoes'))->toBeNull()
+        ->and(DB::table('permissoes_setor')->where('setor', 'coordenador')->exists())->toBeFalse()
+        ->and(DB::table('setores')->where('slug', 'coordenador')->exists())->toBeFalse()
+        // A semente também não o conhece mais: nenhuma tela do menu o declara.
+        ->and(CatalogoFuncionalidades::acoesSemente('operacoes', 'coordenador'))
+        ->toBe(CatalogoFuncionalidades::acoesSemente('operacoes', 'setor-que-nao-existe'));
 });
 
 test('a migration NAO passa por cima da decisao de quem administra', function () {

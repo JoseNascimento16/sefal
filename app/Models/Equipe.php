@@ -11,23 +11,35 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A EQUIPE — quem de fato vai à rua. Pertence a uma área e reúne fiscais.
+ * A EQUIPE — quem de fato vai à rua. Pertence a uma área, tem um LÍDER e reúne
+ * fiscais.
  *
- * É o destino final do direcionamento do Chefe de Setor, e é por ela que o
- * aplicativo sabe o que mostrar a cada fiscal: a fila do fiscal é a fila das
- * equipes de que ele participa.
+ * É o destino do encaminhamento do Chefe de Setor: ele escolhe a equipe, e quem
+ * recebe é o líder dela, que direciona aos fiscais e lê o que volta da rua. E é
+ * por ela que o aplicativo sabe o que mostrar a cada fiscal: a fila do fiscal é
+ * a fila das equipes de que ele participa.
+ *
+ * ## `lider_id` e `encarregado` — o usuário e o nome
+ *
+ * O documento do cliente ("Áreas das equipes — 17/04/2026") nomeia o encarregado
+ * de cada equipe; é ESSA pessoa o líder de equipe, e a partir de 22/09/2026 ela
+ * é usuário do sistema (setor `lider-de-equipe`). O nome em texto fica como
+ * veio do documento e é o que a tela mostra enquanto a equipe não tem líder com
+ * conta — o dado do cliente não some porque ainda não virou vínculo.
  *
  * @property int $id
  * @property string $codigo
  * @property string|null $nome
  * @property int $area_id
  * @property string|null $encarregado
+ * @property int|null $lider_id
  * @property string|null $turno
  * @property bool $ativa
  * @property-read Area $area
+ * @property-read User|null $lider
  * @property-read Collection<int, User> $fiscais
  */
-#[Fillable(['codigo', 'nome', 'area_id', 'encarregado', 'turno', 'ativa'])]
+#[Fillable(['codigo', 'nome', 'area_id', 'encarregado', 'lider_id', 'turno', 'ativa'])]
 class Equipe extends Model
 {
     protected $table = 'equipes';
@@ -42,6 +54,22 @@ class Equipe extends Model
     public function area(): BelongsTo
     {
         return $this->belongsTo(Area::class);
+    }
+
+    /** Quem responde pela equipe dentro do sistema. */
+    /** @return BelongsTo<User, $this> */
+    public function lider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'lider_id');
+    }
+
+    /**
+     * O nome de quem lidera, como a tela mostra: o do usuário quando há vínculo,
+     * o do documento quando ainda não há.
+     */
+    public function nomeDoLider(): string
+    {
+        return (string) ($this->lider?->name ?? $this->encarregado ?? '');
     }
 
     /** @return BelongsToMany<User, $this> */

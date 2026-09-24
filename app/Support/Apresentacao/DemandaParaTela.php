@@ -4,6 +4,8 @@ namespace App\Support\Apresentacao;
 
 use App\Models\Demanda;
 use App\Models\DemandaTramite;
+use App\Support\Estrutura;
+use App\Support\RetornoAoCanal;
 
 /**
  * A demanda do banco na forma que a tela lê.
@@ -89,7 +91,29 @@ class DemandaParaTela
 
             // Em que pé está.
             'situacao' => $demanda->situacao,
+            /*
+             * O RETORNO ao canal: o tipo que o canal pede (`tramite` / `processo`
+             * / nulo) e o que já foi registrado. É o que faz o detalhe mostrar o
+             * formulário ao chefe — ou a resposta dada, para quem chegar depois.
+             */
+            'retorno_ao_canal' => RetornoAoCanal::tipoDe($demanda),
+            'resposta_ao_canal' => $demanda->respondida_ao_canal_em === null ? null : [
+                'texto' => (string) $demanda->resposta_ao_canal,
+                'em' => $demanda->respondida_ao_canal_em->format('Y-m-d H:i'),
+                'por' => $demanda->respondidaPor?->name,
+                'processo' => $demanda->processo_esalvador,
+                // Enquanto a escrita na API está proibida, nada foi enviado: foi feito à mão.
+                'enviado' => false,
+            ],
             'area' => $demanda->area?->nome,
+            /*
+             * A equipe que o BAIRRO sugere, com as alternativas de divisa. É o
+             * que a tela de encaminhamento pré-seleciona em cada linha: o chefe
+             * confirma, em vez de escolher do zero trinta vezes. Nula quando o
+             * bairro não está na estrutura — e a tela diz "sem equipe sugerida"
+             * em vez de inventar uma.
+             */
+            'area_sugerida' => Estrutura::sugerirPorBairro($demanda->bairro),
             'equipe' => $demanda->equipe?->codigo,
             'operacao' => $demanda->operacao?->nome,
 

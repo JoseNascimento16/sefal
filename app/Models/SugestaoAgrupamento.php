@@ -10,14 +10,14 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 
 /**
- * Uma PROPOSTA de agrupamento — da maquina para o coordenador.
+ * Uma PROPOSTA de agrupamento — da maquina para o Chefe de Setor.
  *
  * Ela nunca agrupa nada sozinha: agrupar e ato de gente. O que esta tabela faz e
  * deixar a maquina opinar, dizendo o quanto confia e POR QUE, e guardar o que o
  * humano respondeu.
  *
  * A sugestao RECUSADA e tao importante quanto a aceita: e ela que impede a
- * proxima varredura de propor o mesmo par de novo, cansando o coordenador ate
+ * proxima varredura de propor o mesmo par de novo, cansando o Chefe de Setor ate
  * ele parar de ler as sugestoes — que e como um assistente util vira ruido.
  *
  * @property int $id
@@ -103,7 +103,7 @@ class SugestaoAgrupamento extends Model
         $this->save();
     }
 
-    /** As que ainda esperam o olho do coordenador, as mais confiantes primeiro. */
+    /** As que ainda esperam o olho do Chefe de Setor, as mais confiantes primeiro. */
     /** @param  Builder<static>  $query */
     public function scopePendentes(Builder $query): void
     {

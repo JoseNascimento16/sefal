@@ -28,10 +28,15 @@ return [
      * Os canais por onde um fato chega. `nome` é o que a pessoa lê; a CHAVE é o
      * que viaja no banco, na API e no relatório.
      *
-     * `entrada_padrao` diz como aquele canal costuma chegar HOJE: o e-Salvador e
-     * o Salvador Digital ainda entregam papel ao coordenador (`balcao`), e vão
-     * virar `integracao` quando a API existir. Ofício e pedido de licença nascem
-     * internos e não têm integração prevista.
+     * `entrada_padrao` diz como aquele canal costuma chegar HOJE: o e-Salvador
+     * chega por integração (a API existe; a leitura está em reconhecimento); o
+     * Fala Salvador não tem API e é digitado; ofício, pedido de licença e avulsa
+     * nascem em papel/telefone e não têm integração prevista.
+     *
+     * `registro` diz QUEM digita o canal quando ele chega fora da integração:
+     * `chefe` (na Caixa de Entrada) ou `lider` (na própria tela do canal). É o
+     * que decide o que o formulário da Caixa oferece — o Fala Salvador não
+     * aparece lá porque só os líderes o acessam (decisão do dono, 22/09/2026).
      */
     'canais' => [
 
@@ -49,21 +54,39 @@ return [
             'tem_anexo' => true,
             /*
              * ⚠️ É o canal que mais produz denúncia REPETIDA do mesmo fato: dez
-             * pessoas relatam as mesmas mesas na calçada em dez protocolos. Por
+             * pessoas relatam as mesas na calçada em dez protocolos. Por
              * isso é nele que a pré-triagem por agrupamento importa.
              */
             'agrupa' => true,
+            // Enquanto a integração não lê, o papel que chega é digitado pelo chefe.
+            'registro' => 'chefe',
+            /*
+             * `retorno` diz como o RESULTADO volta ao canal, concluído o trabalho
+             * ({@see \App\Support\RetornoAoCanal}): `tramite` = o chefe responde
+             * no processo de origem; `processo` = o chefe abre um processo (a
+             * avulsa não tem); ausente = não volta por sistema. A escrita na API
+             * do e-Salvador está proibida por enquanto: o ato é registrado aqui
+             * e feito à mão lá.
+             */
+            'retorno' => 'tramite',
         ],
 
-        Demanda::CANAL_SALVADOR_DIGITAL => [
-            'nome' => 'Salvador Digital',
-            'sistema' => 'Central de Atendimento Salvador Digital',
+        Demanda::CANAL_FALA_SALVADOR => [
+            'nome' => 'Fala Salvador',
+            'sistema' => 'Central de Atendimento Fala Salvador (156)',
             'artigo' => 'a',
-            'entrada_padrao' => Demanda::ENTRADA_INTEGRACAO,
+            /*
+             * Sem API. Só os LÍDERES acessam o Fala Salvador; o SEFAL é
+             * intermediário de registro — o líder digita aqui o que recebeu lá,
+             * para o caso andar pelo fluxo, e responde ao cidadão no próprio
+             * Fala Salvador.
+             */
+            'entrada_padrao' => Demanda::ENTRADA_BALCAO,
             // Atendimento por telefone: pode ser anônima, e ninguém anexa foto.
             'admite_anonima' => true,
             'tem_anexo' => false,
             'agrupa' => true,
+            'registro' => 'lider',
         ],
 
         Demanda::CANAL_NOVA_LICENCA => [
@@ -75,6 +98,7 @@ return [
             'tem_anexo' => true,
             // Pedido de licença é de UM requerente para UM ponto: agrupar não faz sentido.
             'agrupa' => false,
+            'registro' => 'chefe',
         ],
 
         Demanda::CANAL_OFICIO => [
@@ -85,6 +109,23 @@ return [
             'admite_anonima' => false,
             'tem_anexo' => true,
             'agrupa' => false,
+            'registro' => 'chefe',
+        ],
+
+        Demanda::CANAL_AVULSA => [
+            'nome' => 'Avulsa',
+            'sistema' => 'Ligação ou e-mail de superior ao Chefe de Setor',
+            'artigo' => 'a',
+            'entrada_padrao' => Demanda::ENTRADA_BALCAO,
+            // Quem pede é um superior identificado; o "requerente" é ele.
+            'admite_anonima' => false,
+            // E-mail encaminhado, print, ofício informal: há o que anexar.
+            'tem_anexo' => true,
+            // Um pedido, uma ação: agrupar não faz sentido.
+            'agrupa' => false,
+            'registro' => 'chefe',
+            // Concluída, vira PROCESSO no e-Salvador: o resultado precisa de um dono formal.
+            'retorno' => 'processo',
         ],
     ],
 

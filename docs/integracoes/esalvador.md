@@ -53,9 +53,21 @@ As três credenciais vêm de lugares **diferentes**:
 | `password` (secret key) | equipe do e-Salvador (SEMGE) | não |
 | `token` | gerado por uma **pessoa** no e-Salvador: Ajuda → Integração Token | **não**, e **não fica guardado lá** — perdeu, gera outro e o antigo morre na hora |
 
-> ⚠️ **O IP da nossa aplicação precisa ser liberado junto à SEMGE.** Está escrito
-> na documentação como pré-requisito das credenciais. Sem isso o próprio `/login`
-> responde 401, e o sintoma é indistinguível de senha errada.
+> ⚠️ **O IP da nossa aplicação é cadastrado junto com as credenciais.** A
+> documentação menciona isso uma única vez, e o que ela diz é só isto:
+>
+> > "As credenciais de acesso nome e password, **bem como o endereço de IP da
+> > aplicação que vai acessar a API**, devem ser previamente configuradas junto à
+> > equipe de desenvolvimento do eSalvador - SEMGE."
+>
+> **O que a documentação NÃO diz:** se uma chamada vinda de IP não cadastrado é
+> recusada, nem com qual código. Pode ser allowlist com bloqueio efetivo, pode ser
+> só registro cadastral do provisionamento. Não assuma nenhum dos dois — **teste**
+> assim que houver credencial, e anote aqui o que de fato aconteceu.
+>
+> A distinção importa na prática: se for bloqueio, o IP de saída da nossa
+> aplicação tem de ser estável e conhecido (no OKD, o IP de egress do cluster;
+> em máquina de dev, o da VPN da Prefeitura), e isso muda a conversa com a SEMGE.
 
 O JWT dura 1 hora; guardamos por 3300s (`ESALVADOR_TOKEN_VALIDO_POR`) para nunca
 apresentar um token que expira no meio do caminho.
@@ -192,11 +204,127 @@ Três caminhos, e eles não são excludentes:
 
 ---
 
+---
+
+## Reconhecimento contra a API REAL — 15/09/2026
+
+> Feito **somente com GET** (mais o `POST /login`, que é autenticação e não cria
+> nem altera recurso). Nenhum `PUT`, nenhum `DELETE`, nenhum POST de escrita — em
+> particular **não** se chamou `PUT /seleciona-caixa`. É API de **produção**, e
+> não existe ambiente de homologação.
+
+### O que ficou provado
+
+**1. A autenticação funciona daqui.** `POST /login` → **HTTP 200**, com
+`access_token` de 371 caracteres. Isso encerra a dúvida do IP: do ponto de rede
+desta máquina (VPN da Prefeitura), a credencial passa. Continua sem resposta o
+que acontece a partir de um IP diferente — o do egress do OKD, por exemplo.
+
+**2. A documentação tem um erro de grafia.** O endpoint publicado como
+`/subsassuntos/{id}` responde **404**. O real é **`/subassuntos/{id}`** (sem o
+primeiro "s"), que responde 200.
+
+**3. Para nós a classificação tem DOIS níveis, não três.** Todos os assuntos de
+interesse responderam com **zero subassuntos**. `ESALVADOR_SUBASSUNTOS` fica
+vazio por não haver o que pôr.
+
+**4. ⚠️ O CONTEÚDO só é legível para processo que está NA CAIXA DO USUÁRIO.**
+
+`GET /consulta-ultimo-tramite/{n}/{ano}` — que é onde moram o relato e os
+requerentes — respondeu, para todo processo testado:
+
+```json
+{"error":"Unauthorized","msg":"O processo não está na caixa do usuário."}
+```
+
+Enquanto `GET /consulta/{n}/{ano}` (metadados: classificação, unidades, datas,
+`codigo`, `identificador`) responde 200 para qualquer processo.
+
+E `GET /caixa-processos`, chamado sem `seleciona-caixa`, devolveu uma caixa que
+**não é a da SEMOP**: **91 processos**, e na primeira página vinte deles são de
+**SEFAZ (18) e PGMS (2)** — grupos ADMINISTRATIVO FISCAL e POLITICAS PUBLICAS,
+nenhum da Ordem Pública. O usuário da nossa credencial está hoje apontado para a
+caixa de outra secretaria.
+
+**Consequência direta: sem apontar a caixa para a unidade da SEFAL, a integração
+lê metadados e não lê denúncia nenhuma.** E apontar é `PUT /seleciona-caixa` —
+escrita, proibida nesta fase. Ver "O que precisa ser resolvido", abaixo.
+
+### Os ids, descobertos e confirmados com dado real
+
+| O quê | Id | Nome no catálogo deles |
+|---|---|---|
+| **Órgão** | **5369** | SEMOP — Secretaria Municipal de Ordem Pública |
+| **Unidade — a nossa** | **5382** | **SEFAL — Setor de Fiscalização de Atividades em Logradouros Públicos** |
+| Unidade — onde o público entrega | 5423 | SEATE — Setor de Atendimento ao Público |
+| Unidade — licenciamento | 5381 | SEALP — Setor de Autorização para o Exercício de Atividades em Logradouros Públicos |
+| Unidade — apreensão | 5383 | SEABE — Setor de Apreensão de Bens em Logradouros Públicos |
+| Unidade — guarda do apreendido | 5379 | SEGUB — Setor de Guarda de Bens Apreendidos |
+| **Grupo** | **10** | ORDEM PUBLICA |
+| Grupo (ouvidoria da cidade) | 11 | OUVIDORIA |
+
+Assuntos do grupo 10 que nos interessam:
+
+| Id | Assunto | O que parece ser |
+|---|---|---|
+| **215** | COMERCIO INFORMAL E ESPACO PUBLICO - **FISCALIZACAO** | **a denúncia** — é o que mais chega à caixa da SEFAL |
+| 222 | COMERCIO INFORMAL E ESPACO PUBLICO - CADASTRO | cadastro de ambulante |
+| 216 | COMERCIO INFORMAL E ESPACO PUBLICO - LICENCA AMBULANTE | o canal "nova licença" |
+| 217 / 218 / 219 / 221 | LICENCA BAIANA DE ACARAJE / KIT PRAIA / USO DO SOLO / OUTRAS | outras licenças |
+| 223 | COMERCIO INFORMAL E ESPACO PUBLICO - OUTROS | resto |
+| 232 | FISCALIZACAO | genérico, e de vários órgãos — **não** é só nosso |
+
+E, no grupo 11: 235 DENUNCIA, 234 CENTRAL DE ATENDIMENTO - 156, 237 FALA
+SALVADOR.
+
+### O volume real (últimos 89 dias, consultado em 15/09/2026)
+
+| Recorte | Processos |
+|---|---|
+| grupo 10 · assunto 215 (todos os órgãos) | **53** |
+| grupo 10 · assunto 216 — licença ambulante | 66 |
+| grupo 10 · assunto 232 — fiscalização genérica | 26 |
+| grupo 11 · assunto 235 — denúncia (cidade inteira) | 254 |
+| **unidade 5382 — a caixa da SEFAL** | **38** |
+| unidade 5381 — SEALP | 5 |
+| unidade 5423 — SEATE | 868 |
+
+Duas leituras que importam:
+
+- **a caixa da SEFAL recebe ~38 processos por trimestre**, quase todos
+  `COMERCIO INFORMAL E ESPACO PUBLICO - FISCALIZACAO`. É um volume de dezenas por
+  trimestre, não de milhares — o que muda a expectativa sobre a pré-triagem: ela
+  vai tratar poucos casos por dia, e o ganho está em não mandar equipe duas vezes,
+  não em volume;
+- **`OUVIDORIA / DENUNCIA` (235) NÃO é nosso**: os processos que apareceram são
+  de SMED/OUV (Educação). É a ouvidoria da cidade toda. Filtrar por esse assunto
+  importaria denúncia de escola.
+
+### O identificador tem estrutura
+
+`"identificador": "215.5423.207495/2026"` = `{assunto}.{unidade_origem}.{numero}/{ano}`.
+
+Serve de conferência barata: dá para validar a classificação sem uma segunda
+chamada.
+
+### O que precisa ser resolvido antes de ligar
+
+| Bloqueio | Natureza | Com quem |
+|---|---|---|
+| **A caixa do nosso usuário aponta para outra unidade** | precisa de `PUT /seleciona-caixa` (escrita) **ou** de a SEMGE/SEMOP apontá-la do lado deles | SEMOP + SEMGE |
+| Confirmar que **215** é o assunto da denúncia de ambulante | conferir um caso real com quem opera | SEMOP |
+| Saber se o endereço do fato vem no texto | só dá para ver lendo um relato — e ler depende do item 1 | SEMOP |
+| Se o IP bloqueia, e qual será o IP de saída em produção | daqui passa; do OKD, desconhecido | SEMGE |
+
+> A ordem importa: **enquanto a caixa não apontar para a SEFAL, nada do conteúdo
+> é legível**, e a pergunta sobre o endereço — que é a que decide o desenho da
+> pré-triagem — continua sem resposta.
+
 ## Pendências antes de ligar
 
 | O que falta | Com quem |
 |---|---|
-| Liberação do **IP** da aplicação | equipe do e-Salvador (SEMGE) |
+| Cadastro do **IP** da aplicação (e saber se ele bloqueia) | equipe do e-Salvador (SEMGE) |
 | `nome` + `password` (secret key) | equipe do e-Salvador (SEMGE) |
 | `token` de integração gerado por um servidor | SEMOP, dentro do e-Salvador |
 | Id da **unidade** (a caixa) e do **órgão** da SEMOP | SEMOP / `GET /orgaos`, `GET /unidades/{orgao}` |
@@ -208,5 +336,23 @@ Enquanto isso, `ESALVADOR_LIGADA=false`: nada sai daqui para a rede.
 ## Códigos de resposta
 
 `200` ok · `201` criado · `400` dados ausentes ou errados · `401` não autenticado
-(**inclui IP não liberado**) · `403` uso indevido do recurso · `404` não
-encontrado · `500` erro deles.
+· `403` uso indevido do recurso · `404` não encontrado · `500` erro deles.
+
+> A documentação não relaciona nenhum desses códigos ao IP não cadastrado — a
+> lista é genérica. Quando o primeiro teste real acontecer, registre aqui o
+> código e a mensagem que vierem: é a única forma de o próximo a depurar não
+> refazer a adivinhação.
+
+## A ESTRUTURA da escrita — montada em 23/09/2026, sem escrever
+
+O ato do chefe que fecha o ciclo existe no sistema, e a chamada à API **não**:
+
+| Peça | Onde | O que faz hoje |
+|---|---|---|
+| Cliente | `App\Services\ESalvador\ESalvador` | `responderProcesso()` (→ `POST /criar-tramite`) e `abrirProcesso()` (endpoint ainda não documentado para nós). Com `ESALVADOR_LIGADA=false` devolvem `null` e **nada sai para a rede**; com a integração ligada lançam `EscritaNaoLiberada` — ligar o interruptor por engano não escreve num processo real. |
+| Ato | `App\Support\RetornoAoCanal` | Concluída a demanda, registra em `demandas` (`respondida_ao_canal_em`, `resposta_ao_canal`, `processo_esalvador`, `respondida_por_id`) e no trâmite (`Resposta registrada no e-Salvador` / `Processo aberto no e-Salvador`, com "Enviado pela integração: Não"). Um retorno por demanda; só `Concluída`; só canais com `retorno` na config (`e-salvador` → `tramite`, `avulsa` → `processo`). |
+| Porta | `POST retaguarda/denuncias/{demanda}/responder-ao-canal` e `POST retaguarda/caixa-de-entrada/{demanda}/responder-ao-canal` (`RetornoAoCanalController`) | Só o Chefe de Setor e o administrador. Na avulsa o **número do processo** é obrigatório: com a integração desligada, é a prova de que o chefe o abriu à mão. |
+| Tela | `components/retaguarda/retorno-ao-canal.tsx`, no detalhe da denúncia (e-Salvador) e da Caixa (avulsa) | Formulário para o chefe; a resposta dada, para quem chegar depois. O texto da tela diz "registrado aqui e feito à mão no e-Salvador". |
+
+**Para ligar de verdade**, quando a SEMGE/SEMOP liberar a escrita: preencher o corpo dos dois métodos do cliente (login `POST /login` → `POST /criar-tramite` com `descricao`; criação de processo conforme o contrato que a SEMGE definir), e a replicação nos processos **agregados** (`demandas.agrupada_em_id`) — um resultado, um trâmite em cada processo. O resto do sistema não muda.
+

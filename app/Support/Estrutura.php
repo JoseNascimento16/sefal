@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  * ## Por que uma classe, e não consulta espalhada pelos controllers
  *
  * Porque três perguntas têm de dar a MESMA resposta em todo lugar: qual equipe o
- * bairro sugere, quem é o Chefe de Setor de cada área e por quais áreas esta
+ * bairro sugere, quem é o líder de cada equipe e por quais equipes esta
  * matrícula responde. Espalhadas, elas divergiriam no primeiro ajuste — e a
  * divergência seria invisível: a Caixa de Entrada encaminharia para uma área e a
  * tela de Denúncias mostraria outra.
@@ -57,8 +57,8 @@ class Estrutura
         if (! app()->bound(self::MEMORIA)) {
             app()->instance(self::MEMORIA, Area::with([
                 'bairros',
-                'chefeDeSetor',
                 'equipes.fiscais',
+                'equipes.lider',
             ])->orderBy('nome')->get());
         }
 
@@ -92,10 +92,19 @@ class Estrutura
                 // trabalha hoje). O banco já aceita várias — quando isso mudar, é
                 // a tela que ganha a lista, não o modelo que muda.
                 'equipe' => (string) ($equipe?->codigo ?? ''),
+                // O nome do documento do cliente. Continua sendo o que a tela
+                // mostra quando a equipe ainda não tem líder com conta.
                 'encarregado' => (string) ($equipe?->encarregado ?? ''),
-                'chefe_de_setor' => $area->chefeDeSetor === null ? null : [
-                    'nome' => $area->chefeDeSetor->name,
-                    'matricula' => $area->chefeDeSetor->login,
+                /*
+                 * O LÍDER DE EQUIPE — quem recebe o que o chefe encaminha a esta
+                 * equipe. Nulo quando o encarregado do documento ainda não virou
+                 * usuário: é estado legítimo, não dado faltando, e é o que faz a
+                 * tela dizer "equipe sem líder no sistema" em vez de prometer um
+                 * acesso que ninguém tem.
+                 */
+                'lider' => $equipe?->lider === null ? null : [
+                    'nome' => $equipe->lider->name,
+                    'matricula' => $equipe->lider->login,
                 ],
                 'recorte' => $area->recorte,
                 'turno' => (string) ($area->turno ?? ''),
@@ -122,7 +131,7 @@ class Estrutura
     /**
      * As equipes numa lista rasa — o que os formulários oferecem como destino.
      *
-     * @return list<array{equipe: string, area: string, regiao: string, encarregado: string, recorte: string, turno: string}>
+     * @return list<array{equipe: string, area: string, regiao: string, encarregado: string, lider: string, lider_matricula: string|null, recorte: string, turno: string}>
      */
     public static function equipes(): array
     {
@@ -135,6 +144,10 @@ class Estrutura
                     'area' => $area->nome,
                     'regiao' => (string) ($area->regiao ?? ''),
                     'encarregado' => (string) ($equipe->encarregado ?? ''),
+                    // Quem recebe o encaminhamento: o chefe escolhe a equipe
+                    // vendo PARA QUEM está mandando.
+                    'lider' => $equipe->nomeDoLider(),
+                    'lider_matricula' => $equipe->lider?->login,
                     'recorte' => $area->recorte,
                     'turno' => (string) ($equipe->turno ?? $area->turno ?? ''),
                 ];
@@ -173,67 +186,72 @@ class Estrutura
     }
 
     /**
-     * `área => Chefe de Setor`.
-     *
-     * Não confundir com o `encarregado`, que chefia a equipe em campo. O Chefe de
-     * Setor é quem recebe a demanda encaminhada, decide equipe ou operação e lê o
-     * que a equipe concluiu. "Encaminhei para a Área 5" só diz metade — a outra
-     * metade é para QUEM.
-     *
-     * @return array<string, array{nome: string, matricula: string|null}>
-     */
-    public static function chefiasPorArea(): array
-    {
-        $mapa = [];
-
-        foreach (self::carregadas() as $area) {
-            $mapa[$area->nome] = [
-                'nome' => (string) ($area->chefeDeSetor?->name ?? ''),
-                // Área sem conta de chefe tem nome vazio e matrícula nula: é
-                // estado legítimo, não dado faltando.
-                'matricula' => $area->chefeDeSetor?->login,
-            ];
-        }
-
-        return $mapa;
-    }
-
-    /**
-     * As áreas de que esta matrícula é a chefia — vazio quando não responde por
+     * Os CÓDIGOS das equipes que esta matrícula lidera — vazio quando não lidera
      * nenhuma.
      *
-     * Devolve LISTA porque na vida real uma pessoa responde por mais de uma área
-     * (férias, acumulação, área recém-criada).
+     * Substitui `areasDoChefe()`: o Chefe de Setor passou a ser um só e a
+     * responder por tudo (22/09/2026), então "por quais áreas esta matrícula
+     * responde" deixou de ser pergunta. A que ficou é esta — e é pela equipe,
+     * não pela área, porque é a equipe que tem líder.
+     *
+     * Devolve LISTA porque na vida real uma pessoa cobre a equipe do colega em
+     * férias, ou a equipe recém-criada ainda sem líder próprio.
      *
      * @return list<string>
      */
-    public static function areasDoChefe(?string $matricula): array
+    public static function equipesDoLider(?string $matricula): array
     {
         if ($matricula === null || trim($matricula) === '') {
             return [];
         }
 
         $procurada = mb_strtolower(trim($matricula));
-        $areas = [];
+        $codigos = [];
 
         foreach (self::carregadas() as $area) {
-            if ($area->chefeDeSetor !== null && mb_strtolower($area->chefeDeSetor->login) === $procurada) {
-                $areas[] = $area->nome;
+            foreach ($area->equipes as $equipe) {
+                if ($equipe->lider !== null && mb_strtolower($equipe->lider->login) === $procurada) {
+                    $codigos[] = $equipe->codigo;
+                }
             }
         }
 
-        return $areas;
+        return $codigos;
+    }
+
+    /**
+     * `código da equipe => líder`, para quem encaminha ver PARA QUEM está
+     * mandando. "Encaminhei para a C2" só diz metade — a outra metade é para quem.
+     *
+     * @return array<string, array{nome: string, matricula: string|null}>
+     */
+    public static function lideresPorEquipe(): array
+    {
+        $mapa = [];
+
+        foreach (self::carregadas() as $area) {
+            foreach ($area->equipes as $equipe) {
+                $mapa[$equipe->codigo] = [
+                    'nome' => $equipe->nomeDoLider(),
+                    // Equipe sem conta de líder tem matrícula nula: é estado
+                    // legítimo, não dado faltando.
+                    'matricula' => $equipe->lider?->login,
+                ];
+            }
+        }
+
+        return $mapa;
     }
 
     /**
      * A equipe SUGERIDA para um bairro — e as alternativas, quando o bairro
      * pertence a mais de uma área.
      *
-     * A sugestão nunca decide sozinha: quem confirma é o coordenador. Um bairro
+     * A sugestão nunca decide sozinha: quem confirma é o Chefe de Setor. Um bairro
      * de divisa tem duas respostas igualmente certas, e escolher uma em silêncio
      * esconderia a decisão de quem tem de tomá-la.
      *
-     * @return array{equipe: string, area: string, regiao: string, encarregado: string, alternativas: list<array<string, string>>}|null
+     * @return array{equipe: string, area: string, regiao: string, encarregado: string, lider: string, alternativas: list<array<string, string>>}|null
      */
     public static function sugerirPorBairro(?string $bairro): ?array
     {
@@ -258,6 +276,7 @@ class Estrutura
                     'area' => $area->nome,
                     'regiao' => (string) ($area->regiao ?? ''),
                     'encarregado' => (string) ($equipe?->encarregado ?? ''),
+                    'lider' => (string) ($equipe?->nomeDoLider() ?? ''),
                 ];
 
                 break;

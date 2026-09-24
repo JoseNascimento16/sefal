@@ -126,7 +126,10 @@ return [
                     'icone' => 'caixa',
                     'slug' => 'caixa-de-entrada',
                     'curto' => 'ENTRADA',
-                    'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                    // A mesa do CHEFE DE SETOR: pré-triagem, encaminhamento e
+                    // devolução. O líder de equipe não entra — o que é dele chega
+                    // pelas Denúncias, já encaminhado.
+                    'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
                     'rotulo' => 'Denúncias',
@@ -139,15 +142,15 @@ return [
                             'icone' => 'denuncias',
                             'slug' => 'denuncias',
                             'curto' => 'E-SALV',
-                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                         ],
                         [
-                            'rotulo' => 'Salvador Digital',
-                            'rota' => 'retaguarda.denuncias.salvador-digital.index',
+                            'rotulo' => 'Fala Salvador',
+                            'rota' => 'retaguarda.denuncias.fala-salvador.index',
                             'icone' => 'denuncias',
                             'slug' => 'denuncias',
                             'curto' => 'FALA',
-                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                         ],
                     ],
                 ],
@@ -163,8 +166,8 @@ return [
                     'contador' => 'fiscalizacoes-a-decidir',
                     'setores' => [
                         'administrador',
-                        'coordenador',
                         'chefe-de-setor',
+                        'lider-de-equipe',
                         'fiscal' => ['apenas_leitura' => true],
                     ],
                 ],
@@ -175,28 +178,28 @@ return [
          * Denúncias — o que as ouvidorias da Prefeitura entregam por INTEGRAÇÃO.
          *
          * Vem ANTES de Fiscalização porque é o começo da cadeia: a denúncia chega
-         * de fora, é triada pelo coordenador, encaminhada à área e direcionada
-         * pelo Chefe de Setor — e só então vira trabalho de rua. O menu desenha a ordem
-         * do trabalho.
+         * de fora, é encaminhada pelo Chefe de Setor a uma equipe e direcionada
+         * aos fiscais pelo líder dela — e só então vira trabalho de rua. O menu
+         * desenha a ordem do trabalho.
          *
          * Seção PRÓPRIA, e não itens dentro de Fiscalização, porque estas telas
          * não são trabalho de campo nem cadastro: são o ciclo ADMINISTRATIVO que
          * antecede o campo, com dois papéis decidindo em sequência. E são seção
-         * separada da Caixa de Entrada de propósito — lá o coordenador DIGITA
-         * o papel que chegou ao balcão; aqui ninguém digita nada, a denúncia
-         * chega sozinha pela integração.
+         * separada da Caixa de Entrada de propósito — lá o Chefe de Setor pré-tria
+         * e DIGITA o que chegou por ligação ou e-mail; aqui ninguém digita nada, a
+         * denúncia chega já entendida.
          *
          * ── As duas declaram o MESMO slug, e isso é deliberado ───────────────
          *
          * Elas moram sob o mesmo primeiro trecho do caminho
          * (`/retaguarda/denuncias/…`), que é de onde as guardas deduzem a tela: a
          * permissão é UMA, para o módulo, e aparece no Modo Gerente com o nome da
-         * seção. Separar a permissão do e-Salvador da do Salvador Digital seria uma
+         * seção. Separar a permissão do e-Salvador da do Fala Salvador seria uma
          * decisão que ninguém precisa tomar — quem cuida de denúncia cuida das
          * duas origens.
          *
-         * Concessão inicial: administrador, coordenador e Chefe de Setor, que são
-         * justamente os papéis do fluxo (o coordenador tria; o Chefe de Setor
+         * Concessão inicial: administrador, Chefe de Setor e líder de equipe, que
+         * são justamente os papéis do fluxo (o chefe encaminha; o líder
          * direciona). O FISCAL
          * não entra — deixá-lo aqui permitiria escolher o próprio trabalho e
          * arquivar o que não quisesse atender; a denúncia chega a ele pelo
@@ -251,18 +254,18 @@ return [
                  * cliente, 02/09/2026).
                  *
                  * Vem ANTES de "Fiscalizações" porque é o começo da cadeia: a
-                 * demanda de fora (e-Salvador, Salvador Digital, pedido de nova
+                 * demanda de fora (e-Salvador, Fala Salvador, pedido de nova
                  * licença, ofício) entra por aqui, é triada e só então vira
                  * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
                  *
-                 * Concessão inicial: coordenador, administrador e Chefe de Setor. O
-                 * COORDENADOR é o dono do trabalho — registrar o que chega em
-                 * papel é a função dele (decisão do dono, 02/09/2026); o Chefe de
-                 * Setor acompanha o que foi encaminhado. O FISCAL não entra — triar o que
-                 * chega, encaminhar e devolver com justificativa é ato
-                 * de coordenação, e a demanda encaminhada chega a ele pelo
-                 * aplicativo, já dirigida. Dar-lhe a caixa permitiria escolher o
-                 * próprio trabalho e arquivar o que não quisesse atender.
+                 * Concessão inicial: administrador e Chefe de Setor. O CHEFE é o dono
+                 * do trabalho — pré-triar o que chega, registrar o que vem por
+                 * ligação ou e-mail, encaminhar e devolver com justificativa são
+                 * atos dele (decisão do dono, 22/09/2026). O líder de equipe não
+                 * entra: o que é dele chega pelas Denúncias, já encaminhado. O
+                 * FISCAL também não — a demanda chega a ele pelo aplicativo, já
+                 * dirigida; dar-lhe a caixa permitiria escolher o próprio trabalho
+                 * e arquivar o que não quisesse atender.
                  */
                 /*
                  * Fiscalizações — TUDO o que a equipe concluiu em rua, numa tela
@@ -283,9 +286,9 @@ return [
                  * trabalho de rua — e volta para cá. O menu desenha a ordem do
                  * trabalho.
                  *
-                 * Concessão inicial: Chefe de Setor (a fila é dele), Coordenador
-                 * (acompanha o que aconteceu com o que encaminhou, SEM decidir — a
-                 * recusa mora no controller) e administrador.
+                 * Concessão inicial: líder de equipe (a fila da equipe é dele),
+                 * Chefe de Setor (lê tudo e cobre a ausência do líder) e
+                 * administrador.
                  *
                  * ⚠️ O FISCAL entra, em apenas leitura, e isto é decisão do dono
                  * (09/09/2026) COM uma ressalva registrada: **o fiscal é usuário do
@@ -490,11 +493,10 @@ return [
                             'icone' => 'operacoes',
                             'slug' => 'operacoes',
                             'curto' => 'OPERAÇÃO',
-                            'setores' => [
-                                'administrador',
-                                'chefe-de-setor',
-                                'coordenador' => ['apenas_leitura' => true],
-                            ],
+                            // O líder monta a operação da equipe dele; o Chefe de
+                            // Setor, de qualquer uma. O fiscal não entra: quem
+                            // executa não desenha o plano.
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                         ],
                     ],
                 ],
@@ -523,10 +525,10 @@ return [
                  * áreas e equipes.
                  *
                  * Concessão inicial: o Chefe de Setor CADASTRA (é ele que responde
-                 * pelo trabalho de rua da área dele) e o COORDENADOR consulta — ele
-                 * tria a entrada e precisa saber que operação existe para onde
-                 * encaminhar a demanda, mas montar a operação não é dele. A recusa
-                 * do ato dele mora no controller, dizendo o motivo.
+                 * pelo trabalho de rua do setor) e o LÍDER DE EQUIPE consulta — ele
+                 * direciona a demanda e precisa saber que operação existe para
+                 * anexá-la, mas montar a operação não é dele. A recusa do ato dele
+                 * mora no controller, dizendo o motivo.
                  *
                  * O FISCAL não entra: planejar operação é ato de gestão, e ele
                  * recebe o trabalho já dirigido, pelo aplicativo.

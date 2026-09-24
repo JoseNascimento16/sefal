@@ -70,14 +70,14 @@ class ContadoresDoMenu
              * gatilho de trabalho de quem decide — sem o número, a chefia só
              * descobre que tem sete retornos parados quando abre a tela.
              *
-             * ⚠️ O número é RECORTADO pela área, pela mesma regra que recorta a
-             * listagem ({@see PapelNaArea}): um contador que somasse o universo
+             * ⚠️ O número é RECORTADO pela equipe, pela mesma regra que recorta a
+             * listagem ({@see Papel}): um contador que somasse o universo
              * mostraria "12" a quem abre a tela e encontra 3, e a diferença
              * pareceria registro perdido. É a mesma fonte, o mesmo recorte.
              *
-             * ⚠️ E ele só conta para quem DECIDE. Para o Coordenador — que
-             * acompanha e não decide — e para o fiscal, o número seria uma
-             * cobrança sobre trabalho que não é deles.
+             * ⚠️ E ele só conta para quem DECIDE. Para o fiscal — que consulta e
+             * não decide — o número seria uma cobrança sobre trabalho que não é
+             * dele.
              *
              * É PROTÓTIPO, e por isso não é consulta a banco: a fila é derivada do
              * trâmite das denúncias mais o arquivo das avulsas, e as decisões vivem
@@ -89,12 +89,12 @@ class ContadoresDoMenu
                 'valor' => function (): int {
                     $usuario = Auth::user();
 
-                    if (! PapelNaArea::decide($usuario)) {
+                    if (! Papel::decide($usuario)) {
                         return 0;
                     }
 
-                    $areas = PapelNaArea::areas($usuario);
-                    $recorta = PapelNaArea::recorta($usuario);
+                    $equipes = Papel::equipes($usuario);
+                    $recorta = Papel::recorta($usuario);
 
                     /*
                      * UMA contagem, sem carregar linha: o menu é montado em toda
@@ -106,7 +106,7 @@ class ContadoresDoMenu
                         ->whereNotNull('despachada_em');
 
                     if ($recorta) {
-                        $consulta->whereHas('equipe.area', static fn ($q) => $q->whereIn('nome', $areas));
+                        $consulta->whereHas('equipe', static fn ($q) => $q->whereIn('codigo', $equipes));
                     }
 
                     return $consulta->count();

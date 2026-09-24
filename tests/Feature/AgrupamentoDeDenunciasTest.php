@@ -123,7 +123,7 @@ it('não responde de novo a agregada que já foi encerrada', function () {
     $principal = denuncia();
     $agregada = denuncia();
     $agregada->agruparEm($principal, $coordenador, 'Mesmo fato.');
-    $agregada->registrar('Arquivada', Demanda::ARQUIVADA, DemandaTramite::PAPEL_COORDENADOR, $coordenador);
+    $agregada->registrar('Arquivada', Demanda::ARQUIVADA, DemandaTramite::PAPEL_CHEFE_DE_SETOR, $coordenador);
 
     expect($principal->responderAgregadas('Regularizado no local', $coordenador))->toBe(0);
 });

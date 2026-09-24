@@ -32,7 +32,7 @@ uses(RefreshDatabase::class);
 it('cria as contas de demonstração com senha inicial e o papel certo', function () {
     $this->artisan('sefal:preparar-demonstracao')->assertSuccessful();
 
-    foreach (['admin' => 'admin123', 'coordenador' => 'coordenador123', 'gestor1' => 'gestor123'] as $login => $senha) {
+    foreach (['admin' => 'admin123', 'fiscal' => 'fiscal123', 'gestor1' => 'gestor123'] as $login => $senha) {
         $usuario = User::where('login', $login)->first();
 
         // Autentica DE VERDADE: existir e deixar entrar são coisas diferentes, e
@@ -42,12 +42,17 @@ it('cria as contas de demonstração com senha inicial e o papel certo', functio
             ->and(Hash::check($senha, $usuario->password))->toBeTrue("a senha inicial de {$login} não entra");
     }
 
-    // O coordenador existe para a demonstração mostrar o PAPEL, e não só a tela:
-    // o administrador enxerga tudo, então não revela o recorte de quem tria.
-    expect(User::where('login', 'coordenador')->first()->setores->pluck('slug')->all())
-        ->toContain('coordenador')
-        ->and(User::where('login', 'gestor1')->first()->setores->pluck('slug')->all())
-        ->toContain('chefe-de-setor');
+    // As contas existem para a demonstração mostrar o PAPEL, e não só a tela: o
+    // administrador enxerga tudo, então não revela nem a mesa do chefe nem o
+    // recorte do líder. Os líderes (`lider-<equipe>`) nascem no seeder da estrutura.
+    expect(User::where('login', 'gestor1')->first()->setores->pluck('slug')->all())
+        ->toContain('chefe-de-setor')
+        ->and(User::where('login', 'fiscal')->first()->setores->pluck('slug')->all())
+        ->toContain('fiscal')
+        ->and(User::where('login', 'lider-c1')->first()?->setores->pluck('slug')->all())
+        ->toContain('lider-de-equipe')
+        // O coordenador não entra no SEFAL (decisão do dono, 22/09/2026).
+        ->and(User::where('login', 'coordenador')->exists())->toBeFalse();
 });
 
 it('NUNCA troca a senha de uma conta que já existe', function () {
@@ -79,10 +84,10 @@ it('preenche a senha quando a conta existe mas está sem nenhuma', function () {
      * resultado seria um hash válido de nada — uma conta que parece ter senha e
      * na qual ninguém consegue entrar. É assim que uma conta importada chega.
      */
-    $sem = User::factory()->create(['login' => 'coordenador', 'ativo' => true]);
+    $sem = User::factory()->create(['login' => 'fiscal', 'ativo' => true]);
     DB::table('users')->where('id', $sem->id)->update(['password' => '']);
 
     $this->artisan('sefal:preparar-demonstracao')->assertSuccessful();
 
-    expect(Hash::check('coordenador123', User::where('login', 'coordenador')->first()->password))->toBeTrue();
+    expect(Hash::check('fiscal123', User::where('login', 'fiscal')->first()->password))->toBeTrue();
 });

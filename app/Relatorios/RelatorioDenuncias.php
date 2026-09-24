@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Date;
  * A pergunta que a coordenação leva para a reunião com as ouvidorias: quantas
  * denúncias cada canal mandou, quantas ainda esperam triagem e quantas
  * viraram trabalho de rua. O PRAZO é a coluna que cobra: denúncia vencida na
- * mesa é o que o cidadão sente, e é o que o e-Salvador e o Salvador Digital
+ * mesa é o que o cidadão sente, e é o que o e-Salvador e o Fala Salvador
  * perguntam.
  *
  * Mesma fonte das telas de Denúncias (a montagem de {@see DemandaParaTela}),

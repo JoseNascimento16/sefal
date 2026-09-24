@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Date;
  * É essa variação que o analisador precisa atravessar.
  *
  * **Os dois canais.** O e-Salvador traz requerente identificado e endereço
- * estruturado; o Salvador Digital pode ser anônimo e traz a transcrição do que o
+ * estruturado; o Fala Salvador pode ser anônimo e traz a transcrição do que o
  * atendente ouviu, às vezes sem número. Um agrupamento que só funcionasse dentro
  * do mesmo canal deixaria de fora metade da repetição real.
  *
@@ -60,7 +60,7 @@ class DenunciasRepetidasSeeder extends Seeder
             '212', 9, false, 'Bar do Zeca', 'José Carlos Andrade Lima',
         ],
         [
-            'salvador-digital', 'Bar ocupando o passeio público',
+            'fala-salvador', 'Bar ocupando o passeio público',
             'Munícipe informa que o estabelecimento coloca mesas e cadeiras no passeio todas as noites, de quinta a domingo, e que já reclamou no local sem sucesso.',
             '214', 26, true, 'Bar do Zeca', '',
         ],
@@ -70,7 +70,7 @@ class DenunciasRepetidasSeeder extends Seeder
             '218', 41, false, 'Bar do Zéca', '',
         ],
         [
-            'salvador-digital', 'Mesas na calçada atrapalhando quem anda',
+            'fala-salvador', 'Mesas na calçada atrapalhando quem anda',
             'Denunciante relata mesas na calçada em frente ao bar, obrigando pedestres a caminhar pela via, em rua de movimento.',
             '212', 58, true, 'Bar do Zeca', '',
         ],

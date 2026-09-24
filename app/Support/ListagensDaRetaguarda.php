@@ -13,10 +13,10 @@ use InvalidArgumentException;
  *
  * ── Por que quem resolve é o SERVIDOR ───────────────────────────────────────
  *
- * A coluna condicional (`quando`) depende de QUEM entrou: a área só é coluna
+ * A coluna condicional (`quando`) depende de QUEM entrou: a equipe só é coluna
  * para quem responde por mais de uma. Resolver isso na tela obrigaria cada tela
- * a repetir a regra "conta as áreas do usuário", que é justamente a coisa que
- * {@see PapelNaArea} existe para ter um dono só. Então o
+ * a repetir a regra "conta as equipes do usuário", que é justamente a coisa que
+ * {@see Papel} existe para ter um dono só. Então o
  * controller passa o contexto, este resolvedor devolve a grade pronta, e a tela
  * apenas desenha o que recebeu.
  *

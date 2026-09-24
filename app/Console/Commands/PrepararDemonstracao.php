@@ -123,17 +123,27 @@ class PrepararDemonstracao extends Command
      * exatamente como está. Trocar a senha de alguém é ato deliberado e tem
      * comando próprio: `sefal:setar-senha`.
      *
-     * ## Por que existe um COORDENADOR na lista
+     * ## Quem está na lista, e quem NÃO está
      *
-     * A pré-triagem e a caixa são a mesa DELE. Demonstrá-las como administrador
-     * mostra a tela, mas não o papel: o administrador enxerga tudo, então não se
-     * vê o recorte que o coordenador de verdade tem.
+     * O CHEFE DE SETOR é um só e vê tudo: `gestor1` cumpre esse papel (a
+     * matrícula ficou como nasceu — matrícula identifica gente, não cargo).
+     * `gestor2` e `gestor3` continuam como chefes para a demonstração ter mais
+     * de uma pessoa no mesmo papel.
+     *
+     * Os LÍDERES DE EQUIPE não estão aqui porque nascem da estrutura
+     * (`EstruturaSeeder`): um por equipe, matrícula `lider-<código>` e senha igual
+     * à matrícula — `lider-c2`, `lider-a1`… É lá que mora o vínculo com a equipe,
+     * e duplicá-lo aqui daria dois donos à mesma lista.
+     *
+     * Não há COORDENADOR: os coordenadores trabalham no e-Salvador e não entram
+     * no SEFAL (decisão do dono, 22/09/2026). A conta `coordenador` que existia
+     * na demonstração perdeu o setor na migration e fica sem acesso — que é o
+     * estado real de quem não usa o sistema.
      *
      * @var list<array{login: string, nome: string, senha: string, setor: ?string, admin: bool}>
      */
     private const CONTAS = [
         ['login' => 'admin', 'nome' => 'Administrador', 'senha' => 'admin123', 'setor' => 'administrador', 'admin' => true],
-        ['login' => 'coordenador', 'nome' => 'Coordenador', 'senha' => 'coordenador123', 'setor' => 'coordenador', 'admin' => false],
         ['login' => 'fiscal', 'nome' => 'Fiscal', 'senha' => 'fiscal123', 'setor' => 'fiscal', 'admin' => false],
         ['login' => 'gestor1', 'nome' => 'Gestor 1', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],
         ['login' => 'gestor2', 'nome' => 'Gestor 2', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],

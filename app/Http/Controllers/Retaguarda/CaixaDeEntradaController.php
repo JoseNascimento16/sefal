@@ -12,7 +12,7 @@ use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\SugestaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\PapelNaArea;
+use App\Support\Papel;
 use App\Support\Protocolo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,18 +23,19 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Caixa de Entrada do Coordenador.
+ * Caixa de Entrada — a mesa do Chefe de Setor.
  *
- * É a porta por onde a demanda entra QUANDO CHEGA EM PAPEL: o e-Salvador e o
- * Salvador Digital entregam documento impresso ao coordenador, que digita,
- * decide e encaminha. O cadastro manual é requisito, não gambiarra — quando a
- * API chegar, ele continua existindo, e é a coluna `entrada` que separa um do
- * outro.
+ * É a porta por onde a demanda entra QUANDO CHEGA FORA DA INTEGRAÇÃO: o papel
+ * do e-Salvador, o ofício, o pedido de licença e a AVULSA — a ligação ou o
+ * e-mail de um superior pedindo uma ação. O Chefe de Setor digita, decide e
+ * encaminha. O cadastro manual é requisito, não gambiarra — quando a API ler,
+ * ele continua existindo, e é a coluna `entrada` que separa um do outro. O Fala
+ * Salvador NÃO entra por aqui: é digitado pelo líder, na tela do canal.
  *
  * ── As duas decisões que a tela existe para tomar ───────────────────────────
  *
  *   1. **Registrar e encaminhar** — a demanda ganha destino. O bairro SUGERE a
- *      área; quem confirma é o coordenador, porque um bairro de divisa pertence
+ *      área; quem confirma é o Chefe de Setor, porque um bairro de divisa pertence
  *      a duas áreas e as duas respostas estão certas.
  *   2. **Registrar e devolver/arquivar** — com MOTIVO e JUSTIFICATIVA
  *      obrigatórios. É ato administrativo: quem, quando, por quê. A validação
@@ -50,9 +51,10 @@ use Inertia\Response;
  *
  *  - a situação passou a ser a do fluxo completo: o que a tela chamava de
  *    "Aguardando triagem" é `Recebida`, e "Encaminhada" virou duas —
- *    `Encaminhada à área` (o coordenador escolheu só a área) e `Direcionada à
- *    equipe` (escolheu a equipe também). São dois estados diferentes do mundo, e
- *    um nome só para os dois escondia de quem cobra em que mesa o caso está;
+ *    `Encaminhada ao líder` (o Chefe de Setor escolheu a equipe; está na mesa
+ *    do líder dela) e `Direcionada aos fiscais` (o líder mandou a equipe ao
+ *    ponto). São dois estados diferentes do mundo, e um nome só para os dois
+ *    escondia de quem cobra em que mesa o caso está;
  *  - **não há mais "reiniciar"**: caixa de entrada não se reinicia.
  *
  * A guarda de acesso deduz a tela do primeiro trecho do caminho
@@ -75,7 +77,7 @@ class CaixaDeEntradaController extends Controller
         /*
          * A CAIXA — o que já é caso entendido.
          *
-         * Inclui o que o coordenador digitou (que nunca esteve em pré-triagem) e
+         * Inclui o que o Chefe de Setor digitou (que nunca esteve em pré-triagem) e
          * o que veio por integração e já foi liberado. A partir daqui a origem
          * não muda a decisão: as duas passam pelo mesmo crivo de encaminhar ou
          * devolver, e separá-las em duas filas faria a mesma escolha ser tomada
@@ -95,7 +97,7 @@ class CaixaDeEntradaController extends Controller
          *
          * Vem em ordem CRESCENTE, ao contrário da Caixa: aqui a mais antiga é a
          * que tende a ser a principal de um grupo (a varredura agrega na mais
-         * velha), e o coordenador lê na ordem em que os fatos chegaram.
+         * velha), e o Chefe de Setor lê na ordem em que os fatos chegaram.
          */
         $preTriagem = Demanda::emPreTriagem()
             ->deTrabalho()
@@ -111,10 +113,10 @@ class CaixaDeEntradaController extends Controller
                  * Quem lê não tem como saber se a funcionalidade quebrou ou se a
                  * área dele simplesmente não tem repetição.
                  */
-                PapelNaArea::recorta($usuario),
+                Papel::recorta($usuario),
                 fn ($consulta) => $consulta->whereHas(
-                    'area',
-                    fn ($q) => $q->whereIn('nome', PapelNaArea::areas($usuario)),
+                    'equipe',
+                    fn ($q) => $q->whereIn('codigo', Papel::equipes($usuario)),
                 ),
             )
             ->orderBy('recebida_em')
@@ -134,9 +136,10 @@ class CaixaDeEntradaController extends Controller
             'motivos' => array_values((array) config('demandas.motivos_de_devolucao', [])),
             'destinos' => array_values((array) config('demandas.destinos_de_retorno', [])),
             'prazoPadraoEmDias' => (int) config('demandas.prazo_padrao_em_dias', 10),
+            // Quem RESPONDE ao canal (a avulsa vira processo no e-Salvador): o chefe e o administrador.
+            'decide' => Papel::ehChefe($usuario) || ($usuario?->ehAdmin() ?? false),
             'equipes' => Estrutura::equipes(),
             'areas' => Estrutura::nomesDeArea(),
-            'chefias' => Estrutura::chefiasPorArea(),
             'bairros' => Estrutura::bairros(),
             // O mapa bairro → sugestão vai inteiro para a tela: é ele que faz a
             // sugestão aparecer no instante em que a pessoa escolhe o bairro,
@@ -180,8 +183,8 @@ class CaixaDeEntradaController extends Controller
             'recebida_em' => ['required', 'date'],
             'prazo' => ['nullable', 'date', 'after_or_equal:recebida_em'],
 
-            // Denúncia PODE ser anônima — é a realidade do Salvador Digital e do
-            // e-Salvador. Quando não é, o nome passa a ser obrigatório:
+            // Denúncia PODE ser anônima — é a realidade do que chega por
+            // telefone. Quando não é, o nome passa a ser obrigatório:
             // "anônima" tem de ser escolha explícita, nunca campo esquecido.
             'anonima' => ['required', 'boolean'],
             'requerente' => ['exclude_if:anonima,true', 'required', 'string', 'max:150', new NomeDeCadastro],
@@ -198,12 +201,13 @@ class CaixaDeEntradaController extends Controller
             /*
              * Encaminhar exige DESTINO, e ele pode ser a área (o caso normal: o
              * Chefe de Setor é quem escolhe a equipe) ou já a equipe, quando o
-             * coordenador sabe qual é. `exclude_unless` tira os campos da conta
+             * Chefe de Setor sabe qual é. `exclude_unless` tira os campos da conta
              * no caminho em que não fazem sentido, em vez de recusar um
              * formulário que está correto.
              */
-            'area' => ['exclude_unless:destino,encaminhar', 'nullable', Rule::in(Estrutura::nomesDeArea())],
-            'equipe' => ['exclude_unless:destino,encaminhar', 'nullable', Rule::in(Estrutura::codigosDeEquipe())],
+            // O destino é a EQUIPE: o Chefe de Setor escolhe, e quem recebe é o
+            // líder dela. A área não é mais escolha — é o que a equipe carrega.
+            'equipe' => ['exclude_unless:destino,encaminhar', 'required', Rule::in(Estrutura::codigosDeEquipe())],
             'observacao' => ['exclude_unless:destino,encaminhar', 'nullable', 'string', 'max:500'],
 
             'motivo' => ['exclude_unless:destino,devolver', 'required', Rule::in((array) config('demandas.motivos_de_devolucao', []))],
@@ -223,17 +227,17 @@ class CaixaDeEntradaController extends Controller
             'destino_retorno.required' => 'Diga se a demanda volta ao remetente ou é arquivada.',
         ]);
 
-        if ($destino === 'encaminhar' && ($dados['area'] ?? null) === null && ($dados['equipe'] ?? null) === null) {
+        if ($destino === 'encaminhar' && ($dados['equipe'] ?? null) === null) {
             // A recusa diz o que fazer, e não só que faltou algo.
             return back()
                 ->withInput()
-                ->withErrors(['area' => 'Escolha a área que vai receber a demanda — ou já a equipe, se você souber qual é.']);
+                ->withErrors(['equipe' => 'Escolha a equipe que vai receber a demanda — o líder dela é quem direciona aos fiscais.']);
         }
 
         $demanda = $this->criar($dados);
 
         $destino === 'encaminhar'
-            ? $this->encaminharDemanda($demanda, $dados['area'] ?? null, $dados['equipe'] ?? null, $dados['observacao'] ?? null)
+            ? $this->encaminharDemanda($demanda, $dados['equipe'], $dados['observacao'] ?? null)
             : $this->devolverDemanda($demanda, $dados['motivo'], $dados['justificativa'], $dados['destino_retorno']);
 
         return redirect()
@@ -242,25 +246,23 @@ class CaixaDeEntradaController extends Controller
     }
 
     /**
-     * Triagem de uma demanda que já está na caixa.
+     * Encaminhamento de uma demanda que já está na caixa: o Chefe de Setor
+     * escolhe a EQUIPE, e quem recebe é o líder dela.
      *
-     * Serve tanto para a que estava aguardando triagem quanto para reabrir uma
-     * que havia sido devolvida — o caso real de o remetente complementar o
-     * endereço que faltava.
+     * Serve tanto para a que estava esperando quanto para reabrir uma que havia
+     * sido devolvida — o caso real de o remetente complementar o endereço que
+     * faltava.
      */
     public function encaminhar(Request $request, Demanda $demanda): RedirectResponse
     {
         $dados = $request->validate([
-            'area' => ['nullable', Rule::in(Estrutura::nomesDeArea())],
-            'equipe' => ['nullable', Rule::in(Estrutura::codigosDeEquipe())],
+            'equipe' => ['required', Rule::in(Estrutura::codigosDeEquipe())],
             'observacao' => ['nullable', 'string', 'max:500'],
+        ], [
+            'equipe.required' => 'Escolha a equipe que vai receber a demanda — o líder dela é quem direciona aos fiscais.',
         ]);
 
-        if (($dados['area'] ?? null) === null && ($dados['equipe'] ?? null) === null) {
-            return back()->withErrors(['area' => 'Escolha a área que vai receber a demanda — ou já a equipe.']);
-        }
-
-        $this->encaminharDemanda($demanda, $dados['area'] ?? null, $dados['equipe'] ?? null, $dados['observacao'] ?? null);
+        $this->encaminharDemanda($demanda, $dados['equipe'], $dados['observacao'] ?? null);
 
         return back()->with('flash.sucesso', $this->recado($demanda));
     }
@@ -321,10 +323,10 @@ class CaixaDeEntradaController extends Controller
             'ordem' => 1,
             'ocorrida_em' => $recebida,
             'user_id' => Auth::id(),
-            'papel' => DemandaTramite::PAPEL_COORDENADOR,
+            'papel' => DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             'autor' => Auth::user()?->name,
             'acao' => 'Demanda cadastrada',
-            'detalhe' => 'Documento recebido em papel pela coordenação, com origem '.$dados['origem'].'.',
+            'detalhe' => 'Registrada pelo Chefe de Setor, com origem '.$dados['origem'].'.',
             'situacao' => Demanda::RECEBIDA,
             'campos' => [
                 'Origem do documento' => (string) $dados['origem'],
@@ -343,40 +345,42 @@ class CaixaDeEntradaController extends Controller
     }
 
     /**
-     * Encaminha à área, ou direciona já à equipe quando o coordenador sabe qual.
+     * Encaminha à equipe escolhida — e, portanto, ao líder dela.
      *
-     * São DOIS estados do mundo, e por isso duas situações: no primeiro o caso
-     * está na mesa do Chefe de Setor esperando a escolha da equipe; no segundo
-     * ele já está na mão de quem vai à rua. Um nome só para os dois esconderia
-     * de quem cobra em que mesa o caso parou.
+     * O que fica registrado é a equipe E o líder: "encaminhei para a C2" só diz
+     * metade, a outra metade é para quem. Se a equipe ainda não tem líder com
+     * conta, o passo diz isso, e o caso fica visível ao chefe e ao administrador
+     * até alguém assumir.
      */
-    private function encaminharDemanda(Demanda $demanda, ?string $nomeDaArea, ?string $codigoDaEquipe, ?string $observacao): void
+    private function encaminharDemanda(Demanda $demanda, string $codigoDaEquipe, ?string $observacao): void
     {
         $equipe = Estrutura::equipeModel($codigoDaEquipe);
-        $area = $equipe?->area ?? ($nomeDaArea === null ? null : Area::where('nome', $nomeDaArea)->first());
-        $chefe = $area?->chefeDeSetor;
 
-        $paraEquipe = $equipe !== null;
+        if ($equipe === null) {
+            return;
+        }
+
+        $equipe->loadMissing(['area', 'lider']);
 
         $demanda->registrar(
-            acao: $paraEquipe ? 'Triada e direcionada à equipe' : 'Triada e encaminhada à área',
-            situacao: $paraEquipe ? Demanda::DIRECIONADA_A_EQUIPE : Demanda::ENCAMINHADA_A_AREA,
-            papel: DemandaTramite::PAPEL_COORDENADOR,
+            acao: 'Encaminhada ao líder de equipe',
+            situacao: Demanda::ENCAMINHADA_AO_LIDER,
+            papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             autor: Auth::user(),
             detalhe: $observacao,
             campos: array_filter([
-                'Bairro que sugeriu a área' => $demanda->bairro,
-                'Área de destino' => $area?->nome,
-                // Encaminhar "para a Área 5" só diz metade — a outra metade é
-                // para QUEM. Sem chefe cadastrado, o caso fica visível ao
-                // Coordenador e ao administrador, e a tela diz isso.
-                'Chefe de Setor' => $chefe?->name ?? 'área ainda sem chefe cadastrado',
-                'Equipe escolhida' => $equipe === null ? null : $equipe->rotulo(),
+                'Bairro que sugeriu a equipe' => $demanda->bairro,
+                'Equipe de destino' => $equipe->rotulo().' — '.($equipe->area?->nome ?? 'sem área'),
+                'Líder da equipe' => $equipe->lider?->name
+                    ?? ($equipe->encarregado !== null
+                        ? $equipe->encarregado.' (ainda sem conta no sistema)'
+                        : 'equipe ainda sem líder cadastrado'),
             ], static fn (?string $v): bool => $v !== null && $v !== ''),
-            mudancas: array_filter([
-                'area_id' => $area?->id,
-                'equipe_id' => $equipe?->id,
-            ], static fn (?int $v): bool => $v !== null),
+            mudancas: [
+                'area_id' => $equipe->area_id,
+                'equipe_id' => $equipe->id,
+                'operacao_id' => null,
+            ],
         );
     }
 
@@ -385,9 +389,9 @@ class CaixaDeEntradaController extends Controller
         $arquivar = $destinoRetorno === 'Arquivada';
 
         $demanda->registrar(
-            acao: $arquivar ? 'Arquivada na triagem' : 'Devolvida ao remetente',
+            acao: $arquivar ? 'Arquivada pelo Chefe de Setor' : 'Devolvida ao remetente',
             situacao: $arquivar ? Demanda::ARQUIVADA : Demanda::DEVOLVIDA,
-            papel: DemandaTramite::PAPEL_COORDENADOR,
+            papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             autor: Auth::user(),
             detalhe: $justificativa,
             campos: ['Motivo' => $motivo, 'Destino' => $destinoRetorno],
@@ -404,19 +408,25 @@ class CaixaDeEntradaController extends Controller
     {
         $demanda->refresh();
 
+        $lider = $demanda->equipe?->nomeDoLider();
+
         return match ($demanda->situacao) {
-            Demanda::ENCAMINHADA_A_AREA => "Demanda {$demanda->protocolo} encaminhada à {$demanda->area?->nome} — "
-                .'o Chefe de Setor decide a equipe.',
-            Demanda::DIRECIONADA_A_EQUIPE => "Demanda {$demanda->protocolo} direcionada à Equipe {$demanda->equipe?->codigo} — "
-                .'aparecerá no aplicativo dos fiscais da equipe.',
+            Demanda::ENCAMINHADA_AO_LIDER => "Demanda {$demanda->protocolo} encaminhada à Equipe {$demanda->equipe?->codigo}"
+                .($lider !== null && $lider !== '' ? " — na mesa de {$lider}, que direciona aos fiscais." : ' — a equipe ainda não tem líder no sistema.'),
+            Demanda::DIRECIONADA_AOS_FISCAIS => "Demanda {$demanda->protocolo} direcionada aos fiscais da Equipe {$demanda->equipe?->codigo} — "
+                .'aparecerá no aplicativo deles.',
             Demanda::DEVOLVIDA => "Demanda {$demanda->protocolo} devolvida ao remetente, com a justificativa registrada.",
             Demanda::ARQUIVADA => "Demanda {$demanda->protocolo} arquivada, com a justificativa registrada.",
-            default => "Demanda {$demanda->protocolo} registrada e aguardando triagem.",
+            default => "Demanda {$demanda->protocolo} registrada na Caixa, à espera do encaminhamento.",
         };
     }
 
     /**
      * Os nomes de canal que o formulário oferece — e que a validação aceita.
+     *
+     * Só os que o CHEFE registra (`registro = chefe`). O Fala Salvador fica de
+     * fora de propósito: só os líderes o acessam, e eles o digitam na tela do
+     * próprio canal (decisão do dono, 22/09/2026).
      *
      * @return list<string>
      */
@@ -424,7 +434,10 @@ class CaixaDeEntradaController extends Controller
     {
         return array_values(array_map(
             static fn (array $canal): string => (string) $canal['nome'],
-            (array) config('demandas.canais', []),
+            array_filter(
+                (array) config('demandas.canais', []),
+                static fn (array $canal): bool => ($canal['registro'] ?? 'chefe') === 'chefe',
+            ),
         ));
     }
 

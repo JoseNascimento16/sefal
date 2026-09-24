@@ -16,6 +16,7 @@ import {
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
+import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import {
     FilaDePreTriagem,
@@ -50,6 +51,7 @@ import {
     devolver as rotaDevolver,
     encaminhar as rotaEncaminhar,
     index,
+    responderAoCanal as rotaResponderAoCanal,
     store,
 } from '@/routes/retaguarda/caixa-de-entrada';
 
@@ -90,6 +92,8 @@ interface Props {
     motivos: string[];
     destinos: string[];
     prazoPadraoEmDias: number;
+    /** Esta pessoa responde ao canal (a avulsa vira processo no e-Salvador)? Vem do servidor. */
+    decide: boolean;
     equipes: EquipeResumo[];
     bairros: string[];
     /** `bairro → equipe sugerida`, para a sugestão aparecer sem ida ao servidor. */
@@ -135,7 +139,7 @@ const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
         // que escolheu só a área e o que escolheu a equipe. Quem digita a palavra
         // quer os dois; quem precisa distinguir lê a coluna.
         expressao: /\bencaminhad\w*\b|\bdirecionad\w*\b/,
-        valor: { tipo: 'situacao', valores: ['Encaminhada à área', 'Direcionada à equipe'] },
+        valor: { tipo: 'situacao', valores: ['Encaminhada ao líder', 'Direcionada aos fiscais'] },
     },
     { expressao: /\bdevolvid\w*\b/, valor: { tipo: 'situacao', valores: ['Devolvida'] } },
     { expressao: /\barquivad\w*\b/, valor: { tipo: 'situacao', valores: ['Arquivada'] } },
@@ -144,7 +148,9 @@ const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
         expressao: /\bprazo vencido\b|\bvencid\w*\b|\batrasad\w*\b/,
         valor: { tipo: 'prazo-vencido' },
     },
-    { expressao: /\bfala salvador\b|\b156\b/, valor: { tipo: 'origem', valor: 'Salvador Digital' } },
+    // O Fala Salvador não entra pela Caixa (é do líder); a avulsa — ligação ou
+    // e-mail de superior — é o que o chefe registra fora de canal.
+    { expressao: /\bavulsas?\b|\bligacao\b|\be-?mail\b/, valor: { tipo: 'origem', valor: 'Avulsa' } },
     { expressao: /\be-?salvador\b/, valor: { tipo: 'origem', valor: 'e-Salvador' } },
     { expressao: /\bnova licenca\b|\blicenca\b/, valor: { tipo: 'origem', valor: 'Nova licença' } },
     { expressao: /\boficio\b/, valor: { tipo: 'origem', valor: 'Ofício' } },
@@ -164,6 +170,7 @@ export default function CaixaDeEntrada({
     motivos,
     destinos,
     prazoPadraoEmDias,
+    decide,
     equipes,
     bairros,
     sugestoes,
@@ -244,12 +251,12 @@ export default function CaixaDeEntrada({
         () => ({
             total: demandas.length,
             // Os nomes são os do MODEL (`Demanda::SITUACOES`). A tela já chamou
-            // `Recebida` de "Aguardando triagem" e `Encaminhada à área` de
+            // `Recebida` de "Aguardando triagem" e `Encaminhada ao líder` de
             // "Encaminhada" — e os contadores, presos aos nomes antigos, ficavam
             // zerados sem que nada parecesse quebrado.
             triagem: demandas.filter((d) => d.situacao === 'Recebida').length,
             encaminhadas: demandas.filter((d) =>
-                ['Encaminhada à área', 'Direcionada à equipe'].includes(d.situacao),
+                ['Encaminhada ao líder', 'Direcionada aos fiscais'].includes(d.situacao),
             ).length,
             retornadas: demandas.filter((d) =>
                 ['Devolvida', 'Arquivada'].includes(d.situacao),
@@ -525,10 +532,11 @@ export default function CaixaDeEntrada({
                     <p className="sobrancelha">Fiscalização</p>
                     <h1>Caixa de Entrada</h1>
                     <p>
-                        O que chega de <strong>fora</strong> e em papel —
-                        e-Salvador, Salvador Digital, pedido de nova licença e
-                        ofício. Aqui o coordenador registra, decide e{' '}
-                        <strong>encaminha à equipe da área do bairro</strong> ou
+                        O que chega ao <strong>Chefe de Setor</strong> fora da
+                        integração — papel do e-Salvador, pedido de nova licença,
+                        ofício e a <strong>avulsa</strong> (ligação ou e-mail de
+                        superior). Aqui ele registra, decide e{' '}
+                        <strong>encaminha à equipe sugerida pelo bairro</strong> ou
                         devolve com justificativa.
                     </p>
                 </div>
@@ -1002,9 +1010,9 @@ export default function CaixaDeEntrada({
                                             {sugestao.regiao})
                                         </strong>
                                         <div>
-                                            Encarregado: {sugestao.encarregado}. A
-                                            sugestão vem do bloco de bairros da
-                                            área — você pode trocar abaixo.
+                                            Líder: {sugestao.lider || sugestao.encarregado} — é
+                                            quem recebe e direciona aos fiscais. A sugestão vem
+                                            do bloco de bairros da área — você pode trocar abaixo.
                                         </div>
 
                                         {sugestao.alternativas.length > 0 && (
@@ -1159,7 +1167,7 @@ export default function CaixaDeEntrada({
                                         {equipes.map((e) => (
                                             <option key={e.equipe} value={e.equipe}>
                                                 Equipe {e.equipe} · {e.area} ({e.regiao}) —{' '}
-                                                {e.encarregado}
+                                                {e.lider || e.encarregado}
                                             </option>
                                         ))}
                                     </select>
@@ -1383,6 +1391,14 @@ export default function CaixaDeEntrada({
                                 </div>
                             )}
                         </dl>
+
+                        {/* A avulsa concluída vira PROCESSO no e-Salvador: o chefe abre
+                            lá e registra aqui o número, enquanto a integração não escreve. */}
+                        <RetornoAoCanal
+                            demanda={aberta}
+                            decide={decide}
+                            rota={rotaResponderAoCanal({ demanda: aberta.id }).url}
+                        />
 
                         <h3 className="card-titulo" style={{ marginTop: 26 }}>
                             Trâmite

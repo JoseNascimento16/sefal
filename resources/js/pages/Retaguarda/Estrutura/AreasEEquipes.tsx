@@ -52,7 +52,7 @@ import {
  * ── Bairro em duas áreas é aviso, nunca erro ────────────────────────────────
  *
  * O vínculo bairro↔equipe não é 1:1: a Caixa de Entrada SUGERE e o
- * coordenador CONFIRMA. Marcar isso como pendência mandaria a chefia
+ * Chefe de Setor CONFIRMA. Marcar isso como pendência mandaria a chefia
  * "corrigir" um dado que está certo.
  */
 
@@ -122,9 +122,9 @@ export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
                 a.regiao,
                 a.equipe,
                 a.encarregado,
-                // O Chefe de Setor entra na busca: quem procura pelo nome dele quer achar
-                // a área dele, e ele agora é dado da estrutura como o encarregado.
-                a.chefe_de_setor?.nome,
+                // O líder entra na busca: quem procura pelo nome dele quer achar a
+                // equipe dele.
+                a.lider?.nome,
                 a.bairros.join(' '),
                 a.fiscais.map((f) => `${f.nome} ${f.matricula}`).join(' '),
             ]);
@@ -389,7 +389,7 @@ export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
                                     Não é erro a corrigir: o vínculo bairro↔equipe
                                     não é exclusivo. Nesses casos a Caixa de
                                     Entrada <strong>sugere</strong> uma equipe e o
-                                    coordenador <strong>confirma</strong>.
+                                    Chefe de Setor <strong>confirma</strong>.
                                 </div>
                             </div>
                         )}
@@ -618,26 +618,25 @@ export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
                                     <dt>Encarregado (campo)</dt>
                                     <dd>{aberta.encarregado}</dd>
                                 </div>
-                                {/* Duas pessoas diferentes, e é fácil confundi-las:
-                                    o encarregado chefia a equipe EM RUA; o Chefe de
-                                    Setor responde pela área DENTRO do sistema — é ele
-                                    que recebe a denúncia encaminhada, decide equipe ou
-                                    operação e recebe de volta o que a equipe concluiu
-                                    em campo. Por isso os rótulos dizem qual é qual. */}
+                                {/* O encarregado do documento É o líder da equipe
+                                    dentro do sistema — a mesma pessoa, com conta:
+                                    é ele que recebe a denúncia encaminhada, direciona
+                                    aos fiscais e recebe de volta o que a equipe
+                                    concluiu em campo. O rótulo diz se a conta existe. */}
                                 <div>
-                                    <dt>Chefe de Setor da área (sistema)</dt>
+                                    <dt>Líder da equipe (sistema)</dt>
                                     <dd>
-                                        {aberta.chefe_de_setor === null ||
-                                        aberta.chefe_de_setor.nome.trim() === '' ? (
+                                        {aberta.lider === null ||
+                                        aberta.lider.nome.trim() === '' ? (
                                             <span style={{ color: 'var(--sm-aviso)' }}>
-                                                sem Chefe de Setor registrado —
-                                                denúncia encaminhada a esta área fica
-                                                sem quem a receba
+                                                sem líder registrado — denúncia
+                                                encaminhada a esta equipe fica sem quem
+                                                a receba
                                             </span>
                                         ) : (
                                             <>
-                                                {aberta.chefe_de_setor.nome}
-                                                {aberta.chefe_de_setor.matricula === null ? (
+                                                {aberta.lider.nome}
+                                                {aberta.lider.matricula === null ? (
                                                     <div
                                                         style={{
                                                             color: 'var(--sm-texto-fraco)',
@@ -652,7 +651,7 @@ export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
                                                         }}
                                                     >
                                                         matrícula{' '}
-                                                        {aberta.chefe_de_setor.matricula.toUpperCase()}
+                                                        {aberta.lider.matricula.toUpperCase()}
                                                     </div>
                                                 )}
                                             </>
@@ -928,7 +927,7 @@ export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
                                                     ). É caso previsto, não
                                                     duplicidade a corrigir: a Caixa
                                                     de Entrada sugere a equipe e o
-                                                    coordenador confirma.
+                                                    Chefe de Setor confirma.
                                                 </div>
                                             </div>
                                         )}

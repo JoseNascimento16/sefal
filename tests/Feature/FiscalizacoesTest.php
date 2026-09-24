@@ -90,25 +90,26 @@ function registroNoBanco(int $id): array
     return FiscalizacaoParaTela::completa($f);
 }
 
-/** Um Chefe de Setor de verdade: a matrícula é o que o liga à área na estrutura. */
-function chefeDaFila(string $matricula): User
+/**
+ * O líder de uma equipe de verdade — quem decide sobre o retorno DELA.
+ *
+ * A conta `lider-<código>` já existe: é o seeder da estrutura que a cria e a
+ * liga à equipe (`equipes.lider_id`). Criar outra aqui daria DOIS donos ao mesmo
+ * vínculo — e o teste passaria a provar um cadastro que o sistema não tem.
+ */
+function liderDaFila(string $codigo): User
 {
-    /*
-     * A conta já existe: é o seeder da estrutura que a cria e a liga à área
-     * (`areas.chefe_de_setor_id`). Criar outra com a mesma matrícula aqui daria
-     * DOIS donos ao mesmo vínculo — e o teste passaria a provar um cadastro que
-     * o sistema não tem.
-     */
-    $u = User::where('login', User::normalizarMatricula($matricula))->firstOrFail();
-    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'chefe-de-setor')->firstOrFail()->id]);
+    $u = User::where('login', User::normalizarMatricula('lider-'.$codigo))->firstOrFail();
+    $u->setores()->syncWithoutDetaching([Setor::where('slug', 'lider-de-equipe')->firstOrFail()->id]);
 
     return $u->fresh();
 }
 
-function coordenadorDaFila(): User
+/** O Chefe de Setor: lê tudo, sem recorte (22/09/2026). */
+function chefeDaFila(): User
 {
     $u = User::factory()->create(['admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'coordenador')->firstOrFail());
+    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
 
     return $u->fresh();
 }
@@ -226,7 +227,7 @@ test('a fila leva a CHAVE da recomendacao e o catalogo que a traduz na redacao e
      * Sem esta prova, a tela cairia no fallback e mostraria a chave crua a quem
      * decide — o que é visível, mas não é o que o dono pediu.
      */
-    $pagina = test()->actingAs(chefeDaFila('gestor1'))
+    $pagina = test()->actingAs(liderDaFila('C1'))
         ->get('/retaguarda/fiscalizacoes')
         ->viewData('page')['props'];
 
@@ -324,22 +325,22 @@ test('lei: a equipe da fiscalizacao avulsa existe na estrutura de areas', functi
     }
 });
 
-test('o chefe de setor recebe so o que as equipes da area dele concluiram', function () {
-    $chefe = chefeDaFila('gestor1');
-    $minhas = Estrutura::areasDoChefe('gestor1');
+test('o lider recebe so o que a equipe dele concluiu', function () {
+    $lider = liderDaFila('C1');
+    $minhas = Estrutura::equipesDoLider('lider-c1');
 
     expect($minhas)->not->toBe([]);
 
-    $servidos = filaServida($chefe);
+    $servidos = filaServida($lider);
 
-    expect($servidos)->not->toBe([], 'a área do gestor1 precisa de retorno para demonstrar');
+    expect($servidos)->not->toBe([], 'a Equipe C1 precisa de retorno para demonstrar');
 
     $deFora = array_values(array_filter(
         $servidos,
-        static fn (array $r): bool => ! in_array((string) $r['area'], $minhas, true),
+        static fn (array $r): bool => ! in_array((string) $r['equipe'], $minhas, true),
     ));
 
-    expect($deFora)->toBe([], 'a fila do Chefe de Setor traz só as áreas dele');
+    expect($deFora)->toBe([], 'a fila do líder traz só a equipe dele');
 });
 
 test('o conteudo do retorno alheio nao viaja ate o navegador do chefe de outra area', function () {
@@ -348,7 +349,7 @@ test('o conteudo do retorno alheio nao viaja ate o navegador do chefe de outra a
      * número do documento, que vão dentro do registro. Então o teste procura o
      * texto no corpo inteiro da resposta, e não só na lista de identificadores.
      */
-    $chefe = chefeDaFila('gestor3');
+    $chefe = liderDaFila('A2');
 
     $this->actingAs($chefe)
         ->get('/retaguarda/fiscalizacoes')
@@ -358,41 +359,49 @@ test('o conteudo do retorno alheio nao viaja ate o navegador do chefe de outra a
         ->assertDontSee('Operação Verão');
 });
 
-test('quem tria ve o universo — inclusive a area sem chefe com conta', function () {
-    $servidos = filaServida(coordenadorDaFila());
+test('o chefe de setor ve o universo — todas as equipes, sem recorte', function () {
+    $servidos = filaServida(chefeDaFila());
     $areas = array_values(array_unique(array_column($servidos, 'area')));
 
-    // Área 2 não tem conta de Chefe de Setor na demonstração: só o Coordenador e o
-    // administrador a enxergam, e é isso que faz dela a prova do recorte.
+    // Mais de uma área na mesma fila é a prova de que não há recorte: o líder
+    // vê uma equipe; o chefe, o setor inteiro.
     expect($areas)->toContain('Área 2')
         ->and(count($areas))->toBeGreaterThan(1);
 });
 
-test('quem apenas acompanha e recusado COM O MOTIVO, e nada e alterado', function () {
-    $coordenador = coordenadorDaFila();
+test('o chefe de setor decide sobre registro de QUALQUER equipe, e o ato fica assinado por ele', function () {
+    /*
+     * Até 22/09/2026 quem triava (o coordenador) só acompanhava a fila. O Chefe
+     * de Setor de hoje é outro papel: o retorno das equipes volta para a mesa
+     * dele também, e ele dá ciência ou manda voltar — sem recorte, porque ele
+     * responde pelo setor inteiro.
+     */
+    $chefe = chefeDaFila();
     $registro = filaDoBanco()[0];
 
-    $this->actingAs($coordenador)
+    $this->actingAs($chefe)
         ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$registro['id']]])
         ->assertRedirect()
-        ->assertSessionHas('flash.erro', fn (string $recado): bool => str_contains($recado, 'Chefe de Setor da área'));
+        ->assertSessionHas('flash.sucesso');
 
-    expect(estadoNoBanco((int) $registro['id']))
-        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
+    $gravado = registroNoBanco((int) $registro['id']);
+
+    expect($gravado['estado'])->toBe(Fiscalizacao::CIENTE)
+        ->and($gravado['decisao']['quem'])->toBe($chefe->name);
 });
 
-test('o chefe de setor e recusado NOMINALMENTE ao decidir sobre registro de outra area', function () {
+test('o lider e recusado NOMINALMENTE ao decidir sobre registro de outra equipe', function () {
     /*
      * Esconder da listagem não é fronteira: quem souber montar a requisição
      * alcança o registro de outra área, e o lote é o caminho fácil porque manda
      * uma lista de identificadores. A recusa nomeia o registro para quem clicou
      * saber o que aconteceu.
      */
-    $chefe = chefeDaFila('gestor3');
-    $minhas = Estrutura::areasDoChefe('gestor3');
+    $chefe = liderDaFila('A2');
+    $minhas = Estrutura::equipesDoLider('lider-a2');
 
     $alheio = collect(filaDoBanco())
-        ->first(static fn (array $r): bool => ! in_array((string) $r['area'], $minhas, true));
+        ->first(static fn (array $r): bool => ! in_array((string) $r['equipe'], $minhas, true));
 
     expect($alheio)->not->toBeNull();
 
@@ -410,7 +419,7 @@ test('o chefe de setor e recusado NOMINALMENTE ao decidir sobre registro de outr
 });
 
 test('a ciencia do chefe de setor tira o registro da fila e deixa o ato registrado', function () {
-    $chefe = chefeDaFila('gestor1');
+    $chefe = liderDaFila('C1');
     $meus = array_column(filaServida($chefe), 'id');
 
     expect($meus)->not->toBe([]);
@@ -434,7 +443,7 @@ test('a ciencia do chefe de setor tira o registro da fila e deixa o ato registra
 });
 
 test('a nova vistoria exige justificativa NO SERVIDOR, e nao so no formulario', function () {
-    $chefe = chefeDaFila('gestor1');
+    $chefe = liderDaFila('C1');
     $meus = array_column(filaServida($chefe), 'id');
 
     $this->actingAs($chefe)
@@ -465,13 +474,13 @@ test('a nova vistoria exige justificativa NO SERVIDOR, e nao so no formulario', 
         ->toBe(Fiscalizacao::NOVA_VISTORIA);
 });
 
-test('a decisao em lote conta o efeito, e lote inteiro fora da area nao altera nada', function () {
-    $chefe = chefeDaFila('gestor1');
+test('a decisao em lote conta o efeito, e lote com registro de outra equipe nao altera nada', function () {
+    $chefe = liderDaFila('C1');
     $meus = array_column(filaServida($chefe), 'id');
-    $minhas = Estrutura::areasDoChefe('gestor1');
+    $minhas = Estrutura::equipesDoLider('lider-c1');
 
     $alheio = collect(filaDoBanco())
-        ->first(static fn (array $r): bool => ! in_array((string) $r['area'], $minhas, true));
+        ->first(static fn (array $r): bool => ! in_array((string) $r['equipe'], $minhas, true));
 
     /*
      * O lote MISTO é o caminho fácil para alcançar o que não se vê: um
@@ -571,7 +580,7 @@ test('o fiscal ve o acervo INTEIRO — limite declarado, nao esquecimento', func
         ->get('/retaguarda/fiscalizacoes')
         ->viewData('page')['props'];
 
-    expect($pagina['recorteDeArea'])->toBeFalse()
+    expect($pagina['recorteDeEquipe'])->toBeFalse()
         ->and($pagina['registros'])->toHaveCount(Fiscalizacao::despachadas()->count());
 });
 
@@ -584,7 +593,7 @@ test('o ACERVO guarda o que a fila perdeu: o decidido segue consultavel, com a p
      * estado. E sobre o que o acervo carrega a mais — quem foi encontrado, as fotos
      * e a coordenada —, que é o que transforma consulta em prova.
      */
-    $chefe = chefeDaFila('gestor1');
+    $chefe = liderDaFila('C1');
     $meus = array_column(filaServida($chefe), 'id');
 
     $this->actingAs($chefe)->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0]]]);
@@ -722,7 +731,7 @@ test('o CONTADOR do menu e a fila de quem decide, recortada pela mesma area', fu
      * pareceria registro perdido. E ele não conta para quem só acompanha: seria
      * cobrança sobre trabalho que não é dele.
      */
-    $chefe = chefeDaFila('gestor1');
+    $chefe = liderDaFila('C1');
 
     $naFila = count(array_filter(
         filaServida($chefe),
@@ -748,8 +757,17 @@ test('o CONTADOR do menu e a fila de quem decide, recortada pela mesma area', fu
 
     expect($contadorDe($chefe)['valor'] ?? null)->toBe($naFila);
 
-    // Quem apenas acompanha não recebe número: seria cobrança sobre trabalho alheio.
-    expect($contadorDe(coordenadorDaFila()))->toBeNull();
+    // O Chefe de Setor decide sobre tudo: o número dele é a fila inteira.
+    $universo = Fiscalizacao::despachadas()->where('situacao', Fiscalizacao::AGUARDANDO_LEITURA)->count();
+
+    expect($universo)->toBeGreaterThan($naFila)
+        ->and($contadorDe(chefeDaFila())['valor'] ?? null)->toBe($universo);
+
+    // Quem apenas consulta não recebe número: seria cobrança sobre trabalho alheio.
+    $fiscal = User::factory()->create(['admin' => false, 'ativo' => true]);
+    $fiscal->setores()->attach(Setor::where('slug', 'fiscal')->firstOrFail());
+
+    expect($contadorDe($fiscal->fresh()))->toBeNull();
 });
 
 test('o recorte visivel da fila vira documento pelo ponto unico de exportacao', function () {
@@ -758,7 +776,7 @@ test('o recorte visivel da fila vira documento pelo ponto unico de exportacao', 
      * tela gera arquivo por conta própria. O que se prova aqui é que o recorte da
      * fila atravessa aquele endpoint com as colunas que a tela declara.
      */
-    $this->actingAs(chefeDaFila('gestor1'))
+    $this->actingAs(liderDaFila('C1'))
         ->post('/retaguarda/exportar-listagem', [
             'formato' => 'xlsx',
             'titulo' => 'Retorno de Campo',

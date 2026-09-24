@@ -6,7 +6,7 @@ use App\Models\Demanda;
 use App\Models\SugestaoAgrupamento;
 
 /**
- * Uma proposta de agrupamento na forma que o coordenador le antes de decidir.
+ * Uma proposta de agrupamento na forma que o Chefe de Setor le antes de decidir.
  *
  * Ela leva os DOIS lados inteiros — assunto, endereco, requerente e data —, e
  * nao so os protocolos. O motivo: aceitar junta dois casos de cidadaos
@@ -14,7 +14,7 @@ use App\Models\SugestaoAgrupamento;
  * confiando num numero de confianca. O que convence e ver os dois relatos lado
  * a lado.
  *
- * O `motivo` e o `origem` vao junto pelo mesmo motivo: o coordenador precisa
+ * O `motivo` e o `origem` vao junto pelo mesmo motivo: o Chefe de Setor precisa
  * poder discordar do RACIOCINIO, e saber se quem propos foi a regra ou o modelo
  * de linguagem muda o peso que ele da a proposta.
  */
@@ -55,7 +55,7 @@ class SugestaoParaTela
             'assunto' => $demanda->assunto,
             // QUEM foi denunciado: é o que separa "o mesmo bar" de "dois
             // estabelecimentos na mesma rua", e é a pergunta que a pré-triagem
-            // responde. Sem isso o coordenador decide pelo endereço, que o
+            // responde. Sem isso o Chefe de Setor decide pelo endereço, que o
             // cidadão escreve de memória.
             'estabelecimento' => (string) ($demanda->estabelecimento ?? ''),
             'denunciado' => (string) ($demanda->denunciado ?? ''),

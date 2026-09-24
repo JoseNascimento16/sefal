@@ -15,7 +15,7 @@ use App\Models\Demanda;
  * propria principal).
  *
  * O `motivo` e obrigatorio aqui, no tipo, e nao numa validacao la na frente:
- * sugestao sem justificativa e oraculo — o coordenador precisa poder discordar
+ * sugestao sem justificativa e oraculo — o Chefe de Setor precisa poder discordar
  * do RACIOCINIO, e nao so do resultado.
  */
 final class Proposta
@@ -27,7 +27,7 @@ final class Proposta
         public readonly Demanda $principal,
         /** 0 a 1. Quanto a proposta confia em si mesma; ordena a fila. */
         public readonly float $confianca,
-        /** POR QUE. E o que o coordenador le antes de aceitar. */
+        /** POR QUE. E o que o Chefe de Setor le antes de aceitar. */
         public readonly string $motivo,
     ) {}
 }

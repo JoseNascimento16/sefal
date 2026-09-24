@@ -8,7 +8,7 @@ use App\Support\Apresentacao\FiscalizacaoParaTela;
 use App\Support\DecisaoDaChefia;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\PapelNaArea;
+use App\Support\Papel;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,22 +49,22 @@ use Inertia\Response;
  * quem esteve lá está PEDINDO, e é por ela que a chefia sabe direcionar. Enterrada
  * no meio da linha, ela seria lida depois da decisão que deveria orientar.
  *
- * ── O recorte por ÁREA, e as duas recusas ───────────────────────────────────
+ * ── O recorte por EQUIPE, e as duas recusas ─────────────────────────────────
  *
- * A listagem do Chefe de Setor traz só os registros das equipes da área que ele
- * responde. O Coordenador e o administrador veem o universo — quem tria precisa
- * saber o que aconteceu com o que encaminhou, e o administrador é o dono do
- * sistema. Quem decide isso é {@see PapelNaArea}, a fonte única da regra, e não
- * uma cópia por tela.
+ * A listagem do líder traz só os registros da equipe que ele lidera. O Chefe de
+ * Setor e o administrador veem o universo — quem encaminha precisa saber o que
+ * aconteceu com o que encaminhou, e o administrador é o dono do sistema. Quem
+ * decide isso é {@see Papel}, a fonte única da regra, e não uma cópia por tela.
  *
  * Mas esconder da lista NÃO é fronteira: quem souber montar a requisição
- * alcançaria registro de outra área, e o lote é o caminho fácil para isso porque
+ * alcançaria registro de outra equipe, e o lote é o caminho fácil para isso porque
  * manda uma lista de identificadores. Então há duas conferências no servidor, e
  * nenhuma substitui a outra:
  *
- *   1. **quem decide** — a leitura do retorno é ato da CHEFIA da área. O
- *      Coordenador acompanha e não decide: dar-lhe a decisão criaria um segundo
- *      dono para o direcionamento, que é do Chefe de Setor;
+ *   1. **quem decide** — a leitura do retorno é ato de quem mandou a equipe: o
+ *      líder dela, ou o Chefe de Setor, que responde pelo setor inteiro. O
+ *      fiscal consulta e não decide: dar-lhe a decisão seria deixá-lo dar
+ *      ciência do próprio trabalho;
  *   2. **de quem é o registro** — conferido contra a área GRAVADA em cada
  *      registro e o vínculo do usuário, as duas coisas que o corpo da requisição
  *      não controla.
@@ -108,15 +108,15 @@ class FiscalizacoesController extends Controller
     public function index(Request $request): Response
     {
         $usuario = $request->user();
-        $areas = PapelNaArea::areas($usuario);
-        $comRecorte = PapelNaArea::recorta($usuario);
+        $equipes = Papel::equipes($usuario);
+        $comRecorte = Papel::recorta($usuario);
 
         return Inertia::render('Retaguarda/Fiscalizacao/Fiscalizacoes', [
             // O recorte é feito AQUI, e não na tela: filtro de front esconde, não
             // protege, e o acervo inteiro teria viajado até o navegador de quem não
             // deve vê-lo — com o relato do fiscal, as fotos e o número do documento
             // dentro.
-            'registros' => $this->registros($comRecorte ? $areas : null),
+            'registros' => $this->registros($comRecorte ? $equipes : null),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige e
             // que a busca reconhece como faceta. Escritos também na tela, um dia
             // discordariam — e a tela ofereceria um estado que o servidor recusa.
@@ -138,26 +138,26 @@ class FiscalizacoesController extends Controller
             // As origens EM PALAVRAS, derivadas das chaves gravadas: é assim que
             // a busca reconhece "ronda" e "operação" como faceta.
             'origens' => ['Denúncia direcionada', 'Operação planejada', 'Ronda da equipe'],
-            // Quem responde por cada área — é o que o Coordenador precisa ver ao
-            // acompanhar: "é da Área 5" só diz metade; a outra metade é de quem.
-            'chefias' => Estrutura::chefiasPorArea(),
+            // Quem lidera cada equipe — é o que o Chefe de Setor precisa ver ao
+            // acompanhar: "é da C2" só diz metade; a outra metade é de quem.
+            'lideres' => Estrutura::lideresPorEquipe(),
             // O que esta pessoa exerce nesta tela, e sobre o que. A tela usa para
-            // dizer qual é a sua área no selo e para explicar que a lista não é o
-            // universo — e a MESMA resposta governa a recusa no servidor.
-            'decide' => PapelNaArea::decide($usuario),
-            'areasDoChefe' => $areas,
-            'recorteDeArea' => $comRecorte,
+            // dizer qual é a sua equipe no selo e para explicar que a lista não é
+            // o universo — e a MESMA resposta governa a recusa no servidor.
+            'decide' => Papel::decide($usuario),
+            'equipesDoLider' => $equipes,
+            'recorteDeEquipe' => $comRecorte,
             // As COLUNAS da grade e as do arquivo — uma listagem por aba, porque
             // a aba troca a fonte dos dados. Ver docs/padroes/listagem-clean.md.
             //
-            // A coluna de ÁREA é condicional e quem resolve é aqui: para o Chefe
-            // de Setor de uma área só ela repetiria a mesma palavra em toda
-            // linha (gasto de largura sem informação); para quem varre várias,
-            // ela é o que torna a fila navegável. A conta usa a MESMA resposta
-            // do recorte, e não uma segunda regra de tela.
+            // A coluna de EQUIPE é condicional e quem resolve é aqui: para o
+            // líder de uma equipe só ela repetiria a mesma palavra em toda linha
+            // (gasto de largura sem informação); para quem varre várias, ela é o
+            // que torna a fila navegável. A conta usa a MESMA resposta do
+            // recorte, e não uma segunda regra de tela.
             'listagens' => ListagensDaRetaguarda::para(
                 ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo'],
-                ['varias-areas' => ! $comRecorte || count($areas) > 1],
+                ['varias-areas' => ! $comRecorte || count($equipes) > 1],
             ),
         ]);
     }
@@ -186,16 +186,16 @@ class FiscalizacoesController extends Controller
 
         $ids = array_map('intval', $dados['ids']);
 
-        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
             return $recusa;
         }
 
-        $efeito = (new DecisaoDaChefia($request->user()))->darCiencia($ids, $dados['observacao'] ?? null);
+        $efeito = $this->decisao($request)->darCiencia($ids, $dados['observacao'] ?? null);
 
         return back()->with(...$this->recado(
             $efeito,
-            'retorno lido — sai da fila da sua área e fica no acervo',
-            'retornos lidos — saem da fila da sua área e ficam no acervo',
+            'retorno lido — sai da fila da sua equipe e fica no acervo',
+            'retornos lidos — saem da fila da sua equipe e ficam no acervo',
         ));
     }
 
@@ -227,11 +227,11 @@ class FiscalizacoesController extends Controller
 
         $ids = array_map('intval', $dados['ids']);
 
-        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
             return $recusa;
         }
 
-        $efeito = (new DecisaoDaChefia($request->user()))->pedirNovaVistoria($ids, (string) $dados['justificativa']);
+        $efeito = $this->decisao($request)->pedirNovaVistoria($ids, (string) $dados['justificativa']);
 
         return back()->with(...$this->recado(
             $efeito,
@@ -241,12 +241,12 @@ class FiscalizacoesController extends Controller
     }
 
     /**
-     * DEVOLVER À COORDENAÇÃO — a chefia diz que o caso não é dela.
+     * DEVOLVER AO CHEFE DE SETOR — o líder diz que o caso não é da equipe dele.
      *
      * Terceira saída da leitura, ao lado da ciência e da nova vistoria (ordem do
-     * dono, 10/09/2026): fecha o ciclo, porque quem redireciona é quem tria. O
+     * dono, 10/09/2026): fecha o ciclo, porque quem re-encaminha é o chefe. O
      * motivo é obrigatório no SERVIDOR — devolver calado joga o caso de volta na
-     * mesa do Coordenador sem nada com que decidir.
+     * mesa do chefe sem nada com que decidir.
      */
     public function devolver(Request $request): RedirectResponse
     {
@@ -260,23 +260,23 @@ class FiscalizacoesController extends Controller
             'motivo' => ['required', 'string', 'min:15', 'max:1000'],
         ], [
             'ids.required' => 'Escolha ao menos um registro.',
-            'motivo.required' => 'Escreva o motivo: o Coordenador precisa saber por que o caso '
+            'motivo.required' => 'Escreva o motivo: o Chefe de Setor precisa saber por que o caso '
                 .'voltou para ele.',
-            'motivo.min' => 'O motivo está curto demais para o Coordenador redirecionar o caso.',
+            'motivo.min' => 'O motivo está curto demais para o Chefe de Setor re-encaminhar o caso.',
         ]);
 
         $ids = array_map('intval', $dados['ids']);
 
-        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
             return $recusa;
         }
 
-        $efeito = (new DecisaoDaChefia($request->user()))->devolverAoCoordenador($ids, (string) $dados['motivo']);
+        $efeito = $this->decisao($request)->devolverAoChefe($ids, (string) $dados['motivo']);
 
         return back()->with(...$this->recado(
             $efeito,
-            'devolvido à coordenação',
-            'devolvidos à coordenação',
+            'devolvido ao Chefe de Setor',
+            'devolvidos ao Chefe de Setor',
         ));
     }
 
@@ -287,15 +287,15 @@ class FiscalizacoesController extends Controller
      * rascunho no aparelho dele, e mostrá-lo aqui faria a chefia decidir sobre
      * vistoria que não terminou.
      *
-     * O recorte por área é feito AQUI, e não na tela: filtro de front esconde,
+     * O recorte por equipe é feito AQUI, e não na tela: filtro de front esconde,
      * não protege, e o acervo inteiro teria viajado até o navegador de quem não
      * deve vê-lo — com o relato do fiscal, as fotos e o número do documento
-     * dentro. `$areas` nulo significa "sem recorte".
+     * dentro. `$equipes` nulo significa "sem recorte".
      *
-     * @param  list<string>|null  $areas
+     * @param  list<string>|null  $equipes  códigos
      * @return list<array<string, mixed>>
      */
-    private function registros(?array $areas): array
+    private function registros(?array $equipes): array
     {
         $consulta = Fiscalizacao::despachadas()
             ->with([
@@ -305,8 +305,8 @@ class FiscalizacoesController extends Controller
             ->orderByDesc('concluida_em')
             ->orderByDesc('id');
 
-        if ($areas !== null) {
-            $consulta->whereHas('equipe.area', static fn ($q) => $q->whereIn('nome', $areas));
+        if ($equipes !== null) {
+            $consulta->whereHas('equipe', static fn ($q) => $q->whereIn('codigo', $equipes));
         }
 
         return $consulta->get()->map(FiscalizacaoParaTela::completa(...))->all();
@@ -322,61 +322,78 @@ class FiscalizacoesController extends Controller
      */
     private function exigirDecisao(Request $request): ?RedirectResponse
     {
-        if (PapelNaArea::decide($request->user())) {
+        if (Papel::decide($request->user())) {
             return null;
         }
 
         return back()->with(
             'flash.erro',
-            'A leitura do retorno de campo é do Chefe de Setor da área — é ele que decide se a '
-            .'equipe volta ao ponto. Você consulta o que a fiscalização registrou.',
+            'A leitura do retorno de campo é do líder da equipe (ou do Chefe de Setor) — é ele que '
+            .'decide se a equipe volta ao ponto. Você consulta o que a fiscalização registrou.',
         );
     }
 
     /**
-     * Recusa a decisão do Chefe de Setor sobre registro que NÃO é da área dele.
+     * O serviço que aplica a decisão, assinando com o PAPEL de quem age.
      *
-     * Existe porque esconder da listagem não é fronteira: a lista dele já vem
-     * recortada, mas quem souber montar a requisição alcançaria o registro de
-     * outra área — e o lote é o caminho fácil, porque manda uma lista de
-     * identificadores.
-     *
-     * A conferência é contra a área GRAVADA em cada registro e o vínculo do
-     * usuário. O administrador passa: é o dono do sistema.
-     *
-     * @param  list<int>  $ids
+     * Quem é recortado por equipe age como líder; quem vê tudo age como chefe.
+     * O trâmite guarda essa diferença porque ela é fato: "o líder deu ciência" e
+     * "o chefe deu ciência" não são a mesma coisa mesmo quando é a mesma pessoa.
      */
-    private function exigirArea(Request $request, array $ids): ?RedirectResponse
+    private function decisao(Request $request): DecisaoDaChefia
     {
         $usuario = $request->user();
 
-        if ($usuario === null || $usuario->ehAdmin()) {
+        return new DecisaoDaChefia(
+            $usuario,
+            Papel::papelDoTramite($usuario, Papel::recorta($usuario) ? 'lider' : 'chefe'),
+        );
+    }
+
+    /**
+     * Recusa a decisão do líder sobre registro que NÃO é da equipe dele.
+     *
+     * Existe porque esconder da listagem não é fronteira: a lista dele já vem
+     * recortada, mas quem souber montar a requisição alcançaria o registro de
+     * outra equipe — e o lote é o caminho fácil, porque manda uma lista de
+     * identificadores.
+     *
+     * A conferência é contra a EQUIPE GRAVADA em cada registro e o vínculo do
+     * usuário. O administrador e o Chefe de Setor passam: respondem por tudo.
+     *
+     * @param  list<int>  $ids
+     */
+    private function exigirEquipe(Request $request, array $ids): ?RedirectResponse
+    {
+        $usuario = $request->user();
+
+        if (! Papel::recorta($usuario)) {
             return null;
         }
 
-        $minhas = PapelNaArea::areas($usuario);
+        $minhas = Papel::equipes($usuario);
 
         /*
-         * Chefe de Setor SEM área vinculada não é caso de passar batido: ele
-         * exerce a decisão (senão não chegaria aqui) e não tem área sobre a qual
+         * Líder SEM equipe vinculada não é caso de passar batido: ele exerce a
+         * decisão (senão não chegaria aqui) e não tem equipe sobre a qual
          * decidir. Recusar dizendo isso é o que faz alguém corrigir o cadastro —
          * deixar passar daria a ele a fila inteira do setor.
          */
         if ($minhas === []) {
             return back()->with(
                 'flash.erro',
-                'Sua conta não está vinculada a nenhuma área de fiscalização, então não há fila '
-                .'sua para ler. Procure quem administra o sistema para registrar a sua área.',
+                'Sua conta não está vinculada a nenhuma equipe, então não há fila sua para ler. '
+                .'Procure quem administra o sistema para registrar a sua equipe.',
             );
         }
 
         $deFora = [];
 
         foreach ($ids as $id) {
-            $registro = Fiscalizacao::with('equipe.area')->find($id);
-            $area = $registro?->equipe?->area?->nome;
+            $registro = Fiscalizacao::with('equipe')->find($id);
+            $equipe = $registro?->equipe?->codigo;
 
-            if ($area === null || ! in_array($area, $minhas, true)) {
+            if ($equipe === null || ! in_array($equipe, $minhas, true)) {
                 $deFora[] = $registro->protocolo ?? "#{$id}";
             }
         }
@@ -387,10 +404,10 @@ class FiscalizacoesController extends Controller
 
         return back()->with(
             'flash.erro',
-            'Você responde por '.implode(', ', $minhas).', e '
+            'Você lidera '.(count($minhas) === 1 ? 'a Equipe ' : 'as Equipes ').implode(', ', $minhas).', e '
             .(count($deFora) === 1 ? 'o registro ' : 'os registros ')
             .implode(', ', $deFora)
-            .(count($deFora) === 1 ? ' não é dessa área' : ' não são dessa área')
+            .(count($deFora) === 1 ? ' não é dessa equipe' : ' não são dessa equipe')
             .'. Nada foi alterado — recarregue a fila.',
         );
     }

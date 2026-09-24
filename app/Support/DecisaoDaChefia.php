@@ -9,14 +9,20 @@ use App\Models\User;
 use Illuminate\Support\Facades\Date;
 
 /**
- * O que o Chefe de Setor faz com o que a equipe trouxe da rua.
+ * O que a CHEFIA faz com o que a equipe trouxe da rua — e "chefia", desde
+ * 22/09/2026, são dois papéis: o LÍDER DE EQUIPE, que lê o retorno da própria
+ * equipe, e o CHEFE DE SETOR, que lê tudo e cobre a ausência do líder.
  *
  * Três saídas, e as três são atos administrativos — cada uma deixa passo:
  *
  *   **ciência**        — leu e aceitou. O caso segue o efeito do desfecho;
  *   **nova vistoria**  — o registro não resolve; a equipe volta ao ponto;
- *   **devolver**       — não é da área dele, ou a medida é de outra alçada: o
- *                        caso volta à coordenação com o motivo escrito.
+ *   **devolver**       — não é da equipe dele, ou a medida é de outra alçada: o
+ *                        caso volta à mesa do Chefe de Setor com o motivo escrito.
+ *
+ * O PAPEL com que o passo é assinado vem de quem chama ({@see __construct}):
+ * "o líder deu ciência" e "o chefe deu ciência" são fatos diferentes mesmo
+ * quando a mesma pessoa acumula os dois setores.
  *
  * ## O leque de volta acontece AQUI
  *
@@ -43,7 +49,13 @@ class DecisaoDaChefia
 
     private int $agregadasRespondidas = 0;
 
-    public function __construct(private readonly ?User $autor) {}
+    /**
+     * @param  string  $papel  com que papel o autor assina — {@see Papel::papelDoTramite}
+     */
+    public function __construct(
+        private readonly ?User $autor,
+        private readonly string $papel = DemandaTramite::PAPEL_LIDER,
+    ) {}
 
     /**
      * CIÊNCIA — a chefia leu, aceitou, e o caso segue o efeito do desfecho.
@@ -74,7 +86,7 @@ class DecisaoDaChefia
     /**
      * NOVA VISTORIA — o registro não resolve; a equipe volta ao ponto.
      *
-     * A demanda volta a `Direcionada à equipe` porque é exatamente onde ela
+     * A demanda volta a `Direcionada aos fiscais` porque é exatamente onde ela
      * estava antes da ida: o trabalho é o mesmo, refeito. Deixá-la "em campo"
      * faria a fila do aplicativo mostrar uma vistoria que ninguém está fazendo.
      *
@@ -96,8 +108,8 @@ class DecisaoDaChefia
 
             $registro->demanda?->registrar(
                 acao: 'Nova vistoria determinada',
-                situacao: Demanda::DIRECIONADA_A_EQUIPE,
-                papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
+                situacao: Demanda::DIRECIONADA_AOS_FISCAIS,
+                papel: $this->papel,
                 autor: $this->autor,
                 detalhe: $justificativa,
                 campos: [
@@ -113,18 +125,18 @@ class DecisaoDaChefia
     }
 
     /**
-     * DEVOLVER — o caso volta à coordenação, com o motivo escrito.
+     * DEVOLVER — o caso volta à mesa do Chefe de Setor, com o motivo escrito.
      *
-     * A demanda volta a `Recebida`, que é a mesa do Coordenador, e perde equipe e
-     * operação: o trabalho foi desfeito, e deixar o time pendurado faria a fila
-     * do aplicativo continuar mostrando o caso a quem já não responde por ele. A
-     * ÁREA fica — ela é o histórico de para onde o caso foi, e apagá-la tiraria
-     * do coordenador a informação que ele precisa para redirecionar.
+     * A demanda volta a `Recebida`, que é a mesa do Chefe de Setor, e perde
+     * equipe e operação: o trabalho foi desfeito, e deixar o time pendurado faria
+     * a fila do aplicativo continuar mostrando o caso a quem já não responde por
+     * ele. A ÁREA fica — ela é o histórico de para onde o caso foi, e apagá-la
+     * tiraria do chefe a informação que ele precisa para re-encaminhar.
      *
      * @param  list<int>  $ids
      * @return array{alterados: int, ignorados: int, resumo: array<string, int>, agregadas: int}
      */
-    public function devolverAoCoordenador(array $ids, string $motivo): array
+    public function devolverAoChefe(array $ids, string $motivo): array
     {
         foreach ($ids as $id) {
             $registro = $this->pendente((int) $id);
@@ -138,14 +150,14 @@ class DecisaoDaChefia
             $this->carimbar($registro, Fiscalizacao::DEVOLVIDA, $motivo);
 
             $registro->demanda?->registrar(
-                acao: 'Devolvida à coordenação',
+                acao: 'Devolvida ao Chefe de Setor',
                 situacao: Demanda::RECEBIDA,
-                papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
+                papel: $this->papel,
                 autor: $this->autor,
                 detalhe: $motivo,
                 campos: [
                     'Registro de campo' => $registro->protocolo,
-                    'Área que devolveu' => (string) ($registro->equipe?->area?->nome ?? '—'),
+                    'Equipe que devolveu' => (string) ($registro->equipe?->rotulo() ?? '—'),
                 ],
                 mudancas: ['equipe_id' => null, 'operacao_id' => null],
             );
@@ -193,7 +205,7 @@ class DecisaoDaChefia
         $demanda->registrar(
             acao: 'Retorno de campo lido pela chefia',
             situacao: $situacao,
-            papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
+            papel: $this->papel,
             autor: $this->autor,
             detalhe: $observacao ?? $registro->consideracoes,
             campos: array_filter([

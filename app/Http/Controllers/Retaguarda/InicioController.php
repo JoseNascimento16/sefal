@@ -96,15 +96,15 @@ class InicioController extends Controller
         [
             'chave' => 'denuncias-e-salvador',
             'titulo' => 'Denúncias do e-Salvador',
-            'descricao' => 'O que o portal da ouvidoria entrega: triar, encaminhar à área ou devolver.',
+            'descricao' => 'O que o portal da ouvidoria entrega: encaminhar à equipe ou devolver.',
             'rota' => 'retaguarda.denuncias.e-salvador.index',
             'slug' => 'denuncias',
         ],
         [
-            'chave' => 'denuncias-salvador-digital',
-            'titulo' => 'Denúncias do Salvador Digital',
-            'descricao' => 'O que chega do Salvador Digital, inclusive anônimo: triar e dirigir o trabalho.',
-            'rota' => 'retaguarda.denuncias.salvador-digital.index',
+            'chave' => 'denuncias-fala-salvador',
+            'titulo' => 'Denúncias do Fala Salvador',
+            'descricao' => 'O que o líder recebeu no 156, inclusive anônimo: registrar e dirigir o trabalho.',
+            'rota' => 'retaguarda.denuncias.fala-salvador.index',
             'slug' => 'denuncias',
         ],
         [

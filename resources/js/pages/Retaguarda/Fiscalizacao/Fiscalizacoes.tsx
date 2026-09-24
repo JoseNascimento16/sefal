@@ -244,10 +244,10 @@ export default function Fiscalizacoes({
     registros,
     estados,
     recomendacoesDoFiscal,
-    chefias,
+    lideres,
     decide,
-    areasDoChefe,
-    recorteDeArea,
+    equipesDoLider,
+    recorteDeEquipe,
     listagens,
 }: {
     registros: Registro[];
@@ -260,12 +260,15 @@ export default function Fiscalizacoes({
      * chefia decidir sem saber que o fiscal pediu algo.
      */
     recomendacoesDoFiscal: CatalogoDeRecomendacoes;
-    chefias: Record<string, { nome: string; matricula: string | null }>;
+    /** Quem lidera cada equipe — o Chefe de Setor precisa ver de quem é o retorno. */
+    lideres: Record<string, { nome: string; matricula: string | null }>;
     /** Esta pessoa DECIDE aqui, ou apenas consulta? Quem responde é o servidor. */
     decide: boolean;
-    areasDoChefe: string[];
+    /** As equipes que esta pessoa lidera (vazio para quem não lidera nenhuma). */
+    equipesDoLider: string[];
     /** A listagem já veio recortada por essas áreas? Quem recorta é o servidor. */
-    recorteDeArea: boolean;
+    /** A fila já veio recortada por essas equipes? Quem recorta é o servidor. */
+    recorteDeEquipe: boolean;
     /**
      * As colunas de cada aba — da grade e do arquivo —, resolvidas no servidor
      * (a de ÁREA só existe para quem varre mais de uma). Ver
@@ -282,7 +285,7 @@ export default function Fiscalizacoes({
     const [observacao, setObservacao] = useState('');
     const [justificativa, setJustificativa] = useState('');
     const [confirmandoVolta, setConfirmandoVolta] = useState(false);
-    /* O motivo da devolução à coordenação — obrigatório, como a justificativa da
+    /* O motivo da devolução ao Chefe de Setor — obrigatório, como a justificativa da
        nova vistoria: quem recebe o caso de volta precisa saber por quê. */
     const [motivo, setMotivo] = useState('');
 
@@ -294,9 +297,9 @@ export default function Fiscalizacoes({
      */
     const aguardando = estados[0];
 
-    /** O Chefe de Setor de uma área, ou null quando a estrutura não registra nenhum. */
-    const chefeDa = (area: string): string | null => {
-        const nome = chefias[area]?.nome ?? '';
+    /** O líder de uma equipe, ou null quando a estrutura não registra nenhum. */
+    const liderDa = (equipe: string | null): string | null => {
+        const nome = equipe === null ? '' : (lideres[equipe]?.nome ?? '');
 
         return nome.trim() === '' ? null : nome;
     };
@@ -484,7 +487,7 @@ export default function Fiscalizacoes({
         );
     }
 
-    function devolverAoCoordenador() {
+    function devolverAoChefe() {
         enviar(
             'devolver',
             devolver().url,
@@ -693,23 +696,23 @@ export default function Fiscalizacoes({
                         {decide && (
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
                                 <span className="rt-chip-dot" />
-                                {/* A ÁREA vai no selo: "você decide" sem dizer sobre o
-                                    quê deixaria a chefia sem saber por que a fila é curta. */}
+                                {/* A EQUIPE vai no selo: "você decide" sem dizer sobre o
+                                    quê deixaria o líder sem saber por que a fila é curta. */}
                                 Sua fila
-                                {areasDoChefe.length > 0
-                                    ? ` · ${areasDoChefe.join(' e ')}`
+                                {equipesDoLider.length > 0
+                                    ? ` · ${equipesDoLider.map((e) => `Equipe ${e}`).join(' e ')}`
                                     : ''}{' '}
                                 — você dá ciência ou manda a equipe voltar
                             </li>
                         )}
 
-                        {/* Chefe de Setor sem área vinculada: ele decide e não tem
-                            sobre o quê. Dito na cara, e não em lista vazia sem
+                        {/* Líder sem equipe vinculada: ele decide e não tem sobre
+                            o quê. Dito na cara, e não em lista vazia sem
                             explicação — lista vazia parece sistema quebrado. */}
-                        {decide && areasDoChefe.length === 0 && (
+                        {decide && recorteDeEquipe && equipesDoLider.length === 0 && (
                             <li className="rt-chip" style={{ color: 'var(--sm-perigo)' }}>
                                 <span className="rt-chip-dot" />
-                                Sua conta não está vinculada a nenhuma área — procure
+                                Sua conta não está vinculada a nenhuma equipe — procure
                                 quem administra o sistema
                             </li>
                         )}
@@ -718,7 +721,7 @@ export default function Fiscalizacoes({
                             <li className="rt-chip">
                                 <span className="rt-chip-dot" />
                                 Você consulta o que a fiscalização registrou; a decisão
-                                sobre o retorno é do Chefe de Setor da área
+                                sobre o retorno é do líder da equipe ou do Chefe de Setor
                             </li>
                         )}
                     </ul>
@@ -731,8 +734,8 @@ export default function Fiscalizacoes({
                         type="button"
                         className="rt-numero"
                         title={
-                            recorteDeArea
-                                ? 'Ver o acervo da sua área'
+                            recorteDeEquipe
+                                ? 'Ver o acervo da sua equipe'
                                 : 'Ver o acervo inteiro'
                         }
                         onClick={() => {
@@ -741,7 +744,7 @@ export default function Fiscalizacoes({
                         }}
                     >
                         <strong>{numeros.total}</strong>
-                        <span>{recorteDeArea ? 'da sua área' : 'concluídas'}</span>
+                        <span>{recorteDeEquipe ? 'da sua equipe' : 'concluídas'}</span>
                     </button>
 
                     <div className="rt-numeros-separador" />
@@ -843,21 +846,17 @@ export default function Fiscalizacoes({
             </div>
 
             {/* A lista da chefia NÃO é o universo, e a tela diz isso. */}
-            {recorteDeArea && (
+            {recorteDeEquipe && (
                 <div className="rt-sugestao" style={{ marginBottom: 18 }}>
                     <Info size={16} aria-hidden />
                     <div>
-                        {/* A frase evita concordar com a lista de áreas de
-                            propósito: "as equipes de Área 5 concluiu/concluíram"
-                            erra o número em um dos dois casos, porque o sujeito é
-                            "as equipes" e a lista é o complemento. */}
                         <strong>
-                            Você está vendo só o que voltou de{' '}
-                            {areasDoChefe.join(' e ')}.
+                            Você está vendo só o que voltou da{' '}
+                            {equipesDoLider.map((e) => `Equipe ${e}`).join(' e da ')}.
                         </strong>
                         <div>
-                            As fiscalizações das outras áreas não aparecem aqui — e a
-                            decisão sobre registro de outra área é recusada pelo
+                            As fiscalizações das outras equipes não aparecem aqui — e a
+                            decisão sobre registro de outra equipe é recusada pelo
                             sistema, não só escondida.
                         </div>
                     </div>
@@ -1061,7 +1060,7 @@ export default function Fiscalizacoes({
                             redireciona. Fecha o ciclo da Caixa de Entrada. */}
                         <div className="card-premium" style={{ margin: 0 }}>
                             <h3 className="card-titulo">
-                                <Undo2 size={16} aria-hidden /> Devolver à coordenação
+                                <Undo2 size={16} aria-hidden /> Devolver ao Chefe de Setor
                             </h3>
                             <p className="card-sub">
                                 O caso volta para quem tria, para ser redirecionado.
@@ -1078,11 +1077,11 @@ export default function Fiscalizacoes({
                                     maxLength={1000}
                                     value={motivo}
                                     onChange={(e) => setMotivo(e.target.value)}
-                                    placeholder="Por que este caso não é da sua área"
+                                    placeholder="Por que este caso não é da sua equipe"
                                 />
                                 <p className="form-ajuda">
-                                    Obrigatório: sem o motivo, o Coordenador recebe o
-                                    caso de volta sem nada com que decidir para onde
+                                    Obrigatório: sem o motivo, o Chefe de Setor recebe
+                                    o caso de volta sem nada com que decidir para onde
                                     mandá-lo.
                                 </p>
                             </div>
@@ -1093,9 +1092,9 @@ export default function Fiscalizacoes({
                                 ocupado={ocupado}
                                 disabled={motivo.trim().length < 15}
                                 rotuloCarregando="Devolvendo…"
-                                onClick={devolverAoCoordenador}
+                                onClick={devolverAoChefe}
                             >
-                                Devolver à coordenação
+                                Devolver ao Chefe de Setor
                             </BotaoAcao>
                         </div>
                         </div>
@@ -1127,9 +1126,9 @@ export default function Fiscalizacoes({
                         subtitulo="Fiscalização › Fiscalizações"
                         contexto={[
                             `Aba: ${aba === 'a-decidir' ? 'A decidir' : 'Acervo'}`,
-                            recorteDeArea
-                                ? `Áreas: ${areasDoChefe.join(' e ')}`
-                                : 'Todas as áreas',
+                            recorteDeEquipe
+                                ? `Equipes: ${equipesDoLider.join(' e ')}`
+                                : 'Todas as equipes',
                             busca.trim() ? `busca: "${busca.trim()}"` : null,
                         ]
                             .filter(Boolean)
@@ -1317,9 +1316,9 @@ export default function Fiscalizacoes({
                                                         <dt>Área e chefia</dt>
                                                         <dd>
                                                             {r.area || VAZIO}
-                                                            {chefeDa(r.area) === null
+                                                            {liderDa(r.equipe) === null
                                                                 ? ''
-                                                                : ` · ${chefeDa(r.area)}`}
+                                                                : ` · líder ${liderDa(r.equipe)}`}
                                                         </dd>
                                                     </div>
                                                     <div>

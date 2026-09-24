@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Date;
  * As demandas do protótipo virando banco — as duas portas de entrada.
  *
  *  - `config/prototipo_denuncias.php` → o que chega por INTEGRAÇÃO (e-Salvador,
- *    Salvador Digital), com o trâmite que cada caso já andou;
+ *    Fala Salvador), com o trâmite que cada caso já andou;
  *  - `config/prototipo_caixa_entrada.php` → o que o coordenador DIGITA no
  *    balcão (inclusive pedido de licença e ofício).
  *
@@ -43,7 +43,7 @@ class DemandasSeeder extends Seeder
     /** Origem escrita na Caixa de Entrada → canal canônico do sistema. */
     private const CANAL_DA_ORIGEM = [
         'e-Salvador' => Demanda::CANAL_E_SALVADOR,
-        'Salvador Digital' => Demanda::CANAL_SALVADOR_DIGITAL,
+        'Fala Salvador' => Demanda::CANAL_FALA_SALVADOR,
         'Nova licença' => Demanda::CANAL_NOVA_LICENCA,
         'Ofício' => Demanda::CANAL_OFICIO,
     ];
@@ -58,7 +58,7 @@ class DemandasSeeder extends Seeder
      */
     private const SITUACAO_DA_CAIXA = [
         'Aguardando triagem' => Demanda::RECEBIDA,
-        'Encaminhada' => Demanda::DIRECIONADA_A_EQUIPE,
+        'Encaminhada' => Demanda::DIRECIONADA_AOS_FISCAIS,
         'Devolvida' => Demanda::DEVOLVIDA,
         'Arquivada' => Demanda::ARQUIVADA,
     ];
@@ -101,7 +101,17 @@ class DemandasSeeder extends Seeder
                     'endereco_impreciso' => (bool) ($bruta['endereco_impreciso'] ?? false),
                     'situacao' => (string) ($bruta['situacao'] ?? Demanda::RECEBIDA),
                     'area_id' => $this->areaId($bruta['area'] ?? null, $bruta['bairro'] ?? null),
-                    'equipe_id' => $this->equipeId($bruta['equipe'] ?? null),
+                    /*
+                     * A demanda ENCAMINHADA tem equipe desde 22/09/2026: o chefe
+                     * escolhe a equipe, e é por `equipe_id` que o líder a enxerga.
+                     * O arquivo de protótipo só declara a equipe a partir do
+                     * direcionamento, então a encaminhada herda a equipe da área.
+                     */
+                    'equipe_id' => $this->equipeId($bruta['equipe'] ?? null)
+                        ?? $this->equipeDaArea(
+                            (string) ($bruta['situacao'] ?? Demanda::RECEBIDA),
+                            $this->areaId($bruta['area'] ?? null, $bruta['bairro'] ?? null),
+                        ),
                     'operacao_id' => $this->operacaoId($bruta['operacao'] ?? null),
                 ],
             );
@@ -207,7 +217,7 @@ class DemandasSeeder extends Seeder
             .'. Nenhum dado foi digitado no SEFAL.', Demanda::RECEBIDA);
 
         if (in_array($situacao, [Demanda::DEVOLVIDA, Demanda::ARQUIVADA], true)) {
-            $passo(6, DemandaTramite::PAPEL_COORDENADOR,
+            $passo(6, DemandaTramite::PAPEL_CHEFE_DE_SETOR,
                 $situacao === Demanda::ARQUIVADA ? 'Arquivada na triagem' : 'Devolvida ao canal de origem',
                 trim(((string) ($bruta['motivo'] ?? '')).' — '.((string) ($bruta['justificativa'] ?? ''))),
                 $situacao);
@@ -219,11 +229,11 @@ class DemandasSeeder extends Seeder
             return;
         }
 
-        $passo(5, DemandaTramite::PAPEL_COORDENADOR, 'Triada e encaminhada à área',
-            "Encaminhada à {$area} para direcionamento do Chefe de Setor.",
-            Demanda::ENCAMINHADA_A_AREA, ['Área de destino' => $area]);
+        $passo(5, DemandaTramite::PAPEL_CHEFE_DE_SETOR, 'Encaminhada ao líder de equipe',
+            "Encaminhada à equipe da {$area} para o líder direcionar aos fiscais.",
+            Demanda::ENCAMINHADA_AO_LIDER, ['Área de destino' => $area]);
 
-        if ($situacao === Demanda::ENCAMINHADA_A_AREA) {
+        if ($situacao === Demanda::ENCAMINHADA_AO_LIDER) {
             return;
         }
 
@@ -232,9 +242,9 @@ class DemandasSeeder extends Seeder
                 'Anexada à '.((string) ($bruta['operacao'] ?? '')).($equipe === '' ? '.' : ", executada pela Equipe {$equipe}."),
                 Demanda::EM_OPERACAO, ['Operação' => (string) ($bruta['operacao'] ?? '—')]);
         } else {
-            $passo(9, DemandaTramite::PAPEL_CHEFE_DE_SETOR, 'Direcionada à equipe',
-                "Direcionada à Equipe {$equipe} para vistoria.",
-                Demanda::DIRECIONADA_A_EQUIPE, ['Equipe escolhida' => "Equipe {$equipe}"]);
+            $passo(9, DemandaTramite::PAPEL_LIDER, 'Direcionada aos fiscais',
+                "Enviada à fila da Equipe {$equipe} para vistoria.",
+                Demanda::DIRECIONADA_AOS_FISCAIS, ['Equipe' => "Equipe {$equipe}"]);
         }
 
         if ($situacao === Demanda::EM_CAMPO) {
@@ -252,9 +262,9 @@ class DemandasSeeder extends Seeder
         $demanda->tramites()->create([
             'ordem' => 1,
             'ocorrida_em' => $recebida,
-            'papel' => DemandaTramite::PAPEL_COORDENADOR,
+            'papel' => DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             'acao' => 'Demanda cadastrada',
-            'detalhe' => 'Documento recebido em papel pela coordenação, com origem '.$origem.'.',
+            'detalhe' => 'Registrada pelo Chefe de Setor, com origem '.$origem.'.',
             'situacao' => Demanda::RECEBIDA,
             'campos' => ['Origem do documento' => $origem, 'Número na origem' => (string) ($bruta['documento_origem'] ?? '—')],
         ]);
@@ -270,10 +280,10 @@ class DemandasSeeder extends Seeder
         $demanda->tramites()->create([
             'ordem' => 2,
             'ocorrida_em' => $recebida->copy()->addHours(4),
-            'papel' => DemandaTramite::PAPEL_COORDENADOR,
+            'papel' => DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             'acao' => $devolvida
-                ? ($situacao === Demanda::ARQUIVADA ? 'Arquivada na triagem' : 'Devolvida ao remetente')
-                : 'Direcionada à equipe',
+                ? ($situacao === Demanda::ARQUIVADA ? 'Arquivada pelo Chefe de Setor' : 'Devolvida ao remetente')
+                : 'Direcionada aos fiscais',
             'detalhe' => $devolvida
                 ? (string) ($bruta['justificativa'] ?? '')
                 : 'Encaminhada à Equipe '.((string) ($bruta['equipe'] ?? '')).', da área do bairro.',
@@ -326,6 +336,23 @@ class DemandasSeeder extends Seeder
         return $codigo === null || $codigo === ''
             ? null
             : Equipe::where('codigo', $codigo)->value('id');
+    }
+
+    /**
+     * A equipe da área — só para a demanda que JÁ passou pelo encaminhamento.
+     *
+     * A que ainda espera o chefe (ou que ele devolveu) não tem equipe, e é isso
+     * que a mantém na Caixa dele e fora da fila de qualquer líder.
+     */
+    private function equipeDaArea(string $situacao, ?int $areaId): ?int
+    {
+        $semEquipe = [Demanda::EM_PRE_TRIAGEM, Demanda::RECEBIDA, Demanda::DEVOLVIDA, Demanda::ARQUIVADA];
+
+        if ($areaId === null || in_array($situacao, $semEquipe, true)) {
+            return null;
+        }
+
+        return Equipe::where('area_id', $areaId)->orderBy('id')->value('id');
     }
 
     private function operacaoId(?string $nome): ?int
