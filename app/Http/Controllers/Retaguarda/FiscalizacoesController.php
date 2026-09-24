@@ -176,6 +176,20 @@ class FiscalizacoesController extends Controller
             return $recusa;
         }
 
+        /*
+         * O LÍDER não encerra (decisão do dono, 24/09/2026): ele decide o que o
+         * retorno pede — a equipe voltar, ou o caso subir ao Chefe de Setor —, e
+         * a tela dele já não oferece a ciência. A recusa aqui é a fronteira: sem
+         * ela, bastaria montar a requisição para arquivar a demanda.
+         */
+        if (Papel::recorta($request->user())) {
+            return back()->with(
+                'flash.erro',
+                'O líder de equipe não encerra o retorno: mande a equipe voltar ao ponto ou encaminhe o caso ao '
+                .'Chefe de Setor para ele deliberar. Nada foi alterado.',
+            );
+        }
+
         $dados = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'ids.*' => ['required', 'integer'],
