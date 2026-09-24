@@ -96,7 +96,13 @@ class DemandaParaTela
              * / nulo) e o que já foi registrado. É o que faz o detalhe mostrar o
              * formulário ao chefe — ou a resposta dada, para quem chegar depois.
              */
+            // A situação em três palavras, como a Caixa de Entrada a mostra, e se
+            // o ciclo já fechou para o canal (é o que decide a aba "Respondidas").
+            'situacao_resumida' => $demanda->situacaoResumida(),
+            'respondida' => $demanda->respondida(),
+            'passou_por_fiscalizacao' => $demanda->passouPorFiscalizacao(),
             'retorno_ao_canal' => RetornoAoCanal::tipoDe($demanda),
+            'retorno_em' => config("demandas.canais.{$demanda->canal}.retorno_em"),
             'resposta_ao_canal' => $demanda->respondida_ao_canal_em === null ? null : [
                 'texto' => (string) $demanda->resposta_ao_canal,
                 'em' => $demanda->respondida_ao_canal_em->format('Y-m-d H:i'),

@@ -98,6 +98,13 @@ class Demanda extends Model
      */
     public const CANAL_AVULSA = 'avulsa';
 
+    /**
+     * O atendimento PRESENCIAL na sede da SEFAL (o sistema e-Protocolo). A quarta
+     * frente (dono, 24/09/2026). Ainda não se sabe se passa pelo e-Salvador antes
+     * de chegar ao chefe — por isso tem caixa própria.
+     */
+    public const CANAL_E_PROTOCOLO = 'e-protocolo';
+
     /** @var list<string> */
     public const CANAIS = [
         self::CANAL_E_SALVADOR,
@@ -105,7 +112,20 @@ class Demanda extends Model
         self::CANAL_NOVA_LICENCA,
         self::CANAL_OFICIO,
         self::CANAL_AVULSA,
+        self::CANAL_E_PROTOCOLO,
     ];
+
+    // ── A situação como a Caixa de Entrada a mostra ───────────────────────────
+
+    public const RESUMO_RECEBIDA = 'Recebida';
+
+    public const RESUMO_ENCAMINHADA = 'Encaminhada ao líder';
+
+    public const RESUMO_EM_FISCALIZACAO = 'Em fiscalização';
+
+    public const RESUMO_RESPONDIDA = 'Respondida';
+
+    public const RESUMO_ENCERRADA = 'Encerrada';
 
     // ── Onde ela está ───────────────────────────────────────────────────────
 
@@ -399,6 +419,80 @@ class Demanda extends Model
     public function sugestoesDeAgrupamento(): HasMany
     {
         return $this->hasMany(SugestaoAgrupamento::class, 'demanda_id');
+    }
+
+    /**
+     * A demanda já foi a campo? — há registro de fiscalização despachado.
+     *
+     * É o que distingue a `Recebida` que ninguém tocou da que VOLTOU ao chefe
+     * depois da vistoria (o líder encaminhou para ele deliberar): a segunda está
+     * no meio da fiscalização, e já pode ser respondida ao canal.
+     */
+    public function passouPorFiscalizacao(): bool
+    {
+        if ($this->relationLoaded('tramites')) {
+            // A lista já trouxe o trâmite com a fiscalização de cada passo: sem
+            // consulta extra por linha da grade.
+            return $this->tramites->contains(
+                static fn (DemandaTramite $t): bool => $t->relationLoaded('fiscalizacao') && $t->fiscalizacao?->despachada_em !== null,
+            );
+        }
+
+        return $this->fiscalizacoes()->whereNotNull('despachada_em')->exists();
+    }
+
+    /**
+     * O ciclo desta demanda já se FECHOU para o canal?
+     *
+     * Fecha quando o chefe registrou o retorno (resposta no e-Salvador/e-Protocolo,
+     * ou o processo/encerramento da avulsa), quando ela saiu do fluxo (devolvida,
+     * arquivada) ou — no canal sem retorno pelo sistema, o Fala Salvador — quando
+     * o trabalho foi concluído: lá quem responde é o líder, no próprio canal.
+     */
+    public function respondida(): bool
+    {
+        if (in_array($this->situacao, [self::DEVOLVIDA, self::ARQUIVADA], true)) {
+            return true;
+        }
+
+        if ($this->respondida_ao_canal_em !== null) {
+            return true;
+        }
+
+        $temRetorno = config("demandas.canais.{$this->canal}.retorno") !== null;
+
+        return ! $temRetorno && $this->situacao === self::CONCLUIDA;
+    }
+
+    /**
+     * A situação em TRÊS palavras, como a Caixa de Entrada a mostra.
+     *
+     * O fluxo tem doze estados, e quem olha a caixa quer saber uma coisa: com
+     * quem está. `Recebida` (na mesa do chefe, ninguém mexeu), `Encaminhada ao
+     * líder`, e `Em fiscalização` — tudo o que acontece entre o líder mandar os
+     * fiscais e o chefe responder ao canal, inclusive a volta do caso ao chefe
+     * depois da vistoria. O que fechou é `Respondida` (a avulsa, `Encerrada`), e
+     * devolvida/arquivada continuam com o nome delas.
+     */
+    public function situacaoResumida(): string
+    {
+        if (in_array($this->situacao, [self::DEVOLVIDA, self::ARQUIVADA], true)) {
+            return $this->situacao;
+        }
+
+        if ($this->respondida()) {
+            return $this->canal === self::CANAL_AVULSA ? self::RESUMO_ENCERRADA : self::RESUMO_RESPONDIDA;
+        }
+
+        if (in_array($this->situacao, [self::RECEBIDA, self::EM_PRE_TRIAGEM], true)) {
+            return $this->passouPorFiscalizacao() ? self::RESUMO_EM_FISCALIZACAO : self::RESUMO_RECEBIDA;
+        }
+
+        if ($this->situacao === self::ENCAMINHADA_AO_LIDER) {
+            return self::RESUMO_ENCAMINHADA;
+        }
+
+        return self::RESUMO_EM_FISCALIZACAO;
     }
 
     /** Esta demanda é uma agregada (o trabalho dela é feito por outra)? */

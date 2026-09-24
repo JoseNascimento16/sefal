@@ -193,86 +193,14 @@ return [
 
         /*
         |----------------------------------------------------------------------
-        | Denúncias › e-Salvador / Fala Salvador — aba "A encaminhar"
+        | Caixas de Entrada por canal — a grade de TODAS as abas
         |----------------------------------------------------------------------
         |
-        | Quem varre: o Chefe de Setor, decidindo a EQUIPE a partir do BAIRRO.
-        | Só isso: bairro é o dado que decide, equipe é onde ele confirma (a
-        | célula é um seletor, não texto), e o prazo é o que ordena a urgência.
-        |
-        | Requerente e assunto descem — o assunto é texto livre e era ele que
-        | esticava a linha. Situação não entra: nesta aba é sempre "Recebida".
-        */
-        'denuncias.encaminhamento' => [
-            'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',
-            'grade' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo', 'largura' => 132],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'largura' => 132, 'alinhar' => 'center'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 190],
-                ['chave' => 'equipe', 'titulo' => 'Equipe (sugerida)', 'largura' => 250],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'largura' => 118, 'alinhar' => 'center'],
-            ],
-            'detalhe' => ['protocolo_origem', 'requerente', 'assunto', 'destino', 'situacao', 'desfecho'],
-            'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
-                ['chave' => 'protocolo_origem', 'titulo' => 'Nº na origem'],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'alinhar' => 'center'],
-                ['chave' => 'requerente', 'titulo' => 'Requerente'],
-                ['chave' => 'assunto', 'titulo' => 'Assunto'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro'],
-                ['chave' => 'area', 'titulo' => 'Área'],
-                ['chave' => 'equipe', 'titulo' => 'Equipe (sugerida)'],
-                ['chave' => 'destino', 'titulo' => 'Destino'],
-                ['chave' => 'situacao', 'titulo' => 'Situação'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'alinhar' => 'center'],
-            ],
-        ],
-
-        /*
-        |----------------------------------------------------------------------
-        | Denúncias — aba "A direcionar"
-        |----------------------------------------------------------------------
-        |
-        | Quem varre: o líder da equipe, mandando os fiscais ao ponto ou anexando
-        | a uma operação. A área já está definida e ele pode liderar mais de uma
-        | equipe, então ela fica — curta, como texto. Situação, de novo, é
-        | constante na aba.
-        */
-        'denuncias.direcionamento' => [
-            'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',
-            'grade' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo', 'largura' => 132],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'largura' => 132, 'alinhar' => 'center'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 190],
-                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 150],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'largura' => 118, 'alinhar' => 'center'],
-            ],
-            'detalhe' => ['protocolo_origem', 'requerente', 'assunto', 'destino', 'situacao', 'desfecho'],
-            'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
-                ['chave' => 'protocolo_origem', 'titulo' => 'Nº na origem'],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'alinhar' => 'center'],
-                ['chave' => 'requerente', 'titulo' => 'Requerente'],
-                ['chave' => 'assunto', 'titulo' => 'Assunto'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro'],
-                ['chave' => 'area', 'titulo' => 'Área'],
-                ['chave' => 'destino', 'titulo' => 'Destino'],
-                ['chave' => 'situacao', 'titulo' => 'Situação'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'alinhar' => 'center'],
-            ],
-        ],
-
-        /*
-        |----------------------------------------------------------------------
-        | Denúncias — aba "Todas"
-        |----------------------------------------------------------------------
-        |
-        | Quem varre: quem acompanha o canal e quer saber em que ESTADO cada
-        | denúncia está. Aqui a situação varia, então ela é a coluna do selo; o
-        | destino (equipe ou operação) desce, porque a pergunta desta aba é "em
-        | que pé está", não "com quem está".
+        | Uma grade só para as quatro caixas e todas as abas (dono, 24/09/2026):
+        | protocolo, recebida, bairro, situação e prazo, com seleção múltipla. A
+        | situação é a RESUMIDA — Recebida, Encaminhada ao líder, Em fiscalização
+        | (e, fechada, Respondida/Encerrada) —; a completa vai na dica e no
+        | arquivo. A equipe é escolhida na folha de encaminhamento, não na linha.
         */
         'denuncias.todas' => [
             'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',

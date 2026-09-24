@@ -88,30 +88,37 @@ class InicioController extends Controller
          * menu: é o começo da cadeia — a demanda de fora entra, é triada, e só
          * então vira trabalho de campo. A ordem dos atalhos conta essa sequência.
          *
-         * Os dois canais de denúncia entram como DOIS atalhos, e não um, porque
-         * são duas telas: um cartão só levaria a uma delas e deixaria a outra sem
-         * caminho a partir daqui — atalho que esconde metade do módulo é pior que
-         * atalho nenhum.
+         * As quatro caixas entram como QUATRO atalhos, e não um, porque são quatro
+         * telas: um cartão só levaria a uma delas e deixaria as outras sem caminho
+         * a partir daqui — atalho que esconde parte do módulo é pior que atalho
+         * nenhum.
          */
         [
-            'chave' => 'denuncias-e-salvador',
-            'titulo' => 'Denúncias do e-Salvador',
-            'descricao' => 'O que o portal da ouvidoria entrega: encaminhar à equipe ou devolver.',
+            'chave' => 'caixa-e-salvador',
+            'titulo' => 'e-Salvador',
+            'descricao' => 'Denúncias e licenças do portal da ouvidoria: encaminhar à equipe ou devolver.',
             'rota' => 'retaguarda.denuncias.e-salvador.index',
-            'slug' => 'denuncias',
+            'slug' => 'caixa-de-entrada',
         ],
         [
-            'chave' => 'denuncias-fala-salvador',
-            'titulo' => 'Denúncias do Fala Salvador',
+            'chave' => 'caixa-fala-salvador',
+            'titulo' => 'Fala Salvador',
             'descricao' => 'O que o líder recebeu no 156, inclusive anônimo: registrar e dirigir o trabalho.',
             'rota' => 'retaguarda.denuncias.fala-salvador.index',
-            'slug' => 'denuncias',
+            'slug' => 'caixa-de-entrada',
         ],
         [
-            'chave' => 'caixa',
-            'titulo' => 'Caixa de Entrada',
-            'descricao' => 'O que chega de fora em papel: registre, encaminhe à equipe ou devolva.',
-            'rota' => 'retaguarda.caixa-de-entrada.index',
+            'chave' => 'caixa-e-protocolo',
+            'titulo' => 'e-Protocolo',
+            'descricao' => 'O atendimento presencial na sede da SEFAL: registrar e encaminhar à equipe.',
+            'rota' => 'retaguarda.denuncias.e-protocolo.index',
+            'slug' => 'caixa-de-entrada',
+        ],
+        [
+            'chave' => 'caixa-avulsas',
+            'titulo' => 'Avulsas',
+            'descricao' => 'O pedido que chega por ligação ou e-mail de superior: registrar e dar destino.',
+            'rota' => 'retaguarda.denuncias.avulsas.index',
             'slug' => 'caixa-de-entrada',
         ],
         [

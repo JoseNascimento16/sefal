@@ -1,10 +1,10 @@
 import { Head } from '@inertiajs/react';
 import type { ComponentProps } from 'react';
 import { PainelDeDenuncias } from '@/components/retaguarda/painel-de-denuncias';
-import { index } from '@/routes/retaguarda/denuncias/e-salvador';
+import { index } from '@/routes/retaguarda/denuncias/e-protocolo';
 
 /**
- * Caixa de Entrada › e-Salvador.
+ * Caixa de Entrada › e-Protocolo.
  *
  * Casca fina, como as outras três caixas: o fluxo inteiro (as abas, o cadastro,
  * o encaminhamento, o direcionamento, o trâmite e o retorno ao canal) vive em
@@ -16,21 +16,21 @@ import { index } from '@/routes/retaguarda/denuncias/e-salvador';
  * trilha de navegação, que a `layout` do Inertia recebe como propriedade
  * estática.
  *
- * Abas Denúncias, Licenças e Respondidas: a licença chega pelo mesmo portal
- * (assunto 216) e é respondida no mesmo processo.
+ * O atendimento presencial na sede da SEFAL. Sem integração: o Chefe de Setor
+ * cadastra. Ainda não se sabe se passa pelo e-Salvador antes de chegar a ele.
  */
-export default function ESalvador(props: ComponentProps<typeof PainelDeDenuncias>) {
+export default function EProtocolo(props: ComponentProps<typeof PainelDeDenuncias>) {
     return (
         <>
-            <Head title="e-Salvador" />
+            <Head title="e-Protocolo" />
             <PainelDeDenuncias {...props} />
         </>
     );
 }
 
-ESalvador.layout = {
+EProtocolo.layout = {
     breadcrumbs: [
         { title: 'Caixa de Entrada', href: index() },
-        { title: 'e-Salvador', href: index() },
+        { title: 'e-Protocolo', href: index() },
     ],
 };

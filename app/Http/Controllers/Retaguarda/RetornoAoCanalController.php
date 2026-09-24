@@ -44,6 +44,7 @@ class RetornoAoCanalController extends Controller
         $dados = $request->validate([
             'texto' => ['required', 'string', 'min:15', 'max:4000'],
             'processo' => ['nullable', 'string', 'max:40', 'regex:/^[0-9.\/-]+$/'],
+            'sem_processo' => ['nullable', 'boolean'],
         ], [
             'texto.required' => 'Escreva o que a fiscalização apurou: é isso que o requerente vai ler.',
             'texto.min' => 'A resposta está curta demais para dizer ao requerente o que foi feito.',
@@ -51,19 +52,20 @@ class RetornoAoCanalController extends Controller
         ]);
 
         try {
-            $this->retorno->registrar($demanda, $usuario, $dados['texto'], $dados['processo'] ?? null);
+            $this->retorno->registrar($demanda, $usuario, $dados['texto'], $dados['processo'] ?? null, (bool) ($dados['sem_processo'] ?? false));
         } catch (DomainException|EscritaNaoLiberada $e) {
             return back()->with('flash.erro', $e->getMessage());
         }
 
         $demanda->refresh();
 
-        return back()->with(
-            'flash.sucesso',
-            RetornoAoCanal::tipoDe($demanda) === RetornoAoCanal::PROCESSO
-                ? "Abertura do processo {$demanda->processo_esalvador} registrada para a demanda {$demanda->protocolo}."
-                : "Resposta ao e-Salvador registrada para a demanda {$demanda->protocolo}"
-                    .($demanda->processo_esalvador !== null ? " (processo {$demanda->processo_esalvador})." : '.'),
-        );
+        $onde = (string) (config("demandas.canais.{$demanda->canal}.retorno_em") ?? 'e-Salvador');
+
+        return back()->with('flash.sucesso', match (true) {
+            (bool) ($dados['sem_processo'] ?? false) => "Demanda {$demanda->protocolo} encerrada com a fiscalização, sem processo.",
+            RetornoAoCanal::tipoDe($demanda) === RetornoAoCanal::PROCESSO => "Abertura do processo {$demanda->processo_esalvador} registrada para a demanda {$demanda->protocolo}.",
+            default => "Resposta ao {$onde} registrada para a demanda {$demanda->protocolo}"
+                .($demanda->processo_esalvador !== null ? " (processo {$demanda->processo_esalvador})." : '.'),
+        });
     }
 }

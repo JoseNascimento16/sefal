@@ -47,70 +47,111 @@ class RetornoAoCanal
     }
 
     /**
-     * Registra o retorno — e envia, quando a integração estiver ligada e liberada.
+     * O ato cabe AGORA? — o motivo quando não cabe, `null` quando cabe.
      *
-     * @throws DomainException quando o ato não cabe (canal sem retorno, demanda não concluída, já respondida)
-     * @throws EscritaNaoLiberada quando a integração está ligada mas a escrita não foi liberada
+     * Cabe quando a fiscalização já produziu resultado: a demanda está
+     * `Concluída`, ou VOLTOU ao chefe (`Recebida`) depois de ter ido a campo — é
+     * o "encaminhar ao Chefe de Setor" do líder, para ele deliberar. E uma vez só.
      */
-    public function registrar(Demanda $demanda, User $autor, string $texto, ?string $processo): DemandaTramite
+    public static function impedimento(Demanda $demanda): ?string
     {
-        $tipo = self::tipoDe($demanda);
-
-        if ($tipo === null) {
-            throw new DomainException(
-                'Este canal não recebe retorno pelo sistema: o Fala Salvador é respondido pelo líder no próprio '
-                .'canal; ofício e pedido de licença não voltam por aqui.',
-            );
-        }
-
-        if ($demanda->situacao !== Demanda::CONCLUIDA) {
-            throw new DomainException(
-                "A demanda {$demanda->protocolo} está \"{$demanda->situacao}\": só o que foi CONCLUÍDO volta ao canal — "
-                .'responder antes do resultado seria prometer o que a fiscalização ainda não apurou.',
-            );
+        if (self::tipoDe($demanda) === null) {
+            return 'Este canal não recebe retorno pelo sistema: o Fala Salvador é respondido pelo líder no próprio canal.';
         }
 
         if ($demanda->respondida_ao_canal_em !== null) {
-            throw new DomainException(
-                "A demanda {$demanda->protocolo} já teve o retorno registrado em "
-                .$demanda->respondida_ao_canal_em->format('d/m/Y H:i').'. O retorno é um só; para complementar, use o trâmite.',
-            );
+            return "A demanda {$demanda->protocolo} já teve o retorno registrado em "
+                .$demanda->respondida_ao_canal_em->format('d/m/Y H:i').'. O retorno é um só; para complementar, use o trâmite.';
         }
 
-        $identificador = $tipo === self::TRAMITE
-            ? trim((string) ($processo ?? $demanda->numero_origem ?? ''))
-            : trim((string) $processo);
+        $voltouDaRua = in_array($demanda->situacao, [Demanda::RECEBIDA, Demanda::EM_PRE_TRIAGEM], true)
+            && $demanda->passouPorFiscalizacao();
 
-        if ($identificador === '' && ! $this->esalvador->ligado()) {
+        if ($demanda->situacao !== Demanda::CONCLUIDA && ! $voltouDaRua) {
+            return "A demanda {$demanda->protocolo} está \"{$demanda->situacao}\": só o que a fiscalização já CONCLUIU volta ao "
+                .'canal — responder antes do resultado seria prometer o que ninguém apurou.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Registra o retorno — e envia, quando a integração estiver ligada e liberada.
+     *
+     * `$semProcesso` é a deliberação que só a AVULSA tem: o chefe encerra com a
+     * fiscalização, sem abrir processo no e-Salvador (dono, 24/09/2026).
+     *
+     * @throws DomainException quando o ato não cabe
+     * @throws EscritaNaoLiberada quando a integração está ligada mas a escrita não foi liberada
+     */
+    public function registrar(Demanda $demanda, User $autor, string $texto, ?string $processo, bool $semProcesso = false): DemandaTramite
+    {
+        if (($motivo = self::impedimento($demanda)) !== null) {
+            throw new DomainException($motivo);
+        }
+
+        $tipo = self::tipoDe($demanda);
+        $onde = (string) (config("demandas.canais.{$demanda->canal}.retorno_em") ?? 'e-Salvador');
+
+        if ($semProcesso && $tipo !== self::PROCESSO) {
+            throw new DomainException('Encerrar sem processo é deliberação da avulsa; a demanda de canal é respondida no canal.');
+        }
+
+        $identificador = match (true) {
+            $semProcesso => '',
+            $tipo === self::TRAMITE => trim((string) ($processo ?? $demanda->numero_origem ?? '')),
+            default => trim((string) $processo),
+        };
+
+        $pelaIntegracao = $onde === 'e-Salvador' && $this->esalvador->ligado();
+
+        if (! $semProcesso && $identificador === '' && ! $pelaIntegracao) {
             throw new DomainException(
                 $tipo === self::TRAMITE
                     ? 'A demanda não tem o número do processo de origem: informe-o para registrar a resposta.'
-                    : 'Informe o número do processo que você abriu no e-Salvador: com a integração desligada, é ele que prova a abertura.',
+                    : "Informe o número do processo que você abriu no {$onde} — ou encerre sem processo: com a integração desligada, é o número que prova a abertura.",
             );
         }
 
-        // Com a integração ligada e liberada, envia; desligada, devolve null e nada sai.
-        $enviado = $tipo === self::TRAMITE
-            ? $this->esalvador->responderProcesso($identificador, $texto)
-            : $this->esalvador->abrirProcesso([
-                'assunto' => $demanda->assunto,
-                'requerente' => $demanda->requerente,
-                'descricao' => $texto,
-            ]);
+        /*
+         * Só o e-Salvador tem cliente. Desligado, ele devolve null e nada sai;
+         * ligado, recusa a escrita até ela ser liberada. O e-Protocolo não tem API:
+         * o retorno é registrado aqui e feito lá, à mão.
+         */
+        $enviado = null;
+
+        if (! $semProcesso && $onde === 'e-Salvador') {
+            $enviado = $tipo === self::TRAMITE
+                ? $this->esalvador->responderProcesso($identificador, $texto)
+                : $this->esalvador->abrirProcesso([
+                    'assunto' => $demanda->assunto,
+                    'requerente' => $demanda->requerente,
+                    'descricao' => $texto,
+                ]);
+        }
 
         if ($enviado !== null && $identificador === '') {
             $identificador = (string) ($enviado['identificador'] ?? '');
         }
 
+        $acao = match (true) {
+            $semProcesso => 'Encerrada com a fiscalização, sem processo',
+            $tipo === self::TRAMITE => "Resposta registrada no {$onde}",
+            default => "Processo aberto no {$onde}",
+        };
+
         return $demanda->registrar(
-            acao: $tipo === self::TRAMITE ? 'Resposta registrada no e-Salvador' : 'Processo aberto no e-Salvador',
-            situacao: $demanda->situacao,
+            acao: $acao,
+            // Respondida, a demanda está concluída — inclusive a que voltou ao chefe.
+            situacao: Demanda::CONCLUIDA,
             papel: DemandaTramite::PAPEL_CHEFE_DE_SETOR,
             autor: $autor,
             detalhe: $texto,
             campos: array_filter([
-                'Processo no e-Salvador' => $identificador,
-                'Enviado pela integração' => $enviado === null ? 'Não — registrado aqui e feito à mão no e-Salvador' : 'Sim',
+                "Processo no {$onde}" => $identificador,
+                'Deliberação' => $semProcesso ? 'Encerrar sem abrir processo' : null,
+                'Enviado pela integração' => $semProcesso ? null
+                    : ($enviado === null ? "Não — registrado aqui e feito à mão no {$onde}" : 'Sim'),
             ]),
             mudancas: [
                 'respondida_ao_canal_em' => Date::now(),

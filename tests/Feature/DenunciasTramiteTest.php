@@ -88,7 +88,7 @@ function chefeDoSetor(): User
 function denunciasServidas(User $u, string $canal): array
 {
     return test()->actingAs($u)
-        ->get("/retaguarda/denuncias/{$canal}")
+        ->get("/retaguarda/caixa-de-entrada/{$canal}")
         ->viewData('page')['props']['denuncias'];
 }
 
@@ -313,7 +313,7 @@ test('a linha de tramite criada por uma decisao nasce com TODAS as chaves do pas
     $chefe = chefeDoSetor();
 
     $this->actingAs($chefe)
-        ->post('/retaguarda/denuncias/encaminhar', [
+        ->post('/retaguarda/caixa-de-entrada/encaminhar', [
             'destinos' => [['id' => 1, 'equipe' => 'C2']],
         ])
         ->assertRedirect();
@@ -840,7 +840,7 @@ test('o chefe de setor de outra area nao recebe nem a linha nem o conteudo do tr
         ->and($ids)->toContain(13);
 
     $this->actingAs($liderC2)
-        ->get('/retaguarda/denuncias/e-salvador')
+        ->get('/retaguarda/caixa-de-entrada/e-salvador')
         ->assertDontSee('194903')
         ->assertDontSee('Jailson Pereira dos Santos');
 });
@@ -855,7 +855,7 @@ test('o chefe de setor ve o universo, com os casos avancados de todas as equipes
 
 test('o catalogo de desfechos chega a tela, para a busca reconhecer a faceta', function () {
     $props = $this->actingAs(chefeDoSetor())
-        ->get('/retaguarda/denuncias/e-salvador')
+        ->get('/retaguarda/caixa-de-entrada/e-salvador')
         ->viewData('page')['props'];
 
     expect($props['desfechos'])->toBe((array) config('prototipo_denuncias.desfechos'));

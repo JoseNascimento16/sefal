@@ -162,6 +162,8 @@ export interface AreaSugerida {
 export interface Canal {
     slug: string;
     nome: string;
+    /** O nome da CAIXA quando difere do da demanda ("Avulsas" × "Avulsa"). */
+    titulo?: string;
     sistema: string;
     /** O artigo que combina com `sistema` — "o portal", "a central". */
     artigo: string;
@@ -239,6 +241,13 @@ export interface Denuncia {
      * O RETORNO ao canal de origem — o tipo que o canal pede e o que já foi
      * registrado (ver `components/retaguarda/retorno-ao-canal.tsx`).
      */
+    /** A situação em três palavras (Recebida, Encaminhada ao líder, Em fiscalização…). */
+    situacao_resumida: string;
+    /** O ciclo já fechou para o canal? Decide a aba "Respondidas". */
+    respondida: boolean;
+    passou_por_fiscalizacao: boolean;
+    /** Onde o retorno é feito — "e-Salvador", "e-Protocolo" —, ou nulo. */
+    retorno_em: string | null;
     retorno_ao_canal: 'tramite' | 'processo' | null;
     resposta_ao_canal: {
         texto: string;

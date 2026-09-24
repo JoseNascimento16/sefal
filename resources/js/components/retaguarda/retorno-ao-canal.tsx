@@ -19,6 +19,10 @@ export interface RetornoDaDemanda {
     protocolo_origem?: string;
     documento_origem?: string;
     retorno_ao_canal: 'tramite' | 'processo' | null;
+    /** Onde o retorno é feito — "e-Salvador", "e-Protocolo". */
+    retorno_em?: string | null;
+    /** Já foi a campo? A que VOLTOU ao chefe depois da vistoria também pode ser respondida. */
+    passou_por_fiscalizacao?: boolean;
     resposta_ao_canal: {
         texto: string;
         em: string;
@@ -55,12 +59,22 @@ export function RetornoAoCanal({
     const tipo = demanda.retorno_ao_canal;
     const registrado = demanda.resposta_ao_canal;
 
-    if (tipo === null || (registrado === null && (!decide || demanda.situacao !== 'Concluída'))) {
+    /*
+     * Cabe responder quando a fiscalização já produziu resultado: a demanda está
+     * concluída, ou VOLTOU ao chefe depois da vistoria (o líder encaminhou para
+     * ele deliberar). A mesma regra, no servidor, é `RetornoAoCanal::impedimento`.
+     */
+    const podeResponder =
+        demanda.situacao === 'Concluída' ||
+        (['Recebida', 'Em pré-triagem'].includes(demanda.situacao) && demanda.passou_por_fiscalizacao === true);
+
+    if (tipo === null || (registrado === null && (!decide || !podeResponder))) {
         return null;
     }
 
     const abertura = tipo === 'processo';
-    const titulo = abertura ? 'Processo no e-Salvador' : 'Resposta ao e-Salvador';
+    const onde = demanda.retorno_em ?? 'e-Salvador';
+    const titulo = abertura ? 'Deliberação do Chefe de Setor' : `Resposta ao ${onde}`;
 
     return (
         <>
@@ -72,7 +86,11 @@ export function RetornoAoCanal({
                     <CheckCircle2 size={16} aria-hidden />
                     <div>
                         <strong>
-                            {abertura ? 'Processo aberto' : 'Respondida'}
+                            {abertura
+                                ? registrado.processo
+                                    ? 'Processo aberto'
+                                    : 'Encerrada com a fiscalização, sem processo'
+                                : 'Respondida'}
                             {registrado.processo ? ` · ${registrado.processo}` : ''} · {dataHoraBR(registrado.em)}
                             {registrado.por ? ` · ${registrado.por}` : ''}
                         </strong>
@@ -80,12 +98,14 @@ export function RetornoAoCanal({
                         <div style={{ marginTop: 6, color: 'var(--sm-texto-fraco)' }}>
                             {registrado.enviado
                                 ? 'Enviado pela integração.'
-                                : 'Registrado aqui e feito à mão no e-Salvador — a integração ainda não escreve lá.'}
+                                : abertura && !registrado.processo
+                                  ? 'Deliberação registrada aqui: a avulsa terminou na fiscalização.'
+                                  : `Registrado aqui e feito à mão no ${onde} — a integração ainda não escreve lá.`}
                         </div>
                     </div>
                 </div>
             ) : (
-                <FormularioDeRetorno demanda={demanda} abertura={abertura} rota={rota} />
+                <FormularioDeRetorno demanda={demanda} abertura={abertura} onde={onde} rota={rota} />
             )}
         </>
     );
@@ -94,10 +114,12 @@ export function RetornoAoCanal({
 function FormularioDeRetorno({
     demanda,
     abertura,
+    onde,
     rota,
 }: {
     demanda: RetornoDaDemanda;
     abertura: boolean;
+    onde: string;
     rota: string;
 }) {
     const { enviando, ocupado, enviar } = useEnvio();
@@ -108,11 +130,11 @@ function FormularioDeRetorno({
     const origem = demanda.protocolo_origem || demanda.documento_origem || '';
     const chave = `retorno-${demanda.id}`;
 
-    function registrar() {
+    function registrar(semProcesso = false) {
         enviar(
-            chave,
+            semProcesso ? `${chave}-sem` : chave,
             rota,
-            { texto, processo: processo.trim() === '' ? null : processo.trim() },
+            { texto, processo: processo.trim() === '' ? null : processo.trim(), sem_processo: semProcesso },
             {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -137,23 +159,23 @@ function FormularioDeRetorno({
             <p className="card-sub">
                 {abertura ? (
                     <>
-                        A avulsa não tem processo: concluído o trabalho, você <strong>abre o processo no
-                        e-Salvador</strong> com o resultado e registra aqui o número. A integração ainda
-                        não abre processo — o ato é seu, à mão, lá.
+                        A avulsa não tem processo. Concluída a fiscalização, você <strong>delibera</strong>:
+                        abre um processo no e-Salvador com o resultado (feito à mão lá — a integração
+                        ainda não abre processo — e o número registrado aqui), ou{' '}
+                        <strong>encerra só com a fiscalização</strong>, sem processo.
                     </>
                 ) : (
                     <>
-                        Concluído o trabalho, você <strong>responde no processo de origem</strong>
-                        {origem ? ` (${origem})` : ''} o que a fiscalização apurou — é o que o requerente
-                        vai ler. A integração ainda não escreve no e-Salvador: registre aqui e faça o
-                        trâmite à mão lá.
+                        Com o resultado da fiscalização, você <strong>responde no processo de origem</strong>
+                        {origem ? ` (${origem})` : ''} o que foi apurado — é o que o requerente vai ler. A
+                        integração ainda não escreve no {onde}: registre aqui e faça o trâmite à mão lá.
                     </>
                 )}
             </p>
 
             <div className="form-group">
                 <label className="form-label" htmlFor={`${chave}-texto`}>
-                    {abertura ? 'Resultado a constar no processo' : 'Resposta ao requerente'}
+                    {abertura ? 'Resultado da fiscalização' : 'Resposta ao requerente'}
                 </label>
                 <textarea
                     id={`${chave}-texto`}
@@ -170,7 +192,7 @@ function FormularioDeRetorno({
             <div className="rt-form-linha">
                 <div className="form-group">
                     <label className="form-label" htmlFor={`${chave}-processo`}>
-                        {abertura ? 'Nº do processo aberto no e-Salvador' : 'Nº do processo (se diferente do de origem)'}
+                        {abertura ? `Nº do processo aberto no ${onde} (se abrir)` : 'Nº do processo (se diferente do de origem)'}
                     </label>
                     <input
                         id={`${chave}-processo`}
@@ -192,10 +214,24 @@ function FormularioDeRetorno({
                     ocupado={ocupado}
                     disabled={texto.trim().length < 15 || (abertura && processo.trim() === '')}
                     rotuloCarregando="Registrando…"
-                    onClick={registrar}
+                    onClick={() => registrar(false)}
                 >
                     {abertura ? 'Registrar abertura do processo' : 'Registrar resposta'}
                 </BotaoAcao>
+                {/* A deliberação que só a avulsa tem: terminar na fiscalização. */}
+                {abertura && (
+                    <BotaoAcao
+                        className="btn btn-secondary btn-sm"
+                        icone={<CheckCircle2 size={16} aria-hidden />}
+                        carregando={enviando === `${chave}-sem`}
+                        ocupado={ocupado}
+                        disabled={texto.trim().length < 15}
+                        rotuloCarregando="Encerrando…"
+                        onClick={() => registrar(true)}
+                    >
+                        Encerrar sem processo
+                    </BotaoAcao>
+                )}
                 {texto.trim().length < 15 && (
                     <span className="form-ajuda" style={{ margin: 0 }}>
                         Escreva o resultado para registrar.

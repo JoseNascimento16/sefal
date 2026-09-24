@@ -144,7 +144,7 @@ it('aceitar agrupa, tira da fila de trabalho e deixa passo nos dois lados', func
     $sugestao = SugestaoAgrupamento::firstOrFail();
 
     $this->actingAs(chefeDaTriagem())
-        ->post(route('retaguarda.denuncias.agrupamento.aceitar', $sugestao), [
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.aceitar', $sugestao), [
             'observacao' => 'Conferi no mapa: é o mesmo bar.',
         ])
         ->assertSessionHas('flash.sucesso');
@@ -170,11 +170,11 @@ it('recusar exige o porquê, e a recusa impede a próxima varredura de propor de
 
     // Sem motivo escrito não passa: é ele que ensina a próxima varredura.
     $this->actingAs($chefe)
-        ->post(route('retaguarda.denuncias.agrupamento.recusar', $sugestao), ['observacao' => 'não'])
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.recusar', $sugestao), ['observacao' => 'não'])
         ->assertSessionHasErrors('observacao');
 
     $this->actingAs($chefe)
-        ->post(route('retaguarda.denuncias.agrupamento.recusar', $sugestao), [
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.recusar', $sugestao), [
             'observacao' => 'São dois estabelecimentos diferentes, a cinquenta metros um do outro.',
         ])
         ->assertSessionHas('flash.sucesso');
@@ -196,14 +196,14 @@ it('agrupar à mão vale, e exige o motivo que o cidadão vai ler', function () 
     $chefe = chefeDaTriagem();
 
     $this->actingAs($chefe)
-        ->post(route('retaguarda.denuncias.agrupamento.agrupar', $outra), [
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.agrupar', $outra), [
             'principal_id' => $antiga->id,
             'motivo' => 'curto',
         ])
         ->assertSessionHasErrors('motivo');
 
     $this->actingAs($chefe)
-        ->post(route('retaguarda.denuncias.agrupamento.agrupar', $outra), [
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.agrupar', $outra), [
             'principal_id' => $antiga->id,
             'motivo' => 'É o mesmo estabelecimento: a entrada é pela Rua Ceará e as mesas ficam na outra face.',
         ])
@@ -220,7 +220,7 @@ it('desagrupar devolve a denúncia à triagem, porque a associação pode estar 
     $nova->agruparEm($antiga, $chefe, 'Pareceu o mesmo ponto.');
 
     $this->actingAs($chefe)
-        ->post(route('retaguarda.denuncias.agrupamento.desagrupar', $nova), [
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.desagrupar', $nova), [
             'motivo' => 'Fui ao mapa: são dois estabelecimentos, a cinquenta metros um do outro.',
         ])
         ->assertSessionHas('flash.sucesso');
@@ -243,7 +243,7 @@ it('a denúncia que ganhou dono some das outras propostas pendentes', function (
     $sugestao = SugestaoAgrupamento::pendentes()->firstOrFail();
 
     $this->actingAs(chefeDaTriagem())
-        ->post(route('retaguarda.denuncias.agrupamento.aceitar', $sugestao), []);
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.aceitar', $sugestao), []);
 
     /*
      * A proposta que sobrou continua de pé (é outra denúncia), mas nenhuma
@@ -279,7 +279,7 @@ it('a varredura avisa quando não encontrou repetição, em vez de ficar calada'
     relato('Barraca na calçada', '212', 40);
 
     $this->actingAs(chefeDaTriagem())
-        ->post(route('retaguarda.denuncias.agrupamento.varrer'))
+        ->post(route('retaguarda.caixa-de-entrada.agrupamento.varrer'))
         ->assertSessionHas('flash.sucesso', fn (string $r): bool => str_contains($r, 'Nenhuma denúncia repetida'));
 });
 

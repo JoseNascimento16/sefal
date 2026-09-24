@@ -167,7 +167,7 @@ test('o direcionamento recebe a operacao com as chaves que a tela dele LE', func
      * ele alcança: as chaves que a tela precisa CHEGAM, e chegam no formato certo.
      */
     $pagina = test()->actingAs(liderDeOperacao('C1'))
-        ->get('/retaguarda/denuncias/e-salvador')
+        ->get('/retaguarda/caixa-de-entrada/e-salvador')
         ->viewData('page')['props'];
 
     expect($pagina['operacoes'])->not->toBe([]);
@@ -239,7 +239,7 @@ test('a operacao ENCERRADA nao recebe denuncia nova, e a recusa diz o porque', f
     expect($daArea)->not->toBeNull('a amostra precisa de denúncia da Área 5 aguardando direcionamento');
 
     $this->actingAs($chefe)
-        ->post('/retaguarda/denuncias/operacao', [
+        ->post('/retaguarda/caixa-de-entrada/operacao', [
             'ids' => [$daArea->id],
             'nova' => false,
             'operacao' => $encerrada['nome'],
@@ -339,7 +339,7 @@ test('nome repetido e recusado, aqui e no direcionamento', function () {
     ]);
 
     $this->actingAs($chefe)
-        ->post('/retaguarda/denuncias/operacao', [
+        ->post('/retaguarda/caixa-de-entrada/operacao', [
             'ids' => [$daArea->id],
             'nova' => true,
             'nome' => $existente,
