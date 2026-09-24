@@ -320,9 +320,10 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::prefix('retaguarda/fiscalizacoes')->name('retaguarda.fiscalizacoes.')->group(function () {
         Route::get('/', [FiscalizacoesController::class, 'index'])->name('index');
-        Route::post('ciencia', [FiscalizacoesController::class, 'ciencia'])->name('ciencia');
+        // Não há "dar ciência" (dono, 24/09/2026): o líder manda voltar ou encaminha ao chefe.
         Route::post('nova-vistoria', [FiscalizacoesController::class, 'novaVistoria'])->name('nova-vistoria');
-        Route::post('devolver', [FiscalizacoesController::class, 'devolver'])->name('devolver');
+        Route::post('encaminhar-ao-chefe', [FiscalizacoesController::class, 'encaminharAoChefe'])->name('encaminhar-ao-chefe');
+        Route::post('arquivar', [FiscalizacoesController::class, 'arquivar'])->name('arquivar');
         // Só existe porque é protótipo: devolve a fila ao estado de demonstração.
     });
 

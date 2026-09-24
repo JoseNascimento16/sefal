@@ -8,6 +8,7 @@ use App\Models\DemandaAnexo;
 use App\Models\DemandaTramite;
 use App\Models\Equipe;
 use App\Models\Operacao;
+use App\Support\CiclosDeFiscalizacao;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Date;
@@ -67,6 +68,9 @@ class DemandasSeeder extends Seeder
     {
         $this->semearIntegracao();
         $this->semearBalcao();
+
+        // As FISCALIZAÇÕES (ciclos) do que acabou de ser semeado.
+        CiclosDeFiscalizacao::sincronizarLegado();
     }
 
     // ── O que chega sozinho ─────────────────────────────────────────────────

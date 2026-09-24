@@ -89,6 +89,13 @@ return [
             'tem_anexo' => false,
             'agrupa' => true,
             'registro' => 'lider',
+            /*
+             * O chefe devolve o processo à origem também aqui (dono, 24/09/2026):
+             * o retorno é registrado no sistema, e a resposta ao cidadão, feita no
+             * próprio Fala Salvador — não há API.
+             */
+            'retorno' => 'tramite',
+            'retorno_em' => 'Fala Salvador',
         ],
 
         Demanda::CANAL_NOVA_LICENCA => [

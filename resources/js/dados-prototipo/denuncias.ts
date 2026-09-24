@@ -241,6 +241,20 @@ export interface Denuncia {
      * O RETORNO ao canal de origem — o tipo que o canal pede e o que já foi
      * registrado (ver `components/retaguarda/retorno-ao-canal.tsx`).
      */
+    /** As Fiscalizações (ciclos) desta demanda — uma por encaminhamento ao líder. */
+    fiscalizacoes: {
+        id: number;
+        protocolo: string;
+        aberto_em: string;
+        equipe: string;
+        posse: string;
+        aba: 'andamento' | 'encaminhadas' | 'arquivo';
+        desfecho: string;
+        total_vistorias: number;
+        total_fotos: number;
+        documentos: string[];
+        url: string;
+    }[];
     /** A situação em três palavras (Recebida, Encaminhada ao líder, Em fiscalização…). */
     situacao_resumida: string;
     /** O ciclo já fechou para o canal? Decide a aba "Respondidas". */

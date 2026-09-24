@@ -64,6 +64,13 @@ class RetornoAoCanal
                 .$demanda->respondida_ao_canal_em->format('d/m/Y H:i').'. O retorno é um só; para complementar, use o trâmite.';
         }
 
+        // A Fiscalização ainda com a equipe: o líder precisa encaminhar o resultado
+        // antes — a cadeia é líder › chefe › origem.
+        if (CiclosDeFiscalizacao::abertoDa($demanda) !== null) {
+            return "A Fiscalização da demanda {$demanda->protocolo} ainda está com a equipe: o líder precisa "
+                .'encaminhar o resultado ao Chefe de Setor antes da resposta à origem.';
+        }
+
         $voltouDaRua = in_array($demanda->situacao, [Demanda::RECEBIDA, Demanda::EM_PRE_TRIAGEM], true)
             && $demanda->passouPorFiscalizacao();
 
@@ -139,6 +146,9 @@ class RetornoAoCanal
             $tipo === self::TRAMITE => "Resposta registrada no {$onde}",
             default => "Processo aberto no {$onde}",
         };
+
+        // O processo voltou à origem: as Fiscalizações dele vão para o Arquivo.
+        CiclosDeFiscalizacao::arquivarDa($demanda);
 
         return $demanda->registrar(
             acao: $acao,

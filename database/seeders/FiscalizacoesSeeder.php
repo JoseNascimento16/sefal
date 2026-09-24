@@ -11,6 +11,7 @@ use App\Models\FiscalizacaoFoto;
 use App\Models\FiscalizacaoRecomendacao;
 use App\Models\LocalizacaoAmbulante;
 use App\Models\Operacao;
+use App\Support\CiclosDeFiscalizacao;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Date;
@@ -39,6 +40,9 @@ class FiscalizacoesSeeder extends Seeder
     {
         $this->semearAvulsas();
         $this->semearDasDenuncias();
+
+        // As FISCALIZAÇÕES (ciclos) do que acabou de ser semeado.
+        CiclosDeFiscalizacao::sincronizarLegado();
     }
 
     /**

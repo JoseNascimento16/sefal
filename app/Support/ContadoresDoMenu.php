@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Ambulante;
+use App\Models\CicloDeFiscalizacao;
+use App\Models\Demanda;
 use App\Models\Fiscalizacao;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
@@ -97,13 +99,22 @@ class ContadoresDoMenu
                     $recorta = Papel::recorta($usuario);
 
                     /*
-                     * UMA contagem, sem carregar linha: o menu é montado em toda
-                     * requisição da Retaguarda, e trazer os registros para contar
-                     * em memória pagaria o preço em todas as telas.
+                     * O trabalho de cada um (dono, 24/09/2026): o CHEFE conta as
+                     * Fiscalizações que o líder encaminhou a ele e esperam a
+                     * deliberação (aba "Encaminhadas"); o LÍDER, as que estão com
+                     * a equipe e pedem decisão dele — enviar à equipe, ou ler o
+                     * retorno de campo. UMA contagem, sem carregar linha: o menu
+                     * é montado em toda requisição da Retaguarda.
                      */
-                    $consulta = Fiscalizacao::query()
-                        ->where('situacao', Fiscalizacao::AGUARDANDO_LEITURA)
-                        ->whereNotNull('despachada_em');
+                    if (Papel::ehChefe($usuario) && ! $recorta && ! $usuario->ehAdmin()) {
+                        return CicloDeFiscalizacao::query()->daAba(CicloDeFiscalizacao::ABA_ENCAMINHADAS)->count();
+                    }
+
+                    $consulta = CicloDeFiscalizacao::query()
+                        ->daAba(CicloDeFiscalizacao::ABA_ANDAMENTO)
+                        ->where(static fn ($q) => $q
+                            ->whereHas('demanda', static fn ($d) => $d->where('situacao', Demanda::ENCAMINHADA_AO_LIDER))
+                            ->orWhereHas('vistorias', static fn ($v) => $v->where('situacao', Fiscalizacao::AGUARDANDO_LEITURA)));
 
                     if ($recorta) {
                         $consulta->whereHas('equipe', static fn ($q) => $q->whereIn('codigo', $equipes));

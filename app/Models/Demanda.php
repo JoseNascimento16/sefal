@@ -311,6 +311,17 @@ class Demanda extends Model
         return $this->hasMany(Fiscalizacao::class);
     }
 
+    /**
+     * As FISCALIZAÇÕES (ciclos) desta demanda — uma por encaminhamento do chefe
+     * ao líder. Todas ficam consultáveis durante o vai e vem do processo.
+     *
+     * @return HasMany<CicloDeFiscalizacao, $this>
+     */
+    public function ciclos(): HasMany
+    {
+        return $this->hasMany(CicloDeFiscalizacao::class)->orderBy('aberto_em')->orderBy('id');
+    }
+
     /** @return BelongsTo<Area, $this> */
     public function area(): BelongsTo
     {

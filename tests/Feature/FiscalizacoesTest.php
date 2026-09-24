@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\CicloDeFiscalizacao;
+use App\Models\Demanda;
 use App\Models\DocumentoCampo;
 use App\Models\Fiscalizacao;
 use App\Models\Setor;
@@ -70,9 +72,26 @@ function filaDoBanco(): array
 {
     $admin = User::factory()->create(['admin' => true, 'ativo' => true]);
 
-    return test()->actingAs($admin)
+    return filaServida($admin);
+}
+
+/**
+ * As FISCALIZAÇÕES (ciclos) que o servidor entrega a esta pessoa — desde
+ * 24/09/2026 a linha da tela é a Fiscalização, e as vistorias vão dentro dela.
+ *
+ * @return list<array<string, mixed>>
+ */
+function ciclosServidos(User $u): array
+{
+    return test()->actingAs($u)
         ->get('/retaguarda/fiscalizacoes')
-        ->viewData('page')['props']['registros'];
+        ->viewData('page')['props']['fiscalizacoes'];
+}
+
+/** A Fiscalização (ciclo) de uma vistoria, pelo banco. */
+function cicloDaVistoria(int $vistoria): CicloDeFiscalizacao
+{
+    return CicloDeFiscalizacao::findOrFail(Fiscalizacao::findOrFail($vistoria)->ciclo_id);
 }
 
 /** O estado de um registro, direto do banco — é o efeito que a decisão produziu. */
@@ -114,12 +133,10 @@ function chefeDaFila(): User
     return $u->fresh();
 }
 
-/** Os registros que o servidor entrega a esta pessoa. */
+/** As VISTORIAS que o servidor entrega a esta pessoa — de dentro das Fiscalizações. */
 function filaServida(User $u): array
 {
-    return test()->actingAs($u)
-        ->get('/retaguarda/fiscalizacoes')
-        ->viewData('page')['props']['registros'];
+    return collect(ciclosServidos($u))->flatMap(static fn (array $c): array => $c['vistorias'])->values()->all();
 }
 
 test('cada ida ao ponto vira UM registro — a vistoria e o retorno não se fundem', function () {
@@ -240,7 +257,7 @@ test('a fila leva a CHAVE da recomendacao e o catalogo que a traduz na redacao e
         ->and($catalogo['seab'])->toBe('Encaminhar ao SEAB');
 
     $comRecomendacao = array_values(array_filter(
-        $pagina['registros'],
+        collect($pagina['fiscalizacoes'])->flatMap(static fn (array $c): array => $c['vistorias'])->all(),
         static fn (array $r): bool => $r['recomendacoes'] !== [],
     ));
 
@@ -369,279 +386,296 @@ test('o chefe de setor ve o universo — todas as equipes, sem recorte', functio
         ->and(count($areas))->toBeGreaterThan(1);
 });
 
-test('o chefe de setor decide sobre registro de QUALQUER equipe, e o ato fica assinado por ele', function () {
-    /*
-     * Até 22/09/2026 quem triava (o coordenador) só acompanhava a fila. O Chefe
-     * de Setor de hoje é outro papel: o retorno das equipes volta para a mesa
-     * dele também, e ele dá ciência ou manda voltar — sem recorte, porque ele
-     * responde pelo setor inteiro.
-     */
+test('o chefe de setor ACOMPANHA: não conduz a Fiscalização com a equipe, e a recusa diz onde ele delibera', function () {
     $chefe = chefeDaFila();
-    $registro = filaDoBanco()[0];
+    $vistoria = collect(filaDoBanco())->firstWhere('estado', Fiscalizacao::AGUARDANDO_LEITURA);
+    $ciclo = cicloDaVistoria((int) $vistoria['id']);
+
+    $this->actingAs($chefe)->get('/retaguarda/fiscalizacoes')
+        ->assertInertia(fn ($p) => $p->where('conduz', false)->where('arquiva', true));
 
     $this->actingAs($chefe)
-        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$registro['id']]])
-        ->assertRedirect()
-        ->assertSessionHas('flash.sucesso');
+        ->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+            'ids' => [$ciclo->id],
+            'motivo' => 'O chefe tentando encaminhar a si mesmo pela tela do líder.',
+        ])
+        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'Caixa de Entrada'));
 
-    $gravado = registroNoBanco((int) $registro['id']);
-
-    expect($gravado['estado'])->toBe(Fiscalizacao::CIENTE)
-        ->and($gravado['decisao']['quem'])->toBe($chefe->name);
+    expect($ciclo->fresh()->posse)->toBe(CicloDeFiscalizacao::POSSE_EQUIPE);
 });
 
-test('o lider e recusado NOMINALMENTE ao decidir sobre registro de outra equipe', function () {
+test('o lider e recusado NOMINALMENTE ao agir sobre Fiscalizacao de outra equipe', function () {
     /*
      * Esconder da listagem não é fronteira: quem souber montar a requisição
-     * alcança o registro de outra área, e o lote é o caminho fácil porque manda
-     * uma lista de identificadores. A recusa nomeia o registro para quem clicou
-     * saber o que aconteceu.
+     * alcança a Fiscalização de outra equipe, e o lote é o caminho fácil. A recusa
+     * nomeia a Fiscalização para quem clicou saber o que aconteceu.
      */
-    $chefe = liderDaFila('A2');
+    $lider = liderDaFila('A2');
     $minhas = Estrutura::equipesDoLider('lider-a2');
 
-    $alheio = collect(filaDoBanco())
-        ->first(static fn (array $r): bool => ! in_array((string) $r['equipe'], $minhas, true));
+    $alheio = CicloDeFiscalizacao::with('equipe')->daAba(CicloDeFiscalizacao::ABA_ANDAMENTO)->get()
+        ->first(static fn (CicloDeFiscalizacao $c): bool => ! in_array((string) $c->equipe?->codigo, $minhas, true));
 
     expect($alheio)->not->toBeNull();
 
-    $this->actingAs($chefe)
-        ->post('/retaguarda/fiscalizacoes/devolver', [
-            'ids' => [$alheio['id']],
-            'motivo' => 'Tentando encaminhar ao chefe um registro que não é da minha equipe.',
+    $this->actingAs($lider)
+        ->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+            'ids' => [$alheio->id],
+            'motivo' => 'Tentando encaminhar ao chefe uma Fiscalização que não é da minha equipe.',
         ])
         ->assertRedirect()
         ->assertSessionHas(
             'flash.erro',
-            fn (string $recado): bool => str_contains($recado, (string) $alheio['protocolo'])
-                && str_contains($recado, 'Nada foi alterado'),
+            fn (string $recado): bool => str_contains($recado, $alheio->protocolo) && str_contains($recado, 'Nada foi alterado'),
         );
 
-    expect(estadoNoBanco((int) $alheio['id']))
-        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
+    expect($alheio->fresh()->posse)->toBe(CicloDeFiscalizacao::POSSE_EQUIPE);
 });
 
-test('o LIDER nao da ciencia: a demanda nao se encerra na mao dele, e nada e alterado', function () {
+test('não existe mais "dar ciência": a rota saiu', function () {
+    $this->actingAs(liderDaFila('C1'))
+        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [1]])
+        ->assertStatus(404);
+});
+
+test('o líder encaminha a Fiscalização ao chefe: ela vai para Encaminhadas, posse Chefe, e a demanda volta à mesa dele', function () {
     $lider = liderDaFila('C1');
-    $meus = array_column(filaServida($lider), 'id');
+    $ciclo = collect(ciclosServidos($lider))
+        ->first(static fn (array $c): bool => $c['aba'] === 'andamento' && $c['vistoria_pendente'] !== null && $c['demanda'] !== null);
+
+    expect($ciclo)->not->toBeNull('a Equipe C1 precisa de retorno de campo pendente para demonstrar');
 
     $this->actingAs($lider)
-        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0]]])
-        ->assertRedirect()
-        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'Chefe de Setor')
-            && str_contains($r, 'Nada foi alterado'));
-
-    expect(estadoNoBanco((int) $meus[0]))->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
-});
-
-test('a ciencia do chefe de setor tira o registro da fila e deixa o ato registrado', function () {
-    $chefe = chefeDaFila();
-    $meus = array_values(array_column(array_filter(
-        filaServida($chefe),
-        static fn (array $r): bool => $r['estado'] === Fiscalizacao::AGUARDANDO_LEITURA,
-    ), 'id'));
-
-    expect($meus)->not->toBe([]);
-
-    $this->actingAs($chefe)
-        ->post('/retaguarda/fiscalizacoes/ciencia', [
-            'ids' => [$meus[0]],
-            'observacao' => 'Lido; o ponto entra na ronda da semana.',
+        ->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+            'ids' => [$ciclo['id']],
+            'motivo' => 'Ponto regularizado na vistoria; cabe responder à origem.',
         ])
-        ->assertRedirect()
         ->assertSessionHas('flash.sucesso');
 
-    $registro = registroNoBanco((int) $meus[0]);
+    $gravado = CicloDeFiscalizacao::with('demanda')->findOrFail($ciclo['id']);
 
-    expect($registro['estado'])->toBe(Fiscalizacao::CIENTE)
-        ->and($registro['decisao']['quem'])->toBe($chefe->name)
-        ->and($registro['decisao']['detalhe'])->toBe('Lido; o ponto entra na ronda da semana.')
-        // Decidido deixa de estar parado: contar dias de fila do que saiu da fila
-        // seria cobrar um atraso que não existe.
-        ->and($registro['dias_parado'])->toBeNull();
+    expect($gravado->aba())->toBe(CicloDeFiscalizacao::ABA_ENCAMINHADAS)
+        ->and($gravado->posse)->toBe(CicloDeFiscalizacao::POSSE_CHEFE)
+        ->and($gravado->motivo_do_encaminhamento)->toContain('regularizado')
+        // A vistoria que esperava a leitura fica carimbada.
+        ->and(estadoNoBanco((int) $ciclo['vistoria_pendente']))->toBe(Fiscalizacao::DEVOLVIDA)
+        // A demanda volta à mesa do chefe, com o resultado no trâmite.
+        ->and($gravado->demanda->situacao)->toBe(Demanda::RECEBIDA)
+        ->and($gravado->demanda->ultimoTramite()->campos)->toHaveKey('Fiscalização');
+
+    // Na tela, a coluna Posse atual diz com quem está.
+    $servido = collect(ciclosServidos($lider))->firstWhere('id', $ciclo['id']);
+    expect($servido['posse'])->toBe('Chefe de Setor')->and($servido['aba'])->toBe('encaminhadas');
 });
 
-test('a nova vistoria exige justificativa NO SERVIDOR, e nao so no formulario', function () {
-    $chefe = liderDaFila('C1');
-    $meus = array_column(filaServida($chefe), 'id');
+test('mandar a equipe voltar exige justificativa NO SERVIDOR, e a nova vistoria é da MESMA Fiscalização', function () {
+    $lider = liderDaFila('C1');
+    $ciclo = collect(ciclosServidos($lider))->first(static fn (array $c): bool => $c['vistoria_pendente'] !== null);
 
-    $this->actingAs($chefe)
-        ->post('/retaguarda/fiscalizacoes/nova-vistoria', ['ids' => [$meus[0]]])
+    $this->actingAs($lider)
+        ->post('/retaguarda/fiscalizacoes/nova-vistoria', ['ids' => [$ciclo['id']]])
         ->assertSessionHasErrors('justificativa');
 
-    // Curta demais também é recusada: "voltar lá" não conta à equipe o que ela
-    // deve procurar desta vez.
-    $this->actingAs($chefe)
-        ->post('/retaguarda/fiscalizacoes/nova-vistoria', [
-            'ids' => [$meus[0]],
-            'justificativa' => 'voltar lá',
-        ])
+    $this->actingAs($lider)
+        ->post('/retaguarda/fiscalizacoes/nova-vistoria', ['ids' => [$ciclo['id']], 'justificativa' => 'voltar lá'])
         ->assertSessionHasErrors('justificativa');
 
-    expect(estadoNoBanco((int) $meus[0]))
-        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
+    expect(estadoNoBanco((int) $ciclo['vistoria_pendente']))->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 
-    $this->actingAs($chefe)
+    $this->actingAs($lider)
         ->post('/retaguarda/fiscalizacoes/nova-vistoria', [
-            'ids' => [$meus[0]],
+            'ids' => [$ciclo['id']],
             'justificativa' => 'O ponto monta depois das 19h — voltar no horário indicado pela vizinhança.',
         ])
-        ->assertRedirect()
         ->assertSessionHas('flash.sucesso');
 
-    expect(estadoNoBanco((int) $meus[0]))
-        ->toBe(Fiscalizacao::NOVA_VISTORIA);
+    expect(estadoNoBanco((int) $ciclo['vistoria_pendente']))->toBe(Fiscalizacao::NOVA_VISTORIA)
+        // Continua com a equipe: é a mesma Fiscalização, e o desfecho muda conforme avança.
+        ->and(CicloDeFiscalizacao::findOrFail($ciclo['id'])->aba())->toBe(CicloDeFiscalizacao::ABA_ANDAMENTO);
 });
 
-test('a decisao em lote conta o efeito, e lote com registro de outra equipe nao altera nada', function () {
-    $chefe = liderDaFila('C1');
-    $meus = array_column(filaServida($chefe), 'id');
+test('o lote com Fiscalização de outra equipe não altera nada', function () {
+    $lider = liderDaFila('C1');
     $minhas = Estrutura::equipesDoLider('lider-c1');
+    $meu = collect(ciclosServidos($lider))->first(static fn (array $c): bool => $c['vistoria_pendente'] !== null);
+    $alheio = CicloDeFiscalizacao::with('equipe')->get()
+        ->first(static fn (CicloDeFiscalizacao $c): bool => ! in_array((string) $c->equipe?->codigo, $minhas, true));
 
-    $alheio = collect(filaDoBanco())
-        ->first(static fn (array $r): bool => ! in_array((string) $r['equipe'], $minhas, true));
-
-    /*
-     * O lote MISTO é o caminho fácil para alcançar o que não se vê: um
-     * identificador da própria área junto de um de fora. A recusa é do lote
-     * inteiro — aplicar a parte válida deixaria a fronteira valendo pela metade,
-     * e quem montou a requisição sairia com metade do que pediu.
-     */
-    $this->actingAs($chefe)
+    $this->actingAs($lider)
         ->post('/retaguarda/fiscalizacoes/nova-vistoria', [
-            'ids' => [$meus[0], $alheio['id']],
+            'ids' => [$meu['id'], $alheio->id],
             'justificativa' => 'Voltar no fim da tarde, quando as mesas saem para a calçada.',
         ])
         ->assertSessionHas('flash.erro');
 
-    expect(estadoNoBanco((int) $meus[0]))
-        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA)
-        ->and(estadoNoBanco((int) $alheio['id']))
-        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
+    expect(estadoNoBanco((int) $meu['vistoria_pendente']))->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
 });
 
-test('o administrador ve tudo e decide sobre qualquer area', function () {
+test('o administrador vê tudo e conduz qualquer Fiscalização', function () {
     $admin = User::factory()->create(['admin' => true, 'ativo' => true]);
-    $servidos = filaServida($admin);
+    $ciclos = ciclosServidos($admin);
 
-    expect($servidos)->toHaveCount(Fiscalizacao::despachadas()->count());
+    expect($ciclos)->toHaveCount(CicloDeFiscalizacao::count());
+
+    $alvo = collect($ciclos)->firstWhere('aba', 'andamento');
 
     $this->actingAs($admin)
-        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$servidos[0]['id']]])
-        ->assertRedirect()
+        ->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+            'ids' => [$alvo['id']],
+            'motivo' => 'Encaminhando pela administração para demonstrar o fluxo.',
+        ])
         ->assertSessionHas('flash.sucesso');
 });
 
-test('o fiscal CONSULTA e nao decide: a tela nao lhe oferece, e o servidor recusa', function () {
-    /*
-     * A entrada do fiscal é decisão do dono (09/09/2026), com a ressalva registrada
-     * de que ele é usuário do APLICATIVO — o acesso à Retaguarda existe por
-     * completude, não por fluxo. Antes da unificação ele era barrado na porta.
-     *
-     * O que NÃO mudou é o que importa: quem escreveu o retorno foi ele, e dar-lhe a
-     * decisão permitiria dar ciência do próprio trabalho, apagando a conferência que
-     * a fila existe para provocar.
-     *
-     * As DUAS metades são provadas aqui, e nenhuma substitui a outra: a tela não lhe
-     * oferece a seleção (`decide` falso — e é do servidor que essa resposta vem) e o
-     * servidor recusa o ato com o motivo escrito. Esconder botão é conforto; a
-     * fronteira é a recusa.
-     */
+test('o fiscal CONSULTA e nao conduz: a tela nao lhe oferece, e o servidor recusa', function () {
     $fiscal = User::factory()->create(['admin' => false, 'ativo' => true]);
     $fiscal->setores()->attach(Setor::where('slug', 'fiscal')->firstOrFail());
     $fiscal = $fiscal->fresh();
 
     $this->actingAs($fiscal)->get('/retaguarda/fiscalizacoes')
         ->assertOk()
-        ->assertInertia(fn ($p) => $p
-            ->component('Retaguarda/Fiscalizacao/Fiscalizacoes')
-            ->where('decide', false));
+        ->assertInertia(fn ($p) => $p->component('Retaguarda/Fiscalizacao/Fiscalizacoes')->where('conduz', false));
 
-    $registro = filaDoBanco()[0];
+    $ciclo = CicloDeFiscalizacao::daAba(CicloDeFiscalizacao::ABA_ANDAMENTO)->firstOrFail();
 
-    /*
-     * Quem responde primeiro aqui é a guarda de AÇÃO do Modo Gerente: a concessão
-     * do fiscal é "apenas leitura", então a mutação é barrada antes de o controller
-     * ver a requisição. Por isso o recado é o dela, e não o do papel — e é por isso
-     * que este teste não exige o texto do controller: exigi-lo faria a prova
-     * depender de qual das duas guardas atende, e as duas barram.
-     *
-     * O que a lei do projeto cobra está cobrado: a recusa é EXPLÍCITA (há
-     * `flash.erro`, e não tela em branco) e nada foi alterado. A recusa por PAPEL,
-     * com o texto do controller, é provada no teste do Coordenador — que passa pela
-     * permissão e é barrado pela regra de quem decide.
-     */
     $this->actingAs($fiscal)
-        ->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$registro['id']]])
+        ->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+            'ids' => [$ciclo->id],
+            'motivo' => 'O fiscal tentando encaminhar o próprio trabalho.',
+        ])
         ->assertRedirect()
-        ->assertSessionHas('flash.erro', fn (string $recado): bool => trim($recado) !== '');
+        ->assertSessionHas('flash.erro', fn (string $r): bool => trim($r) !== '');
 
-    expect(estadoNoBanco((int) $registro['id']))
-        ->toBe(Fiscalizacao::AGUARDANDO_LEITURA);
+    expect($ciclo->fresh()->posse)->toBe(CicloDeFiscalizacao::POSSE_EQUIPE);
 });
 
 test('o fiscal ve o acervo INTEIRO — limite declarado, nao esquecimento', function () {
     /*
-     * Ele NÃO é recortado por área (o recorte é do Chefe de Setor) e não existe
-     * vínculo entre a CONTA dele e os registros que ela assinou: o registro guarda o
-     * NOME de quem assinou, a estrutura guarda a MATRÍCULA do fiscal na equipe, e
-     * nada liga os dois. Casar por nome seria adivinhar — e adivinhar em fronteira
-     * de dados é pior que não ter fronteira, porque cria a impressão de que existe
-     * uma.
-     *
-     * Este teste NÃO defende o comportamento: ele o PRENDE ao que está escrito. A
-     * frase da tela diz "você consulta o que a fiscalização registrou", e não "o que
-     * você registrou"; a pendência está em PEND-021. Se alguém for estreitar isso,
-     * este teste vermelho é a conversa acontecendo — em vez de a tela e o doc
-     * discordarem em silêncio.
+     * Ele NÃO é recortado (o recorte é do líder) e não existe vínculo entre a
+     * CONTA dele e os registros que ela assinou. Este teste PRENDE o comportamento
+     * ao que está escrito (PEND-021).
      */
     $fiscal = User::factory()->create(['admin' => false, 'ativo' => true]);
     $fiscal->setores()->attach(Setor::where('slug', 'fiscal')->firstOrFail());
 
-    $pagina = test()->actingAs($fiscal->fresh())
-        ->get('/retaguarda/fiscalizacoes')
-        ->viewData('page')['props'];
+    $pagina = test()->actingAs($fiscal->fresh())->get('/retaguarda/fiscalizacoes')->viewData('page')['props'];
 
     expect($pagina['recorteDeEquipe'])->toBeFalse()
-        ->and($pagina['registros'])->toHaveCount(Fiscalizacao::despachadas()->count());
+        ->and($pagina['fiscalizacoes'])->toHaveCount(CicloDeFiscalizacao::count());
 });
 
-test('o ACERVO guarda o que a fila perdeu: o decidido segue consultavel, com a prova do ponto', function () {
-    /*
-     * A razão de ser da segunda aba. Depois da ciência o registro sai da FILA — e se
-     * saísse do sistema, ninguém responderia "o que foi feito naquele ponto?".
-     *
-     * A prova é sobre a FONTE, que é uma só: o mesmo conjunto que a fila corta pelo
-     * estado. E sobre o que o acervo carrega a mais — quem foi encontrado, as fotos
-     * e a coordenada —, que é o que transforma consulta em prova.
-     */
+test('quando o chefe devolve o processo à origem, as Fiscalizações dele vão para o ARQUIVO — e seguem consultáveis', function () {
+    $lider = liderDaFila('C1');
+    $ciclo = collect(ciclosServidos($lider))
+        ->first(static fn (array $c): bool => $c['aba'] === 'andamento' && $c['vistoria_pendente'] !== null && $c['demanda'] !== null);
+
+    $this->actingAs($lider)->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+        'ids' => [$ciclo['id']],
+        'motivo' => 'Resultado da vistoria para o chefe responder à origem.',
+    ]);
+
+    $demanda = Demanda::findOrFail($ciclo['demanda']['id']);
+
+    $this->actingAs(chefeDaFila())
+        ->post(route('retaguarda.denuncias.responder-ao-canal', $demanda), [
+            'texto' => 'A equipe esteve no local e o ponto foi regularizado. Processo respondido.',
+            'processo' => '215.5382.009999/2026',
+        ])
+        ->assertSessionHas('flash.sucesso');
+
+    $servido = collect(ciclosServidos($lider))->firstWhere('id', $ciclo['id']);
+
+    expect($servido['aba'])->toBe('arquivo')
+        // O arquivo carrega a prova: as vistorias continuam inteiras dentro dela.
+        ->and($servido['vistorias'])->not->toBe([]);
+});
+
+test('responder à origem com a Fiscalização ainda com a equipe é recusado: o líder encaminha antes', function () {
+    $ciclo = CicloDeFiscalizacao::with('demanda')->daAba(CicloDeFiscalizacao::ABA_ANDAMENTO)
+        ->whereNotNull('demanda_id')->get()
+        ->first(static fn (CicloDeFiscalizacao $c): bool => $c->demanda->situacao !== Demanda::ENCAMINHADA_AO_LIDER);
+
+    $ciclo->demanda->forceFill(['situacao' => Demanda::CONCLUIDA])->save();
+
+    $this->actingAs(chefeDaFila())
+        ->post(route('retaguarda.denuncias.responder-ao-canal', $ciclo->demanda), [
+            'texto' => 'Tentando responder antes de o líder encaminhar o resultado.',
+            'processo' => '215.5382.000001/2026',
+        ])
+        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'ainda está com a equipe'));
+
+    expect($ciclo->fresh()->aba())->toBe(CicloDeFiscalizacao::ABA_ANDAMENTO);
+});
+
+test('um novo encaminhamento do chefe abre uma Fiscalização IRMÃ, e as duas ficam consultáveis', function () {
+    $lider = liderDaFila('C1');
+    $ciclo = collect(ciclosServidos($lider))
+        ->first(static fn (array $c): bool => $c['aba'] === 'andamento' && $c['vistoria_pendente'] !== null && $c['demanda'] !== null);
+
+    $this->actingAs($lider)->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+        'ids' => [$ciclo['id']],
+        'motivo' => 'Situação mantida; o chefe decide se pede nova fiscalização.',
+    ]);
+
+    $this->actingAs(chefeDaFila())
+        ->post(route('retaguarda.denuncias.encaminhar'), [
+            'destinos' => [['id' => $ciclo['demanda']['id'], 'equipe' => 'C1']],
+        ])
+        ->assertSessionHas('flash.sucesso');
+
+    $ciclos = CicloDeFiscalizacao::where('demanda_id', $ciclo['demanda']['id'])->orderBy('id')->get();
+
+    expect($ciclos)->toHaveCount(2)
+        ->and($ciclos[0]->aba())->toBe(CicloDeFiscalizacao::ABA_ENCAMINHADAS)
+        ->and($ciclos[1]->aba())->toBe(CicloDeFiscalizacao::ABA_ANDAMENTO);
+
+    $nova = collect(ciclosServidos($lider))->firstWhere('id', $ciclos[1]->id);
+
+    expect($nova['desfecho'])->toBe('Aguardando envio à equipe')
+        ->and(array_column($nova['irmas'], 'id'))->toContain($ciclos[0]->id);
+});
+
+test('o chefe arquiva a Fiscalização sem processo; a que tem processo só vai ao Arquivo pela origem', function () {
+    $semDemanda = CicloDeFiscalizacao::whereNull('demanda_id')->firstOrFail();
+    $semDemanda->forceFill(['posse' => CicloDeFiscalizacao::POSSE_CHEFE, 'arquivado_em' => null])->save();
+    $comDemanda = CicloDeFiscalizacao::whereNotNull('demanda_id')->firstOrFail();
+    $comDemanda->forceFill(['posse' => CicloDeFiscalizacao::POSSE_CHEFE, 'arquivado_em' => null])->save();
+
     $chefe = chefeDaFila();
-    $meus = array_values(array_column(array_filter(
-        filaServida($chefe),
-        static fn (array $r): bool => $r['estado'] === Fiscalizacao::AGUARDANDO_LEITURA,
-    ), 'id'));
 
-    $this->actingAs($chefe)->post('/retaguarda/fiscalizacoes/ciencia', ['ids' => [$meus[0]]]);
+    $this->actingAs($chefe)->post('/retaguarda/fiscalizacoes/arquivar', ['ids' => [$comDemanda->id]])
+        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'origem'));
 
-    $servidos = filaServida($chefe);
-    $decidido = collect($servidos)->firstWhere('id', $meus[0]);
+    $this->actingAs($chefe)->post('/retaguarda/fiscalizacoes/arquivar', ['ids' => [$semDemanda->id]])
+        ->assertSessionHas('flash.sucesso');
 
-    /*
-     * Continua sendo entregue à tela (é o acervo) e já não está aguardando (saiu da
-     * fila). As duas coisas: se ele deixasse de ser entregue, a aba Acervo não teria
-     * como mostrá-lo.
-     */
-    expect($decidido)->not->toBeNull('o registro decidido tem de continuar no acervo')
-        ->and($decidido['estado'])->toBe(Fiscalizacao::CIENTE);
+    expect($semDemanda->fresh()->aba())->toBe(CicloDeFiscalizacao::ABA_ARQUIVO)
+        ->and($comDemanda->fresh()->aba())->toBe(CicloDeFiscalizacao::ABA_ENCAMINHADAS);
+});
 
-    // E o acervo carrega a prova do que foi feito: ao menos um registro com foto e
-    // coordenada — senão a aba responderia "o que foi feito?" sem nada a mostrar.
-    $comProva = array_values(array_filter(
-        $servidos,
-        static fn (array $r): bool => $r['fotos'] !== [] && $r['gps'] !== null,
-    ));
+test('a demanda na Caixa de Entrada lista as Fiscalizações dela, com o caminho para abrir cada uma', function () {
+    $ciclo = CicloDeFiscalizacao::with('demanda')->whereNotNull('demanda_id')->firstOrFail();
+    $admin = User::factory()->create(['admin' => true, 'ativo' => true]);
+    $rota = match ($ciclo->demanda->canal) {
+        Demanda::CANAL_FALA_SALVADOR => 'retaguarda.denuncias.fala-salvador.index',
+        default => 'retaguarda.denuncias.e-salvador.index',
+    };
 
-    expect($comProva)->not->toBe([], 'o acervo precisa de registro com foto e coordenada');
+    $this->actingAs($admin)->get(route($rota))
+        ->assertInertia(function ($p) use ($ciclo) {
+            $props = $p->toArray()['props'];
+            $linha = collect([...$props['denuncias'], ...$props['licencas']])->firstWhere('id', $ciclo->demanda_id);
+
+            expect($linha['fiscalizacoes'])->not->toBe([])
+                ->and(collect($linha['fiscalizacoes'])->firstWhere('id', $ciclo->id)['url'])
+                ->toEndWith('?fiscalizacao='.$ciclo->id);
+
+            return $p;
+        });
+
+    // E o caminho abre a Fiscalização na tela dela.
+    $this->actingAs($admin)->get('/retaguarda/fiscalizacoes?fiscalizacao='.$ciclo->id)
+        ->assertInertia(fn ($p) => $p->where('abrir', $ciclo->id));
 });
 
 test('o PRAZO de retorno sai da notificacao e a conta e do servidor', function () {
@@ -746,32 +780,11 @@ test('lei: o vencimento do prazo tem UM dono — a tela LE a data, nao a recalcu
 ', $divergentes));
 });
 
-test('o CONTADOR do menu e a fila de quem decide, recortada pela mesma area', function () {
-    /*
-     * O número ao lado do item é o gatilho de trabalho: sem ele, a chefia só
-     * descobre que tem retorno parado quando abre a tela.
-     *
-     * ⚠️ Ele tem de contar EXATAMENTE o que a tela vai mostrar. Um contador que
-     * somasse o universo mostraria "12" a quem abre e encontra 3, e a diferença
-     * pareceria registro perdido. E ele não conta para quem só acompanha: seria
-     * cobrança sobre trabalho que não é dele.
-     */
-    $chefe = liderDaFila('C1');
-
-    $naFila = count(array_filter(
-        filaServida($chefe),
-        static fn (array $r): bool => (string) $r['estado'] === Fiscalizacao::AGUARDANDO_LEITURA,
-    ));
-
-    expect($naFila)->toBeGreaterThan(0);
-
+test('o CONTADOR do menu é o trabalho de cada um: o líder, o que pede decisão dele; o chefe, o que chegou a ele', function () {
     $contadorDe = function (User $u): mixed {
         $menu = test()->actingAs($u)->get('/retaguarda/inicio')->viewData('page')['props']['menu'];
 
         foreach (collect($menu)->pluck('itens')->flatten(1) as $item) {
-            // O menu entrega `url`, e não o nome da rota: quem resolve o nome é o
-            // middleware que monta a barra. Procurar por `rota` aqui devolveria
-            // sempre nulo, e o teste passaria a provar nada.
             if (($item['url'] ?? null) === route('retaguarda.fiscalizacoes.index', absolute: false)) {
                 return $item['contador'] ?? null;
             }
@@ -780,15 +793,18 @@ test('o CONTADOR do menu e a fila de quem decide, recortada pela mesma area', fu
         return null;
     };
 
-    expect($contadorDe($chefe)['valor'] ?? null)->toBe($naFila);
+    $lider = liderDaFila('C1');
+    $aDecidir = count(array_filter(ciclosServidos($lider), static fn (array $c): bool => $c['a_decidir']));
 
-    // O Chefe de Setor decide sobre tudo: o número dele é a fila inteira.
-    $universo = Fiscalizacao::despachadas()->where('situacao', Fiscalizacao::AGUARDANDO_LEITURA)->count();
+    expect($aDecidir)->toBeGreaterThan(0)
+        ->and($contadorDe($lider)['valor'] ?? null)->toBe($aDecidir);
 
-    expect($universo)->toBeGreaterThan($naFila)
-        ->and($contadorDe(chefeDaFila())['valor'] ?? null)->toBe($universo);
+    $encaminhadas = CicloDeFiscalizacao::daAba(CicloDeFiscalizacao::ABA_ENCAMINHADAS)->count();
+    $chefe = chefeDaFila();
 
-    // Quem apenas consulta não recebe número: seria cobrança sobre trabalho alheio.
+    expect($contadorDe($chefe)['valor'] ?? null)->toBe($encaminhadas > 0 ? $encaminhadas : null);
+
+    // Quem apenas consulta não recebe número.
     $fiscal = User::factory()->create(['admin' => false, 'ativo' => true]);
     $fiscal->setores()->attach(Setor::where('slug', 'fiscal')->firstOrFail());
 

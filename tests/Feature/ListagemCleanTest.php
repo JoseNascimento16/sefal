@@ -268,7 +268,7 @@ function liderDeUmaEquipeSo(): User
 }
 
 dataset('telas com listagem', [
-    'Fiscalizações' => ['/retaguarda/fiscalizacoes', ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo']],
+    'Fiscalizações' => ['/retaguarda/fiscalizacoes', ['fiscalizacoes.ciclos']],
     // As quatro caixas de canal têm UMA grade (dono, 24/09/2026).
     'Caixa do e-Salvador' => ['/retaguarda/caixa-de-entrada/e-salvador', ['denuncias.todas']],
     'Caixa do Fala Salvador' => ['/retaguarda/caixa-de-entrada/fala-salvador', ['denuncias.todas']],
@@ -381,38 +381,23 @@ it('não gasta coluna do acompanhamento com o que é igual em TODA linha — e a
         });
 });
 
-it('não gasta coluna de ÁREA com quem responde por uma área só', function () {
-    // Quem varre cinco áreas precisa da coluna para navegar a fila; para quem
-    // tem uma, ela repetiria a mesma palavra em toda linha. É o exemplo que o
-    // dono deu, e a única coluna condicional do catálogo hoje.
-    $this->actingAs(liderDeUmaEquipeSo())
-        ->get('/retaguarda/fiscalizacoes')
-        ->assertOk()
-        ->assertInertia(function ($p) {
-            $dados = $p->toArray()['props'];
+it('a grade das Fiscalizações diz com quem está: a coluna POSSE ATUAL existe para todos', function () {
+    /*
+     * Desde 24/09/2026 a linha é a Fiscalização (o ciclo), e a pergunta da grade é
+     * "com quem está" — Equipe ou Chefe de Setor (pedido do dono). A área saiu da
+     * grade (vai no detalhe e no arquivo); a posse não sai para ninguém.
+     */
+    foreach ([liderDeUmaEquipeSo(), administradorDaListagem()] as $quem) {
+        $this->actingAs($quem)
+            ->get('/retaguarda/fiscalizacoes')
+            ->assertOk()
+            ->assertInertia(function ($p) {
+                $grade = chavesDaListagem($p->toArray()['props']['listagens']['fiscalizacoes.ciclos']['grade']);
 
-            $this->assertTrue($dados['recorteDeEquipe']);
-            $this->assertNotContains(
-                'area',
-                chavesDaListagem($dados['listagens']['fiscalizacoes.a-decidir']['grade']),
-                'O líder de uma equipe só recebeu a coluna de área — ela '
-                .'repetiria a mesma palavra em toda linha.'
-            );
+                $this->assertContains('posse', $grade);
+                $this->assertContains('desfecho', $grade);
 
-            return $p;
-        });
-
-    $this->actingAs(administradorDaListagem())
-        ->get('/retaguarda/fiscalizacoes')
-        ->assertOk()
-        ->assertInertia(function ($p) {
-            $this->assertContains(
-                'area',
-                chavesDaListagem($p->toArray()['props']['listagens']['fiscalizacoes.a-decidir']['grade']),
-                'Quem varre várias áreas ficou sem a coluna de área — sem ela a '
-                .'fila do Chefe de Setor não é navegável.'
-            );
-
-            return $p;
-        });
+                return $p;
+            });
+    }
 });
