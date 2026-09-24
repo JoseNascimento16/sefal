@@ -299,6 +299,60 @@ return [
         | linha só e sem sub-linha — a geometria continua de pé, e a lei da data
         | em BR também.
         */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Usuários — as duas abas
+        |----------------------------------------------------------------------
+        |
+        | Quem varre é quem administra: "quem tem conta, em que setor, e quem
+        | ainda não entrou?". A matrícula vai sob o nome, na mesma célula (é como
+        | se identifica a pessoa), e as equipes descem para a ficha — no arquivo
+        | as duas vêm em coluna própria.
+        |
+        | A lixeira responde outra pergunta: "o que some, e quando?". Por isso a
+        | remoção definitiva é coluna — e diz quando a conta NÃO será removida
+        | (tem histórico no sistema).
+        */
+        'usuarios.ativos' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Usuarios.tsx',
+            'grade' => [
+                ['chave' => 'usuario', 'titulo' => 'Usuário', 'largura' => 260],
+                ['chave' => 'email', 'titulo' => 'E-mail', 'largura' => 240],
+                ['chave' => 'setores', 'titulo' => 'Setores', 'largura' => 230],
+                ['chave' => 'primeiroAcesso', 'titulo' => '1º acesso', 'largura' => 120, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['equipes'],
+            'exportacao' => [
+                ['chave' => 'usuario', 'titulo' => 'Nome'],
+                ['chave' => 'login', 'titulo' => 'Matrícula'],
+                ['chave' => 'email', 'titulo' => 'E-mail'],
+                ['chave' => 'setores', 'titulo' => 'Setores'],
+                ['chave' => 'equipes', 'titulo' => 'Equipes'],
+                ['chave' => 'primeiroAcesso', 'titulo' => '1º acesso', 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
+        'usuarios.excluidos' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Usuarios.tsx',
+            'grade' => [
+                ['chave' => 'usuario', 'titulo' => 'Usuário', 'largura' => 260],
+                ['chave' => 'email', 'titulo' => 'E-mail', 'largura' => 240],
+                ['chave' => 'excluidoEm', 'titulo' => 'Excluído em', 'largura' => 150, 'alinhar' => 'center'],
+                ['chave' => 'remocao', 'titulo' => 'Remoção definitiva', 'largura' => 230],
+            ],
+            'detalhe' => ['setores'],
+            'exportacao' => [
+                ['chave' => 'usuario', 'titulo' => 'Nome'],
+                ['chave' => 'login', 'titulo' => 'Matrícula'],
+                ['chave' => 'email', 'titulo' => 'E-mail'],
+                ['chave' => 'setores', 'titulo' => 'Setores'],
+                ['chave' => 'excluidoEm', 'titulo' => 'Excluído em', 'alinhar' => 'center'],
+                ['chave' => 'remocao', 'titulo' => 'Remoção definitiva'],
+            ],
+        ],
+
         'sistema.logs' => [
             'tela' => 'resources/js/pages/Retaguarda/Sistema/Logs.tsx',
             'grade' => [

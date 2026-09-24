@@ -281,6 +281,7 @@ dataset('telas com listagem', [
     // quebrou" e "o que está fora do requisito" —, mas listagem é listagem: fora
     // da varredura, é a que apodrece.
     'Logs' => ['/retaguarda/logs', ['sistema.logs']],
+    'Usuários' => ['/retaguarda/usuarios', ['usuarios.ativos', 'usuarios.excluidos']],
     'Acompanhamento de Requisitos' => ['/retaguarda/acompanhamento-de-requisitos', ['sistema.requisitos']],
 ]);
 
