@@ -11,6 +11,7 @@ use App\Support\Estrutura;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Database\Seeders\DemonstracaoSeeder;
 use Database\Seeders\EstruturaSeeder;
+use Database\Seeders\FiscalizacoesParaOLiderSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 
@@ -632,7 +633,56 @@ test('um novo encaminhamento do chefe abre uma Fiscalização IRMÃ, e as duas f
     $nova = collect(ciclosServidos($lider))->firstWhere('id', $ciclos[1]->id);
 
     expect($nova['desfecho'])->toBe('Aguardando envio à equipe')
+        ->and($nova['posse'])->toBe('Líder de Equipe')
         ->and(array_column($nova['irmas'], 'id'))->toContain($ciclos[0]->id);
+});
+
+test('a POSSE distingue o líder da equipe: decisão do líder é "Líder de Equipe", fiscais no ponto é "Equipe"', function () {
+    $lider = liderDaFila('C1');
+    $demanda = Demanda::where('situacao', Demanda::RECEBIDA)->whereNull('agrupada_em_id')->whereDoesntHave('ciclos')->firstOrFail();
+
+    $this->actingAs(chefeDaFila())
+        ->post(route('retaguarda.denuncias.encaminhar'), ['destinos' => [['id' => $demanda->id, 'equipe' => 'C1']]])
+        ->assertSessionHas('flash.sucesso');
+
+    $posseDaDemanda = static fn (): string => collect(ciclosServidos($lider))
+        ->first(static fn (array $c): bool => ($c['demanda']['id'] ?? null) === $demanda->id)['posse'];
+
+    // Chegou do chefe: quem tem de agir é o líder, enviando aos fiscais.
+    expect($posseDaDemanda())->toBe('Líder de Equipe');
+
+    $this->actingAs($lider)
+        ->post(route('retaguarda.denuncias.direcionar'), ['ids' => [$demanda->id]])
+        ->assertSessionHas('flash.sucesso');
+
+    // Enviada: agora está com os fiscais.
+    expect($posseDaDemanda())->toBe('Equipe');
+});
+
+test('o semeador da demonstração deixa ao líder Fiscalizações vindas do chefe E retornos concluídos pela equipe', function () {
+    $this->seed(FiscalizacoesParaOLiderSeeder::class);
+
+    $semeadas = Demanda::whereHas('tramites', static fn ($q) => $q->where('detalhe', FiscalizacoesParaOLiderSeeder::OBSERVACAO))->pluck('id')->all();
+    $admin = User::factory()->create(['admin' => true, 'ativo' => true]);
+    $ciclos = collect(ciclosServidos($admin))->filter(static fn (array $c): bool => in_array($c['demanda']['id'] ?? null, $semeadas, true));
+
+    $vindas = $ciclos->where('desfecho', 'Aguardando envio à equipe');
+    $concluidas = $ciclos->filter(static fn (array $c): bool => $c['vistoria_pendente'] !== null);
+
+    expect($ciclos)->toHaveCount(FiscalizacoesParaOLiderSeeder::VINDAS_DO_CHEFE + FiscalizacoesParaOLiderSeeder::CONCLUIDAS)
+        ->and($ciclos->pluck('aba')->unique()->values()->all())->toBe(['andamento'])
+        ->and($ciclos->pluck('posse')->unique()->values()->all())->toBe(['Líder de Equipe'])
+        ->and($vindas)->toHaveCount(FiscalizacoesParaOLiderSeeder::VINDAS_DO_CHEFE)
+        ->and($concluidas)->toHaveCount(FiscalizacoesParaOLiderSeeder::CONCLUIDAS);
+
+    // O retorno concluído chega com a prova: relato e fotos.
+    $vistoria = $concluidas->first()['vistorias'][0];
+    expect($vistoria['consideracoes'])->not->toBeEmpty();
+
+    // Idempotente: rodar de novo não cria nada.
+    $antes = CicloDeFiscalizacao::count();
+    $this->seed(FiscalizacoesParaOLiderSeeder::class);
+    expect(CicloDeFiscalizacao::count())->toBe($antes);
 });
 
 test('o chefe arquiva a Fiscalização sem processo; a que tem processo só vai ao Arquivo pela origem', function () {
