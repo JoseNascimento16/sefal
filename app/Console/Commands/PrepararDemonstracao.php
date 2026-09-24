@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Demanda;
+use App\Models\Equipe;
+use App\Models\Fiscalizacao;
 use App\Models\Setor;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -12,6 +14,7 @@ use Database\Seeders\SetoresSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Deixa a demonstração pronta para ser percorrida — e só quando ela está vazia.
@@ -36,11 +39,24 @@ use Illuminate\Support\Facades\Artisan;
  *
  * ⚠️ Não roda em produção — o {@see DemonstracaoSeeder} planta cadastro
  * inventado, e lá os ambulantes vêm do SGCI e as demandas, da integração.
+ *
+ * ## `--so-estas-contas` — a demonstração com QUATRO portas, e só elas
+ *
+ * Pedido do dono (24/09/2026): na demonstração pública, uma conta por papel —
+ * `admin`, `chefe`, `lider1`, `fiscal1` — e nenhuma outra. Com a opção, depois
+ * de semear, o comando apaga toda conta fora da lista e amarra as que ficam à
+ * estrutura: `lider1` passa a liderar TODAS as equipes (o que o chefe
+ * encaminhar, a qualquer equipe, chega a ele) e `fiscal1` passa a integrar todas
+ * elas; as fiscalizações assinadas por fiscais apagados passam a ser dele.
+ *
+ * É opção, e não comportamento: apagar conta é destrutivo, e este comando também
+ * roda fora da demonstração pública. Só o boot do Render a passa.
  */
 class PrepararDemonstracao extends Command
 {
     protected $signature = 'sefal:preparar-demonstracao
-                            {--senha= : Só para uma conta SEM senha; nunca troca a de quem já tem}';
+                            {--senha= : Só para uma conta SEM senha; nunca troca a de quem já tem}
+                            {--so-estas-contas : Apaga toda conta fora da lista da demonstração (só no Render)}';
 
     protected $description = 'Semeia sistema e demonstração num banco vazio, sem apagar nada do que já existe.';
 
@@ -88,6 +104,8 @@ class PrepararDemonstracao extends Command
                 .'Para refazê-la do zero, apague o banco e rode de novo.',
             );
 
+            $this->enxugarSePedido();
+
             return self::SUCCESS;
         }
 
@@ -96,6 +114,8 @@ class PrepararDemonstracao extends Command
 
             return true;
         });
+
+        $this->enxugarSePedido();
 
         $this->components->info(sprintf(
             '%d demandas na base, %d delas aguardando pré-triagem.',
@@ -123,31 +143,24 @@ class PrepararDemonstracao extends Command
      * exatamente como está. Trocar a senha de alguém é ato deliberado e tem
      * comando próprio: `sefal:setar-senha`.
      *
-     * ## Quem está na lista, e quem NÃO está
+     * ## Uma conta por papel (decisão do dono, 24/09/2026)
      *
-     * O CHEFE DE SETOR é um só e vê tudo: `gestor1` cumpre esse papel (a
-     * matrícula ficou como nasceu — matrícula identifica gente, não cargo).
-     * `gestor2` e `gestor3` continuam como chefes para a demonstração ter mais
-     * de uma pessoa no mesmo papel.
-     *
-     * Os LÍDERES DE EQUIPE não estão aqui porque nascem da estrutura
-     * (`EstruturaSeeder`): um por equipe, matrícula `lider-<código>` e senha igual
-     * à matrícula — `lider-c2`, `lider-a1`… É lá que mora o vínculo com a equipe,
-     * e duplicá-lo aqui daria dois donos à mesma lista.
+     * `admin` (administrador), `chefe` (o Chefe de Setor — um só, vê tudo),
+     * `lider1` (líder de equipe) e `fiscal1` (fiscal). Com `--so-estas-contas`
+     * elas são as ÚNICAS, e `lider1`/`fiscal1` são amarrados a todas as equipes
+     * ({@see enxugarSePedido}); sem a opção, as contas da estrutura
+     * (`lider-<equipe>`, fiscais) continuam existindo ao lado delas.
      *
      * Não há COORDENADOR: os coordenadores trabalham no e-Salvador e não entram
-     * no SEFAL (decisão do dono, 22/09/2026). A conta `coordenador` que existia
-     * na demonstração perdeu o setor na migration e fica sem acesso — que é o
-     * estado real de quem não usa o sistema.
+     * no SEFAL (decisão do dono, 22/09/2026).
      *
      * @var list<array{login: string, nome: string, senha: string, setor: ?string, admin: bool}>
      */
     private const CONTAS = [
         ['login' => 'admin', 'nome' => 'Administrador', 'senha' => 'admin123', 'setor' => 'administrador', 'admin' => true],
-        ['login' => 'fiscal', 'nome' => 'Fiscal', 'senha' => 'fiscal123', 'setor' => 'fiscal', 'admin' => false],
-        ['login' => 'gestor1', 'nome' => 'Gestor 1', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],
-        ['login' => 'gestor2', 'nome' => 'Gestor 2', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],
-        ['login' => 'gestor3', 'nome' => 'Gestor 3', 'senha' => 'gestor123', 'setor' => 'chefe-de-setor', 'admin' => false],
+        ['login' => 'chefe', 'nome' => 'Chefe de Setor', 'senha' => 'chefe123', 'setor' => 'chefe-de-setor', 'admin' => false],
+        ['login' => 'lider1', 'nome' => 'Líder de Equipe', 'senha' => 'lider123', 'setor' => 'lider-de-equipe', 'admin' => false],
+        ['login' => 'fiscal1', 'nome' => 'Fiscal', 'senha' => 'fiscal123', 'setor' => 'fiscal', 'admin' => false],
     ];
 
     private function garantirContasDaDemonstracao(): void
@@ -193,5 +206,47 @@ class PrepararDemonstracao extends Command
                 $nasceuAgora ? 'conta criada' : 'já existia — senha preservada',
             );
         }
+    }
+
+    /**
+     * Deixa na base SÓ as contas da lista — quando `--so-estas-contas` é passada.
+     *
+     * Amarra antes de apagar, para nada ficar órfão: `lider1` lidera todas as
+     * equipes, `fiscal1` integra todas, e as fiscalizações dos fiscais que saem
+     * passam a ele (`fiscal_id` é obrigatório e não tem `ON DELETE`). O resto das
+     * referências a `users` é `nullOnDelete`/`cascadeOnDelete` e se resolve só.
+     */
+    private function enxugarSePedido(): void
+    {
+        if (! $this->option('so-estas-contas')) {
+            return;
+        }
+
+        $this->components->task('Só as contas da demonstração', function () {
+            DB::transaction(function () {
+                $ficam = User::whereIn('login', array_column(self::CONTAS, 'login'))->pluck('id', 'login');
+                $lider = $ficam['lider1'] ?? null;
+                $fiscal = $ficam['fiscal1'] ?? null;
+
+                if ($lider !== null) {
+                    Equipe::query()->update(['lider_id' => $lider]);
+                }
+
+                if ($fiscal !== null) {
+                    DB::table('equipe_fiscais')->insertOrIgnore(Equipe::pluck('id')->map(static fn (int $equipe): array => [
+                        'equipe_id' => $equipe,
+                        'user_id' => $fiscal,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ])->all());
+
+                    Fiscalizacao::whereNotIn('fiscal_id', $ficam->values())->update(['fiscal_id' => $fiscal]);
+                }
+
+                User::whereNotIn('id', $ficam->values())->get()->each->delete();
+            });
+
+            return true;
+        });
     }
 }
