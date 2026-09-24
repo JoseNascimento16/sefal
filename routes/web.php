@@ -23,6 +23,7 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
 use App\Http\Controllers\Retaguarda\RetornoAoCanalController;
+use App\Http\Controllers\Retaguarda\UsuariosController;
 use App\Http\Middleware\SoChefeDeSetor;
 use App\Models\Demanda;
 use Illuminate\Routing\RedirectController;
@@ -120,6 +121,25 @@ Route::middleware(['auth'])->group(function () {
      * apagar linha daqui apagaria a única trilha de um defeito de produção.
      * `ObservabilidadeTest` reprova se alguma mutação nascer sob este caminho.
      */
+    /*
+     * Usuários — quem tem conta na Retaguarda, e em que setor.
+     *
+     * O caminho começa pelo slug da tela (`usuarios`): é dele que as guardas de
+     * leitura e de ação deduzem a permissão, e a semente a dá só ao
+     * administrador. Excluir é mandar para a lixeira; `restaurar` a tira de lá.
+     * O `{usuario}` da restauração é o número, e não o modelo: a conta excluída
+     * não é encontrada pela busca comum — é justamente o que a lixeira faz.
+     */
+    Route::prefix('retaguarda/usuarios')->name('retaguarda.usuarios.')->group(function () {
+        Route::get('/', [UsuariosController::class, 'index'])->name('index');
+        Route::post('/', [UsuariosController::class, 'store'])->name('store');
+        Route::put('{usuario}', [UsuariosController::class, 'update'])->name('update');
+        Route::delete('{usuario}', [UsuariosController::class, 'destroy'])->name('destroy');
+        Route::post('{usuario}/convite', [UsuariosController::class, 'convite'])->name('convite');
+        Route::post('{usuario}/restaurar', [UsuariosController::class, 'restaurar'])
+            ->whereNumber('usuario')->name('restaurar');
+    });
+
     Route::prefix('retaguarda/logs')->name('retaguarda.logs.')->group(function () {
         Route::get('/', [LogsController::class, 'index'])->name('index');
         // O rastro de UMA ocorrência, que a listagem não carrega (campo longo).

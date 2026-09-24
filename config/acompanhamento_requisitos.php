@@ -198,6 +198,24 @@ return [
 
         [
             'modulo' => 'Sistema',
+            'tela' => 'Usuários',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.usuarios.index',
+            'breadcrumb' => 'Sistema › Usuários',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: tela de Usuários do Codecon, trazida por pedido do dono '
+                .'em 25/09/2026. Quem tem conta e em que setor: inclusão com convite de primeiro acesso por '
+                .'e-mail (a conta nasce sem senha conhecida), alteração de setores e situação, reenvio do '
+                .'convite, exclusão para a lixeira com restauração e remoção definitiva em três dias — menos '
+                .'a conta com histórico, que fica guardada. O Chefe de Setor é um só (marcar outro tira o '
+                .'setor de quem tinha, com aviso antes de salvar); administrador só se dá entre '
+                .'administradores; ninguém tira o próprio acesso de administrador, se desativa ou se exclui. '
+                .'Só o administrador abre a tela.',
+        ],
+
+        [
+            'modulo' => 'Sistema',
             'tela' => 'Relatórios',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.relatorios.index',

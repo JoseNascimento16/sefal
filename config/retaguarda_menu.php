@@ -500,6 +500,23 @@ return [
                  * ao trocar de seção.
                  */
 
+                /*
+                 * Usuários — quem tem conta, em que setor, e se já fez o primeiro
+                 * acesso (tela trazida do Codecon, 25/09/2026).
+                 *
+                 * Só o administrador, pela mesma razão do Modo Gerente: quem cria
+                 * conta e dá setor distribui acesso. Se o Modo Gerente conceder a
+                 * tela a outro setor, dar ou tirar ADMINISTRADOR continua só de
+                 * administrador (a recusa mora no controller, com o motivo).
+                 */
+                [
+                    'rotulo' => 'Usuários',
+                    'rota' => 'retaguarda.usuarios.index',
+                    'icone' => 'usuarios',
+                    'curto' => 'USUÁRIOS',
+                    'slug' => 'usuarios',
+                    'setores' => ['administrador'],
+                ],
                 [
                     'rotulo' => 'Relatórios',
                     'rota' => 'retaguarda.relatorios.index',

@@ -3,7 +3,10 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+// O "Esqueci minha senha" sai pela notificação própria, em português — a
+// padrão do framework chegava em inglês. O contrato que o teste usa (o token)
+// é o mesmo.
+use App\Notifications\LinkDeSenha as ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
