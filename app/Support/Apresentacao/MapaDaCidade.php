@@ -3,6 +3,7 @@
 namespace App\Support\Apresentacao;
 
 use App\Models\Ambulante;
+use App\Models\Area;
 use App\Models\AreaBairro;
 use App\Models\Equipe;
 use App\Models\Fiscalizacao;
@@ -55,13 +56,13 @@ class MapaDaCidade
         $recorte = self::recorteDoLider($usuario);
 
         return [
-            'pontos' => self::pontos(),
+            'pontos' => self::pontos($recorte),
             'registros' => self::registrosDeHoje($recorte),
             'fiscais' => self::fiscaisEmCampo($recorte),
             // O líder vê só as fiscalizações da área dele (dono, 25/09/2026) — e a
             // tela diz isso, para o mapa vazio não parecer cidade parada.
             'recorte' => $recorte === null ? null : ['equipes' => $recorte['codigos']],
-            'equipes' => Estrutura::equipes(),
+            'equipes' => self::equipesDoRecorte($recorte),
             'centro' => (array) config('geografia.centro'),
             // O instante que a tela está mostrando. Dito em palavras porque o
             // mapa não tem atualização contínua: é uma fotografia, e esconder
@@ -87,7 +88,13 @@ class MapaDaCidade
     {
         $recorte = self::recorteDoLider($usuario);
 
-        $bairros = self::bairrosComEquipe();
+        // O líder vê o relevo só dos bairros das áreas das equipes dele.
+        $bairros = $recorte === null
+            ? self::bairrosComEquipe()
+            : array_values(array_filter(
+                self::bairrosComEquipe(),
+                static fn (array $b): bool => self::noRecorte((string) $b['bairro'], null, $recorte),
+            ));
         $indicePorBairro = [];
 
         foreach ($bairros as $i => $b) {
@@ -125,7 +132,7 @@ class MapaDaCidade
         return [
             'bairros' => $bairros,
             'pontos' => $pontos,
-            'equipes' => Estrutura::equipes(),
+            'equipes' => self::equipesDoRecorte($recorte),
             'centro' => (array) config('geografia.centro'),
             'momento' => Date::now()->format('d/m/Y H:i'),
             'janela_em_dias' => self::JANELA_DE_CALOR,
@@ -143,7 +150,7 @@ class MapaDaCidade
      *
      * @return list<array<string, mixed>>
      */
-    private static function pontos(): array
+    private static function pontos(?array $recorte = null): array
     {
         $porBairro = self::mapaDeBairros();
         $hoje = Date::now()->startOfDay();
@@ -180,6 +187,7 @@ class MapaDaCidade
                     'fonte' => $lugar->fonte,
                 ];
             })
+            ->filter(static fn (array $p): bool => $recorte === null || self::noRecorte((string) $p['bairro'], (string) $p['equipe'], $recorte))
             ->values()
             ->all();
     }
@@ -316,6 +324,49 @@ class MapaDaCidade
             'codigos' => $codigos,
             'bairros' => AreaBairro::whereIn('area_id', $equipes->pluck('area_id')->unique()->all())->pluck('bairro')->all(),
         ];
+    }
+
+    /**
+     * As equipes que a tela oferece no filtro: todas, ou só as do líder.
+     *
+     * @param  array{equipes: list<int>, codigos: list<string>, bairros: list<string>}|null  $recorte
+     * @return list<array<string, mixed>>
+     */
+    private static function equipesDoRecorte(?array $recorte): array
+    {
+        $equipes = Estrutura::equipes();
+
+        if ($recorte === null) {
+            return $equipes;
+        }
+
+        return array_values(array_filter(
+            $equipes,
+            static fn (array $e): bool => in_array((string) ($e['equipe'] ?? ''), $recorte['codigos'], true),
+        ));
+    }
+
+    /**
+     * O bairro (ou a equipe) está no recorte do líder? Compara o bairro pela
+     * forma canônica — "Imbuí" e "Imbui" são o mesmo bairro.
+     *
+     * @param  array{equipes: list<int>, codigos: list<string>, bairros: list<string>}  $recorte
+     */
+    private static function noRecorte(string $bairro, ?string $equipe, array $recorte): bool
+    {
+        if ($equipe !== null && in_array($equipe, $recorte['codigos'], true)) {
+            return true;
+        }
+
+        $chave = Area::chaveDeBairro($bairro);
+
+        foreach ($recorte['bairros'] as $b) {
+            if (Area::chaveDeBairro($b) === $chave) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

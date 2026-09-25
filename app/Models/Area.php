@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * A ÁREA — o recorte territorial que tem um Chefe de Setor e equipes.
@@ -134,10 +135,11 @@ class Area extends Model
     /** A forma comparável de um nome de bairro. Use ao gravar E ao procurar. */
     public static function chaveDeBairro(?string $bairro): string
     {
-        $texto = mb_strtolower(trim((string) $bairro));
-        $semAcento = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+        // `Str::ascii`, e não `iconv(... TRANSLIT)`: o iconv do Windows troca "í"
+        // por "'i", e "Imbuí" e "Imbui" viravam chaves diferentes (no Linux não).
+        $semAcento = Str::ascii(mb_strtolower(trim((string) $bairro)));
 
-        return (string) preg_replace('/\s+/', ' ', $semAcento === false ? $texto : $semAcento);
+        return (string) preg_replace('/\s+/', ' ', $semAcento);
     }
 
     /** @param  Builder<static>  $query */

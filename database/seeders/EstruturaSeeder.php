@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Area;
 use App\Models\AreaBairro;
+use App\Models\Bairro;
 use App\Models\Equipe;
 use App\Models\Setor;
 use App\Models\User;
@@ -91,6 +92,9 @@ class EstruturaSeeder extends Seeder
             $this->ligarLider($equipe, $setorLider);
             $this->semearFiscais($equipe, (array) ($dados['fiscais'] ?? []), $setorFiscal);
         }
+
+        // O catálogo de bairros nasce dos bairros que as áreas citam (25/09/2026).
+        Bairro::sincronizarDasAreas();
     }
 
     /**

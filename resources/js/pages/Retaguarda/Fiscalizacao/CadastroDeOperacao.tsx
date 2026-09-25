@@ -270,6 +270,23 @@ export default function CadastroDeOperacao({
         setForm((atual) => ({ ...atual, bairros: [...new Set([...atual.bairros, ...daArea])] }));
     }
 
+    /**
+     * Desmarcar a área (ou a equipe) tira os bairros dela — menos os que ainda
+     * são cobertos pela área escolhida ou por outra equipe marcada (bairro de
+     * divisa fica, se a outra área também o tem).
+     */
+    function desmarcarBairrosDa(area: string, areasQueFicam: string[]) {
+        const cobertos = new Set(areasQueFicam.flatMap((a) => bairrosPorArea[a] ?? []));
+        const daArea = new Set((bairrosPorArea[area] ?? []).filter((b) => !cobertos.has(b)));
+
+        setForm((atual) => ({ ...atual, bairros: atual.bairros.filter((b) => !daArea.has(b)) }));
+    }
+
+    /** As áreas das equipes marcadas, sem esta (a que está saindo). */
+    function areasDasEquipes(equipesMarcadas: string[]): string[] {
+        return equipesMarcadas.map((codigo) => equipes.find((e) => e.equipe === codigo)?.area).filter((a): a is string => !!a);
+    }
+
     function alternarId(campo: 'fiscais' | 'demandas', id: number) {
         setForm((atual) => ({
             ...atual,
@@ -972,7 +989,12 @@ export default function CadastroDeOperacao({
                                             data-erro={errors.area ? '1' : undefined}
                                             value={form.area}
                                             onChange={(e) => {
+                                                const anterior = form.area;
+
                                                 mudar('area', e.target.value);
+                                                // Trocar de área tira os bairros da anterior (menos os que as
+                                                // equipes marcadas ainda cobrem) e marca os da nova.
+                                                desmarcarBairrosDa(anterior, [e.target.value, ...areasDasEquipes(form.equipes)]);
                                                 marcarBairrosDa(e.target.value);
                                             }}
                                         >
@@ -1097,6 +1119,11 @@ export default function CadastroDeOperacao({
                                                     onChange={() => {
                                                         if (!form.equipes.includes(e.equipe)) {
                                                             marcarBairrosDa(e.area);
+                                                        } else {
+                                                            desmarcarBairrosDa(e.area, [
+                                                                form.area,
+                                                                ...areasDasEquipes(form.equipes.filter((x) => x !== e.equipe)),
+                                                            ]);
                                                         }
 
                                                         alternarNaLista('equipes', e.equipe);
@@ -1132,8 +1159,9 @@ export default function CadastroDeOperacao({
                                         ))}
                                     </div>
                                     <p className="form-ajuda">
-                                        Escolher a área ou uma equipe marca os bairros dela — desmarque
-                                        os que ficam de fora. Nenhum marcado significa a área inteira.
+                                        Escolher a área ou uma equipe marca os bairros dela; desmarcá-la
+                                        tira esses bairros. Dá para desmarcar um a um. Nenhum marcado
+                                        significa a área inteira.
                                     </p>
                                 </div>
 

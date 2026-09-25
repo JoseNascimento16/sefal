@@ -6,6 +6,7 @@ use App\Http\Controllers\Retaguarda\AmbulantesController;
 use App\Http\Controllers\Retaguarda\AreasController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
 use App\Http\Controllers\Retaguarda\ArquivosController;
+use App\Http\Controllers\Retaguarda\BairrosController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\DenunciasController;
 use App\Http\Controllers\Retaguarda\EquipesController;
@@ -158,6 +159,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [AreasController::class, 'store'])->name('store');
         Route::put('{area}', [AreasController::class, 'update'])->name('update');
         Route::delete('{area}', [AreasController::class, 'destroy'])->name('destroy');
+    });
+
+    /*
+     * Bairros — o catálogo de bairros da cidade (dono, 25/09/2026). Slug `bairros`.
+     */
+    Route::prefix('retaguarda/bairros')->name('retaguarda.bairros.')->group(function () {
+        Route::get('/', [BairrosController::class, 'index'])->name('index');
+        Route::post('/', [BairrosController::class, 'store'])->name('store');
+        Route::put('{bairro}', [BairrosController::class, 'update'])->name('update');
+        Route::delete('{bairro}', [BairrosController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('retaguarda/equipes')->name('retaguarda.equipes.')->group(function () {

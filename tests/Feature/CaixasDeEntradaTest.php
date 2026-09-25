@@ -157,7 +157,7 @@ it('o chefe cadastra no e-Protocolo: a demanda nasce Recebida, esperando o encam
             'bairro' => 'Rio Vermelho',
         ])
         ->assertSessionHasNoErrors()
-        ->assertSessionHas('flash.sucesso');
+        ->assertSessionHas('demanda_registrada');
 
     $demanda = Demanda::firstOrFail();
 

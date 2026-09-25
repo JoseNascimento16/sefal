@@ -1,6 +1,8 @@
-import { Info, Plus, Save, X } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
+import { CircleCheck, Info, Plus, Save, X } from 'lucide-react';
 import { useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
+import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import type { EquipeResumo, Sugestao } from '@/dados-prototipo/administrativo';
 import { useEnvio } from '@/hooks/use-envio';
 import { hojeISO } from '@/lib/datas';
@@ -47,6 +49,15 @@ export function RegistroDeDemanda({
     const [slug, setSlug] = useState(canais[0]?.slug ?? '');
     const canal = canais.find((c) => c.slug === slug) ?? canais[0];
 
+    /*
+     * A CONFIRMAÇÃO com o protocolo, no meio da tela (dono, 25/09/2026). Vem do
+     * servidor uma vez só, logo depois de gravar; fechar a esconde.
+     */
+    const { demandaRegistrada } = usePage().props;
+    const [confirmacaoFechada, setConfirmacaoFechada] = useState<string | null>(null);
+    const confirmacao =
+        demandaRegistrada && demandaRegistrada.protocolo !== confirmacaoFechada ? demandaRegistrada : null;
+
     if (canal === undefined) {
         return null;
     }
@@ -74,35 +85,70 @@ export function RegistroDeDemanda({
                             : 'Registre o que chegou até você: a demanda entra como recebida e espera o seu encaminhamento à equipe.'}
                     </p>
                 </div>
-                <button
-                    type="button"
-                    className={aberto ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'}
-                    onClick={() => setAberto((a) => !a)}
-                >
-                    {aberto ? (
-                        <>
-                            <X size={15} aria-hidden /> Fechar
-                        </>
-                    ) : (
-                        <>
-                            <Plus size={15} aria-hidden /> Registrar
-                        </>
-                    )}
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setAberto(true)}>
+                    <Plus size={15} aria-hidden /> Registrar
                 </button>
             </div>
 
+            {/* O formulário abre numa janela sobreposta (dono, 25/09/2026). */}
             {aberto && (
-                <Formulario
-                    key={canal.slug}
-                    canal={canal}
-                    canais={canais}
-                    trocarCanal={setSlug}
-                    bairros={bairros}
-                    sugestoes={sugestoes}
-                    equipes={equipes}
-                    equipesDoLider={equipesDoLider}
-                    aoRegistrar={() => setAberto(false)}
-                />
+                <Sobreposicao>
+                    <div
+                        className="card-premium rt-janela-registro"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Registrar demanda"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                            <h2 className="sobreposicao-titulo" style={{ margin: 0 }}>
+                                <Plus size={18} aria-hidden /> Registrar demanda
+                            </h2>
+                            <button type="button" className="icon-btn" title="Fechar" aria-label="Fechar" onClick={() => setAberto(false)}>
+                                <X size={17} aria-hidden />
+                            </button>
+                        </div>
+                        <Formulario
+                            key={canal.slug}
+                            canal={canal}
+                            canais={canais}
+                            trocarCanal={setSlug}
+                            bairros={bairros}
+                            sugestoes={sugestoes}
+                            equipes={equipes}
+                            equipesDoLider={equipesDoLider}
+                            aoRegistrar={() => setAberto(false)}
+                        />
+                    </div>
+                </Sobreposicao>
+            )}
+
+            {confirmacao !== null && (
+                <Sobreposicao clicandoFora={() => setConfirmacaoFechada(confirmacao.protocolo)}>
+                    <div
+                        className="card-premium rt-confirmacao-registro"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Demanda registrada"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <CircleCheck size={40} aria-hidden className="rt-confirmacao-icone" />
+                        <h2 className="sobreposicao-titulo" style={{ margin: 0 }}>
+                            Demanda registrada
+                        </h2>
+                        <p className="card-sub" style={{ margin: 0 }}>{confirmacao.canal} · protocolo</p>
+                        <p className="rt-confirmacao-protocolo">{confirmacao.protocolo}</p>
+                        <p className="card-sub" style={{ margin: 0 }}>{confirmacao.proximo}</p>
+                        <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            autoFocus
+                            onClick={() => setConfirmacaoFechada(confirmacao.protocolo)}
+                        >
+                            Entendi
+                        </button>
+                    </div>
+                </Sobreposicao>
             )}
         </section>
     );

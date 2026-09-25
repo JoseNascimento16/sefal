@@ -472,6 +472,8 @@ return [
                                 'administrador',
                                 'chefe-de-setor' => ['apenas_leitura' => true],
                                 'fiscal' => ['apenas_leitura' => true],
+                                // O líder consulta o prontuário que o mapa abre (dono, 25/09/2026).
+                                'lider-de-equipe' => ['apenas_leitura' => true],
                             ],
                         ],
                         [
@@ -496,6 +498,15 @@ return [
                             'icone' => 'areas',
                             'slug' => 'areas',
                             'curto' => 'ÁREAS',
+                            'setores' => ['administrador', 'chefe-de-setor'],
+                        ],
+                        [
+                            // O catálogo de bairros (dono, 25/09/2026). Mesma concessão de Áreas.
+                            'rotulo' => 'Bairros',
+                            'rota' => 'retaguarda.bairros.index',
+                            'icone' => 'mapa',
+                            'slug' => 'bairros',
+                            'curto' => 'BAIRROS',
                             'setores' => ['administrador', 'chefe-de-setor'],
                         ],
                         [

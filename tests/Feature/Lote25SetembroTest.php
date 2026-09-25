@@ -2,6 +2,7 @@
 
 use App\Models\Area;
 use App\Models\AreaBairro;
+use App\Models\Bairro;
 use App\Models\Demanda;
 use App\Models\Equipe;
 use App\Models\Fiscalizacao;
@@ -247,4 +248,82 @@ it('a operação recebe denúncias no cadastro e fiscais de outra área; tirar a
 
     expect($demanda->fresh()->operacao_id)->toBeNull()
         ->and($demanda->fresh()->situacao)->not->toBe(Demanda::EM_OPERACAO);
+});
+
+// ── Terceira leva (25/09/2026, tarde) ────────────────────────────────────────
+
+it('o líder abre o prontuário do ambulante (consulta), e não grava', function () {
+    $lider = contaDoLote('lider-de-equipe');
+
+    $this->actingAs($lider)->get(route('retaguarda.ambulantes.index'))->assertOk();
+});
+
+it('no mapa, o líder recebe só as equipes dele no filtro', function () {
+    $lider = contaDoLote('lider-de-equipe', ['login' => 'lider-filtro']);
+    $minha = Area::create(['nome' => 'Área F1', 'regiao' => 'Orla']);
+    $outra = Area::create(['nome' => 'Área F2', 'regiao' => 'Centro']);
+    Equipe::create(['codigo' => 'F1', 'area_id' => $minha->id, 'lider_id' => $lider->id]);
+    Equipe::create(['codigo' => 'F2', 'area_id' => $outra->id]);
+    Estrutura::esquecer();
+
+    $this->actingAs($lider)->get(route('retaguarda.mapa.index'))
+        ->assertInertia(fn ($p) => $p->where('equipes', fn ($e) => collect($e)->pluck('equipe')->all() === ['F1']));
+
+    $this->actingAs($lider)->get(route('retaguarda.mapa-de-calor.index'))
+        ->assertInertia(fn ($p) => $p->where('equipes', fn ($e) => collect($e)->pluck('equipe')->all() === ['F1']));
+});
+
+it('registrar a demanda devolve a confirmação com o protocolo, para a tela mostrar no meio', function () {
+    $chefe = contaDoLote('chefe-de-setor');
+
+    $resposta = $this->actingAs($chefe)->post(route('retaguarda.denuncias.registrar', 'avulsa'), [
+        'tipo_avulsa' => Demanda::AVULSA_SUPERIOR, 'recebida_em' => Date::now()->format('Y-m-d'), 'anonima' => false,
+        'requerente' => 'Coordenadoria', 'assunto' => 'Ambulantes na praça', 'endereco' => 'Praça A', 'bairro' => 'Barra',
+    ]);
+
+    $protocolo = Demanda::firstOrFail()->protocolo;
+    $resposta->assertSessionHas('demanda_registrada', fn (array $c) => $c['protocolo'] === $protocolo);
+
+    // Na tela seguinte, o dado chega como prop compartilhada.
+    $this->actingAs($chefe)->withSession(['demanda_registrada' => ['protocolo' => $protocolo, 'canal' => 'Avulsa', 'proximo' => 'x']])
+        ->get(route('retaguarda.denuncias.avulsas.index'))
+        ->assertInertia(fn ($p) => $p->where('demandaRegistrada.protocolo', $protocolo));
+});
+
+it('o catálogo de bairros: cadastra, recusa o mesmo nome sem acento, renomeia nas áreas e não exclui bairro em área', function () {
+    $chefe = contaDoLote('chefe-de-setor');
+    $area = Area::create(['nome' => 'Área B', 'regiao' => 'Orla']);
+    AreaBairro::create(['area_id' => $area->id, 'bairro' => 'Imbui']);
+    Bairro::sincronizarDasAreas();
+
+    $imbui = Bairro::where('nome', 'Imbui')->firstOrFail();
+
+    $this->actingAs($chefe)->post(route('retaguarda.bairros.store'), ['nome' => 'Imbuí', 'ativo' => true])
+        ->assertSessionHasErrors('nome');
+
+    $this->actingAs($chefe)->post(route('retaguarda.bairros.store'), ['nome' => 'Stiep', 'latitude' => '-12.99', 'longitude' => '-38.45', 'ativo' => true])
+        ->assertSessionHasNoErrors();
+
+    $this->actingAs($chefe)->put(route('retaguarda.bairros.update', $imbui), ['nome' => 'Imbuí', 'latitude' => '-12.97', 'longitude' => '-38.44', 'ativo' => true])
+        ->assertSessionHasNoErrors();
+
+    expect(AreaBairro::where('area_id', $area->id)->value('bairro'))->toBe('Imbuí')
+        ->and((float) AreaBairro::where('area_id', $area->id)->value('latitude'))->toBe(-12.97);
+
+    $this->actingAs($chefe)->delete(route('retaguarda.bairros.destroy', $imbui))
+        ->assertSessionHas('flash.erro', fn (string $m) => str_contains($m, 'Área B'));
+
+    $this->actingAs($chefe)->delete(route('retaguarda.bairros.destroy', Bairro::where('nome', 'Stiep')->firstOrFail()))
+        ->assertSessionHas('flash.sucesso');
+
+    expect(Bairro::where('nome', 'Stiep')->exists())->toBeFalse();
+});
+
+it('acrescentar um bairro novo na área o põe também no catálogo', function () {
+    $this->actingAs(contaDoLote('chefe-de-setor'))->post(route('retaguarda.areas.store'), [
+        'nome' => 'Área C', 'regiao' => 'Subúrbio', 'recorte' => 'bairros', 'turno' => 'Diurno', 'ativa' => true,
+        'bairros' => ['Bairro Recém Criado'],
+    ])->assertSessionHasNoErrors();
+
+    expect(Bairro::where('nome', 'Bairro Recém Criado')->exists())->toBeTrue();
 });

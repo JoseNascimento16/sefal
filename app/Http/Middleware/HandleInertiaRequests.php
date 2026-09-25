@@ -80,6 +80,9 @@ class HandleInertiaRequests extends Middleware
             ],
             'acoes' => $this->acoes($request, $user),
             'flash' => $this->recado($request),
+            // A demanda que acabou de ser registrada — a tela mostra o protocolo numa
+            // confirmação no meio da tela (dono, 25/09/2026). Vale uma vez (flash).
+            'demandaRegistrada' => fn () => $request->hasSession() ? $request->session()->get('demanda_registrada') : null,
             'painel' => $this->painel($request),
         ];
     }
