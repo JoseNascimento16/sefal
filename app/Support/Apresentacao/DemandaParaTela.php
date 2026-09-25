@@ -43,6 +43,9 @@ class DemandaParaTela
             // De onde veio e como chegou.
             'canal' => $demanda->canal,
             'origem' => self::rotuloDoCanal($demanda->canal),
+            // Qual avulsa: pedido de superior ou ofício (nulo nos outros canais).
+            'tipo_avulsa' => $demanda->tipo_avulsa,
+            'tipo_avulsa_nome' => Demanda::TIPOS_AVULSA[$demanda->tipo_avulsa ?? ''] ?? null,
             'entrada' => $demanda->entrada,
             'documento_origem' => (string) ($demanda->numero_origem ?? ''),
             'protocolo_origem' => (string) ($demanda->numero_origem ?? ''),
@@ -151,6 +154,10 @@ class DemandaParaTela
             'anexos' => $demanda->relationLoaded('anexos')
                 ? $demanda->anexos->pluck('nome')->values()->all()
                 : [],
+            // Os anexos como ARQUIVOS: para ver e baixar (dono, 25/09/2026).
+            'anexos_arquivos' => $demanda->relationLoaded('anexos')
+                ? $demanda->anexos->map(ArquivoParaTela::anexo(...))->values()->all()
+                : [],
 
             /*
              * O que a ÚLTIMA ida a campo produziu, no topo da demanda.
@@ -194,6 +201,7 @@ class DemandaParaTela
                 'equipamento' => $ultima->equipamento,
                 'relato' => $ultima->consideracoes,
                 'fotos' => $ultima->fotos->count(),
+                'arquivos' => $ultima->fotos->map(ArquivoParaTela::foto(...))->values()->all(),
                 'gps' => $ultima->latitude === null || $ultima->longitude === null
                     ? null
                     : $ultima->latitude.', '.$ultima->longitude,
@@ -263,6 +271,7 @@ class DemandaParaTela
                 'consideracoes' => null,
                 'recomendacoes' => [],
                 'fotos' => [],
+                'arquivos' => [],
                 'gps' => null,
                 'precisao_m' => null,
                 'documento' => null,
@@ -281,6 +290,7 @@ class DemandaParaTela
             'fotos' => $f->fotos->map(
                 static fn ($foto): string => (string) ($foto->legenda ?? basename($foto->caminho)),
             )->values()->all(),
+            'arquivos' => $f->fotos->map(ArquivoParaTela::foto(...))->values()->all(),
             'gps' => $f->latitude === null || $f->longitude === null
                 ? null
                 : $f->latitude.', '.$f->longitude,
@@ -304,6 +314,7 @@ class DemandaParaTela
                 'equipamento' => $f->equipamento,
                 'relato' => $f->consideracoes,
                 'fotos' => $f->fotos->count(),
+                'arquivos' => $f->fotos->map(ArquivoParaTela::foto(...))->values()->all(),
                 'gps' => $f->latitude === null || $f->longitude === null
                     ? null
                     : $f->latitude.', '.$f->longitude,

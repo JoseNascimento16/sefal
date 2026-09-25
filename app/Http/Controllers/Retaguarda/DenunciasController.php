@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Retaguarda;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Demanda;
+use App\Models\DemandaAnexo;
 use App\Models\DemandaTramite;
 use App\Models\Fiscalizacao;
 use App\Models\Operacao;
 use App\Models\User;
+use App\Rules\ArquivoSeguro;
 use App\Rules\NomeDeCadastro;
+use App\Support\Apresentacao\ArquivoParaTela;
 use App\Support\Apresentacao\DemandaParaTela;
 use App\Support\Apresentacao\OperacaoParaTela;
 use App\Support\CiclosDeFiscalizacao;
@@ -21,8 +24,10 @@ use App\Support\Prototipo\RecomendacoesDoFiscal;
 use App\Support\TriagemDeDemandas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -142,18 +147,27 @@ class DenunciasController extends Controller
     public function registrar(Request $request, string $canal): RedirectResponse
     {
         $configuracao = (array) config("demandas.canais.{$canal}", []);
+        $usuario = $request->user();
 
-        if (($configuracao['registro'] ?? null) === 'lider') {
+        /*
+         * O canal do LÍDER (Fala Salvador) aceita também o registro do chefe
+         * (dono, 25/09/2026: sem integração, o chefe precisa lançar o que chega
+         * a ele). Cada um registra do seu jeito: o líder, já na mesa dele; o
+         * chefe, como Recebida, para encaminhar.
+         */
+        $como = self::comoRegistra($usuario, $canal);
+
+        if ($como === 'lider') {
             return $this->registrarFalaSalvador($request);
         }
 
-        $usuario = $request->user();
-
-        if (! Papel::ehChefe($usuario) && ! ($usuario?->ehAdmin() ?? false)) {
+        if ($como === null) {
             return back()->with(
                 'flash.erro',
-                'O cadastro deste canal é do Chefe de Setor: é a ele que a demanda chega. '
-                .'O líder recebe o caso já encaminhado.',
+                ($configuracao['registro'] ?? null) === 'lider'
+                    ? 'Registrar o Fala Salvador é do líder de equipe ou do Chefe de Setor.'
+                    : 'O cadastro deste canal é do Chefe de Setor: é a ele que a demanda chega. '
+                        .'O líder recebe o caso já encaminhado.',
             );
         }
 
@@ -166,6 +180,8 @@ class DenunciasController extends Controller
                 $avulsa ? 'nullable' : 'required', 'string', 'max:40',
                 Rule::unique('demandas', 'numero_origem')->where('canal', $canal),
             ],
+            // A avulsa diz de onde veio o pedido: de um superior ou de um ofício.
+            'tipo_avulsa' => [$avulsa ? 'required' : 'exclude', Rule::in(array_keys(Demanda::TIPOS_AVULSA))],
             'recebida_em' => ['required', 'date', 'before_or_equal:today'],
             // `declined` aceita false/0: o canal que não admite anônima exige quem pediu.
             'anonima' => array_values(array_filter(['required', 'boolean', $admiteAnonima ? null : 'declined'])),
@@ -175,7 +191,12 @@ class DenunciasController extends Controller
             'endereco' => ['required', 'string', 'max:200'],
             'bairro' => ['required', 'string', 'max:80'],
             'descricao' => ['nullable', 'string', 'max:2000'],
+            // Os arquivos que vieram com o pedido (o ofício digitalizado, o e-mail,
+            // a foto): até cinco, 10 MB cada, só documento e imagem.
+            ...self::regrasDeAnexo(),
         ], [
+            'tipo_avulsa.required' => 'Diga se é pedido de superior ou ofício.',
+            'tipo_avulsa.in' => 'Tipo de avulsa desconhecido.',
             'documento_origem.required' => 'Informe o número do documento no canal de origem.',
             'documento_origem.unique' => 'Já existe uma demanda deste canal com esse número — ela não entra duas vezes.',
             'anonima.declined' => 'Este canal não recebe demanda anônima: informe quem pediu.',
@@ -192,6 +213,7 @@ class DenunciasController extends Controller
         $demanda = Demanda::create([
             'protocolo' => $protocolo,
             'canal' => $canal,
+            'tipo_avulsa' => $avulsa ? $dados['tipo_avulsa'] : null,
             'entrada' => Demanda::ENTRADA_BALCAO,
             // Sem número (a ligação da avulsa), o próprio protocolo ocupa o lugar:
             // a unicidade é por canal e número, e dois vazios colidiriam no Oracle.
@@ -209,6 +231,8 @@ class DenunciasController extends Controller
             'area_id' => Area::sugeridaParaBairro((string) $dados['bairro'])?->id,
             'criada_por_id' => Auth::id(),
         ]);
+
+        $this->guardarAnexos($demanda, (array) $request->file('anexos', []));
 
         $demanda->tramites()->create([
             'ordem' => 1,
@@ -268,6 +292,9 @@ class DenunciasController extends Controller
             'endereco' => ['required', 'string', 'max:200'],
             'bairro' => ['required', 'string', 'max:80'],
             'descricao' => ['nullable', 'string', 'max:2000'],
+            // Os arquivos que vieram com o pedido (o ofício digitalizado, o e-mail,
+            // a foto): até cinco, 10 MB cada, só documento e imagem.
+            ...self::regrasDeAnexo(),
             // Uma equipe só: fica implícita. Mais de uma (ou administrador): escolhe.
             'equipe' => [
                 count($minhas) === 1 ? 'nullable' : 'required',
@@ -311,6 +338,8 @@ class DenunciasController extends Controller
             'area_id' => $equipe->area_id,
             'criada_por_id' => Auth::id(),
         ]);
+
+        $this->guardarAnexos($demanda, (array) $request->file('anexos', []));
 
         $demanda->tramites()->create([
             'ordem' => 1,
@@ -592,10 +621,9 @@ class DenunciasController extends Controller
         return Inertia::render("Retaguarda/Denuncias/{$pagina}", [
             'canal' => $configuracao,
             /*
-             * Esta pessoa REGISTRA este canal aqui? Só quando o canal é digitado
-             * pelo líder (`registro = lider`) e ela lidera uma equipe — ou é o
-             * administrador, que cobre a ausência. O chefe não: o que chega a ele
-             * entra pela Caixa.
+             * Esta pessoa REGISTRA este canal aqui? O chefe registra em todas as
+             * caixas; o líder, no Fala Salvador; o administrador, onde o canal pede.
+             * Ver `comoRegistra`.
              */
             'registra' => self::registra($usuario, $canal),
             /*
@@ -608,7 +636,9 @@ class DenunciasController extends Controller
                     'slug' => $c,
                     'nome' => (string) config("demandas.canais.{$c}.nome"),
                     'admite_anonima' => (bool) config("demandas.canais.{$c}.admite_anonima"),
-                    'registro' => config("demandas.canais.{$c}.registro"),
+                    'tem_anexo' => (bool) config("demandas.canais.{$c}.tem_anexo"),
+                    // Como ESTA pessoa registra aqui — o chefe no Fala Salvador registra como chefe.
+                    'registro' => self::comoRegistra($usuario, $c),
                 ],
                 array_filter(
                     $canal === Demanda::CANAL_E_SALVADOR
@@ -684,15 +714,77 @@ class DenunciasController extends Controller
      * Esta pessoa CADASTRA neste canal? O líder, no canal que é dele (o Fala
      * Salvador); o chefe, nos demais; o administrador, em todos.
      */
+    /**
+     * As regras dos anexos do cadastro manual — uma vez só, para os dois
+     * caminhos de registro (o do chefe e o do líder).
+     */
+    /** @return array<string, list<mixed>> */
+    private static function regrasDeAnexo(): array
+    {
+        return [
+            'anexos' => ['nullable', 'array', 'max:5'],
+            'anexos.*' => ['file', 'max:10240', new ArquivoSeguro([...ArquivoSeguro::DOCUMENTOS, ...ArquivoSeguro::IMAGENS])],
+        ];
+    }
+
+    /**
+     * Guarda os arquivos que vieram com a demanda, no disco PRIVADO — eles só
+     * saem pela rota de anexos, que confere quem pede. O nome no disco é gerado
+     * (o enviado vira só o rótulo): servir pelo nome enviado é o caminho
+     * conhecido para atravessar diretório.
+     *
+     * @param  array<int, UploadedFile>  $arquivos
+     */
+    private function guardarAnexos(Demanda $demanda, array $arquivos): void
+    {
+        foreach ($arquivos as $arquivo) {
+            if (! $arquivo instanceof UploadedFile || ! $arquivo->isValid()) {
+                continue;
+            }
+
+            $extensao = strtolower($arquivo->getClientOriginalExtension() ?: 'bin');
+            $caminho = $arquivo->storeAs('demandas/'.$demanda->id, Str::uuid()->toString().'.'.$extensao, ArquivoParaTela::DISCO);
+
+            DemandaAnexo::create([
+                'demanda_id' => $demanda->id,
+                'nome' => mb_substr(basename($arquivo->getClientOriginalName()), 0, 200),
+                'caminho' => $caminho,
+                'tipo' => $arquivo->getMimeType(),
+                'bytes' => $arquivo->getSize(),
+            ]);
+        }
+    }
+
     private static function registra(?User $usuario, string $canal): bool
     {
+        return self::comoRegistra($usuario, $canal) !== null;
+    }
+
+    /**
+     * COMO esta pessoa registra neste canal: `lider` (a demanda nasce na mesa
+     * dela, já com a equipe), `chefe` (nasce Recebida, para encaminhar) ou nulo
+     * (não registra).
+     *
+     * O canal do líder (Fala Salvador) aceita também o chefe (dono, 25/09/2026):
+     * enquanto não há integração, o que chega ao chefe por lá precisa entrar. Quem
+     * é líder E chefe registra como líder — é o caminho que o canal pede. O
+     * administrador registra como o canal pede.
+     *
+     * @return 'lider'|'chefe'|null
+     */
+    private static function comoRegistra(?User $usuario, string $canal): ?string
+    {
+        $doLider = config("demandas.canais.{$canal}.registro") === 'lider';
+
         if ($usuario?->ehAdmin() ?? false) {
-            return true;
+            return $doLider ? 'lider' : 'chefe';
         }
 
-        return config("demandas.canais.{$canal}.registro") === 'lider'
-            ? Papel::ehLider($usuario)
-            : Papel::ehChefe($usuario);
+        if ($doLider && Papel::ehLider($usuario)) {
+            return 'lider';
+        }
+
+        return Papel::ehChefe($usuario) ? 'chefe' : null;
     }
 
     /**

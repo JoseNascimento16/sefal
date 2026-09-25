@@ -1,18 +1,15 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     ChevronDown,
-    LogOut,
     PanelLeftClose,
     PanelLeftOpen,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { iconeDoMenu } from '@/lib/icones-menu';
 import { cn } from '@/lib/utils';
-import { logout } from '@/routes';
 import { inicio } from '@/routes/retaguarda';
 import type { MenuContador, MenuItem } from '@/types/navigation';
 
@@ -98,10 +95,8 @@ export function Sidebar({
      */
     onAbrirPainel: (painel: string) => void;
 }) {
-    const { menu, auth } = usePage().props;
+    const { menu } = usePage().props;
     const { isCurrentUrl } = useCurrentUrl();
-    const [confirmandoSaida, setConfirmandoSaida] = useState(false);
-    const [saindo, setSaindo] = useState(false);
 
     /**
      * As pastas que a PESSOA abriu ou fechou à mão.
@@ -174,20 +169,6 @@ export function Sidebar({
         };
     }, [flutuante]);
 
-    /** Iniciais para o avatar — duas letras, ou "?" quando não há nome. */
-    const iniciais =
-        (auth.user?.name ?? '')
-            .trim()
-            .split(/\s+/)
-            .slice(0, 2)
-            .map((p) => p[0] ?? '')
-            .join('')
-            .toUpperCase() || '?';
-
-    /** O papel de quem entrou: o primeiro setor, ou o desvio do administrador. */
-    const papel = auth.user?.admin
-        ? 'Administrador'
-        : (auth.user?.setores[0] ?? 'Sem setor definido');
 
     /**
      * O clique de um item — navegar ou abrir painel. Está aqui, e não duplicado
@@ -422,27 +403,6 @@ export function Sidebar({
         );
     }
 
-    /** Sair PERGUNTA antes: a sessão leva embora formulário aberto. */
-    const perguntaDeSaida = confirmandoSaida && (
-        <ModalConfirm
-            titulo="Sair do sistema?"
-            mensagem="A sessão é encerrada e o que estiver preenchido em formulário aberto se perde. Para entrar de novo você precisa da matrícula e da senha."
-            rotuloConfirmar="Sair do sistema"
-            rotuloCancelar="Continuar no sistema"
-            iconeConfirmar={<LogOut size={16} aria-hidden />}
-            destrutiva
-            processando={saindo}
-            onCancelar={() => setConfirmandoSaida(false)}
-            onConfirmar={() => {
-                setSaindo(true);
-                // A limpeza dos dados em memória vem ANTES do pedido: o aparelho
-                // pode ser compartilhado, e o histórico de navegação do Inertia
-                // guarda as telas já visitadas.
-                router.flushAll();
-                router.post(logout().url);
-            }}
-        />
-    );
 
     /*
      * O painel flutuante mora no `<body>`, e não dentro da doca: a fila de itens da
@@ -521,20 +481,10 @@ export function Sidebar({
                         >
                             <PanelLeftOpen size={19} aria-hidden />
                         </button>
-                        <button
-                            type="button"
-                            className="rt-doca-avatar"
-                            title={`${auth.user?.name ?? ''} — sair do sistema`}
-                            aria-label="Sair do sistema"
-                            onClick={() => setConfirmandoSaida(true)}
-                        >
-                            {iniciais}
-                        </button>
                     </div>
                 </aside>
 
                 {painelDaPasta}
-                {perguntaDeSaida}
             </>
         );
     }
@@ -616,31 +566,8 @@ export function Sidebar({
                     ))}
                 </nav>
 
-                {/* O cartão de quem entrou, no pé: identidade e saída no mesmo
-                    lugar, longe das ações de trabalho. */}
-                <div className="rt-usuario-cartao">
-                    <span className="rt-avatar" aria-hidden>
-                        {iniciais}
-                    </span>
-                    <span className="rt-usuario-texto">
-                        <span className="rt-usuario-nome">
-                            {auth.user?.name ?? ''}
-                        </span>
-                        <span className="rt-usuario-papel">{papel}</span>
-                    </span>
-                    <button
-                        type="button"
-                        className="rt-usuario-sair"
-                        title="Sair do sistema"
-                        aria-label="Sair do sistema"
-                        onClick={() => setConfirmandoSaida(true)}
-                    >
-                        <LogOut size={16} aria-hidden />
-                    </button>
-                </div>
             </aside>
 
-            {perguntaDeSaida}
         </>
     );
 }

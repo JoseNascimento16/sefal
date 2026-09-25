@@ -12,6 +12,8 @@ export interface CanalDeRegistro {
     nome: string;
     admite_anonima: boolean;
     registro?: 'chefe' | 'lider';
+    /** O canal recebe arquivo junto (ofício digitalizado, e-mail, foto)? */
+    tem_anexo?: boolean;
 }
 
 /**
@@ -140,6 +142,8 @@ function Formulario({
     const opcoes = equipesDoLider.length > 0 ? equipesDoLider : equipes.map((e) => e.equipe);
 
     const vazio = {
+        // Só a avulsa usa: de onde veio o pedido (dono, 25/09/2026 — o ofício é um tipo de avulsa).
+        tipo_avulsa: 'pedido-de-superior',
         documento_origem: '',
         recebida_em: hoje,
         anonima: false,
@@ -153,6 +157,9 @@ function Formulario({
     };
 
     const [form, setForm] = useState({ ...vazio });
+    // Os arquivos ficam fora do `form`: arquivo não se "limpa" trocando o valor do campo.
+    const [anexos, setAnexos] = useState<File[]>([]);
+    const [chaveDoCampoDeArquivo, setChaveDoCampoDeArquivo] = useState(0);
     const [erros, setErros] = useState<Record<string, string>>({});
 
     function mudar<C extends keyof typeof vazio>(campo: C, valor: (typeof vazio)[C]) {
@@ -178,15 +185,20 @@ function Formulario({
             {
                 ...form,
                 documento_origem: form.documento_origem.trim() === '' ? null : form.documento_origem,
+                tipo_avulsa: avulsa ? form.tipo_avulsa : null,
                 equipe: form.equipe || null,
                 anonima: canal.admite_anonima ? form.anonima : false,
                 requerente: form.anonima ? null : form.requerente,
                 contato: form.anonima ? null : form.contato,
+                // Com arquivo, o Inertia manda como formulário multipart sozinho.
+                anexos: canal.tem_anexo ? anexos : [],
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
                     setForm({ ...vazio });
+                    setAnexos([]);
+                    setChaveDoCampoDeArquivo((n) => n + 1);
                     setErros({});
                     aoRegistrar();
                 },
@@ -233,9 +245,31 @@ function Formulario({
                     </div>
                 )}
 
+                {avulsa && (
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="rd-tipo-avulsa">
+                            Chegou como {obrigatorio}
+                        </label>
+                        <select
+                            id="rd-tipo-avulsa"
+                            className="form-control"
+                            value={form.tipo_avulsa}
+                            onChange={(e) => mudar('tipo_avulsa', e.target.value)}
+                        >
+                            <option value="pedido-de-superior">Pedido de superior (ligação ou e-mail)</option>
+                            <option value="oficio">Ofício de órgão ou do Ministério Público</option>
+                        </select>
+                        {erro('tipo_avulsa')}
+                    </div>
+                )}
+
                 <div className="form-group">
                     <label className="form-label" htmlFor="rd-documento">
-                        Nº no {canal.nome} {avulsa ? '(se houver)' : obrigatorio}
+                        {avulsa ? (
+                            form.tipo_avulsa === 'oficio' ? 'Nº do ofício (se houver)' : 'Nº do e-mail (se houver)'
+                        ) : (
+                            <>Nº no {canal.nome} {obrigatorio}</>
+                        )}
                     </label>
                     <input
                         id="rd-documento"
@@ -243,7 +277,13 @@ function Formulario({
                         className="form-control"
                         value={form.documento_origem}
                         maxLength={40}
-                        placeholder={avulsa ? 'Nº do e-mail ou ofício, se houver' : 'O número que o canal deu'}
+                        placeholder={
+                            avulsa
+                                ? form.tipo_avulsa === 'oficio'
+                                    ? 'Ex.: Ofício nº 123/2026'
+                                    : 'Foi uma ligação? Deixe em branco'
+                                : 'O número que o canal deu'
+                        }
                         onChange={(e) => mudar('documento_origem', e.target.value)}
                     />
                     {erro('documento_origem')}
@@ -304,7 +344,7 @@ function Formulario({
                 <div className="rt-form-linha">
                     <div className="form-group">
                         <label className="form-label" htmlFor="rd-requerente">
-                            {avulsa ? 'Quem pediu' : 'Requerente'} {obrigatorio}
+                            {avulsa ? (form.tipo_avulsa === 'oficio' ? 'Órgão que enviou' : 'Quem pediu') : 'Requerente'} {obrigatorio}
                         </label>
                         <input
                             id="rd-requerente"
@@ -411,6 +451,35 @@ function Formulario({
                     onChange={(e) => mudar('descricao', e.target.value)}
                 />
             </div>
+
+            {canal.tem_anexo && (
+                <div className="form-group">
+                    <label className="form-label" htmlFor="rd-anexos">
+                        Anexos
+                    </label>
+                    <input
+                        key={chaveDoCampoDeArquivo}
+                        id="rd-anexos"
+                        type="file"
+                        className="form-control"
+                        multiple
+                        accept=".pdf,.doc,.docx,.odt,.txt,.rtf,.jpg,.jpeg,.png,.webp,.gif,.bmp"
+                        onChange={(e) => setAnexos(Array.from(e.target.files ?? []))}
+                    />
+                    <p className="form-ajuda">
+                        O ofício digitalizado, o e-mail, a foto — até cinco arquivos de até 10 MB, em PDF, documento
+                        ou imagem. Ficam na demanda e podem ser vistos e baixados por quem trabalha nela.
+                    </p>
+                    {erro('anexos')}
+                    {Object.keys(erros)
+                        .filter((chave) => chave.startsWith('anexos.'))
+                        .map((chave) => (
+                            <p key={chave} className="form-ajuda" style={{ color: 'var(--sm-perigo)' }}>
+                                {erros[chave]}
+                            </p>
+                        ))}
+                </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <BotaoAcao

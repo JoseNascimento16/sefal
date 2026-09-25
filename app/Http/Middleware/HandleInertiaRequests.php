@@ -180,6 +180,12 @@ class HandleInertiaRequests extends Middleware
             'login' => $user->login,
             'admin' => $user->ehAdmin(),
             'setores' => $user->setores->pluck('slug')->all(),
+            /*
+             * Abre a tela de Usuários? O atalho dela mora no menu da CONTA, no
+             * canto superior direito (dono, 25/09/2026), e não no menu lateral —
+             * por isso a pergunta vem aqui, respondida pela mesma matriz.
+             */
+            'administra_usuarios' => app(PermissaoService::class)->pode($user, 'usuarios', 'visivel'),
         ];
     }
 

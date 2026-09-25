@@ -50,7 +50,7 @@ test('a senha nao viaja para a tela', function () {
         );
 });
 
-test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () {
+test('o menu traz o inicio e o trabalho da fiscalizacao — o perfil saiu para o menu da conta', function () {
     /*
      * O que se afirma aqui é a MONTAGEM do menu — as seções e os itens que o
      * servidor entrega —, não o controle de acesso. Por isso o usuário é um
@@ -71,9 +71,11 @@ test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () 
             $itens = $menu->pluck('itens')->flatten(1);
             $rotulos = $itens->pluck('rotulo');
 
+            // Meu Perfil saiu do menu lateral e foi para o menu da CONTA, no canto
+            // superior direito (dono, 25/09/2026) — ver `MenuDaContaTest`.
             expect($rotulos)
                 ->toContain('Início')
-                ->toContain('Meu Perfil');
+                ->not->toContain('Meu Perfil');
 
             /*
              * ⚠️ AMBULANTES MUDOU DE LUGAR. Ele era item de primeiro nível da

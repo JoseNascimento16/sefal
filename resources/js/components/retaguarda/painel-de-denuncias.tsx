@@ -1,17 +1,16 @@
 import {
+    ArrowLeft,
     CornerUpLeft,
     FileText,
-    Info,
     Inbox,
+    Info,
     ListChecks,
     MapPinOff,
-    Paperclip,
     Send,
     Siren,
     TriangleAlert,
     UserRound,
     UserX,
-    X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -20,6 +19,7 @@ import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
+import { ListaDeArquivos } from '@/components/retaguarda/lista-de-arquivos';
 import { RegistroDeDemanda } from '@/components/retaguarda/registro-de-demanda';
 import type { CanalDeRegistro } from '@/components/retaguarda/registro-de-demanda';
 import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
@@ -627,6 +627,7 @@ export function PainelDeDenuncias({
             return casaTermos(termos, [
                 d.protocolo,
                 d.protocolo_origem,
+                d.tipo_avulsa_nome,
                 d.anonima ? 'anonimo' : d.requerente,
                 d.telefone,
                 d.email,
@@ -876,9 +877,17 @@ export function PainelDeDenuncias({
         vencida: boolean,
     ): { conteudo: ReactNode; dica?: string; interativa?: boolean } {
         if (chave === 'protocolo') {
+            // O ofício ganha selo: é a avulsa que costuma pedir resposta formal.
             return {
-                conteudo: d.protocolo,
-                dica: `${d.protocolo} · ${canal.nome} ${d.protocolo_origem}`,
+                conteudo:
+                    d.tipo_avulsa === 'oficio' ? (
+                        <>
+                            {d.protocolo} <span className="selo selo-info">Ofício</span>
+                        </>
+                    ) : (
+                        d.protocolo
+                    ),
+                dica: `${d.protocolo} · ${canal.nome}${d.tipo_avulsa_nome ? ` (${d.tipo_avulsa_nome})` : ''} ${d.protocolo_origem}`,
             };
         }
 
@@ -969,6 +978,7 @@ export function PainelDeDenuncias({
     const linhasExportacao = ord.itens.map((d) => ({
         protocolo: d.protocolo,
         protocolo_origem: d.protocolo_origem,
+        tipo: d.tipo_avulsa_nome ?? VAZIO,
         recebida: dataHoraBR(d.recebida_em_hora),
         requerente: quemDenunciou(d),
         assunto: d.assunto,
@@ -1426,7 +1436,8 @@ export function PainelDeDenuncias({
                         <div className="rt-detalhe-cabeca">
                             <div>
                                 <p className="sobrancelha">
-                                    {canal.nome} · {aberta.protocolo_origem}
+                                    {canal.nome}
+                                    {aberta.tipo_avulsa_nome ? ` · ${aberta.tipo_avulsa_nome}` : ''} · {aberta.protocolo_origem}
                                 </p>
                                 <h2 className="card-titulo">{aberta.assunto}</h2>
                                 <p className="card-sub">
@@ -1576,19 +1587,12 @@ export function PainelDeDenuncias({
 
                             {canal.tem_anexo && (
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <dt>Anexos do cidadão</dt>
+                                    <dt>Anexos</dt>
                                     <dd>
-                                        {aberta.anexos.length === 0
-                                            ? 'O cidadão não anexou nada.'
-                                            : aberta.anexos.map((nome) => (
-                                                  <span
-                                                      key={nome}
-                                                      className="selo selo-neutro"
-                                                      style={{ marginRight: 6 }}
-                                                  >
-                                                      <Paperclip size={12} aria-hidden /> {nome}
-                                                  </span>
-                                              ))}
+                                        <ListaDeArquivos
+                                            arquivos={aberta.anexos_arquivos ?? []}
+                                            vazio="Nenhum arquivo veio com a demanda."
+                                        />
                                     </dd>
                                 </div>
                             )}
@@ -1749,7 +1753,7 @@ export function PainelDeDenuncias({
                             className="btn btn-secondary btn-sm"
                             onClick={() => trocarAba(abaPrincipal)}
                         >
-                            <X size={15} aria-hidden /> Fechar a demanda
+                            <ArrowLeft size={15} aria-hidden /> Voltar
                         </button>
                     </>
                 )}

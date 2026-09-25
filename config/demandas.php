@@ -116,22 +116,18 @@ return [
             'retorno_em' => 'e-Salvador',
         ],
 
-        Demanda::CANAL_OFICIO => [
-            'nome' => 'Ofício',
-            'sistema' => 'Ofício de órgão ou do Ministério Público',
-            'artigo' => 'o',
-            'entrada_padrao' => Demanda::ENTRADA_BALCAO,
-            'admite_anonima' => false,
-            'tem_anexo' => true,
-            'agrupa' => false,
-            'registro' => 'chefe',
-        ],
-
+        /*
+         * ⚠️ O OFÍCIO não é mais canal (dono, 25/09/2026): é um TIPO de avulsa
+         * (`Demanda::TIPOS_AVULSA`), com o mesmo destino — depois da
+         * fiscalização, o chefe decide se vira processo no e-Salvador. Os que
+         * existiam foram convertidos pela migration
+         * `2026_09_25_100000_oficio_vira_tipo_de_avulsa`.
+         */
         Demanda::CANAL_AVULSA => [
             'nome' => 'Avulsa',
             // O nome da CAIXA (a tela), no plural — o `nome` é o de cada demanda.
             'titulo' => 'Avulsas',
-            'sistema' => 'ligação ou e-mail de superior ao Chefe de Setor',
+            'sistema' => 'ligação ou e-mail de superior, ou ofício de órgão ou do Ministério Público',
             'artigo' => 'a',
             'entrada_padrao' => Demanda::ENTRADA_BALCAO,
             // Quem pede é um superior identificado; o "requerente" é ele.

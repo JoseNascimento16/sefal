@@ -414,6 +414,9 @@ return [
                     'icone' => 'perfil',
                     'curto' => 'PERFIL',
                     'setores' => [],
+                    // O atalho mora no menu da CONTA, no canto superior direito
+                    // (dono, 25/09/2026), como no Codecon.
+                    'oculto' => true,
                 ],
 
                 [
@@ -448,6 +451,20 @@ return [
                             'icone' => 'areas',
                             'slug' => 'areas-e-equipes',
                             'curto' => 'ÁREAS',
+                            'setores' => ['administrador', 'chefe-de-setor'],
+                        ],
+                        [
+                            /*
+                             * Equipes — quem está em cada equipe: o líder (a conta
+                             * que recebe o trabalho) e os fiscais (dono, 25/09/2026).
+                             * Mesma concessão de Áreas e Equipes: quem desenha a
+                             * estrutura é a gestão.
+                             */
+                            'rotulo' => 'Equipes',
+                            'rota' => 'retaguarda.equipes.index',
+                            'icone' => 'usuarios',
+                            'slug' => 'equipes',
+                            'curto' => 'EQUIPES',
                             'setores' => ['administrador', 'chefe-de-setor'],
                         ],
                         [
@@ -516,6 +533,10 @@ return [
                     'curto' => 'USUÁRIOS',
                     'slug' => 'usuarios',
                     'setores' => ['administrador'],
+                    // Fora do menu lateral: o atalho fica no menu da CONTA, no canto
+                    // superior direito (dono, 25/09/2026). A tela continua na
+                    // matriz do Modo Gerente — `oculto` tira o atalho, não o acesso.
+                    'oculto' => true,
                 ],
                 [
                     'rotulo' => 'Relatórios',

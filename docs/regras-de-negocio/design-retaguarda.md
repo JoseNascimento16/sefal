@@ -47,7 +47,7 @@ O que era da barra se dividiu:
 | Antes, na barra | Agora |
 |---|---|
 | Trilha de navegação | A sobrancelha + o título dizem os mesmos dois níveis, com mais presença. A trilha só é desenhada quando tem **mais de um nível** (aí ela diz o caminho de volta, que o título não diz) |
-| Identidade e **Sair** | Cartão do usuário no pé do painel |
+| Identidade, **Meu Perfil**, **Usuários** e **Sair** | Menu da conta no canto superior direito (avatar com o nome, `.rt-conta-botao`), como no Codecon — desde 25/09/2026; antes, cartão do usuário no pé do painel |
 | Tema e avisos | Cluster discreto no canto superior direito do miolo (`.rt-cluster`) — sem fundo, sem borda, sem reservar altura |
 | Botão de abrir o menu | Não existe: o menu está **sempre à vista** (RN-04) |
 
@@ -83,7 +83,7 @@ mais por requisição para cada um.
 
 | Forma | Quando | Como é |
 |---|---|---|
-| **Painel estendido** (292px) | ≥ 1100px, por preferência da pessoa | Nome do item, contador à direita, cartão do usuário no pé |
+| **Painel estendido** (292px) | ≥ 1100px, por preferência da pessoa | Nome do item, contador à direita |
 | **Doca** (96px) | preferência da pessoa, **ou** largura < 1100px | Cartão navy flutuante, destacado das bordas; ícone + rótulo curto; contador virando selo no canto |
 | **Barra inferior** | < 620px | A mesma doca, deitada no pé da tela, itens rolando na horizontal |
 
@@ -277,6 +277,7 @@ como o menu (RN-01); o formulário de acesso, esse sim, acompanha o tema.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 25/09/2026 | José Nascimento | Casca | Identidade, Meu Perfil, Usuários e Sair saem do menu lateral (cartão do pé do painel e avatar da doca) e vão para o **menu da conta**, no canto superior direito, ao lado de tema e avisos — como no Codecon. Meu Perfil e Usuários ficam `oculto` no menu: o atalho sai, a tela e a permissão ficam. | Pedido do dono. |
 | 09/09/2026 | José Nascimento | Casca da Retaguarda | A RN-05 passa a apontar para o **padrão de listagem** ([`docs/padroes/listagem-clean.md`](../padroes/listagem-clean.md)): grade enxuta, uma linha por registro com **altura fixa** (`table.data-table.enxuta`, 56px na célula), corte com reticências pelo `.celula-1l` com o texto inteiro no `title`, no máximo cinco colunas, texto livre fora da grade, detalhe no clique e **exportação completa**. As colunas da grade e as do arquivo passam a ser declaradas no servidor (`config/listagens_da_retaguarda.php`), com a de **área** condicional a quem varre mais de uma. | Ordem do dono (09/09/2026): _"as listagens estão muito poluídas, muita informação quebrando linha de forma irregular… deixe a informação detalhada para quando o usuário clicar"_. A régua e o porquê de cada item ficam em [`docs/padroes/listagem-clean.md`](../padroes/listagem-clean.md) — este doc aponta para lá em vez de repetir a régua. |
 | 09/09/2026 | José Nascimento | Casca da Retaguarda | **O andaime das telas em preparação foi removido** (RN-09): a última tela do catálogo passou a existir, e com ela saíram o controller, a página `EmPreparacao` e o `.prep-*` do CSS. A regra de produto ficou escrita para ser refeita de propósito quando o plano voltar a andar na frente das telas, e a lei que a guardava mudou de forma — passou a exigir que **toda tela do menu** tenha conteúdo próprio, e não só as quatro que estavam listadas. Nasceu a lista de **marcadores** (`.rt-marcadores`), para escolher muitos valores irmãos de um conjunto (as equipes de uma operação, os bairros que ela alcança), distinta do cartão de escolha, que é para escolher entre caminhos com consequências diferentes. | Andaime sem morador é a armadilha seguinte à que ele resolvia, e pior que ela: um laço sobre catálogo vazio passa sem verificar nada, e a lei morre sem ninguém notar. |
 | 27/08/2026 | José Nascimento | Casca da Retaguarda | Criação do doc. A casca passa a ser a "editorial curva" (RN-01), a barra superior sai e o topo da tela vira o cabeçalho da página (RN-02), o menu ganha número vivo declarado por item (RN-03) e duas formas — painel e doca, com barra inferior no telefone (RN-04); as linhas de grade viram cartões com marca de pendência e chip com ponto (RN-05); números de cabeçalho saem da própria lista da tela (RN-06). Registrada a diretriz para as telas de mapa (RN-07). | A casca anterior era genérica: barra superior repetindo o título em corpo 13, menu branco encostado em miolo branco, grade de linhas sem hierarquia e nenhum número à vista — quem abria o sistema não sabia por onde começar o dia. O menu, abaixo de 900px, ficava escondido atrás de um hambúrguer. |

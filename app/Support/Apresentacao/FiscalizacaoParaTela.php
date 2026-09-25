@@ -62,6 +62,9 @@ class FiscalizacaoParaTela
             'fotos' => $f->relationLoaded('fotos')
                 ? $f->fotos->map(static fn ($foto): string => (string) ($foto->legenda ?? basename($foto->caminho)))->values()->all()
                 : [],
+            // As mesmas fotos como ARQUIVOS: para ver e baixar (dono, 25/09/2026).
+            'arquivos' => ($f->relationLoaded('fotos') ? $f->fotos : $f->fotos()->get())
+                ->map(ArquivoParaTela::foto(...))->values()->all(),
 
             'desfecho' => $f->desfecho,
             'consideracoes' => $f->consideracoes,

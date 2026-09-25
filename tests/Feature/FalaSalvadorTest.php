@@ -109,19 +109,44 @@ it('o registro aparece na tela do canal, para o próprio líder direcionar', fun
             ->where('denuncias.0.canal', Demanda::CANAL_FALA_SALVADOR));
 });
 
-it('o Chefe de Setor não registra o Fala Salvador — o canal é dos líderes', function () {
+it('o Chefe de Setor TAMBÉM registra o Fala Salvador — e o caso nasce Recebida, na mesa dele', function () {
+    /*
+     * Era só do líder até 25/09/2026. O dono mudou: sem integração, o que chega
+     * ao chefe pelo canal também precisa entrar. O chefe registra do jeito dele —
+     * a demanda nasce Recebida e sem equipe, e ele encaminha depois —, e o
+     * líder continua registrando já na própria mesa.
+     */
     equipeComLider();
     $chefe = comPapel('chefe-de-setor');
 
     $this->actingAs($chefe)
         ->get(route('retaguarda.denuncias.fala-salvador.index'))
         ->assertOk()
-        ->assertInertia(fn ($p) => $p->where('registra', false));
+        ->assertInertia(fn ($p) => $p
+            ->where('registra', true)
+            ->where('registroEm.0.slug', 'fala-salvador')
+            ->where('registroEm.0.registro', 'chefe'));
 
     $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao())
-        ->assertRedirect()
-        ->assertSessionHas('flash.erro', fn (string $r): bool => str_contains($r, 'líder'));
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('flash.sucesso');
+
+    $demanda = Demanda::firstOrFail();
+
+    expect($demanda->canal)->toBe(Demanda::CANAL_FALA_SALVADOR)
+        ->and($demanda->situacao)->toBe(Demanda::RECEBIDA)
+        ->and($demanda->equipe_id)->toBeNull()
+        ->and($demanda->anonima)->toBeTrue()
+        ->and($demanda->ultimoTramite()->papel)->toBe(DemandaTramite::PAPEL_CHEFE_DE_SETOR);
+});
+
+it('o fiscal não registra o Fala Salvador, e é recusado com o motivo', function () {
+    $fiscal = comPapel('fiscal');
+
+    $this->actingAs($fiscal)
+        ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao())
+        ->assertSessionHas('flash.erro');
 
     expect(Demanda::count())->toBe(0);
 });

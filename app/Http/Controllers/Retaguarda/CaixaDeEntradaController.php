@@ -302,6 +302,8 @@ class CaixaDeEntradaController extends Controller
         $demanda = Demanda::create([
             'protocolo' => Protocolo::proximo('DEM', modelClass: Demanda::class),
             'canal' => $canal,
+            // Nesta tela antiga não se escolhe o tipo: a avulsa é pedido de superior.
+            'tipo_avulsa' => $canal === Demanda::CANAL_AVULSA ? Demanda::AVULSA_SUPERIOR : null,
             'entrada' => Demanda::ENTRADA_BALCAO,
             'numero_origem' => $dados['documento_origem'],
             'recebida_em' => $recebida,
@@ -453,6 +455,7 @@ class CaixaDeEntradaController extends Controller
             }
         }
 
-        return Demanda::CANAL_OFICIO;
+        // O que chega por fora dos canais é avulsa (o ofício virou tipo dela).
+        return Demanda::CANAL_AVULSA;
     }
 }

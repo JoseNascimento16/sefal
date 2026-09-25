@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { ListaDeArquivos } from '@/components/retaguarda/lista-de-arquivos';
 import type {
     CampoLido,
     DocumentoDeCampo,
@@ -79,7 +80,7 @@ import { cn } from '@/lib/utils';
 
 /** Quantas fotos o passo registrou — o número que vira selo na linha do tempo. */
 function totalDeFotos(t: TramiteDenuncia): number {
-    return t.campo?.fotos.length ?? 0;
+    return t.campo?.arquivos?.length ?? 0;
 }
 
 /**
@@ -222,22 +223,13 @@ function RegistroEmCampo({ campo }: { campo: RegistroDeCampo }) {
                 </p>
             )}
 
-            {campo.fotos.length > 0 && (
+            {(campo.arquivos?.length ?? 0) > 0 && (
                 <div style={{ marginTop: 10 }}>
                     <p className="form-ajuda" style={{ marginBottom: 6 }}>
-                        {contar(campo.fotos.length, 'foto', 'fotos')}{' '}
-                        {plural(campo.fotos.length, 'registrada', 'registradas')} pelo
-                        aplicativo do fiscal:
+                        <Camera size={14} aria-hidden /> {contar(campo.arquivos?.length ?? 0, 'foto', 'fotos')}{' '}
+                        {plural(campo.arquivos?.length ?? 0, 'registrada', 'registradas')} pelo aplicativo do fiscal:
                     </p>
-                    {campo.fotos.map((foto) => (
-                        <span
-                            key={foto}
-                            className="selo selo-neutro"
-                            style={{ marginRight: 6, marginBottom: 4 }}
-                        >
-                            <Camera size={12} aria-hidden /> {foto}
-                        </span>
-                    ))}
+                    <ListaDeArquivos arquivos={campo.arquivos ?? []} />
                 </div>
             )}
         </Secao>

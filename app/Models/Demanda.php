@@ -59,7 +59,7 @@ use InvalidArgumentException;
  * @property-read Collection<int, DemandaTramite> $tramites
  */
 #[Fillable([
-    'protocolo', 'canal', 'entrada', 'numero_origem', 'recebida_em', 'prazo_em',
+    'protocolo', 'canal', 'tipo_avulsa', 'entrada', 'numero_origem', 'recebida_em', 'prazo_em',
     'anonima', 'requerente', 'documento', 'email', 'telefone',
     'assunto', 'relato', 'estabelecimento', 'denunciado', 'documento_denunciado',
     'logradouro', 'numero', 'referencia', 'bairro', 'endereco_impreciso', 'latitude', 'longitude',
@@ -89,14 +89,39 @@ class Demanda extends Model
 
     public const CANAL_NOVA_LICENCA = 'nova-licenca';
 
+    /**
+     * O canal que o ofício TINHA até 25/09/2026. Hoje o ofício é um TIPO de
+     * avulsa ({@see AVULSA_OFICIO}) e nenhum registro nasce com este canal — a
+     * constante fica só para a migration que converteu os antigos
+     * (`2026_09_25_100000_oficio_vira_tipo_de_avulsa`). Fora de {@see CANAIS}.
+     */
     public const CANAL_OFICIO = 'oficio';
 
     /**
-     * Ligação ou e-mail de um superior ao Chefe de Setor pedindo uma ação. Não
-     * chega por sistema nenhum: o chefe registra, encaminha ao líder e, ao
-     * final, abre o processo no e-Salvador com o resultado.
+     * Pedido que chega ao Chefe de Setor por fora dos canais: a ligação ou o
+     * e-mail de um superior, ou o OFÍCIO de um órgão ou do Ministério Público
+     * ({@see TIPOS_AVULSA}). Não chega por sistema nenhum: o chefe registra,
+     * encaminha ao líder e, ao final, decide se abre processo no e-Salvador com
+     * o resultado ou encerra só com a fiscalização.
      */
     public const CANAL_AVULSA = 'avulsa';
+
+    /** A avulsa pedida por um superior, por ligação ou e-mail. */
+    public const AVULSA_SUPERIOR = 'pedido-de-superior';
+
+    /** A avulsa que chegou como ofício de órgão ou do Ministério Público. */
+    public const AVULSA_OFICIO = 'oficio';
+
+    /**
+     * Os tipos de avulsa, com o nome que a tela mostra (dono, 25/09/2026: "pode
+     * considerar um ofício como um subtipo de avulsa").
+     *
+     * @var array<string, string>
+     */
+    public const TIPOS_AVULSA = [
+        self::AVULSA_SUPERIOR => 'Pedido de superior',
+        self::AVULSA_OFICIO => 'Ofício',
+    ];
 
     /**
      * O atendimento PRESENCIAL na sede da SEFAL (o sistema e-Protocolo). A quarta
@@ -110,7 +135,6 @@ class Demanda extends Model
         self::CANAL_E_SALVADOR,
         self::CANAL_FALA_SALVADOR,
         self::CANAL_NOVA_LICENCA,
-        self::CANAL_OFICIO,
         self::CANAL_AVULSA,
         self::CANAL_E_PROTOCOLO,
     ];

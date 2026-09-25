@@ -211,7 +211,8 @@ return [
                 .'a conta com histórico, que fica guardada. O Chefe de Setor é um só (marcar outro tira o '
                 .'setor de quem tinha, com aviso antes de salvar); administrador só se dá entre '
                 .'administradores; ninguém tira o próprio acesso de administrador, se desativa ou se exclui. '
-                .'Só o administrador abre a tela.',
+                .'Só o administrador abre a tela. O atalho fica no menu da CONTA, no canto superior direito '
+                .'(com Meu Perfil e Sair), como no Codecon — não no menu lateral.',
         ],
 
         [
@@ -573,8 +574,9 @@ return [
                 .'anônima ou quem ligou, endereço, bairro, assunto, relato; a equipe fica implícita para '
                 .'quem lidera uma só e é escolhida por quem lidera várias — só entre as suas), e o caso '
                 .'nasce JÁ NA MESA DELE (Encaminhada ao líder), sem passar pelo chefe, para ele direcionar '
-                .'aos fiscais; a resposta ao cidadão continua no Fala Salvador. O Chefe de Setor vê a tela '
-                .'mas não registra (recusa com o motivo). O formulário é o MÍNIMO para o caso existir no '
+                .'aos fiscais; a resposta ao cidadão continua no Fala Salvador. Desde 25/09/2026 o CHEFE DE '
+                .'SETOR também registra (sem integração, o que chega a ele precisa entrar): o caso dele nasce '
+                .'Recebida, sem equipe, para ele encaminhar. O formulário é o MÍNIMO para o caso existir no '
                 .'fluxo; o específico do canal vem depois (PEND-023). O que o telefone muda no dado: a '
                 .'denúncia pode ser ANÔNIMA, o relato é a transcrição do que o atendente ouviu, e não há '
                 .'anexo. '.$fluxoDenuncias,
@@ -602,15 +604,31 @@ return [
             'breadcrumb' => 'Caixa de Entrada › Avulsas',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemDenuncias.' O pedido que chega ao Chefe de Setor por ligação ou e-mail de um '
-                .'superior. Lista única, sem abas. O chefe cadastra (o número de origem é opcional: foi uma '
-                .'ligação), encaminha à equipe e, concluída a fiscalização, DELIBERA: abre processo no '
+            'nota' => $origemDenuncias.' O pedido que chega ao Chefe de Setor por fora dos canais, em dois '
+                .'tipos: pedido de superior (ligação ou e-mail) e OFÍCIO de órgão ou do Ministério Público — o '
+                .'ofício deixou de ser canal em 25/09/2026 e virou tipo de avulsa, com selo na grade. Lista única, '
+                .'sem abas. O chefe cadastra dizendo como chegou (o número de origem é opcional), encaminha à equipe e, concluída a fiscalização, DELIBERA: abre processo no '
                 .'e-Salvador com o resultado (registrado aqui, feito à mão lá — a escrita na API está '
                 .'proibida) ou encerra só com a fiscalização, sem processo. '.$fluxoDenuncias,
         ],
 
         [
-            // Era o módulo 'Estrutura', que era uma seção de menu com UMA tela.
+            'modulo' => 'Sistema',
+            'tela' => 'Equipes',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.equipes.index',
+            'breadcrumb' => 'Sistema › Equipes',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: pedido do dono em 25/09/2026 ("preciso de um cadastro de '
+                .'equipes"). Quem está em cada equipe: código, área, turno, o LÍDER (a conta que recebe o '
+                .'trabalho encaminhado à equipe — só contas ativas do setor Líder de Equipe) e os FISCAIS (só '
+                .'contas ativas do setor Fiscal). É daqui que sai o recorte do líder nas telas. Equipe com '
+                .'histórico (demanda, vistoria, Fiscalização, operação) não se exclui — inativa-se. Do '
+                .'administrador e do Chefe de Setor.',
+        ],
+
+        [
             // A seção foi removida em 10/09/2026 e a tela passou para Sistema
             // (ordem do dono); o módulo acompanha, senão o resumo agruparia por
             // uma seção que ninguém acha mais no menu.
