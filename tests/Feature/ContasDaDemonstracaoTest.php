@@ -63,9 +63,11 @@ it('com --so-estas-contas ficam SÓ as quatro contas, amarradas à estrutura', f
     $lider = User::where('login', 'lider1')->first();
     $fiscal = User::where('login', 'fiscal1')->first();
 
-    // O que o chefe encaminhar, a qualquer equipe, chega ao líder da demonstração.
-    expect(Equipe::count())->toBeGreaterThan(0)
-        ->and(Equipe::where('lider_id', '!=', $lider->id)->orWhereNull('lider_id')->count())->toBe(0)
+    // O líder da demonstração lidera a A1 e só ela (dono, 25/09/2026): as outras
+    // ficam sem líder com conta, e o recorte do líder aparece na demonstração.
+    expect(Equipe::count())->toBeGreaterThan(1)
+        ->and(Equipe::where('lider_id', $lider->id)->pluck('codigo')->all())->toBe(['A1'])
+        ->and(Equipe::where('codigo', '!=', 'A1')->whereNotNull('lider_id')->count())->toBe(0)
         // E o fiscal integra todas as equipes, para a fila do aparelho não vir vazia.
         ->and(DB::table('equipe_fiscais')->where('user_id', $fiscal->id)->count())->toBe(Equipe::count())
         // Nenhuma fiscalização ficou assinada por conta apagada.
