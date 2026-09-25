@@ -282,6 +282,7 @@ dataset('telas com listagem', [
     // da varredura, é a que apodrece.
     'Logs' => ['/retaguarda/logs', ['sistema.logs']],
     'Usuários' => ['/retaguarda/usuarios', ['usuarios.ativos', 'usuarios.excluidos']],
+    'Equipes' => ['/retaguarda/equipes', ['equipes']],
     'Acompanhamento de Requisitos' => ['/retaguarda/acompanhamento-de-requisitos', ['sistema.requisitos']],
 ]);
 

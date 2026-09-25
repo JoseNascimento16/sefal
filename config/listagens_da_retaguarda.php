@@ -315,6 +315,36 @@ return [
         | remoção definitiva é coluna — e diz quando a conta NÃO será removida
         | (tem histórico no sistema).
         */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Equipes
+        |----------------------------------------------------------------------
+        |
+        | Quem varre é a gestão: "que equipe é de que área, quem responde por ela
+        | e quantos fiscais tem?". Os NOMES dos fiscais e o turno descem para a
+        | ficha; no arquivo, vêm inteiros.
+        */
+        'equipes' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Equipes.tsx',
+            'grade' => [
+                ['chave' => 'equipe', 'titulo' => 'Equipe', 'largura' => 200],
+                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 220],
+                ['chave' => 'lider', 'titulo' => 'Líder', 'largura' => 220],
+                ['chave' => 'total_fiscais', 'titulo' => 'Fiscais', 'largura' => 100, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['turno', 'fiscais'],
+            'exportacao' => [
+                ['chave' => 'equipe', 'titulo' => 'Equipe'],
+                ['chave' => 'area', 'titulo' => 'Área'],
+                ['chave' => 'turno', 'titulo' => 'Turno'],
+                ['chave' => 'lider', 'titulo' => 'Líder'],
+                ['chave' => 'total_fiscais', 'titulo' => 'Nº de fiscais', 'alinhar' => 'center'],
+                ['chave' => 'fiscais', 'titulo' => 'Fiscais'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
         'usuarios.ativos' => [
             'tela' => 'resources/js/pages/Retaguarda/Sistema/Usuarios.tsx',
             'grade' => [

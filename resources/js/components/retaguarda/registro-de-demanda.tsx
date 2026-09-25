@@ -12,6 +12,8 @@ export interface CanalDeRegistro {
     nome: string;
     admite_anonima: boolean;
     registro?: 'chefe' | 'lider';
+    /** O canal recebe arquivo junto (ofício digitalizado, e-mail, foto)? */
+    tem_anexo?: boolean;
 }
 
 /**
@@ -155,6 +157,9 @@ function Formulario({
     };
 
     const [form, setForm] = useState({ ...vazio });
+    // Os arquivos ficam fora do `form`: arquivo não se "limpa" trocando o valor do campo.
+    const [anexos, setAnexos] = useState<File[]>([]);
+    const [chaveDoCampoDeArquivo, setChaveDoCampoDeArquivo] = useState(0);
     const [erros, setErros] = useState<Record<string, string>>({});
 
     function mudar<C extends keyof typeof vazio>(campo: C, valor: (typeof vazio)[C]) {
@@ -185,11 +190,15 @@ function Formulario({
                 anonima: canal.admite_anonima ? form.anonima : false,
                 requerente: form.anonima ? null : form.requerente,
                 contato: form.anonima ? null : form.contato,
+                // Com arquivo, o Inertia manda como formulário multipart sozinho.
+                anexos: canal.tem_anexo ? anexos : [],
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
                     setForm({ ...vazio });
+                    setAnexos([]);
+                    setChaveDoCampoDeArquivo((n) => n + 1);
                     setErros({});
                     aoRegistrar();
                 },
@@ -442,6 +451,35 @@ function Formulario({
                     onChange={(e) => mudar('descricao', e.target.value)}
                 />
             </div>
+
+            {canal.tem_anexo && (
+                <div className="form-group">
+                    <label className="form-label" htmlFor="rd-anexos">
+                        Anexos
+                    </label>
+                    <input
+                        key={chaveDoCampoDeArquivo}
+                        id="rd-anexos"
+                        type="file"
+                        className="form-control"
+                        multiple
+                        accept=".pdf,.doc,.docx,.odt,.txt,.rtf,.jpg,.jpeg,.png,.webp,.gif,.bmp"
+                        onChange={(e) => setAnexos(Array.from(e.target.files ?? []))}
+                    />
+                    <p className="form-ajuda">
+                        O ofício digitalizado, o e-mail, a foto — até cinco arquivos de até 10 MB, em PDF, documento
+                        ou imagem. Ficam na demanda e podem ser vistos e baixados por quem trabalha nela.
+                    </p>
+                    {erro('anexos')}
+                    {Object.keys(erros)
+                        .filter((chave) => chave.startsWith('anexos.'))
+                        .map((chave) => (
+                            <p key={chave} className="form-ajuda" style={{ color: 'var(--sm-perigo)' }}>
+                                {erros[chave]}
+                            </p>
+                        ))}
+                </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <BotaoAcao

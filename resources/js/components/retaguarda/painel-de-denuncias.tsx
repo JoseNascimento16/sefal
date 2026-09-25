@@ -1,17 +1,16 @@
 import {
+    ArrowLeft,
     CornerUpLeft,
     FileText,
-    Info,
     Inbox,
+    Info,
     ListChecks,
     MapPinOff,
-    Paperclip,
     Send,
     Siren,
     TriangleAlert,
     UserRound,
     UserX,
-    X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -20,6 +19,7 @@ import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
+import { ListaDeArquivos } from '@/components/retaguarda/lista-de-arquivos';
 import { RegistroDeDemanda } from '@/components/retaguarda/registro-de-demanda';
 import type { CanalDeRegistro } from '@/components/retaguarda/registro-de-demanda';
 import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
@@ -1587,19 +1587,12 @@ export function PainelDeDenuncias({
 
                             {canal.tem_anexo && (
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <dt>Anexos do cidadão</dt>
+                                    <dt>Anexos</dt>
                                     <dd>
-                                        {aberta.anexos.length === 0
-                                            ? 'O cidadão não anexou nada.'
-                                            : aberta.anexos.map((nome) => (
-                                                  <span
-                                                      key={nome}
-                                                      className="selo selo-neutro"
-                                                      style={{ marginRight: 6 }}
-                                                  >
-                                                      <Paperclip size={12} aria-hidden /> {nome}
-                                                  </span>
-                                              ))}
+                                        <ListaDeArquivos
+                                            arquivos={aberta.anexos_arquivos ?? []}
+                                            vazio="Nenhum arquivo veio com a demanda."
+                                        />
                                     </dd>
                                 </div>
                             )}
@@ -1760,7 +1753,7 @@ export function PainelDeDenuncias({
                             className="btn btn-secondary btn-sm"
                             onClick={() => trocarAba(abaPrincipal)}
                         >
-                            <X size={15} aria-hidden /> Fechar a demanda
+                            <ArrowLeft size={15} aria-hidden /> Voltar
                         </button>
                     </>
                 )}

@@ -184,11 +184,25 @@ export default function Usuarios({
         const { facetas, termos } = parseConsulta<Faceta>(busca, FACETAS);
 
         return usuarios.filter((u) => {
-            if (facetas.includes('ativos') && !u.ativo) return false;
-            if (facetas.includes('inativos') && u.ativo) return false;
-            if (facetas.includes('sem-setor') && u.setores.length > 0) return false;
-            if (facetas.includes('pendente') && u.senhaDefinida) return false;
-            if (facetas.includes('concluido') && !u.senhaDefinida) return false;
+            if (facetas.includes('ativos') && !u.ativo) {
+return false;
+}
+
+            if (facetas.includes('inativos') && u.ativo) {
+return false;
+}
+
+            if (facetas.includes('sem-setor') && u.setores.length > 0) {
+return false;
+}
+
+            if (facetas.includes('pendente') && u.senhaDefinida) {
+return false;
+}
+
+            if (facetas.includes('concluido') && !u.senhaDefinida) {
+return false;
+}
 
             // Cada termo precisa casar em ALGUM campo — "chefe" acha pelo setor
             // por extenso, "c1" acha o líder da equipe C1.
@@ -366,7 +380,9 @@ export default function Usuarios({
     }
 
     function incluir() {
-        if (!acoes.incluir) return;
+        if (!acoes.incluir) {
+return;
+}
 
         setAberto(null);
         setForm(formularioDe(null));
@@ -382,7 +398,9 @@ export default function Usuarios({
     }
 
     function alternarSetor(slug: string) {
-        if (somenteLeitura) return;
+        if (somenteLeitura) {
+return;
+}
 
         setForm((atual) => ({
             ...atual,
@@ -409,7 +427,9 @@ export default function Usuarios({
     }
 
     function excluir() {
-        if (aberto === null) return;
+        if (aberto === null) {
+return;
+}
 
         router.delete(
             destroy(aberto.id).url,
@@ -423,13 +443,17 @@ export default function Usuarios({
     }
 
     function reenviarConvite() {
-        if (aberto === null) return;
+        if (aberto === null) {
+return;
+}
 
         enviar('convite', convite(aberto.id).url, {});
     }
 
     function confirmarRestauracao() {
-        if (restaurando === null) return;
+        if (restaurando === null) {
+return;
+}
 
         enviar('restaurar', restaurar(restaurando.id).url, {}, { onSuccess: () => setRestaurando(null) });
     }

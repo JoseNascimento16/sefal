@@ -261,7 +261,7 @@ class FiscalizacoesController extends Controller
     private function ciclos(?array $equipes): array
     {
         $consulta = CicloDeFiscalizacao::with([
-            'demanda.ciclos.vistorias.fotos', 'demanda.ciclos.vistorias.documento', 'demanda.ciclos.equipe',
+            'demanda.anexos', 'demanda.ciclos.vistorias.fotos', 'demanda.ciclos.vistorias.documento', 'demanda.ciclos.equipe',
             'equipe.area', 'equipe.lider', 'encaminhadoPor',
             'vistorias.demanda.tramites', 'vistorias.operacao', 'vistorias.equipe.area', 'vistorias.fiscal',
             'vistorias.ambulante', 'vistorias.fotos', 'vistorias.recomendacoes', 'vistorias.documento',

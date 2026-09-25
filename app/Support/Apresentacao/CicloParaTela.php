@@ -66,6 +66,8 @@ class CicloParaTela
                 'situacao' => $demanda->situacao,
                 'situacao_resumida' => $demanda->situacaoResumida(),
                 'url' => self::urlDaDemanda($demanda),
+                // Os arquivos que vieram com a demanda: quem fiscaliza vê e baixa daqui.
+                'anexos' => $demanda->anexos->map(ArquivoParaTela::anexo(...))->values()->all(),
             ],
             // Cada ida ao ponto, inteira — a prova do que foi feito.
             'vistorias' => $c->vistorias

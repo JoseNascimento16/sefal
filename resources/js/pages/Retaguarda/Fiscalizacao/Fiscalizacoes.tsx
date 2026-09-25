@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import {
     Archive,
+    ArrowLeft,
     ClipboardCheck,
     ExternalLink,
     FileText,
@@ -10,7 +11,6 @@ import {
     Send,
     Siren,
     Undo2,
-    X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -21,6 +21,8 @@ import { DetalheDaVistoria } from '@/components/retaguarda/detalhe-da-vistoria';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
+import type { Arquivo } from '@/components/retaguarda/lista-de-arquivos';
+import { ListaDeArquivos } from '@/components/retaguarda/lista-de-arquivos';
 import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
@@ -89,6 +91,8 @@ interface Ciclo extends CicloResumo {
         situacao: string;
         situacao_resumida: string;
         url: string;
+        /** Os arquivos que vieram com a demanda, para ver e baixar. */
+        anexos: Arquivo[];
     } | null;
     vistorias: Registro[];
     irmas: CicloResumo[];
@@ -565,8 +569,11 @@ export default function Fiscalizacoes({
                                     {aberta.demanda === null ? (
                                         <span style={fraco}>Sem demanda — nasceu em rua</span>
                                     ) : (
-                                        <a href={aberta.demanda.url}>
-                                            {aberta.demanda.protocolo} · {aberta.demanda.canal_nome}{' '}
+                                        <a
+                                            href={aberta.demanda.url}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                                        >
+                                            {aberta.demanda.protocolo} · {aberta.demanda.canal_nome}
                                             <ExternalLink size={13} aria-hidden />
                                         </a>
                                     )}
@@ -591,6 +598,16 @@ export default function Fiscalizacoes({
                                 <div>
                                     <dt>Arquivada em</dt>
                                     <dd>{dataHoraBR(aberta.arquivado_em)}</dd>
+                                </div>
+                            )}
+                            {/* Os arquivos que vieram com a demanda — quem fiscaliza vê
+                                e baixa daqui, sem precisar ir à Caixa. */}
+                            {aberta.demanda !== null && aberta.demanda.anexos.length > 0 && (
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <dt>Anexos da demanda</dt>
+                                    <dd>
+                                        <ListaDeArquivos arquivos={aberta.demanda.anexos} />
+                                    </dd>
                                 </div>
                             )}
                         </dl>
@@ -664,7 +681,7 @@ export default function Fiscalizacoes({
 
                         <hr className="rt-regua" />
                         <button type="button" className="btn btn-secondary btn-sm" onClick={() => trocarAba(aberta.aba)}>
-                            <X size={15} aria-hidden /> Fechar a Fiscalização
+                            <ArrowLeft size={15} aria-hidden /> Voltar
                         </button>
                     </>
                 )}

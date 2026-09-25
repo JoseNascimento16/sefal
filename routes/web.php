@@ -4,8 +4,10 @@ use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
 use App\Http\Controllers\Retaguarda\AgrupamentoDeDemandasController;
 use App\Http\Controllers\Retaguarda\AmbulantesController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
+use App\Http\Controllers\Retaguarda\ArquivosController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\DenunciasController;
+use App\Http\Controllers\Retaguarda\EquipesController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\FiscalizacoesController;
 use App\Http\Controllers\Retaguarda\InicioController;
@@ -138,6 +140,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('{usuario}/convite', [UsuariosController::class, 'convite'])->name('convite');
         Route::post('{usuario}/restaurar', [UsuariosController::class, 'restaurar'])
             ->whereNumber('usuario')->name('restaurar');
+    });
+
+    /*
+     * Equipes — o cadastro das equipes: código, área, turno, líder e fiscais
+     * (dono, 25/09/2026). O caminho começa pelo slug da tela (`equipes`), que é de
+     * onde as guardas deduzem a permissão.
+     */
+    Route::prefix('retaguarda/equipes')->name('retaguarda.equipes.')->group(function () {
+        Route::get('/', [EquipesController::class, 'index'])->name('index');
+        Route::post('/', [EquipesController::class, 'store'])->name('store');
+        Route::put('{equipe}', [EquipesController::class, 'update'])->name('update');
+        Route::delete('{equipe}', [EquipesController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('retaguarda/logs')->name('retaguarda.logs.')->group(function () {
@@ -278,6 +292,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('fala-salvador', [DenunciasController::class, 'falaSalvador'])->name('fala-salvador.index');
         Route::get('e-protocolo', [DenunciasController::class, 'eProtocolo'])->name('e-protocolo.index');
         Route::get('avulsas', [DenunciasController::class, 'avulsas'])->name('avulsas.index');
+        // O arquivo que veio com a demanda — ver ou baixar (`?baixar=1`). Só o número na URL.
+        Route::get('anexos/{anexo}', [ArquivosController::class, 'anexo'])->whereNumber('anexo')->name('anexo');
 
         /*
          * O CADASTRO manual, por canal: o chefe digita o que chega a ele (papel
@@ -340,6 +356,8 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::prefix('retaguarda/fiscalizacoes')->name('retaguarda.fiscalizacoes.')->group(function () {
         Route::get('/', [FiscalizacoesController::class, 'index'])->name('index');
+        // A foto tirada em campo — ver ou baixar (`?baixar=1`). Só o número na URL.
+        Route::get('fotos/{foto}', [ArquivosController::class, 'foto'])->whereNumber('foto')->name('foto');
         // Não há "dar ciência" (dono, 24/09/2026): o líder manda voltar ou encaminha ao chefe.
         Route::post('nova-vistoria', [FiscalizacoesController::class, 'novaVistoria'])->name('nova-vistoria');
         Route::post('encaminhar-ao-chefe', [FiscalizacoesController::class, 'encaminharAoChefe'])->name('encaminhar-ao-chefe');

@@ -1,3 +1,5 @@
+import type { Arquivo } from '@/components/retaguarda/lista-de-arquivos';
+
 /*
 |------------------------------------------------------------------------------
 | PROTÓTIPO — o vocabulário do módulo de Denúncias
@@ -43,7 +45,10 @@ export interface RegistroDeCampo {
     /** O que a equipe encontrou, em uma linha ("Ponto irregular", "Nada encontrado…"). */
     encontrado: string | null;
     relato: string;
-    fotos: string[];
+    /** Quantas fotos (o servidor manda o número). */
+    fotos: number | string[];
+    /** As fotos como arquivos, para ver e baixar. */
+    arquivos?: Arquivo[];
     gps: string | null;
     precisao_m: number | null;
     /** Quem estava no ponto, quando havia alguém. */
@@ -222,6 +227,8 @@ export interface Denuncia {
 
     /** Nomes dos arquivos que o cidadão anexou (só no e-Salvador). */
     anexos: string[];
+    /** Os anexos como arquivos, para ver e baixar. */
+    anexos_arquivos?: Arquivo[];
 
     situacao: string;
     area: string | null;

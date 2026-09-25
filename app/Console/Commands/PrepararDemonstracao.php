@@ -122,6 +122,9 @@ class PrepararDemonstracao extends Command
             );
 
             $this->enxugarSePedido();
+            // As fotos e os anexos semeados precisam de arquivo para ver e baixar —
+            // e o disco do Render é apagado a cada deploy.
+            Artisan::call('sefal:arquivos-de-demonstracao');
 
             return self::SUCCESS;
         }
@@ -133,6 +136,7 @@ class PrepararDemonstracao extends Command
         });
 
         $this->enxugarSePedido();
+        Artisan::call('sefal:arquivos-de-demonstracao');
 
         $this->components->info(sprintf(
             '%d demandas na base, %d delas aguardando pré-triagem.',

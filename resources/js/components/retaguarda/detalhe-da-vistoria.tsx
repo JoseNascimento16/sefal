@@ -1,4 +1,6 @@
 import { Camera, FileText, Lightbulb, MapPin, UserRound } from 'lucide-react';
+import type { Arquivo } from '@/components/retaguarda/lista-de-arquivos';
+import { ListaDeArquivos } from '@/components/retaguarda/lista-de-arquivos';
 import { dataBR, dataHoraBR, VAZIO } from '@/lib/datas';
 import { contar, plural } from '@/lib/plural';
 import type { CatalogoDeRecomendacoes } from '@/lib/recomendacoes';
@@ -57,8 +59,10 @@ export interface Registro {
      */
     alvo: string | null;
     equipamento: string | null;
-    /** Nomes dos arquivos de foto: o protótipo não guarda imagem. */
+    /** Nomes das fotos. */
     fotos: string[];
+    /** As fotos como arquivos, para ver e baixar. */
+    arquivos?: Arquivo[];
     desfecho: string;
     /** `np` = Notificação Preliminar; `aa` = Auto de Apreensão. */
     documento: {
@@ -273,23 +277,17 @@ export function DetalheDaVistoria({
                             </p>
                         )}
 
-                        {/* As FOTOS entram como nome de
-                            arquivo: o protótipo não guarda
-                            imagem, e miniatura falsa
-                            prometeria o que a tela não
-                            entrega. O que importa aqui é
-                            saber QUANTAS provas existem. */}
-                        {r.fotos.length > 0 && (
-                            <p className="form-ajuda" style={{ marginTop: 6 }}>
-                                <Camera size={14} aria-hidden />{' '}
-                                {contar(r.fotos.length, 'foto', 'fotos')}{' '}
-                                {plural(
-                                    r.fotos.length,
-                                    'registrada',
-                                    'registradas',
-                                )}{' '}
-                                no ponto: {r.fotos.join(', ')}
-                            </p>
+                        {/* As FOTOS, para ver e baixar (dono, 25/09/2026). O arquivo
+                            sai pela rota do servidor, que confere a permissão. */}
+                        {(r.arquivos?.length ?? 0) > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                                <p className="form-ajuda" style={{ marginBottom: 4 }}>
+                                    <Camera size={14} aria-hidden />{' '}
+                                    {contar(r.arquivos?.length ?? 0, 'foto', 'fotos')}{' '}
+                                    {plural(r.arquivos?.length ?? 0, 'registrada', 'registradas')} no ponto:
+                                </p>
+                                <ListaDeArquivos arquivos={r.arquivos ?? []} />
+                            </div>
                         )}
 
                         <div className="rt-sugestao" style={{ marginTop: 12 }}>
