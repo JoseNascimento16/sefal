@@ -249,10 +249,12 @@ class DenunciasController extends Controller
             ]),
         ]);
 
-        return back()->with(
-            'flash.sucesso',
-            "Demanda {$demanda->protocolo} registrada — {$nome}. Encaminhe à equipe quando for a hora.",
-        );
+        // A confirmação vem no MEIO da tela, com o protocolo (dono, 25/09/2026).
+        return back()->with('demanda_registrada', [
+            'protocolo' => $demanda->protocolo,
+            'canal' => $nome,
+            'proximo' => 'A demanda entrou como recebida. Encaminhe à equipe quando for a hora.',
+        ]);
     }
 
     /**
@@ -361,11 +363,13 @@ class DenunciasController extends Controller
         // Já na mesa do líder: a FISCALIZAÇÃO nasce junto, para ele enviar à equipe.
         CiclosDeFiscalizacao::abrirParaDemanda($demanda, $usuario);
 
-        return back()->with(
-            'flash.sucesso',
-            "Demanda {$demanda->protocolo} registrada na sua mesa (Equipe {$equipe->codigo}). "
-            .'Direcione aos fiscais quando for a hora — a resposta ao cidadão continua no Fala Salvador.',
-        );
+        // A confirmação vem no MEIO da tela, com o protocolo (dono, 25/09/2026).
+        return back()->with('demanda_registrada', [
+            'protocolo' => $demanda->protocolo,
+            'canal' => 'Fala Salvador',
+            'proximo' => "A demanda entrou na sua mesa (Equipe {$equipe->codigo}). Direcione aos fiscais quando "
+                .'for a hora — a resposta ao cidadão continua no Fala Salvador.',
+        ]);
     }
 
     /**

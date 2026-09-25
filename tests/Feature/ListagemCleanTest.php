@@ -294,6 +294,7 @@ dataset('telas com listagem', [
     'Usuários' => ['/retaguarda/usuarios', ['usuarios.ativos', 'usuarios.excluidos']],
     'Equipes' => ['/retaguarda/equipes', ['equipes']],
     'Áreas' => ['/retaguarda/areas', ['areas']],
+    'Bairros' => ['/retaguarda/bairros', ['bairros']],
     'Acompanhamento de Requisitos' => ['/retaguarda/acompanhamento-de-requisitos', ['sistema.requisitos']],
 ]);
 

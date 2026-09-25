@@ -630,6 +630,22 @@ return [
 
         [
             'modulo' => 'Sistema',
+            'tela' => 'Bairros',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.bairros.index',
+            'breadcrumb' => 'Sistema › Bairros',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: pedido do dono em 25/09/2026 ("crie também a tela Bairros '
+                .'para cadastro de bairros, para termos um controle melhor. Bairro com Área não se exclui"). O '
+                .'catálogo de bairros: nome (único sem acento — "Imbuí" e "Imbui" são o mesmo) e a coordenada que o '
+                .'mapa usa. Renomear renomeia também nas áreas e operações que citam o bairro; a demanda antiga guarda '
+                .'o nome com que chegou. O cadastro de Áreas oferece os bairros daqui, e o bairro acrescentado lá '
+                .'entra no catálogo. Nasceu com os bairros que as áreas já citavam.',
+        ],
+
+        [
+            'modulo' => 'Sistema',
             'tela' => 'Equipes',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.equipes.index',

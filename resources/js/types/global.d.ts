@@ -25,6 +25,8 @@ declare module '@inertiajs/core' {
             painel: string | null;
             /** O Modo Gerente: pode ligar? está ligado (chaves no menu)? */
             modoGerente: { pode: boolean; ativo: boolean };
+            /** A demanda que acabou de ser registrada (vale uma vez). */
+            demandaRegistrada: { protocolo: string; canal: string; proximo: string } | null;
             [key: string]: unknown;
         };
     }

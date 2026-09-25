@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Retaguarda;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\AreaBairro;
+use App\Models\Bairro;
 use App\Models\Demanda;
 use App\Models\Operacao;
 use App\Rules\NomeDeCadastro;
@@ -49,7 +50,11 @@ class AreasController extends Controller
             'areas' => $areas,
             // Todo bairro já conhecido: os chips oferecem o que existe em vez de
             // convidar a redigitar (e a digitar diferente).
-            'bairrosConhecidos' => Estrutura::bairros(),
+            // O catálogo de Bairros (ativos) e o que as áreas já citam.
+            'bairrosConhecidos' => collect([...Bairro::where('ativo', true)->pluck('nome')->all(), ...Estrutura::bairros()])
+                ->unique(static fn (string $b): string => Area::chaveDeBairro($b))
+                ->sortBy(static fn (string $b): string => Area::chaveDeBairro($b))
+                ->values()->all(),
             'recortes' => array_values((array) config('estrutura.recortes', [])),
             'turnos' => array_values((array) config('estrutura.turnos', [])),
             'listagens' => ListagensDaRetaguarda::para('areas'),
@@ -149,14 +154,20 @@ class AreasController extends Controller
 
         foreach ($marcados as $bairro) {
             if (! in_array(Area::chaveDeBairro($bairro), $existentes, true)) {
-                // A coordenada vem de outra área que já tenha o bairro, se houver.
-                $referencia = AreaBairro::where('bairro', $bairro)->whereNotNull('latitude')->first();
+                /*
+                 * O bairro vem do CATÁLOGO (Sistema › Bairros), com o nome certo e a
+                 * coordenada; o que foi digitado aqui e ainda não existe entra no
+                 * catálogo junto — "Acrescentar" na área é o atalho do cadastro.
+                 */
+                $catalogo = Bairro::pelaChave($bairro)
+                    ?? Bairro::create(['nome' => $bairro, 'ativo' => true]);
+                $referencia = AreaBairro::where('bairro', $catalogo->nome)->whereNotNull('latitude')->first();
 
                 AreaBairro::create([
                     'area_id' => $area->id,
-                    'bairro' => $bairro,
-                    'latitude' => $referencia?->latitude,
-                    'longitude' => $referencia?->longitude,
+                    'bairro' => $catalogo->nome,
+                    'latitude' => $catalogo->latitude ?? $referencia?->latitude,
+                    'longitude' => $catalogo->longitude ?? $referencia?->longitude,
                 ]);
             }
         }

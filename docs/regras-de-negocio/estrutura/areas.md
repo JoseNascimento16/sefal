@@ -43,3 +43,4 @@ desmarca-se **Ativa**.
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 25/09/2026 | José Nascimento | Áreas | Nasce a tela (RN-01 a RN-04), com a migration `2026_09_25_140000_concede_a_tela_de_areas`. | Pedido do dono. |
+| 25/09/2026 | José Nascimento | Áreas | Os chips passam a vir do catálogo de [Bairros](bairros.md) (os ativos); o bairro acrescentado numa área entra no catálogo, e a coordenada vem de lá. | Pedido do dono. |

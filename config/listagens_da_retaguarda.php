@@ -342,6 +342,33 @@ return [
         | "Que área cobre o quê, e com que equipe?". Os NOMES dos bairros e o
         | turno descem para a ficha; no arquivo, vêm inteiros.
         */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Bairros
+        |----------------------------------------------------------------------
+        |
+        | "Que bairro existe, em que área está e tem coordenada?". A latitude e a
+        | longitude descem para a ficha; no arquivo, vêm inteiras.
+        */
+        'bairros' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Bairros.tsx',
+            'grade' => [
+                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 240],
+                ['chave' => 'areas', 'titulo' => 'Áreas', 'largura' => 260],
+                ['chave' => 'coordenada', 'titulo' => 'No mapa', 'largura' => 120, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['latitude', 'longitude'],
+            'exportacao' => [
+                ['chave' => 'bairro', 'titulo' => 'Bairro'],
+                ['chave' => 'areas', 'titulo' => 'Áreas'],
+                ['chave' => 'coordenada', 'titulo' => 'No mapa', 'alinhar' => 'center'],
+                ['chave' => 'latitude', 'titulo' => 'Latitude'],
+                ['chave' => 'longitude', 'titulo' => 'Longitude'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
         'areas' => [
             'tela' => 'resources/js/pages/Retaguarda/Sistema/Areas.tsx',
             'grade' => [

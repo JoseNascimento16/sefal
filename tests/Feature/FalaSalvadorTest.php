@@ -72,7 +72,7 @@ it('o líder registra o que recebeu no Fala Salvador, e o caso nasce na mesa del
     $this->actingAs($lider)
         ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao())
         ->assertSessionHasNoErrors()
-        ->assertSessionHas('flash.sucesso');
+        ->assertSessionHas('demanda_registrada');
 
     $demanda = Demanda::firstOrFail();
 
@@ -130,7 +130,7 @@ it('o Chefe de Setor TAMBÉM registra o Fala Salvador — e o caso nasce Recebid
     $this->actingAs($chefe)
         ->post(route('retaguarda.denuncias.registrar', 'fala-salvador'), ligacao())
         ->assertSessionHasNoErrors()
-        ->assertSessionHas('flash.sucesso');
+        ->assertSessionHas('demanda_registrada');
 
     $demanda = Demanda::firstOrFail();
 
