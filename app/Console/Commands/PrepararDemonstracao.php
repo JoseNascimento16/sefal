@@ -47,15 +47,19 @@ use Illuminate\Support\Facades\DB;
  * Pedido do dono (24/09/2026): na demonstração pública, uma conta por papel —
  * `admin`, `chefe`, `lider1`, `fiscal1` — e nenhuma outra. Com a opção, depois
  * de semear, o comando apaga toda conta fora da lista e amarra as que ficam à
- * estrutura: `lider1` passa a liderar TODAS as equipes (o que o chefe
- * encaminhar, a qualquer equipe, chega a ele) e `fiscal1` passa a integrar todas
- * elas; as fiscalizações assinadas por fiscais apagados passam a ser dele.
+ * estrutura: `lider1` passa a liderar a equipe A1 — e só ela (dono,
+ * 25/09/2026: com todas, o recorte do líder não aparecia na demonstração) —, e
+ * `fiscal1` passa a integrar todas as equipes; as fiscalizações assinadas por
+ * fiscais apagados passam a ser dele.
  *
  * É opção, e não comportamento: apagar conta é destrutivo, e este comando também
  * roda fora da demonstração pública. Só o boot do Render a passa.
  */
 class PrepararDemonstracao extends Command
 {
+    /** A equipe que o `lider1` lidera na demonstração enxuta — e só ela. */
+    public const EQUIPE_DO_LIDER = 'A1';
+
     protected $signature = 'sefal:preparar-demonstracao
                             {--senha= : Só para uma conta SEM senha; nunca troca a de quem já tem}
                             {--so-estas-contas : Apaga toda conta fora da lista da demonstração (só no Render)}';
@@ -232,8 +236,8 @@ class PrepararDemonstracao extends Command
     /**
      * Deixa na base SÓ as contas da lista — quando `--so-estas-contas` é passada.
      *
-     * Amarra antes de apagar, para nada ficar órfão: `lider1` lidera todas as
-     * equipes, `fiscal1` integra todas, e as fiscalizações dos fiscais que saem
+     * Amarra antes de apagar, para nada ficar órfão: `lider1` lidera a equipe
+     * A1 (só ela; as outras ficam sem líder com conta), `fiscal1` integra todas, e as fiscalizações dos fiscais que saem
      * passam a ele (`fiscal_id` é obrigatório e não tem `ON DELETE`). O resto das
      * referências a `users` é `nullOnDelete`/`cascadeOnDelete` e se resolve só.
      */
@@ -249,8 +253,12 @@ class PrepararDemonstracao extends Command
                 $lider = $ficam['lider1'] ?? null;
                 $fiscal = $ficam['fiscal1'] ?? null;
 
+                // O líder da demonstração é o da A1 e de nenhuma outra (dono,
+                // 25/09/2026). As demais ficam sem líder com conta — é o que faz o
+                // recorte do líder aparecer: ele vê só a fila e o mapa da A1.
                 if ($lider !== null) {
-                    Equipe::query()->update(['lider_id' => $lider]);
+                    Equipe::query()->where('codigo', self::EQUIPE_DO_LIDER)->update(['lider_id' => $lider]);
+                    Equipe::query()->where('codigo', '!=', self::EQUIPE_DO_LIDER)->update(['lider_id' => null]);
                 }
 
                 if ($fiscal !== null) {
