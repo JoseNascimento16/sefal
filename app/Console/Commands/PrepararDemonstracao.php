@@ -260,7 +260,10 @@ class PrepararDemonstracao extends Command
                     Fiscalizacao::whereNotIn('fiscal_id', $ficam->values())->update(['fiscal_id' => $fiscal]);
                 }
 
-                User::whereNotIn('id', $ficam->values())->get()->each->delete();
+                // Remoção DE VEZ, e não a lixeira da tela de Usuários: a
+                // demonstração fica com essas contas e nenhuma outra — nem na aba
+                // Excluídos, nem ocupando matrícula.
+                User::withTrashed()->whereNotIn('id', $ficam->values())->get()->each->forceDelete();
             });
 
             return true;
