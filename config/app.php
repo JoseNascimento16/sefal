@@ -59,13 +59,22 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | O horário de SALVADOR (America/Bahia, UTC−3, sem horário de verão).
+    |
+    | Era UTC, o padrão do framework — e toda hora mostrada na Retaguarda saía
+    | três horas adiantada: o trâmite, a vistoria, o log, a exclusão de uma conta
+    | (ajuste pedido pelo dono em 25/09/2026). O banco guarda data e hora SEM
+    | fuso, então o que vale é o fuso de quem grava e lê: o da aplicação. O
+    | mesmo vale para o agendador (a limpeza das 03:00 é às 03:00 de Salvador) e
+    | para o "hoje" dos prazos.
+    |
+    | ⚠️ O que foi gravado ANTES do ajuste ficou em UTC e passa a aparecer três
+    | horas adiantado. Era só dado de teste e de demonstração; não houve correção
+    | retroativa.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'America/Bahia'),
 
     /*
     |--------------------------------------------------------------------------
