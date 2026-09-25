@@ -117,6 +117,32 @@ class Operacao extends Model
         return $this->belongsToMany(Equipe::class, 'operacao_equipes')->withTimestamps();
     }
 
+    /**
+     * Fiscais de QUALQUER área postos na operação, além dos fiscais das equipes
+     * que a executam (dono, 25/09/2026). A fiscalização da operação chega a
+     * todos — ver {@see fiscaisQueRecebem()}.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function fiscais(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'operacao_fiscais')->withTimestamps();
+    }
+
+    /**
+     * Quem RECEBE a fiscalização desta operação: os fiscais das equipes que a
+     * executam e os postos nela à parte, sem repetição.
+     *
+     * @return list<int>
+     */
+    public function fiscaisQueRecebem(): array
+    {
+        $daEquipe = $this->equipes()->with('fiscais:users.id')->get()
+            ->flatMap(static fn (Equipe $e) => $e->fiscais->pluck('id'))->all();
+
+        return array_values(array_unique([...$daEquipe, ...$this->fiscais()->pluck('users.id')->all()]));
+    }
+
     /** @return HasMany<OperacaoBairro, $this> */
     public function bairros(): HasMany
     {

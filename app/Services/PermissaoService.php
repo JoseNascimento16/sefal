@@ -261,11 +261,7 @@ class PermissaoService
 
         $setores = $usuario === null ? [] : $usuario->setores->pluck('slug')->all();
 
-        if ($setores === []) {
-            return $mapa;
-        }
-
-        foreach (PermissaoSetor::query()->whereIn('setor', $setores)->get() as $linha) {
+        foreach ($setores === [] ? [] : PermissaoSetor::query()->whereIn('setor', $setores)->get() as $linha) {
             if (! isset($mapa[$linha->slug])) {
                 continue; // linha de tela que saiu do menu — ignorada, não apagada
             }
@@ -273,6 +269,26 @@ class PermissaoService
             foreach (self::ACOES as $acao) {
                 $mapa[$linha->slug][$acao] = $mapa[$linha->slug][$acao] || (bool) $linha->{$acao};
             }
+        }
+
+        /*
+         * As duas MARCAS da conta (tela de Usuários, como no Codecon — 25/09/2026)
+         * dão o pacote inteiro de UMA tela cada, por cima do cargo:
+         *
+         *  - quem pode ativar o Modo Gerente abre o Modo Gerente;
+         *  - o Administrador de usuários abre a tela de Usuários.
+         *
+         * Nenhuma das duas abre as outras telas de administração — é a razão de
+         * serem marcas próprias, e não o cargo Administrador.
+         */
+        $tudo = ['visivel' => true, 'habilitado' => true, 'apenas_leitura' => false, 'incluir' => true, 'excluir' => true];
+
+        if ($usuario?->is_gerente && isset($mapa['modo-gerente'])) {
+            $mapa['modo-gerente'] = $tudo;
+        }
+
+        if ($usuario?->is_admin_usuarios && isset($mapa['usuarios'])) {
+            $mapa['usuarios'] = $tudo;
         }
 
         // "Só consulta" só vale se NENHUM dos setores tiver concedido escrita: a

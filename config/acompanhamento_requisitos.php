@@ -193,7 +193,7 @@ return [
                 .'pergunta antes). Não é uma página: abre como PAINEL sobre a tela em que a pessoa '
                 .'está, pelo item do menu Sistema — quem distribui acesso está no meio de uma '
                 .'conferência, e ir para outra página fazia perder o lugar. Quem chega pelo endereço '
-                .'antigo é levado à tela inicial com o painel abrindo lá.',
+                .'antigo é levado à tela inicial com o painel abrindo lá.'.' Desde 25/09/2026, como no Codecon: um botão no pé do menu liga o modo (estado na sessão) e cada item e pasta do menu ganha uma CHAVE que abre as permissões só daquela tela; a matriz inteira abre por "Ver todas as telas". O item saiu do menu. Quem liga: o administrador ou a conta com a marca "Pode ativar o Modo Gerente".',
         ],
 
         [
@@ -212,7 +212,7 @@ return [
                 .'setor de quem tinha, com aviso antes de salvar); administrador só se dá entre '
                 .'administradores; ninguém tira o próprio acesso de administrador, se desativa ou se exclui. '
                 .'Só o administrador abre a tela. O atalho fica no menu da CONTA, no canto superior direito '
-                .'(com Meu Perfil e Sair), como no Codecon — não no menu lateral.',
+                .'(com Meu Perfil e Sair), como no Codecon — não no menu lateral.'.' Desde 25/09/2026 o que era "Setores" se chama CARGO na tela, e a conta ganhou as duas marcas do Codecon: pode ativar o Modo Gerente e Administrador de usuários (o poder desta tela sem as outras de administração) — só o administrador as dá ou tira.',
         ],
 
         [
@@ -282,7 +282,7 @@ return [
                 .'o que se cria ou altera vive na sessão de quem navega. Pendências que isto abre: a '
                 .'operação como TABELA, o vínculo dela com os registros de campo que ela produziu '
                 .'(hoje a fiscalização avulsa aponta para a operação por TEXTO, no campo referência) '
-                .'e o encerramento com resultado consolidado, que a spec previa e ninguém definiu.',
+                .'e o encerramento com resultado consolidado, que a spec previa e ninguém definiu.'.' Desde 25/09/2026 é menu pai próprio, entre os mapas e o Sistema; a operação recebe DENÚNCIAS no próprio cadastro (entram Em operação; desmarcadas, voltam à mesa de onde vieram) e FISCAIS de qualquer área, que recebem a fiscalização junto com os fiscais das equipes; escolher a área ou uma equipe marca os bairros dela, desmarcáveis um a um.',
         ],
 
         [
@@ -557,7 +557,7 @@ return [
                 .'seleção múltipla, protocolo, recebida, bairro, situação em três palavras (Recebida, '
                 .'Encaminhada ao líder, Em fiscalização) e prazo. Enquanto a integração não lê, o chefe '
                 .'cadastra aqui o que chega em papel (denúncia ou licença). Como o cidadão abre a denúncia '
-                .'autenticado, o requerente vem SEMPRE identificado. '.$fluxoDenuncias,
+                .'autenticado, o requerente vem SEMPRE identificado. '.$fluxoDenuncias.' Desde 25/09/2026, nas quatro caixas, quem encaminha tem a coluna "Área (sugerida)": um seletor de equipe (com área e líder) na própria linha, para encaminhar em lote já escolhendo cada destino.',
         ],
 
         [
@@ -614,6 +614,22 @@ return [
 
         [
             'modulo' => 'Sistema',
+            'tela' => 'Áreas',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.areas.index',
+            'breadcrumb' => 'Sistema › Áreas',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: pedido do dono em 25/09/2026 ("cadastro de Área com '
+                .'possibilidade de definição dos bairros de cada área, selecionáveis via chips"). Nome, região, o '
+                .'que a área cobre (bairros, corredores ou a cidade inteira), turno e os BAIRROS em chips, com '
+                .'busca e inclusão de bairro novo. Dos bairros sai a sugestão de equipe da demanda, os bairros que a '
+                .'operação marca sozinha e o recorte do líder nos mapas. Área com equipe, demanda ou operação não se '
+                .'exclui — inativa-se. Do administrador e do Chefe de Setor.',
+        ],
+
+        [
+            'modulo' => 'Sistema',
             'tela' => 'Equipes',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.equipes.index',
@@ -650,7 +666,7 @@ return [
                 .'1:1, a Caixa de Entrada sugere e o Chefe de Setor confirma. Cada equipe mostra o LÍDER '
                 .'(o encarregado do documento, com conta lider-<código>). ⚠️ É PROTÓTIPO: a lista de '
                 .'fiscais de cada equipe é fictícia (o documento nomeia só o encarregado), não há tabela '
-                .'nem gravação, e o que a pessoa mexe vive na sessão dela.',
+                .'nem gravação, e o que a pessoa mexe vive na sessão dela.'.' Fora do menu desde 25/09/2026: a área e os bairros passaram ao cadastro de Áreas, e quem está em cada equipe, ao de Equipes. Segue pelo endereço.',
         ],
 
         [
@@ -674,7 +690,7 @@ return [
                 .'coordenadas de Salvador e a área/equipe de cada bairro, não (a derivação sai do mesmo '
                 .'cadastro de Áreas e Equipes). Não há tempo real nem tabela: a tela declara o instante que '
                 .'mostra. Pendências que isto abre: de onde virá a posição do fiscal em campo e com que '
-                .'frequência, e qual é o prazo oficial de retorno de uma notificação.',
+                .'frequência, e qual é o prazo oficial de retorno de uma notificação.'.' Desde 25/09/2026 o líder de equipe também abre o mapa, vendo só as fiscalizações das equipes dele e dos bairros das áreas delas.',
         ],
 
         [
@@ -696,7 +712,7 @@ return [
                 .'melhor aposta, porque o líder já tem rotina. O ranking exporta em PDF/XLSX/DOCX pelo ponto '
                 .'único, com o recorte impresso. ⚠️ É PROTÓTIPO: a incidência é inventada (coordenadas e '
                 .'estrutura de equipes, não), não há tabela, e criar operação é da tela de Cadastro de '
-                .'Operação — esta apenas leva até lá.',
+                .'Operação — esta apenas leva até lá.'.' Desde 25/09/2026 o líder de equipe também abre o mapa, com o mesmo recorte do Mapa ao Vivo.',
         ],
 
         /*

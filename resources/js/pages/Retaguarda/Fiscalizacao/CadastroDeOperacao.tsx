@@ -79,6 +79,26 @@ interface Operacao {
     total_equipes: number;
     /** Atalho do servidor para `situacao === 'Encerrada'`. */
     encerrada: boolean;
+    /** Fiscais de qualquer área postos na operação. */
+    fiscais: { id: number; nome: string }[];
+    /** As denúncias anexadas — a fiscalização delas vai para a rua junto. */
+    demandas: { id: number; protocolo: string; assunto: string; bairro: string; situacao: string }[];
+}
+
+interface FiscalDisponivel {
+    id: number;
+    nome: string;
+    equipes: string[];
+}
+
+interface DemandaDisponivel {
+    id: number;
+    protocolo: string;
+    assunto: string;
+    bairro: string;
+    area: string;
+    situacao: string;
+    operacao_id: number | null;
 }
 
 interface Equipe {
@@ -102,6 +122,12 @@ interface Props {
     /** As áreas das equipes que esta pessoa lidera (vazio para quem vê tudo). */
     areasDoLider: string[];
     recorteDeArea: boolean;
+    /** Os bairros de cada área — marcados sozinhos ao escolher a área ou a equipe. */
+    bairrosPorArea: Record<string, string[]>;
+    /** Fiscais de QUALQUER área que podem ser postos na operação. */
+    fiscaisDisponiveis: FiscalDisponivel[];
+    /** As denúncias que podem ser anexadas (abertas, não agregadas). */
+    demandasDisponiveis: DemandaDisponivel[];
     /**
      * As colunas da grade e as do arquivo, declaradas no servidor. Ver
      * `docs/padroes/listagem-clean.md`.
@@ -145,6 +171,9 @@ export default function CadastroDeOperacao({
     cadastra,
     areasDoLider,
     recorteDeArea,
+    bairrosPorArea,
+    fiscaisDisponiveis,
+    demandasDisponiveis,
     listagens,
 }: Props) {
     const acoes = useAcoes();
@@ -223,9 +252,30 @@ export default function CadastroDeOperacao({
         situacao: situacoes[0] ?? '',
         foco: '',
         observacao: '',
+        fiscais: [] as number[],
+        demandas: [] as number[],
     };
 
     const [form, setForm] = useState({ ...vazio });
+    const [buscaDemanda, setBuscaDemanda] = useState('');
+    const [buscaFiscal, setBuscaFiscal] = useState('');
+
+    /**
+     * Escolher a ÁREA (ou uma equipe) marca sozinho os bairros daquela área — sem
+     * restringir: dá para desmarcar um a um depois (dono, 25/09/2026).
+     */
+    function marcarBairrosDa(area: string) {
+        const daArea = bairrosPorArea[area] ?? [];
+
+        setForm((atual) => ({ ...atual, bairros: [...new Set([...atual.bairros, ...daArea])] }));
+    }
+
+    function alternarId(campo: 'fiscais' | 'demandas', id: number) {
+        setForm((atual) => ({
+            ...atual,
+            [campo]: atual[campo].includes(id) ? atual[campo].filter((v) => v !== id) : [...atual[campo], id],
+        }));
+    }
 
     function mudar<C extends keyof typeof vazio>(campo: C, valor: (typeof vazio)[C]) {
         setForm((atual) => ({ ...atual, [campo]: valor }));
@@ -259,6 +309,8 @@ export default function CadastroDeOperacao({
             situacao: operacao.situacao,
             foco: operacao.foco,
             observacao: operacao.observacao,
+            fiscais: operacao.fiscais.map((f) => f.id),
+            demandas: operacao.demandas.map((d) => d.id),
         });
         setAbertaId(operacao.id);
         setModo('navegacao');
@@ -709,8 +761,14 @@ export default function CadastroDeOperacao({
                                 </p>
                             </div>
 
-                            {aberta !== null && modo === 'navegacao' && cadastra && (
-                                <div style={{ display: 'flex', gap: 8 }}>
+                            {aberta !== null && modo === 'navegacao' && (
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {/* Os botões do registro vêm em cima (dono, 25/09/2026). */}
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={voltarParaLista}>
+                                        Voltar à lista
+                                    </button>
+                                    {cadastra && (
+                                    <>
                                     {acoes.habilitado && (
                                         <BotaoAcao
                                             className="btn btn-secondary btn-sm"
@@ -731,6 +789,8 @@ export default function CadastroDeOperacao({
                                         >
                                             Excluir
                                         </BotaoAcao>
+                                    )}
+                                    </>
                                     )}
                                 </div>
                             )}
@@ -806,6 +866,22 @@ export default function CadastroDeOperacao({
                                         </dd>
                                     </div>
                                     <div style={{ gridColumn: '1 / -1' }}>
+                                        <dt>Fiscais de outras áreas</dt>
+                                        <dd>
+                                            {aberta.fiscais.length === 0
+                                                ? 'só os das equipes que executam'
+                                                : aberta.fiscais.map((f) => f.nome).join(', ')}
+                                        </dd>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <dt>Denúncias da operação</dt>
+                                        <dd>
+                                            {aberta.demandas.length === 0
+                                                ? 'nenhuma anexada'
+                                                : aberta.demandas.map((d) => `${d.protocolo} (${d.bairro || 'sem bairro'})`).join(', ')}
+                                        </dd>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
                                         <dt>Foco</dt>
                                         <dd>{aberta.foco === '' ? VAZIO : aberta.foco}</dd>
                                     </div>
@@ -834,6 +910,33 @@ export default function CadastroDeOperacao({
                                     salvar();
                                 }}
                             >
+                                {/* Os botões vêm também EM CIMA (dono, 25/09/2026). */}
+                                <div className="rt-barra-registro">
+                                    <BotaoAcao
+                                        type="submit"
+                                        icone={<CalendarDays size={16} aria-hidden />}
+                                        carregando={enviando === 'salvar'}
+                                        ocupado={ocupado}
+                                        disabled={!prontoParaSalvar}
+                                        rotuloCarregando="Salvando…"
+                                    >
+                                        {aberta === null ? 'Criar operação' : 'Salvar alterações'}
+                                    </BotaoAcao>
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        disabled={ocupado}
+                                        onClick={
+                                            aberta === null
+                                                ? voltarParaLista
+                                                : () => setModo('navegacao')
+                                        }
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+
                                 <div className="rt-form-linha">
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="nome">
@@ -868,7 +971,10 @@ export default function CadastroDeOperacao({
                                             className="form-control"
                                             data-erro={errors.area ? '1' : undefined}
                                             value={form.area}
-                                            onChange={(e) => mudar('area', e.target.value)}
+                                            onChange={(e) => {
+                                                mudar('area', e.target.value);
+                                                marcarBairrosDa(e.target.value);
+                                            }}
                                         >
                                             {areas.map((a) => (
                                                 <option key={a} value={a}>
@@ -988,9 +1094,13 @@ export default function CadastroDeOperacao({
                                                 <input
                                                     type="checkbox"
                                                     checked={form.equipes.includes(e.equipe)}
-                                                    onChange={() =>
-                                                        alternarNaLista('equipes', e.equipe)
-                                                    }
+                                                    onChange={() => {
+                                                        if (!form.equipes.includes(e.equipe)) {
+                                                            marcarBairrosDa(e.area);
+                                                        }
+
+                                                        alternarNaLista('equipes', e.equipe);
+                                                    }}
                                                 />
                                                 <span>
                                                     <strong>{e.equipe}</strong> · {e.area} —{' '}
@@ -1022,8 +1132,90 @@ export default function CadastroDeOperacao({
                                         ))}
                                     </div>
                                     <p className="form-ajuda">
-                                        Nenhum marcado significa que a operação varre a área
-                                        inteira.
+                                        Escolher a área ou uma equipe marca os bairros dela — desmarque
+                                        os que ficam de fora. Nenhum marcado significa a área inteira.
+                                    </p>
+                                </div>
+
+                                {/* FISCAIS de qualquer área (dono, 25/09/2026): a fiscalização da
+                                    operação chega a eles além dos fiscais das equipes acima. */}
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        Fiscais de outras áreas (opcional) — {form.fiscais.length}
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        style={{ marginBottom: 8 }}
+                                        value={buscaFiscal}
+                                        placeholder="Procure o fiscal pelo nome ou pela equipe"
+                                        aria-label="Procurar fiscal"
+                                        onChange={(e) => setBuscaFiscal(e.target.value)}
+                                    />
+                                    <div className="rt-marcadores" style={{ maxHeight: 220, overflow: 'auto' }}>
+                                        {fiscaisDisponiveis
+                                            .filter((f) => form.fiscais.includes(f.id) || casaTermos(parseConsulta<never>(buscaFiscal, []).termos, [f.nome, ...f.equipes]))
+                                            .map((f) => (
+                                                <label key={f.id} className="rt-marcador">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.fiscais.includes(f.id)}
+                                                        onChange={() => alternarId('fiscais', f.id)}
+                                                    />
+                                                    <span>
+                                                        {f.nome}
+                                                        {f.equipes.length > 0 && <span style={{ color: 'var(--sm-texto-fraco)' }}> · {f.equipes.join(', ')}</span>}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                    </div>
+                                    <p className="form-ajuda">
+                                        A fiscalização desta operação aparece para os fiscais das equipes que
+                                        executam e também para os marcados aqui.
+                                    </p>
+                                </div>
+
+                                {/* DENÚNCIAS da operação (dono, 25/09/2026): anexadas aqui mesmo, no
+                                    cadastro ou na edição — a fiscalização delas vai para a rua junto. */}
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        Denúncias da operação (opcional) — {form.demandas.length}
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        style={{ marginBottom: 8 }}
+                                        value={buscaDemanda}
+                                        placeholder="Procure por protocolo, bairro, área ou assunto"
+                                        aria-label="Procurar denúncia"
+                                        onChange={(e) => setBuscaDemanda(e.target.value)}
+                                    />
+                                    <div className="rt-marcadores" style={{ maxHeight: 260, overflow: 'auto' }}>
+                                        {demandasDisponiveis
+                                            .filter((d) => d.operacao_id === null || d.operacao_id === aberta?.id || form.demandas.includes(d.id))
+                                            .filter(
+                                                (d) =>
+                                                    form.demandas.includes(d.id) ||
+                                                    (buscaDemanda.trim() === ''
+                                                        ? d.area === form.area
+                                                        : casaTermos(parseConsulta<never>(buscaDemanda, []).termos, [d.protocolo, d.bairro, d.area, d.assunto])),
+                                            )
+                                            .map((d) => (
+                                                <label key={d.id} className="rt-marcador" title={d.assunto}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.demandas.includes(d.id)}
+                                                        onChange={() => alternarId('demandas', d.id)}
+                                                    />
+                                                    <span>
+                                                        <strong>{d.protocolo}</strong> · {d.bairro || 'sem bairro'}
+                                                        <span style={{ color: 'var(--sm-texto-fraco)' }}> — {d.situacao}</span>
+                                                    </span>
+                                                </label>
+                                            ))}
+                                    </div>
+                                    <p className="form-ajuda">
+                                        Sem busca, aparecem as denúncias abertas da área escolhida. Anexada, a
+                                        denúncia passa a "Em operação" e vai para a rua com as equipes da
+                                        operação; desmarcada, volta para a mesa de onde veio.
                                     </p>
                                 </div>
 
@@ -1057,7 +1249,7 @@ export default function CadastroDeOperacao({
                                     />
                                 </div>
 
-                                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                <div className="rt-barra-registro rt-barra-registro-pe">
                                     <BotaoAcao
                                         type="submit"
                                         icone={<CalendarDays size={16} aria-hidden />}

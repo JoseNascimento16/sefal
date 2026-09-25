@@ -73,6 +73,18 @@ class Area extends Model
     }
 
     /**
+     * As demandas que foram para esta área. A exclusão da área consulta esta
+     * relação (área com demanda não se exclui) — ela faltava, e excluir área na
+     * tela antiga de Áreas e Equipes quebrava.
+     *
+     * @return HasMany<Demanda, $this>
+     */
+    public function demandas(): HasMany
+    {
+        return $this->hasMany(Demanda::class);
+    }
+
+    /**
      * As áreas que cobrem este bairro, na ordem do cadastro.
      *
      * Devolve LISTA porque o vínculo não é 1:1: Mussurunga, Patamares e Jardim

@@ -279,6 +279,8 @@ return [
                         'chefe-de-setor',
                         // Saber onde a cidade está agora é do trabalho de rua.
                         'fiscal' => ['apenas_leitura' => true],
+                        // O líder vê o mapa, recortado à área dele (dono, 25/09/2026).
+                        'lider-de-equipe' => ['apenas_leitura' => true],
                     ],
                 ],
                 [
@@ -289,7 +291,34 @@ return [
                     'curto' => 'CALOR',
                     // Concentração histórica serve para PLANEJAR: é leitura de
                     // gestão, não de quem está na calçada agora.
-                    'setores' => ['administrador', 'chefe-de-setor'],
+                    'setores' => [
+                        'administrador',
+                        'chefe-de-setor',
+                        // O líder vê o mapa, recortado à área dele (dono, 25/09/2026).
+                        'lider-de-equipe' => ['apenas_leitura' => true],
+                    ],
+                ],
+            ],
+        ],
+
+        /*
+         * OPERAÇÕES — menu pai próprio, entre os mapas e o Sistema (dono,
+         * 25/09/2026). O slug continua `operacoes`: mudar de lugar no menu não
+         * mexe na permissão.
+         */
+        [
+            'rotulo' => 'Operações',
+            'itens' => [
+                [
+                    'rotulo' => 'Cadastro de Operação',
+                    'rota' => 'retaguarda.operacoes.index',
+                    'icone' => 'operacoes',
+                    'slug' => 'operacoes',
+                    'curto' => 'OPERAÇÃO',
+                    // O líder monta a operação da equipe dele; o Chefe de
+                    // Setor, de qualquer uma. O fiscal não entra: quem
+                    // executa não desenha o plano.
+                    'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                 ],
             ],
         ],
@@ -452,6 +481,22 @@ return [
                             'slug' => 'areas-e-equipes',
                             'curto' => 'ÁREAS',
                             'setores' => ['administrador', 'chefe-de-setor'],
+                            // Fora do menu desde 25/09/2026: a área e os bairros dela
+                            // passaram ao cadastro de Áreas, e quem está em cada equipe,
+                            // ao de Equipes. A tela segue pelo endereço.
+                            'oculto' => true,
+                        ],
+                        [
+                            /*
+                             * Áreas — as áreas e os BAIRROS de cada uma, em chips
+                             * (dono, 25/09/2026). Mesma concessão de Equipes.
+                             */
+                            'rotulo' => 'Áreas',
+                            'rota' => 'retaguarda.areas.index',
+                            'icone' => 'areas',
+                            'slug' => 'areas',
+                            'curto' => 'ÁREAS',
+                            'setores' => ['administrador', 'chefe-de-setor'],
                         ],
                         [
                             /*
@@ -468,15 +513,60 @@ return [
                             'setores' => ['administrador', 'chefe-de-setor'],
                         ],
                         [
-                            'rotulo' => 'Cadastro de Operação',
-                            'rota' => 'retaguarda.operacoes.index',
-                            'icone' => 'operacoes',
-                            'slug' => 'operacoes',
-                            'curto' => 'OPERAÇÃO',
-                            // O líder monta a operação da equipe dele; o Chefe de
-                            // Setor, de qualquer uma. O fiscal não entra: quem
-                            // executa não desenha o plano.
-                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
+                            'rotulo' => 'Monitoramento',
+                            'rota' => 'retaguarda.monitoramento.index',
+                            'icone' => 'monitoramento',
+                            'curto' => 'MONITOR',
+                            'slug' => 'monitoramento',
+                            /*
+                             * SÓ O ADMINISTRADOR (ordem do dono, 10/09/2026: "somente
+                             * admin pode ver Monitoramento").
+                             *
+                             * O Chefe de Setor tinha a concessão — a leitura era "quem
+                             * responde por 'o sistema está de pé?' é quem administra e
+                             * quem gerencia a operação". O dono decidiu o contrário, e a
+                             * razão cabe no dado: a tela é diagnóstico do AMBIENTE
+                             * (conta de administrador ativa, armazenamento gravável,
+                             * listas obrigatórias vazias) e o que ela mostra quando algo
+                             * está vermelho conta como o sistema é montado por dentro.
+                             * Não é decisão de operação — é de quem administra.
+                             *
+                             * Declarar `['administrador']` é a forma que o projeto usa
+                             * para "só admin", e não `[]`: o administrador NÃO é semeado
+                             * (o seeder o pula, porque o acesso total dele é desvio no
+                             * código), então as duas formas geram ZERO linha de matriz —
+                             * mas esta diz em voz alta a quem a tela pertence, em vez de
+                             * deixar quem lê concluir que alguém esqueceu de preencher.
+                             * É o que Logs e Acompanhamento de Requisitos já fazem.
+                             *
+                             * ⚠️ Mudar esta lista NÃO tira concessão de banco já semeado
+                             * (a semente se aplica uma vez). Quem tira a linha órfã do
+                             * Chefe de Setor é a migration
+                             * `2026_09_10_090000_monitoramento_passa_a_ser_so_do_administrador`.
+                             */
+                            'setores' => ['administrador'],
+                        ],
+                        [
+                            'rotulo' => 'Logs',
+                            'rota' => 'retaguarda.logs.index',
+                            'icone' => 'logs',
+                            'slug' => 'logs',
+                            // Só o administrador: a ocorrência guarda o endereço e o verbo
+                            // de uma requisição que deu errado, e isso conta bastante
+                            // sobre o que existe do outro lado.
+                            'setores' => ['administrador'],
+                        ],
+                        [
+                            'rotulo' => 'Acompanhamento de Requisitos',
+                            'rota' => 'retaguarda.acompanhamento-de-requisitos.index',
+                            'icone' => 'requisitos',
+                            'curto' => 'REQUISITOS',
+                            'slug' => 'acompanhamento-de-requisitos',
+                            // Só o administrador: a tela é o retrato da CONSTRUÇÃO do
+                            // sistema (o que tem requisito escrito, o que divergiu), não
+                            // da operação. Quem fiscaliza e quem gerencia a fiscalização
+                            // não têm decisão a tomar a partir dela.
+                            'setores' => ['administrador'],
                         ],
                     ],
                 ],
@@ -548,62 +638,6 @@ return [
                     'setores' => ['administrador', 'chefe-de-setor'],
                 ],
                 [
-                    'rotulo' => 'Monitoramento',
-                    'rota' => 'retaguarda.monitoramento.index',
-                    'icone' => 'monitoramento',
-                    'curto' => 'MONITOR',
-                    'slug' => 'monitoramento',
-                    /*
-                     * SÓ O ADMINISTRADOR (ordem do dono, 10/09/2026: "somente
-                     * admin pode ver Monitoramento").
-                     *
-                     * O Chefe de Setor tinha a concessão — a leitura era "quem
-                     * responde por 'o sistema está de pé?' é quem administra e
-                     * quem gerencia a operação". O dono decidiu o contrário, e a
-                     * razão cabe no dado: a tela é diagnóstico do AMBIENTE
-                     * (conta de administrador ativa, armazenamento gravável,
-                     * listas obrigatórias vazias) e o que ela mostra quando algo
-                     * está vermelho conta como o sistema é montado por dentro.
-                     * Não é decisão de operação — é de quem administra.
-                     *
-                     * Declarar `['administrador']` é a forma que o projeto usa
-                     * para "só admin", e não `[]`: o administrador NÃO é semeado
-                     * (o seeder o pula, porque o acesso total dele é desvio no
-                     * código), então as duas formas geram ZERO linha de matriz —
-                     * mas esta diz em voz alta a quem a tela pertence, em vez de
-                     * deixar quem lê concluir que alguém esqueceu de preencher.
-                     * É o que Logs e Acompanhamento de Requisitos já fazem.
-                     *
-                     * ⚠️ Mudar esta lista NÃO tira concessão de banco já semeado
-                     * (a semente se aplica uma vez). Quem tira a linha órfã do
-                     * Chefe de Setor é a migration
-                     * `2026_09_10_090000_monitoramento_passa_a_ser_so_do_administrador`.
-                     */
-                    'setores' => ['administrador'],
-                ],
-                [
-                    'rotulo' => 'Logs',
-                    'rota' => 'retaguarda.logs.index',
-                    'icone' => 'logs',
-                    'slug' => 'logs',
-                    // Só o administrador: a ocorrência guarda o endereço e o verbo
-                    // de uma requisição que deu errado, e isso conta bastante
-                    // sobre o que existe do outro lado.
-                    'setores' => ['administrador'],
-                ],
-                [
-                    'rotulo' => 'Acompanhamento de Requisitos',
-                    'rota' => 'retaguarda.acompanhamento-de-requisitos.index',
-                    'icone' => 'requisitos',
-                    'curto' => 'REQUISITOS',
-                    'slug' => 'acompanhamento-de-requisitos',
-                    // Só o administrador: a tela é o retrato da CONSTRUÇÃO do
-                    // sistema (o que tem requisito escrito, o que divergiu), não
-                    // da operação. Quem fiscaliza e quem gerencia a fiscalização
-                    // não têm decisão a tomar a partir dela.
-                    'setores' => ['administrador'],
-                ],
-                [
                     'rotulo' => 'Modo Gerente',
                     'rota' => 'retaguarda.modo-gerente.index',
                     'icone' => 'permissoes',
@@ -615,6 +649,10 @@ return [
                     // é dela que sai a permissão (e é ela que alimenta o painel),
                     // então tirá-la deixaria o item fora da matriz.
                     'modal' => 'modo-gerente',
+                    // Fora do menu desde 25/09/2026: o Modo Gerente liga pelo botão no
+                    // pé do menu e abre pelas CHAVES ao lado de cada item, como no
+                    // Codecon. A matriz inteira abre por "Ver todas as telas".
+                    'oculto' => true,
                     // Só o administrador, e por desvio (não por linha semeada):
                     // quem distribui acesso não pode distribuir a si mesmo o
                     // poder de distribuir acesso.

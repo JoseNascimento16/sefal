@@ -4,14 +4,17 @@ namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
 use App\Models\Area;
+use App\Models\Demanda;
 use App\Models\Operacao;
 use App\Models\OperacaoBairro;
+use App\Models\User;
 use App\Rules\NomeDeCadastro;
 use App\Support\Apresentacao\OperacaoParaTela;
 use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use App\Support\Papel;
 use App\Support\Protocolo;
+use App\Support\TriagemDeDemandas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -100,6 +103,23 @@ class OperacoesController extends Controller
             'equipes' => Estrutura::equipes(),
             'bairros' => Estrutura::bairros(),
             'lideres' => Estrutura::lideresPorEquipe(),
+            // Os bairros de cada área: ao escolher a área ou uma equipe, a tela marca
+            // os bairros dela sozinha — e deixa desmarcar um a um (dono, 25/09/2026).
+            'bairrosPorArea' => collect(Estrutura::areas())
+                ->mapWithKeys(static fn (array $a): array => [(string) $a['nome'] => array_values((array) ($a['bairros'] ?? []))])
+                ->all(),
+            // Fiscais de QUALQUER área que podem ser postos na operação.
+            'fiscaisDisponiveis' => User::query()->where('ativo', true)
+                ->whereHas('setores', static fn ($q) => $q->where('slug', 'fiscal'))
+                ->with('equipesComoFiscal:equipes.id,codigo')
+                ->orderBy('name')->get(['id', 'name', 'login'])
+                ->map(static fn (User $u): array => [
+                    'id' => $u->id,
+                    'nome' => $u->name,
+                    'equipes' => $u->equipesComoFiscal->pluck('codigo')->values()->all(),
+                ])->all(),
+            // As denúncias que ainda podem ir para uma operação: abertas, não agregadas.
+            'demandasDisponiveis' => $this->demandasDisponiveis($comRecorte ? $areas : null),
             // O que esta pessoa exerce aqui, e sobre o que. A MESMA resposta
             // governa a recusa no servidor: a tela não oferece o que ele recusa.
             'cadastra' => Papel::decide($usuario),
@@ -237,7 +257,7 @@ class OperacoesController extends Controller
      */
     private function listar(?array $areas): array
     {
-        $consulta = Operacao::with(['area', 'equipes', 'bairros', 'coordenador'])
+        $consulta = Operacao::with(['area', 'equipes', 'bairros', 'coordenador', 'fiscais', 'demandas'])
             ->orderByDesc('inicio')
             ->orderBy('nome');
 
@@ -320,7 +340,79 @@ class OperacoesController extends Controller
             OperacaoBairro::firstOrCreate(['operacao_id' => $operacao->id, 'bairro' => $bairro]);
         }
 
-        return $operacao->fresh(['area', 'equipes', 'bairros', 'coordenador']);
+        // Os fiscais de qualquer área postos na operação (dono, 25/09/2026).
+        $operacao->fiscais()->sync($dados['fiscais'] ?? []);
+
+        $this->sincronizarDemandas($operacao->fresh(['equipes']), (array) ($dados['demandas'] ?? []));
+
+        return $operacao->fresh(['area', 'equipes', 'bairros', 'coordenador', 'fiscais', 'demandas']);
+    }
+
+    /**
+     * As DENÚNCIAS da operação (dono, 25/09/2026): anexadas no cadastro ou na
+     * edição, e não só pela Caixa de Entrada. Entra pela MESMA porta da ação
+     * "Incluir em operação" (`TriagemDeDemandas::anexarAOperacao`) — mesmo
+     * trâmite, mesma situação, mesma equipe —, e a que sai do formulário deixa a
+     * operação e volta para a mesa de onde veio.
+     *
+     * @param  list<int>  $ids
+     */
+    private function sincronizarDemandas(Operacao $operacao, array $ids): void
+    {
+        $autor = Auth::user();
+        $atuais = Demanda::where('operacao_id', $operacao->id)->pluck('id')->all();
+
+        $novas = array_values(array_diff($ids, $atuais));
+
+        if ($novas !== []) {
+            (new TriagemDeDemandas($autor))->anexarAOperacao($novas, $operacao, null, Papel::papelDoTramite($autor, 'chefe'));
+        }
+
+        foreach (Demanda::whereIn('id', array_diff($atuais, $ids))->get() as $demanda) {
+            if (in_array($demanda->situacao, Demanda::FECHADAS, true)) {
+                continue;
+            }
+
+            $demanda->registrar(
+                acao: 'Retirada da operação',
+                situacao: $demanda->equipe_id !== null ? Demanda::ENCAMINHADA_AO_LIDER : Demanda::RECEBIDA,
+                papel: Papel::papelDoTramite($autor, 'chefe'),
+                autor: $autor,
+                detalhe: "Saiu da operação {$operacao->nome} pelo cadastro da operação.",
+                mudancas: ['operacao_id' => null],
+            );
+        }
+    }
+
+    /**
+     * As denúncias que podem ir para uma operação: abertas e não agregadas — as
+     * que já estão numa operação também, para a de agora mostrar as suas.
+     *
+     * @param  list<string>|null  $areas
+     * @return list<array<string, mixed>>
+     */
+    private function demandasDisponiveis(?array $areas): array
+    {
+        $consulta = Demanda::query()
+            ->with('area:id,nome')
+            ->whereNull('agrupada_em_id')
+            ->whereNotIn('situacao', Demanda::FECHADAS)
+            ->orderByDesc('recebida_em');
+
+        if ($areas !== null) {
+            $consulta->whereHas('area', static fn ($q) => $q->whereIn('nome', $areas));
+        }
+
+        return $consulta->limit(500)->get(['id', 'protocolo', 'assunto', 'bairro', 'situacao', 'area_id', 'operacao_id'])
+            ->map(static fn (Demanda $d): array => [
+                'id' => $d->id,
+                'protocolo' => $d->protocolo,
+                'assunto' => $d->assunto,
+                'bairro' => (string) ($d->bairro ?? ''),
+                'area' => (string) ($d->area?->nome ?? ''),
+                'situacao' => $d->situacao,
+                'operacao_id' => $d->operacao_id,
+            ])->all();
     }
 
     /** O identificador de quem está gravando — nulo fora de uma requisição. */
@@ -354,6 +446,11 @@ class OperacoesController extends Controller
             'situacao' => ['required', Rule::in(Operacao::SITUACOES)],
             'foco' => ['nullable', 'string', 'max:300'],
             'observacao' => ['nullable', 'string', 'max:600'],
+            // Fiscais de QUALQUER área e denúncias anexadas (dono, 25/09/2026).
+            'fiscais' => ['array'],
+            'fiscais.*' => ['integer', Rule::exists('users', 'id')],
+            'demandas' => ['array'],
+            'demandas.*' => ['integer', Rule::exists('demandas', 'id')],
         ], [
             'nome.required' => 'Dê um nome à operação — é por ele que a equipe vai reconhecê-la.',
             'nome.min' => 'O nome está curto demais para a equipe reconhecer a operação em rua.',
@@ -378,6 +475,8 @@ class OperacoesController extends Controller
             'situacao' => (string) $dados['situacao'],
             'foco' => trim((string) ($dados['foco'] ?? '')),
             'observacao' => trim((string) ($dados['observacao'] ?? '')),
+            'fiscais' => array_values(array_unique(array_map('intval', (array) ($dados['fiscais'] ?? [])))),
+            'demandas' => array_values(array_unique(array_map('intval', (array) ($dados['demandas'] ?? [])))),
         ];
     }
 

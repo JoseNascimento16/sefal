@@ -706,7 +706,11 @@ class DenunciasController extends Controller
             // olhando um dado diferente. Ver docs/padroes/listagem-clean.md.
             // UMA grade para todas as abas (dono, 24/09/2026): protocolo, recebida,
             // bairro, situação e prazo — com a situação em três palavras.
-            'listagens' => ListagensDaRetaguarda::para(['denuncias.todas']),
+            // A coluna de ÁREA (sugerida) só para quem encaminha: é nela que o chefe
+            // escolhe o destino de cada demanda para encaminhar em lote.
+            'listagens' => ListagensDaRetaguarda::para(['denuncias.todas'], [
+                'encaminha' => in_array('encaminhamento', self::etapas($usuario), true),
+            ]),
         ]);
     }
 

@@ -294,4 +294,24 @@ class ModoGerenteController extends Controller
 
         return $registros;
     }
+
+    /**
+     * Liga ou desliga o Modo Gerente — as CHAVES ao lado de cada item do menu,
+     * como no Codecon (dono, 25/09/2026). O estado mora na SESSÃO: vale para a
+     * pessoa, em todas as telas, até ela desligar ou sair. Quem chega aqui já
+     * passou pela guarda da tela `modo-gerente` (administrador ou a marca
+     * "Pode ativar o Modo Gerente").
+     */
+    public function alternar(Request $request): RedirectResponse
+    {
+        $ativo = ! $request->session()->get('modo_gerente_ativo', false);
+        $request->session()->put('modo_gerente_ativo', $ativo);
+
+        return back()->with(
+            'flash.sucesso',
+            $ativo
+                ? 'Modo Gerente ligado: use a chave ao lado de cada item do menu para configurar quem vê e faz o quê.'
+                : 'Modo Gerente desligado.',
+        );
+    }
 }

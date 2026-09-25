@@ -4,8 +4,11 @@ namespace App\Support\Apresentacao;
 
 use App\Models\Ambulante;
 use App\Models\AreaBairro;
+use App\Models\Equipe;
 use App\Models\Fiscalizacao;
+use App\Models\User;
 use App\Support\Estrutura;
+use App\Support\Papel;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Date;
 
@@ -47,12 +50,17 @@ class MapaDaCidade
      *
      * @return array<string, mixed>
      */
-    public static function aoVivo(): array
+    public static function aoVivo(?User $usuario = null): array
     {
+        $recorte = self::recorteDoLider($usuario);
+
         return [
             'pontos' => self::pontos(),
-            'registros' => self::registrosDeHoje(),
-            'fiscais' => self::fiscaisEmCampo(),
+            'registros' => self::registrosDeHoje($recorte),
+            'fiscais' => self::fiscaisEmCampo($recorte),
+            // O líder vê só as fiscalizações da área dele (dono, 25/09/2026) — e a
+            // tela diz isso, para o mapa vazio não parecer cidade parada.
+            'recorte' => $recorte === null ? null : ['equipes' => $recorte['codigos']],
             'equipes' => Estrutura::equipes(),
             'centro' => (array) config('geografia.centro'),
             // O instante que a tela está mostrando. Dito em palavras porque o
@@ -75,8 +83,10 @@ class MapaDaCidade
      *
      * @return array<string, mixed>
      */
-    public static function calor(): array
+    public static function calor(?User $usuario = null): array
     {
+        $recorte = self::recorteDoLider($usuario);
+
         $bairros = self::bairrosComEquipe();
         $indicePorBairro = [];
 
@@ -87,7 +97,7 @@ class MapaDaCidade
         $hoje = Date::now()->startOfDay();
         $pontos = [];
 
-        $registros = Fiscalizacao::whereNotNull('latitude')
+        $registros = self::recortar(Fiscalizacao::whereNotNull('latitude'), $recorte)
             ->whereNotNull('concluida_em')
             ->where('concluida_em', '>=', $hoje->copy()->subDays(self::JANELA_DE_CALOR))
             ->get(['latitude', 'longitude', 'bairro', 'concluida_em']);
@@ -119,6 +129,7 @@ class MapaDaCidade
             'centro' => (array) config('geografia.centro'),
             'momento' => Date::now()->format('d/m/Y H:i'),
             'janela_em_dias' => self::JANELA_DE_CALOR,
+            'recorte' => $recorte === null ? null : ['equipes' => $recorte['codigos']],
         ];
     }
 
@@ -201,12 +212,12 @@ class MapaDaCidade
      *
      * @return list<array<string, mixed>>
      */
-    private static function registrosDeHoje(): array
+    private static function registrosDeHoje(?array $recorte = null): array
     {
         $porBairro = self::mapaDeBairros();
         $agora = Date::now();
 
-        return Fiscalizacao::with(['fiscal', 'equipe.area', 'ambulante.atividade'])
+        return self::recortar(Fiscalizacao::with(['fiscal', 'equipe.area', 'ambulante.atividade']), $recorte)
             ->whereNotNull('concluida_em')
             ->where('concluida_em', '>=', $agora->copy()->startOfDay())
             ->orderByDesc('concluida_em')
@@ -247,11 +258,11 @@ class MapaDaCidade
      *
      * @return list<array<string, mixed>>
      */
-    private static function fiscaisEmCampo(): array
+    private static function fiscaisEmCampo(?array $recorte = null): array
     {
         $porBairro = self::mapaDeBairros();
 
-        return Fiscalizacao::with(['fiscal', 'equipe.area'])
+        return self::recortar(Fiscalizacao::with(['fiscal', 'equipe.area']), $recorte)
             ->where('situacao', Fiscalizacao::EM_CAMPO)
             ->whereNotNull('latitude')
             ->get()
@@ -277,6 +288,55 @@ class MapaDaCidade
             })
             ->values()
             ->all();
+    }
+
+    // ── O recorte do líder ──────────────────────────────────────────────────
+
+    /**
+     * O que o LÍDER vê no mapa (dono, 25/09/2026): as fiscalizações das equipes
+     * dele e as feitas nos bairros das áreas dessas equipes. Nulo para quem vê a
+     * cidade inteira — Chefe de Setor, fiscal e administrador.
+     *
+     * O recorte é feito AQUI, no servidor: filtrar no navegador esconderia, mas a
+     * coordenada e o relato de outras áreas teriam viajado até a tela do líder.
+     *
+     * @return array{equipes: list<int>, codigos: list<string>, bairros: list<string>}|null
+     */
+    private static function recorteDoLider(?User $usuario): ?array
+    {
+        if (! Papel::recorta($usuario)) {
+            return null;
+        }
+
+        $codigos = Papel::equipes($usuario);
+        $equipes = Equipe::whereIn('codigo', $codigos)->get(['id', 'area_id']);
+
+        return [
+            'equipes' => $equipes->pluck('id')->all(),
+            'codigos' => $codigos,
+            'bairros' => AreaBairro::whereIn('area_id', $equipes->pluck('area_id')->unique()->all())->pluck('bairro')->all(),
+        ];
+    }
+
+    /**
+     * Aplica o recorte do líder a uma consulta de fiscalizações.
+     *
+     * @template T of \Illuminate\Database\Eloquent\Builder
+     *
+     * @param  T  $consulta
+     * @param  array{equipes: list<int>, codigos: list<string>, bairros: list<string>}|null  $recorte
+     * @return T
+     */
+    private static function recortar($consulta, ?array $recorte)
+    {
+        if ($recorte === null) {
+            return $consulta;
+        }
+
+        return $consulta->where(static function ($q) use ($recorte) {
+            $q->whereIn('equipe_id', $recorte['equipes'] ?: [0])
+                ->orWhereIn('bairro', $recorte['bairros'] ?: ['']);
+        });
     }
 
     // ── Os bairros do mapa ──────────────────────────────────────────────────

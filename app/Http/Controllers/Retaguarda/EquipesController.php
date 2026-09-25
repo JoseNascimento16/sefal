@@ -144,8 +144,8 @@ class EquipesController extends Controller
             'codigo.unique' => 'Já existe uma equipe com este código.',
             'area_id.required' => 'Escolha a área da equipe.',
             'turno.required' => 'Escolha o turno.',
-            'lider_id.in' => 'O líder precisa ser uma conta ativa do setor Líder de Equipe.',
-            'fiscais.*.in' => 'Só contas ativas do setor Fiscal entram como fiscais.',
+            'lider_id.in' => 'O líder precisa ser uma conta ativa com o cargo Líder de Equipe.',
+            'fiscais.*.in' => 'Só contas ativas com o cargo Fiscal entram como fiscais.',
         ]);
     }
 
