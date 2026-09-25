@@ -948,7 +948,36 @@ export function PainelDeDenuncias({
             };
         }
 
-        // A ÁREA: texto, gravada ou sugerida pelo bairro.
+        // A ÁREA: para quem encaminha, e na demanda que ainda espera o
+        // encaminhamento, é o SELETOR da equipe de destino — a sugestão vem do
+        // bairro e o chefe troca na linha, para encaminhar em lote (dono,
+        // 25/09/2026). Nas demais, texto: gravada ou sugerida.
+        if (chave === 'area' && encaminha && AGUARDANDO_ENCAMINHAMENTO.includes(d.situacao)) {
+            return {
+                interativa: true,
+                conteudo: (
+                    <select
+                        className="form-control"
+                        style={{ minWidth: 220, fontSize: 13 }}
+                        value={equipeDe(d)}
+                        aria-label={`Equipe de destino da demanda ${d.protocolo}`}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onChange={(e) => setEquipePorId((atual) => ({ ...atual, [d.id]: e.target.value }))}
+                    >
+                        <option value="">Escolha a equipe…</option>
+                        {equipes.map((e) => (
+                            <option key={e.equipe} value={e.equipe}>
+                                {`${e.area} · ${e.equipe}`}
+                                {liderDa(e.equipe) === null ? '' : ` — ${liderDa(e.equipe)}`}
+                            </option>
+                        ))}
+                    </select>
+                ),
+                dica: equipeDe(d) === '' ? 'Escolha a equipe de destino' : `Vai para a equipe ${equipeDe(d)}`,
+            };
+        }
+
         if (chave === 'area') {
             const area = areaDe(d);
 

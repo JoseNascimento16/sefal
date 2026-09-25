@@ -32,6 +32,8 @@ class UsuarioRequest extends FormRequest
         $dados = [
             'setores' => array_values(array_unique(array_map('strval', (array) $this->input('setores', [])))),
             'ativo' => $this->boolean('ativo'),
+            'is_gerente' => $this->boolean('is_gerente'),
+            'is_admin_usuarios' => $this->boolean('is_admin_usuarios'),
             'name' => trim((string) $this->input('name', '')),
             'email' => mb_strtolower(trim((string) $this->input('email', ''))),
         ];
@@ -59,6 +61,8 @@ class UsuarioRequest extends FormRequest
             'setores' => ['array'],
             'setores.*' => ['string', Rule::in(Setor::query()->pluck('slug')->all())],
             'ativo' => ['boolean'],
+            'is_gerente' => ['boolean'],
+            'is_admin_usuarios' => ['boolean'],
         ];
 
         if ($this->incluindo()) {

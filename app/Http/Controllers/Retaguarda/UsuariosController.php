@@ -57,7 +57,7 @@ class UsuariosController extends Controller
     public function index(Request $request): Response
     {
         $ativos = User::query()
-            ->select(['id', 'login', 'name', 'email', 'admin', 'ativo', 'senha_definida_em', 'created_at'])
+            ->select(['id', 'login', 'name', 'email', 'admin', 'ativo', 'senha_definida_em', 'is_gerente', 'is_admin_usuarios', 'created_at'])
             ->with(['setores', 'equipesQueLidera:id,codigo,lider_id', 'equipesComoFiscal:equipes.id,codigo'])
             ->orderBy('name')
             ->get()
@@ -68,6 +68,8 @@ class UsuariosController extends Controller
                 'email' => $u->email,
                 'ativo' => (bool) $u->ativo,
                 'senhaDefinida' => $u->senhaDefinida(),
+                'isGerente' => (bool) $u->is_gerente,
+                'isAdminUsuarios' => (bool) $u->is_admin_usuarios,
                 'setores' => $this->setoresDe($u),
                 'lidera' => $u->equipesQueLidera->pluck('codigo')->sort()->values()->all(),
                 'fiscalEm' => $u->equipesComoFiscal->pluck('codigo')->sort()->values()->all(),
@@ -119,6 +121,10 @@ class UsuariosController extends Controller
             return back()->withErrors(['setores' => $recusa]);
         }
 
+        if ($recusa = $this->recusaDeMarcas($request->user(), null, $dados)) {
+            return back()->withErrors(['marcas' => $recusa]);
+        }
+
         [$usuario, $saiu] = DB::transaction(function () use ($dados, $setores) {
             $usuario = User::criarComPrimeiroAcessoPendente([
                 'login' => $dados['login'],
@@ -126,6 +132,8 @@ class UsuariosController extends Controller
                 'email' => $dados['email'],
                 'admin' => in_array(self::ADMINISTRADOR, $setores, true),
                 'ativo' => $dados['ativo'],
+                'is_gerente' => $dados['is_gerente'],
+                'is_admin_usuarios' => $dados['is_admin_usuarios'],
             ]);
 
             $usuario->setores()->sync($this->idsDosSetores($setores));
@@ -154,11 +162,15 @@ class UsuariosController extends Controller
             return back()->withErrors(['setores' => $recusa]);
         }
 
+        if ($recusa = $this->recusaDeMarcas($logado, $usuario, $dados)) {
+            return back()->withErrors(['marcas' => $recusa]);
+        }
+
         // Travas contra se trancar do lado de fora num clique: só outro
         // administrador desfaria.
         if ($logado?->id === $usuario->id) {
             if ($eraAdministrador && ! in_array(self::ADMINISTRADOR, $setores, true)) {
-                return back()->withErrors(['setores' => 'Você não pode tirar o setor Administrador de si mesmo.']);
+                return back()->withErrors(['setores' => 'Você não pode tirar o cargo Administrador de si mesmo.']);
             }
 
             if (! $dados['ativo']) {
@@ -174,6 +186,8 @@ class UsuariosController extends Controller
                 'email' => $dados['email'],
                 'admin' => in_array(self::ADMINISTRADOR, $setores, true),
                 'ativo' => $dados['ativo'],
+                'is_gerente' => $dados['is_gerente'],
+                'is_admin_usuarios' => $dados['is_admin_usuarios'],
             ]);
 
             $usuario->setores()->sync($this->idsDosSetores($setores));
@@ -251,10 +265,32 @@ class UsuariosController extends Controller
         }
 
         if (in_array(self::ADMINISTRADOR, $setores, true)) {
-            return 'Só um administrador pode dar o setor Administrador a alguém.';
+            return 'Só um administrador pode dar o cargo Administrador a alguém.';
         }
 
         return null;
+    }
+
+    /**
+     * As duas MARCAS — pode ativar o Modo Gerente e Administrador de usuários —
+     * só o administrador dá ou tira. Quem administra usuários pela marca não pode
+     * dar a si mesmo (nem a ninguém) o poder de distribuir acesso: seria a porta
+     * para virar administrador por fora. Devolve o motivo da recusa, ou nulo.
+     *
+     * @param  array<string, mixed>  $dados
+     */
+    private function recusaDeMarcas(?User $logado, ?User $alvo, array $dados): ?string
+    {
+        if ($logado?->ehAdmin()) {
+            return null;
+        }
+
+        $mudou = (bool) $dados['is_gerente'] !== (bool) ($alvo?->is_gerente ?? false)
+            || (bool) $dados['is_admin_usuarios'] !== (bool) ($alvo?->is_admin_usuarios ?? false);
+
+        return $mudou
+            ? 'Só um administrador pode dar ou tirar as marcas de Modo Gerente e de Administrador de usuários.'
+            : null;
     }
 
     /**
@@ -302,7 +338,7 @@ class UsuariosController extends Controller
                 ? $saiu[0]
                 : implode(', ', array_slice($saiu, 0, -1)).' e '.$saiu[count($saiu) - 1];
 
-            return ' '.$nomes.(count($saiu) === 1 ? ' deixou' : ' deixaram').' de ser Chefe de Setor — o setor tem um chefe só.';
+            return ' '.$nomes.(count($saiu) === 1 ? ' deixou' : ' deixaram').' de ser Chefe de Setor — o cargo é de uma pessoa só.';
         }
 
         return $ficouSemChefe

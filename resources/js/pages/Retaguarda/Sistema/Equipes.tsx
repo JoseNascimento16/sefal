@@ -415,6 +415,45 @@ return;
                     </>
                 ) : (
                     <>
+                        {/* Os botões do registro vêm EM CIMA, antes do formulário (dono, 25/09/2026). */}
+                        <div className="rt-barra-registro">
+                            <BotaoAcao className="btn btn-secondary btn-sm" icone={<Undo2 size={16} aria-hidden />} ocupado={ocupado} onClick={voltarParaLista}>
+                                Voltar
+                            </BotaoAcao>
+
+                            {aberta !== null && somenteLeitura && (
+                                <>
+                                    {acoes.excluir && (
+                                        <BotaoAcao
+                                            className="btn btn-perigo btn-sm"
+                                            icone={<Trash2 size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setConfirmandoExclusao(true)}
+                                        >
+                                            Excluir
+                                        </BotaoAcao>
+                                    )}
+                                    {acoes.habilitado && (
+                                        <BotaoAcao icone={<Pencil size={16} aria-hidden />} ocupado={ocupado} onClick={() => setModo('edicao')}>
+                                            Editar
+                                        </BotaoAcao>
+                                    )}
+                                </>
+                            )}
+
+                            {modo === 'edicao' && podeGravar && (
+                                <BotaoAcao
+                                    icone={<Check size={16} aria-hidden />}
+                                    carregando={enviando === 'salvar'}
+                                    ocupado={ocupado}
+                                    rotuloCarregando="Salvando…"
+                                    onClick={salvar}
+                                >
+                                    Salvar
+                                </BotaoAcao>
+                            )}
+                        </div>
+
                         {listaDeErros.length > 0 && (
                             <div className="form-erro" style={{ marginBottom: 16 }}>
                                 <TriangleAlert size={15} aria-hidden /> Não foi possível salvar:
@@ -521,8 +560,8 @@ return;
                                 ))}
                             </select>
                             <p className="form-ajuda">
-                                A conta que recebe o trabalho encaminhado à equipe. Só aparecem contas ativas do setor
-                                Líder de Equipe — dê o setor em Usuários.
+                                A conta que recebe o trabalho encaminhado à equipe. Só aparecem contas ativas com o cargo
+                                Líder de Equipe — dê o cargo em Usuários.
                                 {aberta?.encarregado && !form.lider_id && ` Encarregado registrado: ${aberta.encarregado}.`}
                             </p>
                             {erros.lider_id && <p className="form-erro">{erros.lider_id}</p>}
@@ -544,7 +583,7 @@ return;
                             )}
                             {opcoesDeFiscal.length === 0 ? (
                                 <p className="form-ajuda">
-                                    Nenhuma conta ativa do setor Fiscal. Dê o setor em Usuários para ela aparecer aqui.
+                                    Nenhuma conta ativa com o cargo Fiscal. Dê o cargo em Usuários para ela aparecer aqui.
                                 </p>
                             ) : (
                                 <div className="rt-escolhas">
@@ -586,43 +625,25 @@ return;
                             </p>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
-                            <BotaoAcao className="btn btn-secondary btn-sm" icone={<Undo2 size={16} aria-hidden />} ocupado={ocupado} onClick={voltarParaLista}>
-                                Voltar
-                            </BotaoAcao>
-
-                            {aberta !== null && somenteLeitura && (
-                                <>
-                                    {acoes.excluir && (
-                                        <BotaoAcao
-                                            className="btn btn-perigo btn-sm"
-                                            icone={<Trash2 size={16} aria-hidden />}
-                                            ocupado={ocupado}
-                                            onClick={() => setConfirmandoExclusao(true)}
-                                        >
-                                            Excluir
-                                        </BotaoAcao>
-                                    )}
-                                    {acoes.habilitado && (
-                                        <BotaoAcao icone={<Pencil size={16} aria-hidden />} ocupado={ocupado} onClick={() => setModo('edicao')}>
-                                            Editar
-                                        </BotaoAcao>
-                                    )}
-                                </>
-                            )}
-
-                            {modo === 'edicao' && podeGravar && (
-                                <BotaoAcao
-                                    icone={<Check size={16} aria-hidden />}
-                                    carregando={enviando === 'salvar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Salvando…"
-                                    onClick={salvar}
-                                >
-                                    Salvar
+                        {/* Em edição, Voltar e Salvar também no pé (dono, 25/09/2026). */}
+                        {modo === 'edicao' && (
+                            <div className="rt-barra-registro rt-barra-registro-pe">
+                                <BotaoAcao className="btn btn-secondary btn-sm" icone={<Undo2 size={16} aria-hidden />} ocupado={ocupado} onClick={voltarParaLista}>
+                                    Voltar
                                 </BotaoAcao>
-                            )}
-                        </div>
+                                {modo === 'edicao' && podeGravar && (
+                                    <BotaoAcao
+                                        icone={<Check size={16} aria-hidden />}
+                                        carregando={enviando === 'salvar'}
+                                        ocupado={ocupado}
+                                        rotuloCarregando="Salvando…"
+                                        onClick={salvar}
+                                    >
+                                        Salvar
+                                    </BotaoAcao>
+                                )}
+                            </div>
+                        )}
                     </>
                 )}
             </div>

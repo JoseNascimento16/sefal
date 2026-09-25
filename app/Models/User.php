@@ -31,12 +31,14 @@ use Illuminate\Support\Str;
  * @property bool $ativo
  * @property string|null $remember_token
  * @property Carbon|null $senha_definida_em
+ * @property bool $is_gerente
+ * @property bool $is_admin_usuarios
  * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Setor> $setores
  */
-#[Fillable(['name', 'login', 'email', 'password', 'admin', 'ativo'])]
+#[Fillable(['name', 'login', 'email', 'password', 'admin', 'ativo', 'is_gerente', 'is_admin_usuarios'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -192,6 +194,8 @@ class User extends Authenticatable
             'admin' => 'boolean',
             'ativo' => 'boolean',
             'senha_definida_em' => 'datetime',
+            'is_gerente' => 'boolean',
+            'is_admin_usuarios' => 'boolean',
         ];
     }
 

@@ -819,6 +819,71 @@ table.data-table.enxuta tr.linha-detalhe td {
     cursor: pointer;
     transition: var(--sm-transicao);
 }
+/* ── Modo Gerente: a chave ao lado do item e o botão de ligar no pé ────────── */
+.rt-menu-linha {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.rt-menu-linha > .rt-menu-item,
+.rt-menu-linha > .rt-menu-filho {
+    flex: 1;
+    min-width: 0;
+}
+.rt-menu-chave {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 7px;
+    background: rgba(250, 204, 21, 0.18);
+    color: #facc15;
+    cursor: pointer;
+}
+.rt-menu-chave:hover,
+.rt-menu-chave:focus-visible {
+    background: rgba(250, 204, 21, 0.32);
+    outline: none;
+}
+.rt-menu-gerente {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 14px 14px;
+}
+.rt-menu-gerente-botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid rgba(122, 175, 220, 0.35);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--sm-menu-texto);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.rt-menu-gerente-botao.ativo {
+    border-color: #facc15;
+    background: rgba(250, 204, 21, 0.16);
+    color: #fde68a;
+}
+.rt-menu-gerente-todas {
+    border: none;
+    background: none;
+    color: var(--sm-menu-texto);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
 .rt-menu-rotulo {
     flex: 1;
     min-width: 0;
@@ -1277,6 +1342,21 @@ table.data-table.enxuta tr.linha-detalhe td {
     border-radius: var(--sm-raio-md);
     box-shadow: var(--sm-sombra-lg);
     text-align: left;
+}
+
+/* ── A barra de botões do registro (cadastros e parametrização) ─────────────
+   Em cima, antes do formulário (dono, 25/09/2026); em edição, Voltar e Salvar
+   se repetem no pé, para quem terminou de preencher não subir a tela. */
+.rt-barra-registro {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 2px 0 18px;
+}
+.rt-barra-registro-pe {
+    margin: 22px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--sm-borda);
 }
 
 /* ── Lista de escolhas com caixa de marcar (os fiscais da equipe) ──────────── */

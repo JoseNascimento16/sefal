@@ -375,32 +375,29 @@ test('a leitura pedida em JSON e negada COM O MOTIVO, e nao com um redirecioname
         ->assertJsonPath('erro', 'Você não tem acesso a essa tela.');
 });
 
-test('o item do Modo Gerente no menu ABRE PAINEL — nao navega', function () {
+test('o Modo Gerente abre como PAINEL pelo botão e pelas chaves — o item saiu do menu e os demais navegam', function () {
     /*
-     * Teste-LEI do contrato entre o servidor e a barra lateral: é o `modal` do
-     * item que faz a barra desenhar um botão em vez de um link. Sem ele, o item
-     * volta a navegar para o endereço — que hoje só redireciona —, e a pessoa dá
-     * uma volta inteira para chegar ao mesmo painel.
+     * Desde 25/09/2026 (como no Codecon) o Modo Gerente não é item do menu: liga
+     * pelo botão no pé e abre pelas chaves. A config continua declarando o item
+     * com `modal` — oculto — para a permissão da tela e o desvio de quem chega
+     * pelo endereço antigo continuarem valendo.
      */
+    $declarado = collect(config('retaguarda_menu.secoes'))->pluck('itens')->flatten(1)->firstWhere('rotulo', 'Modo Gerente');
+
+    expect($declarado['modal'])->toBe('modo-gerente')
+        ->and($declarado['oculto'] ?? false)->toBeTrue();
+
     $itens = collect(
         $this->actingAs(User::factory()->create(['admin' => true]))
             ->get('/retaguarda/inicio')
             ->viewData('page')['props']['menu']
     )->pluck('itens')->flatten(1);
 
-    expect($itens->firstWhere('rotulo', 'Modo Gerente')['modal'])->toBe('modo-gerente');
+    expect($itens->firstWhere('rotulo', 'Modo Gerente'))->toBeNull()
+        ->and($itens)->not->toBeEmpty();
 
-    /*
-     * E o resto do menu continua NAVEGANDO: `modal` é a exceção declarada, e um
-     * item qualquer tem de prová-lo. A contraprova era o item "Ambulantes", que
-     * desde 10/09 é FILHO da pasta "Sistema" — a busca rasa não o encontrava
-     * mais e o teste morria em "índice de nulo", sem falar do que ele protege.
-     */
-    $navegaveis = $itens->reject(fn (array $i): bool => ($i['modal'] ?? null) !== null);
-
-    expect($navegaveis)->not->toBeEmpty();
-
-    foreach ($navegaveis as $item) {
+    // Todo item que sobrou no menu NAVEGA.
+    foreach ($itens as $item) {
         expect($item['modal'] ?? null)->toBeNull();
     }
 });
@@ -613,33 +610,31 @@ test('o menu obedece o rollout: fora do modo block, o item continua a vista', fu
     expect($apareceNoMenu)->toBe(['off' => true, 'log' => true, 'block' => false]);
 });
 
-test('item de menu que o usuario nao pode ver nao aparece no menu', function () {
-    // Menu e guarda de acesso leem a MESMA regra: se cada um tivesse a sua, um
-    // dia o menu ofereceria uma tela que a guarda barra. A tela do Modo Gerente
-    // não espera o rollout, então some do menu em qualquer modo.
+test('o Modo Gerente só se oferece a quem pode — menu e guarda leem a MESMA regra', function () {
+    // Desde 25/09/2026 o Modo Gerente não é item do menu: é o BOTÃO no pé do menu
+    // (como no Codecon), e a chave ao lado de cada item. Quem vê o botão é quem a
+    // guarda deixa entrar — a mesma matriz decide as duas coisas.
     $chefe = usuarioDoSetor('chefe-de-setor');
 
+    $this->actingAs($chefe)->get('/retaguarda/inicio')
+        ->assertInertia(fn ($p) => $p->where('modoGerente.pode', false));
+
+    PermissaoSetor::create(['setor' => 'chefe-de-setor', 'slug' => 'modo-gerente', 'visivel' => true, 'habilitado' => true]);
+
+    $this->actingAs($chefe)->get('/retaguarda/inicio')
+        ->assertInertia(fn ($p) => $p->where('modoGerente.pode', true));
+
+    // E o item antigo do menu não volta: o atalho é o botão.
     $this->actingAs($chefe)->get('/retaguarda/inicio')
         ->assertInertia(function ($p) {
             $rotulos = collect($p->toArray()['props']['menu'])->pluck('itens')->flatten(1)->pluck('rotulo');
             expect($rotulos)->not->toContain('Modo Gerente');
         });
-
-    PermissaoSetor::create(['setor' => 'chefe-de-setor', 'slug' => 'modo-gerente', 'visivel' => true, 'habilitado' => true]);
-
-    $this->actingAs($chefe)->get('/retaguarda/inicio')
-        ->assertInertia(function ($p) {
-            $rotulos = collect($p->toArray()['props']['menu'])->pluck('itens')->flatten(1)->pluck('rotulo');
-            expect($rotulos)->toContain('Modo Gerente');
-        });
 });
 
-test('o administrador ve o Modo Gerente no menu sem precisar de concessao', function () {
+test('o administrador tem o botão do Modo Gerente sem precisar de concessao', function () {
     $this->actingAs(User::factory()->create(['admin' => true]))->get('/retaguarda/inicio')
-        ->assertInertia(function ($p) {
-            $rotulos = collect($p->toArray()['props']['menu'])->pluck('itens')->flatten(1)->pluck('rotulo');
-            expect($rotulos)->toContain('Modo Gerente');
-        });
+        ->assertInertia(fn ($p) => $p->where('modoGerente.pode', true));
 });
 
 test('a semeadura nasce do menu — tela restrita a setor nasce concedida a ele', function () {

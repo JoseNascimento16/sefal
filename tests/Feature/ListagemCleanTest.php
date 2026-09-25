@@ -86,11 +86,21 @@ it('declara ao menos uma listagem — o catálogo vazio faria toda lei abaixo pa
     $this->assertNotEmpty(ListagensDaRetaguarda::ids());
 });
 
-it('não põe mais de cinco colunas na grade, em nenhuma resolução', function () {
+it('não põe mais de cinco colunas na grade, em nenhuma resolução — salvo exceção DECLARADA com motivo', function () {
     foreach (ListagensDaRetaguarda::ids() as $id) {
+        $listagem = ListagensDaRetaguarda::listagem($id);
+        $teto = (int) ($listagem['teto'] ?? 5);
+
+        // A exceção existe (a Caixa de Entrada, 25/09/2026), mas é declarada no
+        // catálogo com o motivo — e ninguém passa de seis.
+        if ($teto !== 5) {
+            $this->assertNotEmpty($listagem['teto_motivo'] ?? '', "A listagem \"{$id}\" subiu o teto sem declarar o motivo.");
+            $this->assertLessThanOrEqual(6, $teto, "A listagem \"{$id}\" declarou teto acima de seis.");
+        }
+
         foreach (resolucoesDaGrade($id) as $rotulo => $grade) {
             $this->assertLessThanOrEqual(
-                5,
+                $teto,
                 count($grade),
                 "A grade de \"{$id}\" ({$rotulo}) passou de cinco colunas: "
                 .implode(', ', chavesDaListagem($grade))
@@ -283,6 +293,7 @@ dataset('telas com listagem', [
     'Logs' => ['/retaguarda/logs', ['sistema.logs']],
     'Usuários' => ['/retaguarda/usuarios', ['usuarios.ativos', 'usuarios.excluidos']],
     'Equipes' => ['/retaguarda/equipes', ['equipes']],
+    'Áreas' => ['/retaguarda/areas', ['areas']],
     'Acompanhamento de Requisitos' => ['/retaguarda/acompanhamento-de-requisitos', ['sistema.requisitos']],
 ]);
 

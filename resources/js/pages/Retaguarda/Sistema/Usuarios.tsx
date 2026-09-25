@@ -59,6 +59,8 @@ interface Usuario {
     email: string;
     ativo: boolean;
     senhaDefinida: boolean;
+    isGerente: boolean;
+    isAdminUsuarios: boolean;
     setores: string[];
     lidera: string[];
     fiscalEm: string[];
@@ -96,6 +98,8 @@ interface Formulario {
     email: string;
     setores: string[];
     ativo: boolean;
+    is_gerente: boolean;
+    is_admin_usuarios: boolean;
 }
 
 function formularioDe(u: Usuario | null): Formulario {
@@ -105,6 +109,8 @@ function formularioDe(u: Usuario | null): Formulario {
         email: u?.email ?? '',
         setores: u?.setores ?? [],
         ativo: u?.ativo ?? true,
+        is_gerente: u?.isGerente ?? false,
+        is_admin_usuarios: u?.isAdminUsuarios ?? false,
     };
 }
 
@@ -114,7 +120,7 @@ type Faceta = 'ativos' | 'inativos' | 'sem-setor' | 'pendente' | 'concluido';
 const FACETAS = [
     { expressao: /\binativ\w*\b|\bdesativad\w*\b/, valor: 'inativos' as const },
     { expressao: /\bativos?\b/, valor: 'ativos' as const },
-    { expressao: /\bsem setor\w*\b/, valor: 'sem-setor' as const },
+    { expressao: /\bsem (setor|cargo)\w*\b/, valor: 'sem-setor' as const },
     {
         expressao: /\b(1o |primeiro )?acesso pendente\b|\bpendentes?\b|\bsem senha\b|\bnao entrou\b/,
         valor: 'pendente' as const,
@@ -176,7 +182,7 @@ export default function Usuarios({
     }, [setoresOpcoes]);
 
     const setoresEmTexto = (slugs: string[]) =>
-        slugs.length > 0 ? slugs.map(nomeDoSetor).join(', ') : 'Sem setor';
+        slugs.length > 0 ? slugs.map(nomeDoSetor).join(', ') : 'Sem cargo';
 
     // ── Localizar ─────────────────────────────────────────────────────────
 
@@ -250,8 +256,8 @@ return false;
         if (chave === 'setores') {
             return u.setores.length === 0
                 ? {
-                      conteudo: <span className="selo selo-perigo">Sem setor</span>,
-                      dica: 'Sem setor, a conta entra no sistema mas não abre tela nenhuma além do Início e do perfil.',
+                      conteudo: <span className="selo selo-perigo">Sem cargo</span>,
+                      dica: 'Sem cargo, a conta entra no sistema mas não abre tela nenhuma além do Início e do perfil.',
                   }
                 : {
                       conteudo: setoresEmTexto(u.setores),
@@ -464,7 +470,7 @@ return;
     const acesso = form.setores.includes(ADMINISTRADOR)
         ? { rotulo: 'Administrador', tom: 'selo-ok' }
         : form.setores.length > 0
-          ? { rotulo: 'Por setor', tom: 'selo-info' }
+          ? { rotulo: 'Por cargo', tom: 'selo-info' }
           : { rotulo: 'Sem acesso a telas', tom: 'selo-perigo' };
 
     return (
@@ -476,8 +482,8 @@ return;
                     <p className="sobrancelha">Sistema</p>
                     <h1>Usuários</h1>
                     <p>
-                        Quem tem conta na Retaguarda e em que setor. O <strong>setor</strong> define o que cada um
-                        vê e faz — o que cada setor abre é configurado no Modo Gerente. A conta nova recebe por
+                        Quem tem conta na Retaguarda e com que cargo. O <strong>cargo</strong> define o que cada um
+                        vê e faz — o que cada cargo abre é configurado no Modo Gerente. A conta nova recebe por
                         e-mail o convite para definir a senha. Excluídos ficam {contar(diasRetencao, 'dia', 'dias')}{' '}
                         na lixeira antes da remoção definitiva.
                     </p>
@@ -522,8 +528,8 @@ return;
                         <BuscaInteligente
                             busca={busca}
                             setBusca={setBusca}
-                            placeholder="Procure por nome, matrícula, e-mail, setor ou equipe"
-                            exemplos={['acesso pendente', 'sem setor', 'inativos', 'líder de equipe']}
+                            placeholder="Procure por nome, matrícula, e-mail, cargo ou equipe"
+                            exemplos={['acesso pendente', 'sem cargo', 'inativos', 'líder de equipe']}
                         />
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -651,6 +657,59 @@ return;
 
                 {aba === 'registro' && (
                     <>
+                        {/* Os botões do registro vêm EM CIMA, antes do formulário (dono, 25/09/2026). */}
+                        <div className="rt-barra-registro">
+                            <BotaoAcao className="btn btn-secondary btn-sm" icone={<Undo2 size={16} aria-hidden />} ocupado={ocupado} onClick={voltarParaLista}>
+                                Voltar
+                            </BotaoAcao>
+
+                            {aberto !== null && somenteLeitura && (
+                                <>
+                                    {acoes.excluir && !souEu && !contaTravada && (
+                                        <BotaoAcao
+                                            className="btn btn-perigo btn-sm"
+                                            icone={<Trash2 size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setConfirmandoExclusao(true)}
+                                        >
+                                            Excluir
+                                        </BotaoAcao>
+                                    )}
+
+                                    {acoes.habilitado && !aberto.senhaDefinida && (
+                                        <BotaoAcao
+                                            className="btn btn-secondary btn-sm"
+                                            icone={<Mail size={16} aria-hidden />}
+                                            carregando={enviando === 'convite'}
+                                            ocupado={ocupado}
+                                            rotuloCarregando="Enviando…"
+                                            onClick={reenviarConvite}
+                                        >
+                                            Enviar convite
+                                        </BotaoAcao>
+                                    )}
+
+                                    {acoes.habilitado && !contaTravada && (
+                                        <BotaoAcao icone={<Pencil size={16} aria-hidden />} ocupado={ocupado} onClick={() => setModo('edicao')}>
+                                            Editar
+                                        </BotaoAcao>
+                                    )}
+                                </>
+                            )}
+
+                            {modo === 'edicao' && podeGravar && (
+                                <BotaoAcao
+                                    icone={<Check size={16} aria-hidden />}
+                                    carregando={enviando === 'salvar'}
+                                    ocupado={ocupado}
+                                    rotuloCarregando="Salvando…"
+                                    onClick={salvar}
+                                >
+                                    {novo ? 'Criar conta e enviar convite' : 'Salvar'}
+                                </BotaoAcao>
+                            )}
+                        </div>
+
                         {listaDeErros.length > 0 && (
                             <div className="form-erro" style={{ marginBottom: 16 }}>
                                 <TriangleAlert size={15} aria-hidden /> Não foi possível salvar:
@@ -746,7 +805,7 @@ return;
                         </div>
 
                         <p className="card-titulo" style={{ margin: '18px 0 8px', fontSize: 15 }}>
-                            Setores
+                            Cargo
                         </p>
 
                         {erros.setores && (
@@ -850,7 +909,7 @@ return;
                                     {!form.setores.includes(LIDER) && aberto.lidera.length > 0 && (
                                         <>
                                             {' '}
-                                            <strong>Ela continua como líder de {aberto.lidera.join(', ')}</strong>, mas sem o setor
+                                            <strong>Ela continua como líder de {aberto.lidera.join(', ')}</strong>, mas sem o cargo
                                             Líder de Equipe não abre as telas do líder.
                                         </>
                                     )}
@@ -881,57 +940,73 @@ return;
                             {erros.ativo && <p className="form-erro">{erros.ativo}</p>}
                         </div>
 
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
-                            <BotaoAcao className="btn btn-secondary btn-sm" icone={<Undo2 size={16} aria-hidden />} ocupado={ocupado} onClick={voltarParaLista}>
-                                Voltar
-                            </BotaoAcao>
-
-                            {aberto !== null && somenteLeitura && (
-                                <>
-                                    {acoes.excluir && !souEu && !contaTravada && (
-                                        <BotaoAcao
-                                            className="btn btn-perigo btn-sm"
-                                            icone={<Trash2 size={16} aria-hidden />}
-                                            ocupado={ocupado}
-                                            onClick={() => setConfirmandoExclusao(true)}
-                                        >
-                                            Excluir
-                                        </BotaoAcao>
-                                    )}
-
-                                    {acoes.habilitado && !aberto.senhaDefinida && (
-                                        <BotaoAcao
-                                            className="btn btn-secondary btn-sm"
-                                            icone={<Mail size={16} aria-hidden />}
-                                            carregando={enviando === 'convite'}
-                                            ocupado={ocupado}
-                                            rotuloCarregando="Enviando…"
-                                            onClick={reenviarConvite}
-                                        >
-                                            Enviar convite
-                                        </BotaoAcao>
-                                    )}
-
-                                    {acoes.habilitado && !contaTravada && (
-                                        <BotaoAcao icone={<Pencil size={16} aria-hidden />} ocupado={ocupado} onClick={() => setModo('edicao')}>
-                                            Editar
-                                        </BotaoAcao>
-                                    )}
-                                </>
-                            )}
-
-                            {modo === 'edicao' && podeGravar && (
-                                <BotaoAcao
-                                    icone={<Check size={16} aria-hidden />}
-                                    carregando={enviando === 'salvar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Salvando…"
-                                    onClick={salvar}
-                                >
-                                    {novo ? 'Criar conta e enviar convite' : 'Salvar'}
-                                </BotaoAcao>
-                            )}
+                        {/* As duas marcas da conta, como no Codecon. Só o administrador
+                            as dá ou tira: quem administra usuários pela marca não pode
+                            dar a si mesmo o poder de distribuir acesso. */}
+                        <p className="card-titulo" style={{ margin: '18px 0 4px', fontSize: 15 }}>
+                            Modo Gerente
+                        </p>
+                        <p className="form-ajuda" style={{ marginBottom: 10 }}>
+                            O acesso desta conta é definido pelo <strong>cargo</strong> acima. O que cada cargo vê e faz em
+                            cada tela é configurado no Modo Gerente (a chave ao lado dos itens do menu).
+                        </p>
+                        {erros.marcas && <p className="form-erro">{erros.marcas}</p>}
+                        <div className="rt-form-linha">
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="usuario-gerente" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                    <input
+                                        id="usuario-gerente"
+                                        type="checkbox"
+                                        checked={form.is_gerente}
+                                        disabled={somenteLeitura || !mexeEmAdministrador}
+                                        onChange={(e) => setForm({ ...form, is_gerente: e.target.checked })}
+                                        style={{ width: 16, height: 16 }}
+                                    />
+                                    Pode ativar o Modo Gerente
+                                </label>
+                                <p className="form-ajuda">Configura o que cada cargo vê e faz em cada tela.</p>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="usuario-admin-usuarios" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                    <input
+                                        id="usuario-admin-usuarios"
+                                        type="checkbox"
+                                        checked={form.is_admin_usuarios}
+                                        disabled={somenteLeitura || !mexeEmAdministrador}
+                                        onChange={(e) => setForm({ ...form, is_admin_usuarios: e.target.checked })}
+                                        style={{ width: 16, height: 16 }}
+                                    />
+                                    Administrador de usuários
+                                </label>
+                                <p className="form-ajuda">
+                                    Mesmo poder de um administrador <strong>nesta tela</strong> — criar, editar, excluir,
+                                    restaurar e enviar convite —, sem acesso às demais telas de administração.
+                                </p>
+                            </div>
                         </div>
+                        {!mexeEmAdministrador && (
+                            <p className="form-ajuda">Só um administrador dá ou tira estas marcas.</p>
+                        )}
+
+                        {/* Em edição, Voltar e Salvar também no pé (dono, 25/09/2026). */}
+                        {modo === 'edicao' && (
+                            <div className="rt-barra-registro rt-barra-registro-pe">
+                                <BotaoAcao className="btn btn-secondary btn-sm" icone={<Undo2 size={16} aria-hidden />} ocupado={ocupado} onClick={voltarParaLista}>
+                                    Voltar
+                                </BotaoAcao>
+                                {modo === 'edicao' && podeGravar && (
+                                    <BotaoAcao
+                                        icone={<Check size={16} aria-hidden />}
+                                        carregando={enviando === 'salvar'}
+                                        ocupado={ocupado}
+                                        rotuloCarregando="Salvando…"
+                                        onClick={salvar}
+                                    >
+                                        {novo ? 'Criar conta e enviar convite' : 'Salvar'}
+                                    </BotaoAcao>
+                                )}
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -968,7 +1043,7 @@ return;
                     titulo={`Restaurar a conta de ${restaurando.name}?`}
                     mensagem={
                         <>
-                            A conta <strong>{restaurando.login}</strong> volta para a lista com os mesmos setores —{' '}
+                            A conta <strong>{restaurando.login}</strong> volta para a lista com os mesmos cargos —{' '}
                             {setoresEmTexto(restaurando.setores)} — e as mesmas equipes, e a pessoa volta a poder entrar.
                         </>
                     }

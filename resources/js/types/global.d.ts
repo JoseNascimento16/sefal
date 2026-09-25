@@ -23,6 +23,8 @@ declare module '@inertiajs/core' {
              * `HandleInertiaRequests::painel`.
              */
             painel: string | null;
+            /** O Modo Gerente: pode ligar? está ligado (chaves no menu)? */
+            modoGerente: { pode: boolean; ativo: boolean };
             [key: string]: unknown;
         };
     }

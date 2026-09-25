@@ -3,6 +3,7 @@
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
 use App\Http\Controllers\Retaguarda\AgrupamentoDeDemandasController;
 use App\Http\Controllers\Retaguarda\AmbulantesController;
+use App\Http\Controllers\Retaguarda\AreasController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
 use App\Http\Controllers\Retaguarda\ArquivosController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
@@ -84,6 +85,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('retaguarda/modo-gerente')->name('retaguarda.modo-gerente.')->group(function () {
         Route::get('/', [ModoGerenteController::class, 'index'])->name('index');
         Route::post('/', [ModoGerenteController::class, 'salvar'])->name('salvar');
+        // Liga/desliga as chaves do menu (estado na sessão).
+        Route::post('alternar', [ModoGerenteController::class, 'alternar'])->name('alternar');
     });
 
     /*
@@ -147,6 +150,16 @@ Route::middleware(['auth'])->group(function () {
      * (dono, 25/09/2026). O caminho começa pelo slug da tela (`equipes`), que é de
      * onde as guardas deduzem a permissão.
      */
+    /*
+     * Áreas — as áreas e os bairros de cada uma (dono, 25/09/2026). Slug `areas`.
+     */
+    Route::prefix('retaguarda/areas')->name('retaguarda.areas.')->group(function () {
+        Route::get('/', [AreasController::class, 'index'])->name('index');
+        Route::post('/', [AreasController::class, 'store'])->name('store');
+        Route::put('{area}', [AreasController::class, 'update'])->name('update');
+        Route::delete('{area}', [AreasController::class, 'destroy'])->name('destroy');
+    });
+
     Route::prefix('retaguarda/equipes')->name('retaguarda.equipes.')->group(function () {
         Route::get('/', [EquipesController::class, 'index'])->name('index');
         Route::post('/', [EquipesController::class, 'store'])->name('store');

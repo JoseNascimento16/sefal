@@ -133,8 +133,18 @@ return [
                 ['chave' => 'recebida', 'titulo' => 'Recebida', 'largura' => 132, 'alinhar' => 'center'],
                 ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 190],
                 ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 200],
+                /*
+                 * A equipe (com a área e o líder) para onde a demanda vai — um
+                 * seletor na linha, para o chefe encaminhar EM LOTE já escolhendo
+                 * cada destino (dono, 25/09/2026). Só para quem encaminha.
+                 */
+                ['chave' => 'area', 'titulo' => 'Área (sugerida)', 'largura' => 260, 'quando' => 'encaminha'],
                 ['chave' => 'prazo', 'titulo' => 'Prazo', 'largura' => 118, 'alinhar' => 'center'],
             ],
+            // Exceção declarada à régua das cinco colunas: a sexta é a do
+            // encaminhamento em lote, e só aparece para quem encaminha.
+            'teto' => 6,
+            'teto_motivo' => 'Dono, 25/09/2026: o chefe encaminha em lote escolhendo a área de cada demanda na própria grade.',
             'detalhe' => ['protocolo_origem', 'requerente', 'assunto', 'area', 'destino', 'desfecho'],
             'exportacao' => [
                 ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
@@ -324,6 +334,36 @@ return [
         | e quantos fiscais tem?". Os NOMES dos fiscais e o turno descem para a
         | ficha; no arquivo, vêm inteiros.
         */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Áreas
+        |----------------------------------------------------------------------
+        |
+        | "Que área cobre o quê, e com que equipe?". Os NOMES dos bairros e o
+        | turno descem para a ficha; no arquivo, vêm inteiros.
+        */
+        'areas' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Areas.tsx',
+            'grade' => [
+                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 240],
+                ['chave' => 'regiao', 'titulo' => 'Região', 'largura' => 200],
+                ['chave' => 'recorte', 'titulo' => 'Cobre', 'largura' => 150],
+                ['chave' => 'total_bairros', 'titulo' => 'Bairros', 'largura' => 100, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['turno', 'bairros', 'equipes'],
+            'exportacao' => [
+                ['chave' => 'area', 'titulo' => 'Área'],
+                ['chave' => 'regiao', 'titulo' => 'Região'],
+                ['chave' => 'recorte', 'titulo' => 'Cobre'],
+                ['chave' => 'turno', 'titulo' => 'Turno'],
+                ['chave' => 'total_bairros', 'titulo' => 'Nº de bairros', 'alinhar' => 'center'],
+                ['chave' => 'bairros', 'titulo' => 'Bairros'],
+                ['chave' => 'equipes', 'titulo' => 'Equipes'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
         'equipes' => [
             'tela' => 'resources/js/pages/Retaguarda/Sistema/Equipes.tsx',
             'grade' => [
@@ -350,7 +390,7 @@ return [
             'grade' => [
                 ['chave' => 'usuario', 'titulo' => 'Usuário', 'largura' => 260],
                 ['chave' => 'email', 'titulo' => 'E-mail', 'largura' => 240],
-                ['chave' => 'setores', 'titulo' => 'Setores', 'largura' => 230],
+                ['chave' => 'setores', 'titulo' => 'Cargo', 'largura' => 230],
                 ['chave' => 'primeiroAcesso', 'titulo' => '1º acesso', 'largura' => 120, 'alinhar' => 'center'],
                 ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
             ],
@@ -359,7 +399,7 @@ return [
                 ['chave' => 'usuario', 'titulo' => 'Nome'],
                 ['chave' => 'login', 'titulo' => 'Matrícula'],
                 ['chave' => 'email', 'titulo' => 'E-mail'],
-                ['chave' => 'setores', 'titulo' => 'Setores'],
+                ['chave' => 'setores', 'titulo' => 'Cargo'],
                 ['chave' => 'equipes', 'titulo' => 'Equipes'],
                 ['chave' => 'primeiroAcesso', 'titulo' => '1º acesso', 'alinhar' => 'center'],
                 ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
@@ -379,7 +419,7 @@ return [
                 ['chave' => 'usuario', 'titulo' => 'Nome'],
                 ['chave' => 'login', 'titulo' => 'Matrícula'],
                 ['chave' => 'email', 'titulo' => 'E-mail'],
-                ['chave' => 'setores', 'titulo' => 'Setores'],
+                ['chave' => 'setores', 'titulo' => 'Cargo'],
                 ['chave' => 'excluidoEm', 'titulo' => 'Excluído em', 'alinhar' => 'center'],
                 ['chave' => 'remocao', 'titulo' => 'Remoção definitiva'],
             ],

@@ -66,6 +66,18 @@ class HandleInertiaRequests extends Middleware
                     && (bool) $request->session()->pull('boas_vindas', false),
             ],
             'menu' => $user ? $this->menu($user) : [],
+            /*
+             * O Modo Gerente como no Codecon (dono, 25/09/2026): `pode` diz se a
+             * pessoa vê o botão de ligar (administrador ou a marca da conta, pela
+             * matriz); `ativo`, se as chaves estão à mostra no menu agora.
+             */
+            'modoGerente' => fn (): array => [
+                'pode' => $user !== null && app(PermissaoService::class)->pode($user, 'modo-gerente', 'visivel'),
+                'ativo' => $user !== null
+                    && $request->hasSession()
+                    && (bool) $request->session()->get('modo_gerente_ativo', false)
+                    && app(PermissaoService::class)->pode($user, 'modo-gerente', 'visivel'),
+            ],
             'acoes' => $this->acoes($request, $user),
             'flash' => $this->recado($request),
             'painel' => $this->painel($request),
@@ -250,6 +262,8 @@ class HandleInertiaRequests extends Middleware
                         'url' => null,
                         'icone' => $item['icone'] ?? 'padrao',
                         'modal' => null,
+                        // Pasta não é tela: a chave dela no Modo Gerente abre as dos filhos.
+                        'slug' => null,
                         'curto' => $item['curto'] ?? Str::upper(Str::before($item['rotulo'], ' ')),
                         'contador' => isset($item['contador'])
                             ? ContadoresDoMenu::para((string) $item['contador'])
@@ -328,6 +342,9 @@ class HandleInertiaRequests extends Middleware
             // cabeçalho de `config/retaguarda_menu.php`). A `url` continua indo: é
             // dela que o painel busca os dados.
             'modal' => $item['modal'] ?? null,
+            // A identidade da tela no controle de acesso — é o que a chave do Modo
+            // Gerente abre. Nulo no item fora do controle (Início, Meu Perfil).
+            'slug' => $item['slug'] ?? null,
             /*
              * O rótulo curto do menu RETRAÍDO (a doca), onde cabem umas nove
              * letras. Sem declaração, a primeira palavra do rótulo — que resolve

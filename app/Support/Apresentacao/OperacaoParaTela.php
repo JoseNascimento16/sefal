@@ -43,6 +43,20 @@ class OperacaoParaTela
             'total_bairros' => count($bairros),
             'total_equipes' => count($equipes),
             'encerrada' => in_array($operacao->situacao, [Operacao::ENCERRADA, Operacao::CANCELADA], true),
+            // Fiscais de qualquer área postos na operação (dono, 25/09/2026).
+            'fiscais' => $operacao->relationLoaded('fiscais')
+                ? $operacao->fiscais->sortBy('name')->map(static fn ($u): array => ['id' => $u->id, 'nome' => $u->name])->values()->all()
+                : [],
+            // As denúncias anexadas à operação — a fiscalização delas vai para a rua junto.
+            'demandas' => $operacao->relationLoaded('demandas')
+                ? $operacao->demandas->sortBy('protocolo')->map(static fn ($d): array => [
+                    'id' => $d->id,
+                    'protocolo' => $d->protocolo,
+                    'assunto' => $d->assunto,
+                    'bairro' => (string) ($d->bairro ?? ''),
+                    'situacao' => $d->situacao,
+                ])->values()->all()
+                : [],
         ];
     }
 
