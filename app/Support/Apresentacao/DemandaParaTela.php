@@ -43,6 +43,9 @@ class DemandaParaTela
             // De onde veio e como chegou.
             'canal' => $demanda->canal,
             'origem' => self::rotuloDoCanal($demanda->canal),
+            // Qual avulsa: pedido de superior ou ofício (nulo nos outros canais).
+            'tipo_avulsa' => $demanda->tipo_avulsa,
+            'tipo_avulsa_nome' => Demanda::TIPOS_AVULSA[$demanda->tipo_avulsa ?? ''] ?? null,
             'entrada' => $demanda->entrada,
             'documento_origem' => (string) ($demanda->numero_origem ?? ''),
             'protocolo_origem' => (string) ($demanda->numero_origem ?? ''),

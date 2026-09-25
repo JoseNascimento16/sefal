@@ -191,6 +191,10 @@ export interface Denuncia {
     canal: string;
     /** O número que o canal de origem deu à denúncia — a prova de que veio de fora. */
     protocolo_origem: string;
+    /** Qual avulsa é — `pedido-de-superior` ou `oficio`; nulo nos outros canais. */
+    tipo_avulsa?: string | null;
+    /** O tipo da avulsa por extenso ("Ofício"), para a tela. */
+    tipo_avulsa_nome?: string | null;
     recebida_em: string;
     /** Quando a integração ENTREGOU a denúncia, com hora. */
     recebida_em_hora: string;

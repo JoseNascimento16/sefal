@@ -170,6 +170,7 @@ it('o chefe cadastra no e-Protocolo: a demanda nasce Recebida, esperando o encam
 it('a avulsa pode entrar sem número — foi uma ligação —, e o protocolo ocupa o lugar', function () {
     $this->actingAs(quemTem('chefe-de-setor'))
         ->post(route('retaguarda.denuncias.registrar', 'avulsa'), [
+            'tipo_avulsa' => Demanda::AVULSA_SUPERIOR,
             'recebida_em' => Date::now()->format('Y-m-d'),
             'anonima' => false,
             'requerente' => 'Coordenadoria de Ordem Pública',

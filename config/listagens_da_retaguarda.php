@@ -139,6 +139,8 @@ return [
             'exportacao' => [
                 ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
                 ['chave' => 'protocolo_origem', 'titulo' => 'Nº na origem'],
+                // Qual avulsa (pedido de superior ou ofício); travessão nos outros canais.
+                ['chave' => 'tipo', 'titulo' => 'Tipo'],
                 ['chave' => 'recebida', 'titulo' => 'Recebida', 'alinhar' => 'center'],
                 ['chave' => 'requerente', 'titulo' => 'Requerente'],
                 ['chave' => 'assunto', 'titulo' => 'Assunto'],

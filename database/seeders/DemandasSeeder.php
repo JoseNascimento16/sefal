@@ -46,7 +46,8 @@ class DemandasSeeder extends Seeder
         'e-Salvador' => Demanda::CANAL_E_SALVADOR,
         'Fala Salvador' => Demanda::CANAL_FALA_SALVADOR,
         'Nova licença' => Demanda::CANAL_NOVA_LICENCA,
-        'Ofício' => Demanda::CANAL_OFICIO,
+        // O ofício virou TIPO de avulsa (dono, 25/09/2026): canal avulsa, tipo ofício.
+        'Ofício' => Demanda::CANAL_AVULSA,
     ];
 
     /**
@@ -139,7 +140,8 @@ class DemandasSeeder extends Seeder
             $demanda = Demanda::updateOrCreate(
                 ['protocolo' => (string) $bruta['protocolo']],
                 [
-                    'canal' => self::CANAL_DA_ORIGEM[$origem] ?? Demanda::CANAL_OFICIO,
+                    'canal' => self::CANAL_DA_ORIGEM[$origem] ?? Demanda::CANAL_AVULSA,
+                    'tipo_avulsa' => ($origem === 'Ofício' || ! isset(self::CANAL_DA_ORIGEM[$origem])) ? Demanda::AVULSA_OFICIO : null,
                     'entrada' => Demanda::ENTRADA_BALCAO,
                     'numero_origem' => $bruta['documento_origem'] ?? null,
                     'recebida_em' => $recebida,

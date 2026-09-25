@@ -166,6 +166,8 @@ class DenunciasController extends Controller
                 $avulsa ? 'nullable' : 'required', 'string', 'max:40',
                 Rule::unique('demandas', 'numero_origem')->where('canal', $canal),
             ],
+            // A avulsa diz de onde veio o pedido: de um superior ou de um ofício.
+            'tipo_avulsa' => [$avulsa ? 'required' : 'exclude', Rule::in(array_keys(Demanda::TIPOS_AVULSA))],
             'recebida_em' => ['required', 'date', 'before_or_equal:today'],
             // `declined` aceita false/0: o canal que não admite anônima exige quem pediu.
             'anonima' => array_values(array_filter(['required', 'boolean', $admiteAnonima ? null : 'declined'])),
@@ -176,6 +178,8 @@ class DenunciasController extends Controller
             'bairro' => ['required', 'string', 'max:80'],
             'descricao' => ['nullable', 'string', 'max:2000'],
         ], [
+            'tipo_avulsa.required' => 'Diga se é pedido de superior ou ofício.',
+            'tipo_avulsa.in' => 'Tipo de avulsa desconhecido.',
             'documento_origem.required' => 'Informe o número do documento no canal de origem.',
             'documento_origem.unique' => 'Já existe uma demanda deste canal com esse número — ela não entra duas vezes.',
             'anonima.declined' => 'Este canal não recebe demanda anônima: informe quem pediu.',
@@ -192,6 +196,7 @@ class DenunciasController extends Controller
         $demanda = Demanda::create([
             'protocolo' => $protocolo,
             'canal' => $canal,
+            'tipo_avulsa' => $avulsa ? $dados['tipo_avulsa'] : null,
             'entrada' => Demanda::ENTRADA_BALCAO,
             // Sem número (a ligação da avulsa), o próprio protocolo ocupa o lugar:
             // a unicidade é por canal e número, e dois vazios colidiriam no Oracle.

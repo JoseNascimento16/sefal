@@ -602,9 +602,10 @@ return [
             'breadcrumb' => 'Caixa de Entrada › Avulsas',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemDenuncias.' O pedido que chega ao Chefe de Setor por ligação ou e-mail de um '
-                .'superior. Lista única, sem abas. O chefe cadastra (o número de origem é opcional: foi uma '
-                .'ligação), encaminha à equipe e, concluída a fiscalização, DELIBERA: abre processo no '
+            'nota' => $origemDenuncias.' O pedido que chega ao Chefe de Setor por fora dos canais, em dois '
+                .'tipos: pedido de superior (ligação ou e-mail) e OFÍCIO de órgão ou do Ministério Público — o '
+                .'ofício deixou de ser canal em 25/09/2026 e virou tipo de avulsa, com selo na grade. Lista única, '
+                .'sem abas. O chefe cadastra dizendo como chegou (o número de origem é opcional), encaminha à equipe e, concluída a fiscalização, DELIBERA: abre processo no '
                 .'e-Salvador com o resultado (registrado aqui, feito à mão lá — a escrita na API está '
                 .'proibida) ou encerra só com a fiscalização, sem processo. '.$fluxoDenuncias,
         ],

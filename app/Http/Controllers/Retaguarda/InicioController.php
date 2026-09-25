@@ -117,7 +117,7 @@ class InicioController extends Controller
         [
             'chave' => 'caixa-avulsas',
             'titulo' => 'Avulsas',
-            'descricao' => 'O pedido que chega por ligação ou e-mail de superior: registrar e dar destino.',
+            'descricao' => 'O pedido de superior ou o ofício de órgão que chega por fora dos canais: registrar e dar destino.',
             'rota' => 'retaguarda.denuncias.avulsas.index',
             'slug' => 'caixa-de-entrada',
         ],
