@@ -6,9 +6,11 @@ use App\Actions\Fortify\AutenticarPorMatricula;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentoCampo;
 use App\Models\Fiscalizacao;
+use App\Models\Levantamento;
 use App\Rules\ArquivoSeguro;
 use App\Support\Aplicativo\AplicativoParaTela;
 use App\Support\Aplicativo\CampoDoFiscal;
+use App\Support\Aplicativo\LevantamentoDeCampo;
 use App\Support\Aplicativo\RegistroDeCampo;
 use App\Support\Aplicativo\ReservaDeNumeros;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
@@ -83,9 +85,66 @@ class AplicativoController extends Controller
             'demandas' => $campo->fila()->map(AplicativoParaTela::demanda(...))->values()->all(),
             'registros' => $campo->registros()->map(AplicativoParaTela::registro(...))->values()->all(),
             'bairros' => AplicativoParaTela::bairros(),
+            'ambulantes' => AplicativoParaTela::ambulantes(),
+            'incidencias' => AplicativoParaTela::incidencias(),
+            'operacoes' => AplicativoParaTela::operacoes($campo),
+            'equipesDaCidade' => AplicativoParaTela::equipesDaCidade(),
+            'levantamentos' => AplicativoParaTela::levantamentos($campo),
             'numeros' => (new ReservaDeNumeros)->repor($request->user()),
             'servidorEm' => Date::now()->toIso8601String(),
         ]);
+    }
+
+    /**
+     * Recebe um levantamento de ambulantes concluído. Idempotente pelo
+     * `client_id` (201 no primeiro envio, 200 no reenvio). As linhas vêm como
+     * JSON dentro do multipart, e a foto de cada linha em `fotos[<id da linha>]`.
+     */
+    public function levantar(Request $request): JsonResponse
+    {
+        $dados = $request->validate([
+            'client_id' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9-]+$/'],
+            'rua' => ['required', 'string', 'max:200'],
+            'bairro' => ['required', 'string', 'max:120'],
+            'equipes' => ['required', 'array', 'min:1', 'max:20'],
+            'equipes.*' => ['string', Rule::exists('equipes', 'codigo')],
+            'iniciado_em' => ['nullable', 'date'],
+            'linhas' => ['required', 'string', 'max:200000'],
+            'fotos' => ['nullable', 'array', 'max:100'],
+            'fotos.*' => ['file', 'max:10240', new ArquivoSeguro(['jpg', 'jpeg', 'png', 'webp'])],
+        ], [
+            'rua.required' => 'Informe a rua do levantamento.',
+            'bairro.required' => 'Informe o bairro do levantamento.',
+            'equipes.required' => 'Escolha ao menos uma equipe para o levantamento sair assinado.',
+            'equipes.*.exists' => 'Uma das equipes escolhidas não existe mais no cadastro.',
+            'fotos.*.max' => 'Cada foto pode ter no máximo 10 MB.',
+        ]);
+
+        $linhas = json_decode($dados['linhas'], true);
+
+        if (! is_array($linhas) || $linhas === []) {
+            throw ValidationException::withMessages(['linhas' => ['O levantamento chegou sem nenhum ambulante. Some ao menos um antes de concluir.']]);
+        }
+
+        $dados['linhas'] = Validator::make(['linhas' => $linhas], [
+            'linhas' => ['array', 'max:100'],
+            'linhas.*.id' => ['required', 'string', 'max:60'],
+            'linhas.*.nome' => ['required', 'string', 'max:150'],
+            'linhas.*.documento' => ['nullable', 'string', 'max:20'],
+            'linhas.*.contato' => ['nullable', 'string', 'max:40'],
+            'linhas.*.referencia' => ['nullable', 'string', 'max:150'],
+            'linhas.*.atividade' => ['nullable', 'string', 'max:80'],
+            'linhas.*.latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'linhas.*.longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ], [
+            'linhas.*.nome.required' => 'Há um ambulante sem nome no levantamento.',
+        ])->validate()['linhas'];
+
+        $ja = Levantamento::where('client_id', $dados['client_id'])->exists();
+        $levantamento = (new LevantamentoDeCampo(new CampoDoFiscal($request->user())))
+            ->gravar($dados, $request->file('fotos', []));
+
+        return response()->json(['levantamento' => AplicativoParaTela::levantamento($levantamento)], $ja ? 200 : 201);
     }
 
     /** Repõe o estoque de números oficiais do fiscal. */
@@ -108,6 +167,7 @@ class AplicativoController extends Controller
             'ocorrencias.*' => ['string', 'max:40'],
             'relato' => ['nullable', 'string', 'max:4000'],
             'ambulante' => ['nullable', 'string', 'max:255'],
+            'ambulante_id' => ['nullable', 'integer', 'exists:ambulantes,id'],
             'retorno_em' => ['nullable', 'date_format:Y-m-d'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],

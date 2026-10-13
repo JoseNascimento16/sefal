@@ -199,7 +199,7 @@ class MapaDaCidade
      * SEFAL prometeu voltar ao ponto e não voltou. Nulo quando não há promessa
      * vencida — a maioria.
      */
-    private static function retornoVencidoHaDias(Ambulante $ambulante, CarbonInterface $hoje): ?int
+    public static function retornoVencidoHaDias(Ambulante $ambulante, CarbonInterface $hoje): ?int
     {
         $documento = $ambulante->fiscalizacoes()
             ->with('documento')

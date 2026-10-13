@@ -8,6 +8,7 @@ use App\Models\DocumentoCampo;
 use App\Models\Fiscalizacao;
 use App\Models\FiscalizacaoFoto;
 use App\Models\FiscalizacaoRecomendacao;
+use App\Models\LocalizacaoAmbulante;
 use App\Support\CiclosDeFiscalizacao;
 use App\Support\Protocolo;
 use Carbon\CarbonInterface;
@@ -85,6 +86,7 @@ final class RegistroDeCampo
                 'equipe_id' => $equipe?->id,
                 'fiscal_id' => $user->id,
                 'alvo' => $dados['ambulante'] ?? null,
+                'ambulante_id' => $dados['ambulante_id'] ?? null,
                 'logradouro' => $dados['endereco'] ?? $demanda?->logradouro,
                 'bairro' => $dados['bairro'] ?? $demanda?->bairro,
                 'latitude' => $dados['latitude'] ?? null,
@@ -130,6 +132,21 @@ final class RegistroDeCampo
             }
 
             CiclosDeFiscalizacao::vincular($vistoria);
+
+            // O ambulante identificado ganha a posição desta ida ao ponto: é o
+            // que move o pino dele no mapa (a última posição conhecida).
+            if ($vistoria->ambulante_id !== null && $vistoria->latitude !== null) {
+                LocalizacaoAmbulante::create([
+                    'ambulante_id' => $vistoria->ambulante_id,
+                    'latitude' => $vistoria->latitude,
+                    'longitude' => $vistoria->longitude,
+                    'precisao_m' => $vistoria->precisao_m,
+                    'fonte' => LocalizacaoAmbulante::FONTE_FISCALIZACAO,
+                    'fiscalizacao_id' => $vistoria->id,
+                    'bairro' => $vistoria->bairro,
+                    'registrada_em' => $aberta,
+                ]);
+            }
 
             if ($demanda !== null) {
                 $passo = $demanda->registrar(

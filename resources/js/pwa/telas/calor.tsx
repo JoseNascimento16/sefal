@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { irPara } from '../app';
+import { irPara, useApp } from '../app';
 import { Topo, atalhoDoPerfil } from '../componentes';
 import { CENTRO_SALVADOR, FISCAL, pontosDoCalor, regioesMaisQuentes } from '../dados-prototipo';
 import { Icone } from '../icones';
@@ -36,8 +36,9 @@ export function TelaCalor() {
     const camadaRef = useRef<CamadaCalor | null>(null);
     const [dias, setDias] = useState(30);
 
-    const pontos = useMemo(() => pontosDoCalor(dias), [dias]);
-    const regioes = useMemo(() => regioesMaisQuentes(dias), [dias]);
+    const { versao } = useApp();
+    const pontos = useMemo(() => pontosDoCalor(dias), [dias, versao]);
+    const regioes = useMemo(() => regioesMaisQuentes(dias), [dias, versao]);
     const lider = regioes[0];
 
     useEffect(() => {

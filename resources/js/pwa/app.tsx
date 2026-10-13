@@ -4,17 +4,30 @@ import { api, ErroDoServidor } from './api';
 import { BarraInferior, type Aba } from './componentes';
 import { LOCAL_APOS_O_DESFECHO, carregarDemandas, demandasVencidas, type Demanda, type Desfecho } from './dados-demandas';
 import { carregarNumeros } from './dados-documentos';
+import { carregarLevantamentos, type Levantamento, type LinhaLevantamento } from './dados-levantamento';
 import {
     HOJE_BR,
     carregarBairros,
+    carregarCampo,
     horaAgora,
+    type Ambulante,
     type DocumentoParaEnvio,
+    type IncidenciaCalor,
+    type Operacao,
     type OrigemRegistro,
     type Regiao,
     type Registro,
     type ViaImpressa,
 } from './dados-prototipo';
-import { filaDe, guardarNaFila, tirarDaFila } from './fila-local';
+import {
+    filaDe,
+    guardarLevantamento,
+    guardarNaFila,
+    levantamentosDe,
+    tirarDaFila,
+    tirarLevantamento,
+    type LevantamentoNaFila,
+} from './fila-local';
 import { FISCAL, aplicarSessao, type SessaoDoServidor } from './sessao';
 import { TelaApreensao } from './telas/apreensao';
 import { TelaCalor } from './telas/calor';
@@ -66,6 +79,8 @@ export type NovoRegistro = {
     arquivos: Blob[];
     precisaoM: number | null;
     ambulante: string | null;
+    /** O ambulante do cadastro, quando o registro saiu de um pino do mapa. */
+    ambulanteId: number | null;
     retornoBr: string | null;
     lat: number;
     lng: number;
@@ -90,7 +105,19 @@ type Contexto = {
     sincronizando: boolean;
     /** A frase do último problema de carga (sem sinal, sessão expirada…). */
     aviso: string | null;
+    /** Muda a cada kit novo — é a dependência das telas que desenham o que veio dele. */
+    versao: number;
+    /** Conclui o levantamento da rua: envia, ou guarda no aparelho sem sinal. */
+    concluirLevantamento: (dados: NovoLevantamento) => Promise<{ concluido: boolean; frase: string }>;
     sair: () => void;
+};
+
+export type NovoLevantamento = {
+    rua: string;
+    bairro: string;
+    equipes: string[];
+    iniciadoEm: string | null;
+    linhas: LinhaLevantamento[];
 };
 
 const ContextoApp = createContext<Contexto | null>(null);
@@ -178,6 +205,11 @@ type Kit = {
     registros: Registro[];
     bairros: Regiao[];
     numeros: { np: string[]; aa: string[] };
+    ambulantes: (Omit<Ambulante, 'emoji'> & { emoji: string | null })[];
+    incidencias: IncidenciaCalor[];
+    operacoes: Operacao[];
+    levantamentos: Levantamento[];
+    equipesDaCidade: { equipe: string; regiao: string; encarregado: string }[];
 };
 
 const novoId = (): string =>
@@ -201,6 +233,7 @@ function corpoDoEnvio(r: Registro, fotos: Blob[]): FormData {
     por('desfecho', r.desfecho);
     por('relato', r.relato);
     por('ambulante', r.ambulante);
+    por('ambulante_id', r.ambulanteId);
     por('latitude', r.lat);
     por('longitude', r.lng);
     por('precisao_m', r.precisaoM);
@@ -225,6 +258,37 @@ function corpoDoEnvio(r: Registro, fotos: Blob[]): FormData {
     return corpo;
 }
 
+/** O levantamento da fila como ele sobe: as linhas em JSON e a foto de cada uma. */
+function corpoDoLevantamento(l: LevantamentoNaFila): FormData {
+    const corpo = new FormData();
+
+    corpo.append('client_id', l.clientId);
+    corpo.append('rua', l.rua);
+    corpo.append('bairro', l.bairro);
+    l.equipes.forEach((e) => corpo.append('equipes[]', e));
+
+    if (l.iniciadoEm) {
+        corpo.append('iniciado_em', l.iniciadoEm);
+    }
+
+    corpo.append('linhas', JSON.stringify(l.linhas));
+    Object.entries(l.fotos).forEach(([linha, foto]) => corpo.append(`fotos[${linha}]`, foto, `${linha}.jpg`));
+
+    return corpo;
+}
+
+/** Como o levantamento que ainda está no aparelho aparece entre os recentes. */
+const comoRecente = (l: LevantamentoNaFila): Levantamento => ({
+    id: l.clientId,
+    rua: l.rua,
+    bairro: l.bairro,
+    equipes: l.equipes,
+    encarregados: [],
+    dataBr: new Date(l.concluidoEm).toLocaleDateString('pt-BR'),
+    linhas: l.linhas.length,
+    situacao: 'em-campo',
+});
+
 /* ---------------------------------- Tela ---------------------------------- */
 
 export function App() {
@@ -236,10 +300,16 @@ export function App() {
     const [sincronizando, setSincronizando] = useState(false);
     /* A fila, os bairros e os números moram em módulos (ligações vivas); trocar
        esta versão é o que faz as telas lerem de novo depois de um kit novo. */
-    const [, setVersao] = useState(0);
+    const [versao, setVersao] = useState(0);
     const [tema, setTema] = useState<'claro' | 'escuro'>(temaInicial);
     const fotos = useRef(new Map<string, Blob[]>());
     const atuais = useRef<Registro[]>([]);
+    /* Levantamentos concluídos que o servidor ainda não confirmou. */
+    const [levantamentosNaFila, setLevantamentosNaFila] = useState<LevantamentoNaFila[]>([]);
+    const kitDeLevantamentos = useRef<{ recentes: Levantamento[]; equipes: Kit['equipesDaCidade'] }>({
+        recentes: [],
+        equipes: [],
+    });
 
     useEffect(() => {
         atuais.current = registros;
@@ -257,6 +327,15 @@ export function App() {
             carregarDemandas(kit.demandas);
             carregarBairros(kit.bairros);
             carregarNumeros(kit.numeros);
+            carregarCampo(kit);
+
+            const levantamentosPendentes = (await levantamentosDe(FISCAL.matricula)).filter(
+                (l) => !kit.levantamentos.some((k) => k.clientId === l.clientId),
+            );
+
+            kitDeLevantamentos.current = { recentes: kit.levantamentos, equipes: kit.equipesDaCidade };
+            carregarLevantamentos([...levantamentosPendentes.map(comoRecente), ...kit.levantamentos], kit.equipesDaCidade);
+            setLevantamentosNaFila(levantamentosPendentes);
 
             const naFila = await filaDe(FISCAL.matricula);
             const doServidor = new Set(kit.registros.map((r) => r.clientId).filter(Boolean));
@@ -321,6 +400,89 @@ export function App() {
         }
     }, []);
 
+    /** Envia um levantamento da fila. Devolve a frase do resultado, ou `null` se chegou. */
+    const enviarLevantamento = useCallback(async (l: LevantamentoNaFila): Promise<{ chegou: boolean; frase: string }> => {
+        try {
+            const resposta = await api.post<{ levantamento: Levantamento }>(
+                'levantamentos',
+                corpoDoLevantamento(l),
+            );
+
+            await tirarLevantamento(l.clientId);
+            setLevantamentosNaFila((lista) => lista.filter((x) => x.clientId !== l.clientId));
+
+            return {
+                chegou: true,
+                frase: `Levantamento ${resposta.levantamento.protocolo} gravado: ${resposta.levantamento.linhas === 1 ? '1 ambulante' : `${resposta.levantamento.linhas} ambulantes`} em ${l.rua}.`,
+            };
+        } catch (erro) {
+            const frase = erro instanceof Error ? erro.message : 'Falha no envio.';
+
+            if (erro instanceof ErroDoServidor && !erro.passageiro) {
+                /* Recusa de conteúdo: na fila ele voltaria a ser recusado para
+                   sempre. Sai dela, e a tela — que ainda tem as linhas — mostra
+                   o motivo para o fiscal corrigir. */
+                await tirarLevantamento(l.clientId);
+                setLevantamentosNaFila((lista) => lista.filter((x) => x.clientId !== l.clientId));
+
+                return { chegou: false, frase };
+            }
+
+            return { chegou: false, frase: `${frase} O levantamento ficou guardado no aparelho e sobe quando o sinal voltar.` };
+        }
+    }, []);
+
+    const concluirLevantamento = useCallback(
+        async (dados: NovoLevantamento): Promise<{ concluido: boolean; frase: string }> => {
+            const entrada: LevantamentoNaFila = {
+                matricula: FISCAL.matricula,
+                clientId: novoId(),
+                rua: dados.rua.trim(),
+                bairro: dados.bairro.trim(),
+                equipes: dados.equipes,
+                iniciadoEm: dados.iniciadoEm,
+                concluidoEm: new Date().toISOString(),
+                linhas: dados.linhas.map((l) => ({
+                    id: l.id,
+                    nome: l.nome,
+                    documento: l.documento,
+                    contato: l.contato,
+                    referencia: l.referencia,
+                    atividade: l.atividade,
+                    latitude: l.latitude ?? null,
+                    longitude: l.longitude ?? null,
+                })),
+                fotos: Object.fromEntries(dados.linhas.flatMap((l) => (l.arquivo ? [[l.id, l.arquivo]] : []))),
+            };
+
+            await guardarLevantamento(entrada);
+            setLevantamentosNaFila((lista) => [...lista, entrada]);
+
+            const resultado = await enviarLevantamento(entrada);
+
+            if (resultado.chegou) {
+                await carregarKit();
+
+                return { concluido: true, frase: resultado.frase };
+            }
+
+            /* Sem sinal: concluído no aparelho. Recusado: volta para o fiscal corrigir. */
+            const naFila = await levantamentosDe(FISCAL.matricula);
+            const ficou = naFila.some((l) => l.clientId === entrada.clientId);
+
+            if (ficou) {
+                carregarLevantamentos(
+                    [...naFila.map(comoRecente), ...kitDeLevantamentos.current.recentes],
+                    kitDeLevantamentos.current.equipes,
+                );
+                setVersao((v) => v + 1);
+            }
+
+            return { concluido: ficou, frase: resultado.frase };
+        },
+        [enviarLevantamento, carregarKit],
+    );
+
     const sincronizar = useCallback(async () => {
         setSincronizando(true);
 
@@ -331,11 +493,15 @@ export function App() {
                 await enviar(registro);
             }
 
+            for (const levantamento of await levantamentosDe(FISCAL.matricula)) {
+                await enviarLevantamento(levantamento);
+            }
+
             await carregarKit();
         } finally {
             setSincronizando(false);
         }
-    }, [enviar, carregarKit]);
+    }, [enviar, enviarLevantamento, carregarKit]);
 
     /* Ao abrir: quem está logado? Com sessão, carrega o kit; sem, mostra a porta. */
     useEffect(() => {
@@ -391,6 +557,7 @@ export function App() {
             relato: novo.relato,
             fotos: novo.fotos,
             ambulante: novo.ambulante,
+            ambulanteId: novo.ambulanteId,
             retornoBr: novo.retornoBr,
             envio: 'pendente',
             documento: null,
@@ -490,8 +657,10 @@ export function App() {
        pedido. O que falta concluir aparece na própria tela de envio, em bloco
        separado. */
     const pendentes = useMemo(
-        () => registros.filter((r) => r.envio !== 'enviado' && r.despachadoBr !== null).length,
-        [registros],
+        () =>
+            registros.filter((r) => r.envio !== 'enviado' && r.despachadoBr !== null).length +
+            levantamentosNaFila.length,
+        [registros, levantamentosNaFila],
     );
 
     const contexto = useMemo<Contexto>(
@@ -519,9 +688,24 @@ export function App() {
             sincronizar,
             sincronizando,
             aviso,
+            versao,
+            concluirLevantamento,
             sair,
         }),
-        [registros, pendentes, tema, registrar, anexarDocumento, despachar, sincronizar, sincronizando, aviso, sair],
+        [
+            registros,
+            pendentes,
+            tema,
+            registrar,
+            anexarDocumento,
+            despachar,
+            sincronizar,
+            sincronizando,
+            aviso,
+            versao,
+            concluirLevantamento,
+            sair,
+        ],
     );
 
     if (verificando) {
@@ -598,8 +782,8 @@ export function App() {
     );
 }
 
-/* A fila, os registros e o envio já são reais; o mapa de pontos, o mapa de
-   calor, o levantamento e as operações do início ainda mostram exemplo. */
+/* Todos os dados já vêm do servidor; a faixa diz só que o aplicativo está em
+   implantação (homologação), para ninguém tomá-lo pela versão final. */
 function FaixaPrototipo() {
-    return <div className="pw-faixa-prototipo">Em implantação · mapa e calor com dados de exemplo</div>;
+    return <div className="pw-faixa-prototipo">Em implantação · homologação</div>;
 }

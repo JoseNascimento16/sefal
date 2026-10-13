@@ -1,13 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { irPara } from '../app';
+import { irPara, useApp } from '../app';
 import { Selo, Topo, Vazio, classes } from '../componentes';
-import { AREAS_SEFAL, EQUIPE } from '../dados-demandas';
+import { DEMANDAS, EQUIPE } from '../dados-demandas';
 import {
     ATIVIDADES_LEVANTAMENTO,
-    EXEMPLOS_LEVANTAMENTO,
+    EQUIPES_DA_CIDADE,
     LEVANTAMENTOS_RECENTES,
-    RUAS_SUGERIDAS,
     frasePluralizada,
     listaEmPortugues,
     numeroDoItem,
@@ -47,9 +46,12 @@ export function TelaLevantamento() {
     const [equipes, setEquipes] = useState<string[]>([EQUIPE.codigo]);
     const [linhas, setLinhas] = useState<LinhaLevantamento[]>([]);
 
-    const encarregados = AREAS_SEFAL.filter((a) => equipes.includes(a.equipe)).map(
-        (a) => a.encarregado,
-    );
+    /* Iniciado quando o fiscal entra em campo — vai no envio. */
+    const [iniciadoEm, setIniciadoEm] = useState<string | null>(null);
+
+    const encarregados = [
+        ...new Set(EQUIPES_DA_CIDADE.filter((a) => equipes.includes(a.equipe)).map((a) => a.encarregado)),
+    ];
 
     const podeIrACampo = rua.trim().length > 2 && bairro.trim().length > 1 && equipes.length > 0;
 
@@ -64,7 +66,10 @@ export function TelaLevantamento() {
                 aoBairro={setBairro}
                 aoEquipes={setEquipes}
                 podeSeguir={podeIrACampo}
-                aoSeguir={() => setEtapa('campo')}
+                aoSeguir={() => {
+                    setIniciadoEm((atual) => atual ?? new Date().toISOString());
+                    setEtapa('campo');
+                }}
             />
         );
     }
@@ -76,6 +81,7 @@ export function TelaLevantamento() {
             equipes={equipes}
             encarregados={encarregados}
             linhas={linhas}
+            iniciadoEm={iniciadoEm}
             aoLinhas={setLinhas}
             aoVoltar={() => setEtapa('cabecalho')}
         />
@@ -105,6 +111,16 @@ function Cabecalho({
     podeSeguir: boolean;
     aoSeguir: () => void;
 }) {
+    /* Atalho: as ruas das demandas na mão da equipe. */
+    const ruasSugeridas = [
+        ...new Map(
+            DEMANDAS.filter((d) => d.equipe === EQUIPE.codigo)
+                .map((d) => ({ rua: d.endereco.split(',')[0].trim(), bairro: d.bairro }))
+                .filter((s) => s.rua.length > 2)
+                .map((s) => [`${s.rua}|${s.bairro}`, s]),
+        ).values(),
+    ].slice(0, 5);
+
     const alternarEquipe = (codigo: string) =>
         aoEquipes(
             equipes.includes(codigo) ? equipes.filter((c) => c !== codigo) : [...equipes, codigo],
@@ -120,9 +136,9 @@ function Cabecalho({
 
             <div className="pw-corpo">
                 <p className="pw-leitura">
-                    Cada linha levantada aqui vira um ponto que o <strong>mapa de calor</strong> passa a
-                    conhecer — é assim que o mapa deixa de mostrar só onde houve ocorrência e passa a
-                    mostrar onde os ambulantes estão.
+                    O censo da rua: cada ambulante encontrado vira uma linha numerada, com foto do
+                    equipamento e o ponto de GPS de onde você estava. Concluído, o levantamento vai ao
+                    servidor no nome das equipes escolhidas.
                 </p>
 
                 <p className="pw-titulo-secao">A rua a levantar</p>
@@ -149,11 +165,13 @@ function Cabecalho({
                     </label>
                 </div>
 
-                <p className="pw-fraco" style={{ margin: '12px 0 8px', fontSize: 13 }}>
-                    Indicadas pela chefia:
-                </p>
+                {ruasSugeridas.length > 0 && (
+                    <p className="pw-fraco" style={{ margin: '12px 0 8px', fontSize: 13 }}>
+                        Das demandas da equipe:
+                    </p>
+                )}
                 <div className="pw-chips" style={{ gap: 8 }}>
-                    {RUAS_SUGERIDAS.map((s) => (
+                    {ruasSugeridas.map((s) => (
                         <button
                             key={s.rua}
                             type="button"
@@ -171,7 +189,7 @@ function Cabecalho({
                 <p className="pw-titulo-secao">Equipes participantes</p>
 
                 <div className="pw-chips" style={{ gap: 8 }}>
-                    {AREAS_SEFAL.map((a) => (
+                    {EQUIPES_DA_CIDADE.map((a) => (
                         <button
                             key={a.equipe}
                             type="button"
@@ -213,6 +231,14 @@ function Cabecalho({
 
                 <p className="pw-titulo-secao">Levantamentos recentes</p>
 
+                {LEVANTAMENTOS_RECENTES.length === 0 && (
+                    <Vazio
+                        icone="🧾"
+                        titulo="Nenhum levantamento nos últimos 30 dias"
+                        texto="Os levantamentos que a sua equipe concluir aparecem aqui."
+                    />
+                )}
+
                 {LEVANTAMENTOS_RECENTES.map((l) => (
                     <div key={l.id} className="pw-card">
                         <div className="pw-linha-espalha" style={{ marginBottom: 4 }}>
@@ -225,6 +251,7 @@ function Cabecalho({
                         </div>
                         <p className="pw-fraco" style={{ margin: 0 }}>
                             {l.bairro} · {l.dataBr}
+                            {l.situacao === 'em-campo' ? ' · na fila do aparelho' : ''}
                         </p>
                         <p className="pw-fraco" style={{ margin: '6px 0 0', fontSize: 13 }}>
                             <Icone nome="equipe" tamanho={13} /> Equipes {l.equipes.join(' / ')} ·{' '}
@@ -245,6 +272,7 @@ function EmCampo({
     equipes,
     encarregados,
     linhas,
+    iniciadoEm,
     aoLinhas,
     aoVoltar,
 }: {
@@ -253,16 +281,48 @@ function EmCampo({
     equipes: string[];
     encarregados: string[];
     linhas: LinhaLevantamento[];
+    iniciadoEm: string | null;
     aoLinhas: (v: LinhaLevantamento[]) => void;
     aoVoltar: () => void;
 }) {
+    const { concluirLevantamento } = useApp();
+    const [concluindo, setConcluindo] = useState(false);
+    const [resultado, setResultado] = useState<{ concluido: boolean; frase: string } | null>(null);
+    const [arquivo, setArquivo] = useState<Blob | null>(null);
+    /* A última posição do aparelho: cada linha leva o ponto onde o fiscal estava. */
+    const posicao = useRef<{ lat: number; lng: number } | null>(null);
+
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            return;
+        }
+
+        const vigia = navigator.geolocation.watchPosition(
+            (p) => {
+                posicao.current = { lat: p.coords.latitude, lng: p.coords.longitude };
+            },
+            () => undefined,
+            { enableHighAccuracy: true, maximumAge: 15000 },
+        );
+
+        return () => navigator.geolocation.clearWatch(vigia);
+    }, []);
+
+    const concluir = async () => {
+        if (concluindo || linhas.length === 0) {
+            return;
+        }
+
+        setConcluindo(true);
+        setResultado(await concluirLevantamento({ rua, bairro, equipes, iniciadoEm, linhas }));
+        setConcluindo(false);
+    };
     const [nome, setNome] = useState('');
     const [documento, setDocumento] = useState('');
     const [contato, setContato] = useState('');
     const [referencia, setReferencia] = useState('');
     const [atividade, setAtividade] = useState(ATIVIDADES_LEVANTAMENTO[0]);
     const [foto, setFoto] = useState<string | null>(null);
-    const [fotoSimulada, setFotoSimulada] = useState(false);
     const [ultimo, setUltimo] = useState<string | null>(null);
     const campoNome = useRef<HTMLInputElement>(null);
     const seletor = useRef<HTMLInputElement>(null);
@@ -289,7 +349,10 @@ function EmCampo({
                 referencia: referencia.trim(),
                 atividade,
                 foto,
-                temFoto: Boolean(foto) || fotoSimulada,
+                temFoto: Boolean(foto),
+                arquivo,
+                latitude: posicao.current?.lat ?? null,
+                longitude: posicao.current?.lng ?? null,
             },
         ]);
 
@@ -299,19 +362,8 @@ function EmCampo({
         setContato('');
         setReferencia('');
         setFoto(null);
-        setFotoSimulada(false);
+        setArquivo(null);
         campoNome.current?.focus();
-    };
-
-    const preencherExemplo = () => {
-        aoLinhas(
-            EXEMPLOS_LEVANTAMENTO.map((e, i) => ({
-                ...e,
-                id: `exemplo-${i}`,
-                item: numeroDoItem(i),
-            })),
-        );
-        setUltimo(numeroDoItem(EXEMPLOS_LEVANTAMENTO.length - 1));
     };
 
     const comFoto = linhas.filter((l) => l.temFoto).length;
@@ -418,15 +470,15 @@ function EmCampo({
                     <div className="pw-campo" style={{ marginBottom: 0 }}>
                         <span>Foto do equipamento</span>
                         <div className="pw-fotos">
-                            {(foto || fotoSimulada) && (
+                            {foto && (
                                 <div className="pw-foto">
-                                    {foto ? <img src={foto} alt="Equipamento levantado" /> : '📷'}
+                                    <img src={foto} alt="Equipamento levantado" />
                                     <button
                                         type="button"
                                         className="pw-foto-remove"
                                         onClick={() => {
                                             setFoto(null);
-                                            setFotoSimulada(false);
+                                            setArquivo(null);
                                         }}
                                         aria-label="Remover foto"
                                     >
@@ -434,24 +486,14 @@ function EmCampo({
                                     </button>
                                 </div>
                             )}
-                            {!foto && !fotoSimulada && (
-                                <>
-                                    <button
-                                        type="button"
-                                        className="pw-foto pw-foto-add"
-                                        onClick={() => seletor.current?.click()}
-                                    >
-                                        <Icone nome="camera" tamanho={28} />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="pw-foto pw-foto-add"
-                                        onClick={() => setFotoSimulada(true)}
-                                        title="Foto simulada, para ver a tela cheia sem câmera"
-                                    >
-                                        <span style={{ fontSize: 13, fontWeight: 700 }}>Simular</span>
-                                    </button>
-                                </>
+                            {!foto && (
+                                <button
+                                    type="button"
+                                    className="pw-foto pw-foto-add"
+                                    onClick={() => seletor.current?.click()}
+                                >
+                                    <Icone nome="camera" tamanho={28} />
+                                </button>
                             )}
                         </div>
                         <input
@@ -465,6 +507,7 @@ function EmCampo({
 
                                 if (arquivo) {
                                     setFoto(URL.createObjectURL(arquivo));
+                                    setArquivo(arquivo);
                                 }
                             }}
                         />
@@ -482,16 +525,6 @@ function EmCampo({
                     Somar e ir ao próximo
                 </button>
 
-                {linhas.length === 0 && (
-                    <button
-                        type="button"
-                        className="pw-btn pw-btn-fantasma"
-                        style={{ marginTop: 10 }}
-                        onClick={preencherExemplo}
-                    >
-                        Preencher exemplo com 6 linhas
-                    </button>
-                )}
 
                 {/* A lista da rua ---------------------------------------- */}
                 <p className="pw-titulo-secao">Levantados nesta rua</p>
@@ -558,19 +591,38 @@ function EmCampo({
                                 {frasePluralizada('equipe', 'equipes', equipes)},{' '}
                                 {frasePluralizada('encarregado', 'encarregados', encarregados)}.
                             </p>
-                            <button
-                                type="button"
-                                className="pw-btn pw-btn-contorno"
-                                style={{ marginTop: 14 }}
-                                onClick={() => irPara('calor')}
-                            >
-                                <Icone nome="calor" tamanho={18} />
-                                Ver no mapa de calor
-                            </button>
-                            <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 12.5 }}>
-                                No protótipo o levantamento não altera o mapa de calor — o botão mostra
-                                para onde esse dado vai.
-                            </p>
+                            {resultado && !resultado.concluido && (
+                                <p role="alert" style={{ margin: '12px 0 0', fontSize: 14.5, color: 'var(--pw-perigo)' }}>
+                                    {resultado.frase}
+                                </p>
+                            )}
+                            {resultado?.concluido ? (
+                                <>
+                                    <p role="status" style={{ margin: '12px 0 0', fontSize: 14.5 }}>
+                                        {resultado.frase}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="pw-btn pw-btn-contorno"
+                                        style={{ marginTop: 12 }}
+                                        onClick={() => irPara('inicio')}
+                                    >
+                                        Voltar ao início
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="pw-btn pw-btn-acao"
+                                    style={{ marginTop: 14 }}
+                                    onClick={() => void concluir()}
+                                    disabled={concluindo}
+                                    aria-busy={concluindo}
+                                >
+                                    <Icone nome={concluindo ? 'atualizar' : 'certo'} tamanho={18} className={concluindo ? 'pw-girando' : undefined} />
+                                    {concluindo ? 'Enviando…' : 'Concluir levantamento'}
+                                </button>
+                            )}
                         </div>
                     </>
                 )}

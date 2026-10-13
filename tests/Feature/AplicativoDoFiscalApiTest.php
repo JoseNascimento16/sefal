@@ -1,11 +1,15 @@
 <?php
 
+use App\Models\Ambulante;
 use App\Models\Area;
 use App\Models\Demanda;
 use App\Models\DemandaTramite;
 use App\Models\Equipe;
 use App\Models\Fiscalizacao;
+use App\Models\Levantamento;
+use App\Models\LocalizacaoAmbulante;
 use App\Models\NumeroReservado;
+use App\Models\Operacao;
 use App\Models\Setor;
 use App\Models\User;
 use App\Support\Aplicativo\ReservaDeNumeros;
@@ -288,4 +292,117 @@ it('a hora em UTC que o aparelho manda é gravada no fuso de Salvador', function
     ]))->assertCreated()->assertJsonPath('registro.hora', '12:14');
 
     Date::setTestNow();
+});
+
+// ── Mapa, calor e operações (etapa 3) ────────────────────────────────────────
+
+it('o kit traz os ambulantes na última posição, o calor das vistorias e as operações da equipe', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo();
+    $ambulante = Ambulante::factory()->create(['apelido' => 'Zé do Coco']);
+    LocalizacaoAmbulante::create([
+        'ambulante_id' => $ambulante->id, 'latitude' => -12.97, 'longitude' => -38.43,
+        'fonte' => LocalizacaoAmbulante::FONTE_CADASTRO, 'bairro' => 'Pituba', 'registrada_em' => Date::now()->subDays(3),
+    ]);
+    $operacao = Operacao::create([
+        'codigo' => 'OP-APP-1', 'nome' => 'Rotina Pituba', 'area_id' => $equipe->area_id,
+        'inicio' => Date::today(), 'situacao' => Operacao::EM_ANDAMENTO,
+    ]);
+    $operacao->equipes()->attach($equipe->id);
+    $outra = Operacao::create([
+        'codigo' => 'OP-APP-2', 'nome' => 'De outra equipe', 'area_id' => $equipe->area_id,
+        'inicio' => Date::today(), 'situacao' => Operacao::EM_ANDAMENTO,
+    ]);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo())->assertCreated();
+    // "Nada encontrado" não é irregularidade: não esquenta o mapa.
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'desfecho' => Fiscalizacao::NADA_ENCONTRADO, 'bairro' => 'Barra',
+    ]))->assertCreated();
+
+    $kit = $this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->assertOk()->json();
+
+    expect(collect($kit['ambulantes'])->firstWhere('servidorId', $ambulante->id))
+        ->apelido->toBe('Zé do Coco')
+        ->regiao->toBe('Pituba')
+        ->and($kit['incidencias'])->toHaveCount(1)
+        ->and($kit['incidencias'][0]['regiao'])->toBe('Pituba')
+        ->and(collect($kit['operacoes'])->pluck('nome')->all())->toBe(['Rotina Pituba'])
+        ->and($kit['operacoes'][0]['tom'])->toBe('agora');
+
+    expect($outra->exists)->toBeTrue();
+});
+
+it('registrar a partir do pino liga a vistoria ao ambulante e move o pino para onde o fiscal esteve', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+    $ambulante = Ambulante::factory()->create();
+    LocalizacaoAmbulante::create([
+        'ambulante_id' => $ambulante->id, 'latitude' => -12.90, 'longitude' => -38.40,
+        'fonte' => LocalizacaoAmbulante::FONTE_CADASTRO, 'bairro' => 'Itapuã', 'registrada_em' => Date::now()->subWeek(),
+    ]);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'ambulante_id' => $ambulante->id, 'latitude' => -12.98, 'longitude' => -38.45, 'bairro' => 'Pituba',
+    ]))->assertCreated();
+
+    expect(Fiscalizacao::firstOrFail()->ambulante_id)->toBe($ambulante->id)
+        ->and($ambulante->fresh()->ultimaLocalizacao->bairro)->toBe('Pituba')
+        ->and((float) $ambulante->fresh()->ultimaLocalizacao->latitude)->toBe(-12.98);
+});
+
+// ── Levantamento de ambulantes (etapa 3) ─────────────────────────────────────
+
+it('o levantamento da rua é gravado com as linhas numeradas, a foto e os encarregados do cadastro', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo('Z1');
+    $lider = User::factory()->create(['name' => 'Marco Líder']);
+    $equipe->update(['lider_id' => $lider->id]);
+
+    $dados = [
+        'client_id' => 'lev-1',
+        'rua' => 'Rua Barão de Mauá',
+        'bairro' => 'Arenoso',
+        'equipes' => ['Z1'],
+        'linhas' => json_encode([
+            ['id' => 'l-a', 'nome' => 'Maria do Acarajé', 'documento' => '12345678900', 'atividade' => 'Acarajé', 'latitude' => -12.95, 'longitude' => -38.47],
+            ['id' => 'l-b', 'nome' => 'Seu Bila', 'atividade' => 'Cerveja'],
+        ]),
+        'fotos' => ['l-a' => UploadedFile::fake()->image('barraca.jpg')],
+    ];
+
+    $this->actingAs($fiscal)->post(route('aplicativo.levantamentos'), $dados, ['Accept' => 'application/json'])
+        ->assertCreated()
+        ->assertJsonPath('levantamento.linhas', 2)
+        ->assertJsonPath('levantamento.encarregados', ['Marco Líder']);
+
+    $levantamento = Levantamento::with('linhas')->firstOrFail();
+    expect($levantamento->linhas->pluck('item')->all())->toBe(['001', '002'])
+        ->and($levantamento->linhas[0]->foto)->not->toBeNull()
+        ->and($levantamento->linhas[1]->foto)->toBeNull()
+        ->and($levantamento->user_id)->toBe($fiscal->id);
+    Storage::disk('local')->assertExists($levantamento->linhas[0]->foto);
+
+    // O reenvio não duplica, e o kit traz o levantamento entre os recentes.
+    $this->actingAs($fiscal)->post(route('aplicativo.levantamentos'), $dados, ['Accept' => 'application/json'])->assertOk();
+    expect(Levantamento::count())->toBe(1);
+
+    $kit = $this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json();
+    expect($kit['levantamentos'][0]['rua'])->toBe('Rua Barão de Mauá')
+        ->and(collect($kit['equipesDaCidade'])->pluck('equipe')->all())->toContain('Z1');
+});
+
+it('levantamento sem nenhum ambulante é recusado dizendo o que falta', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.levantamentos'), [
+        'client_id' => 'lev-vazio', 'rua' => 'Rua A', 'bairro' => 'Pituba', 'equipes' => ['Z1'], 'linhas' => '[]',
+    ])->assertStatus(422)->assertJsonPath('errors.linhas.0', fn (string $m) => str_contains($m, 'sem nenhum ambulante'));
+});
+
+it('recomendação com chave fora do catálogo é recusada — a chave é o que a Retaguarda soma', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo(['recomendacoes' => ['chave-inventada']]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('recomendacoes.0');
+
+    expect(Fiscalizacao::count())->toBe(0);
 });

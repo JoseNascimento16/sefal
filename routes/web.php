@@ -496,6 +496,7 @@ Route::prefix('app/api')->name('aplicativo.')->group(function () {
         Route::get('kit', [AplicativoController::class, 'kit'])->name('kit');
         Route::post('numeros', [AplicativoController::class, 'numeros'])->name('numeros');
         Route::post('fiscalizacoes', [AplicativoController::class, 'registrar'])->name('fiscalizacoes');
+        Route::post('levantamentos', [AplicativoController::class, 'levantar'])->name('levantamentos');
     });
 });
 

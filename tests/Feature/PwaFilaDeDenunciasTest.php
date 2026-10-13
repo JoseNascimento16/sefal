@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Demanda;
 use App\Models\Fiscalizacao;
+use App\Support\Aplicativo\AplicativoParaTela;
 use App\Support\Aplicativo\ReservaDeNumeros;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Tests\TestCase;
@@ -270,40 +271,6 @@ class PwaFilaDeDenunciasTest extends TestCase
         $this->assertGreaterThan(160051, $aa);
     }
 
-    public function test_a_amostra_segue_educativa_com_mais_casos_sem_documento_do_que_com_papel()
-    {
-        /*
-         * Regra da amostra, não observação: uma demonstração em que todo caso de
-         * campo termina em papel desenharia um sistema punitivo que não é o do
-         * cliente. A fiscalização de ambulante termina, na maioria das vezes, com
-         * o ambulante desmontando na frente do fiscal.
-         */
-        $comPapel = ['Notificação Preliminar emitida', 'Auto de Apreensão lavrado'];
-        $semPapel = ['Regularizado no local', 'Nada encontrado no local', 'Regularizado após notificação'];
-
-        $conta = static function (string $fonte, array $desfechos): int {
-            $total = 0;
-
-            foreach ($desfechos as $desfecho) {
-                $total += substr_count($fonte, "'".$desfecho."'");
-            }
-
-            return $total;
-        };
-
-        // Os dois lugares que o dono tem na mão durante a demonstração: a amostra
-        // das denúncias e o turno já registrado no aparelho.
-        foreach (['dados-demandas.ts', 'dados-prototipo.ts'] as $arquivo) {
-            $fonte = $this->fonteDoAplicativo($arquivo);
-
-            $this->assertGreaterThan(
-                $conta($fonte, $comPapel),
-                $conta($fonte, $semPapel),
-                "a amostra de {$arquivo} passou a ter mais papel do que orientação",
-            );
-        }
-    }
-
     public function test_so_conclui_sem_documento_o_desfecho_que_nao_lavra_documento()
     {
         /*
@@ -412,88 +379,6 @@ class PwaFilaDeDenunciasTest extends TestCase
         );
     }
 
-    public function test_nenhum_registro_semeado_recomenda_chave_fora_do_catalogo()
-    {
-        /*
-         * A recomendação viaja como CHAVE, e é a chave que a Retaguarda soma
-         * ("quantos registros pediram operação na área?") e traduz na leitura
-         * dela. Chave semeada fora do catálogo não estoura em lugar nenhum: a
-         * pílula do aparelho cai no fallback e mostra o código, e do outro lado a
-         * chefia lê `passagemm` onde deveria estar a recomendação do fiscal.
-         *
-         * São duas provas, e a segunda é a que pega o erro do dia a dia: o
-         * catálogo deste arquivo é chave a chave o mesmo do outro lado, e nenhuma
-         * semente usa chave que ele não declare. A primeira é o que torna a
-         * segunda confiável — sem ela, renomear a chave nos DOIS lugares daqui
-         * passaria batido e deixaria a Retaguarda sozinha com o nome antigo.
-         */
-        $catalogo = $this->fonteDoAplicativo('dados-demandas.ts');
-
-        $achou = preg_match(
-            '/export const RECOMENDACOES[^=]*=\s*\[(?<corpo>.*?)\n\];/su',
-            $catalogo,
-            $bloco,
-        );
-
-        $this->assertSame(1, $achou, 'o aplicativo não declara mais o catálogo RECOMENDACOES');
-
-        preg_match_all("/id:\s*'([^']+)'/u", $bloco['corpo'], $achados);
-        $chaves = $achados[1];
-
-        $this->assertSame(
-            self::RECOMENDACOES_DA_RETAGUARDA,
-            $chaves,
-            'o catálogo de recomendações do aplicativo divergiu do da Retaguarda '
-            .'(config/prototipo_denuncias.php → recomendacoes_do_fiscal). As duas listas vivem em '
-            .'branches diferentes e nenhum teste as compara: chave nova ou renomeada entra nos DOIS '
-            .'lados, à mão, no mesmo passo.',
-        );
-
-        /*
-         * As sementes do turno: cada linha é um array, e a recomendação é o
-         * ÚLTIMO campo dele — daí o `]],` no fim da linha. Linha sem recomendação
-         * termina em `null],` e não casa, o que é o certo: não há chave para
-         * conferir.
-         */
-        preg_match_all(
-            "/^\s+\[.*\[((?:'[^']*',?\s*)+)\]\],\s*$/mu",
-            $this->fonteDoAplicativo('dados-prototipo.ts'),
-            $linhas,
-            PREG_SET_ORDER,
-        );
-
-        /*
-         * Sem este piso o teste passaria pelo motivo errado: mudar o formato da
-         * semente faria a expressão não casar NADA, e "nenhuma chave inválida"
-         * ficaria verde sem ter olhado uma única linha.
-         */
-        $this->assertGreaterThanOrEqual(
-            3,
-            count($linhas),
-            'a amostra do turno precisa de registro despachado COM recomendação — se o formato da '
-            .'semente mudou, esta varredura deixou de olhar as linhas e passaria vazia',
-        );
-
-        $foraDoCatalogo = [];
-
-        foreach ($linhas as $linha) {
-            preg_match_all("/'([^']*)'/u", $linha[1], $chavesDaLinha);
-
-            foreach ($chavesDaLinha[1] as $chave) {
-                if (! in_array($chave, $chaves, true)) {
-                    $foraDoCatalogo[] = $chave;
-                }
-            }
-        }
-
-        $this->assertSame(
-            [],
-            array_values(array_unique($foraDoCatalogo)),
-            'registro semeado recomenda chave que o catálogo não declara — a pílula mostraria o '
-            .'código, e a Retaguarda mostraria a chave crua no lugar da recomendação',
-        );
-    }
-
     public function test_o_registro_do_turno_nasce_de_um_desfecho_e_nao_de_regular_ou_irregular()
     {
         /*
@@ -502,10 +387,19 @@ class PwaFilaDeDenunciasTest extends TestCase
          * lado dele, a mesma decisão passa a ter dois donos — e um dia o pino diz
          * "regular" num ponto que levou Auto de Apreensão.
          */
-        $fonte = $this->fonteDoAplicativo('dados-prototipo.ts');
+        $this->assertStringContainsString(
+            'status: LOCAL_APOS_O_DESFECHO[novo.desfecho]',
+            $this->fonteDoAplicativo('app.tsx'),
+            'o registro novo deixou de derivar a leitura regular/irregular do desfecho',
+        );
 
-        $this->assertStringContainsString('LOCAL_APOS_O_DESFECHO[s[4]]', $fonte);
-        $this->assertDoesNotMatchRegularExpression("/,\s*'irregular',\s*\[/", $fonte);
-        $this->assertDoesNotMatchRegularExpression("/,\s*'regular',\s*\[/", $fonte);
+        // E a régua é a MESMA dos dois lados: o servidor deriva igual ao aparelho.
+        $doAparelho = array_map(
+            static fn (string $v): string => trim($v, " '"),
+            $this->mapaDeTextos($this->fonteDoAplicativo('dados-demandas.ts'), 'LOCAL_APOS_O_DESFECHO'),
+        );
+        $doServidor = (new \ReflectionClassConstant(AplicativoParaTela::class, 'LOCAL_APOS_O_DESFECHO'))->getValue();
+
+        $this->assertEqualsCanonicalizing($doServidor, $doAparelho);
     }
 }

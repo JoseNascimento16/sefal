@@ -2,11 +2,16 @@
 
 namespace App\Support\Aplicativo;
 
+use App\Models\Ambulante;
 use App\Models\Bairro;
 use App\Models\Demanda;
 use App\Models\DocumentoCampo;
+use App\Models\Equipe;
 use App\Models\Fiscalizacao;
+use App\Models\Levantamento;
+use App\Models\Operacao;
 use App\Models\User;
+use App\Support\Apresentacao\MapaDaCidade;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Date;
 
@@ -64,6 +69,183 @@ final class AplicativoParaTela
                 'bairros' => $area?->bairros()->orderBy('bairro')->pluck('bairro')->all() ?? [],
             ],
             'equipes' => $equipes->pluck('codigo')->all(),
+        ];
+    }
+
+    /** Quantos dias de incidência o mapa de calor do aplicativo recebe (a maior janela da tela). */
+    public const DIAS_DE_CALOR = 90;
+
+    /** Quantas idas ao ponto o histórico do pino mostra. */
+    private const HISTORICO_DO_PINO = 5;
+
+    /**
+     * Os ambulantes com posição conhecida — os pinos do mapa, na ÚLTIMA posição
+     * de cada um, com as últimas idas da fiscalização ao ponto.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function ambulantes(): array
+    {
+        $hoje = Date::today();
+
+        return Ambulante::query()
+            ->with(['atividade', 'ultimaLocalizacao.fiscalizacao'])
+            ->has('ultimaLocalizacao')
+            ->get()
+            ->map(function (Ambulante $a) use ($hoje): array {
+                $lugar = $a->ultimaLocalizacao;
+                $idas = $a->fiscalizacoes()->whereNotNull('despachada_em')->latest('aberta_em')->limit(self::HISTORICO_DO_PINO)->get();
+
+                return [
+                    'id' => 'amb-'.$a->id,
+                    'servidorId' => $a->id,
+                    'nome' => $a->nome,
+                    'apelido' => (string) ($a->apelido ?? $a->nome),
+                    'atividade' => (string) ($a->atividade?->nome ?? 'Atividade não informada'),
+                    // O emoji é escolha do aplicativo, pelo nome da atividade.
+                    'emoji' => null,
+                    'situacao' => $a->situacao === Ambulante::SITUACAO_REGULAR ? 'regular' : 'irregular',
+                    'permissao' => $a->numero_permissao,
+                    'regiao' => (string) ($lugar->bairro ?? ''),
+                    'endereco' => (string) ($lugar->fiscalizacao?->logradouro ?? $lugar->bairro ?? 'Endereço não registrado'),
+                    'lat' => (float) $lugar->latitude,
+                    'lng' => (float) $lugar->longitude,
+                    'ultimaEm' => self::dataBr($lugar->registrada_em),
+                    'retornoHaDias' => MapaDaCidade::retornoVencidoHaDias($a, $hoje),
+                    'historico' => $idas->map(fn (Fiscalizacao $f) => [
+                        'data' => self::dataBr($f->aberta_em),
+                        'resumo' => (string) $f->desfecho,
+                        'status' => self::LOCAL_APOS_O_DESFECHO[$f->desfecho] ?? 'regular',
+                    ])->values()->all(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * As vistorias dos últimos {@see DIAS_DE_CALOR} dias com GPS em que havia
+     * IRREGULARIDADE no ponto — a matéria do mapa de calor ("onde a rua está
+     * quente"). Só "Nada encontrado no local" fica de fora: "Regularizado no
+     * local" teve ambulante irregular, resolvido na hora. Cada uma pesa igual.
+     *
+     * @return list<array{lat: float, lng: float, peso: float, haDias: int, regiao: string}>
+     */
+    public static function incidencias(): array
+    {
+        $hoje = Date::today();
+
+        return Fiscalizacao::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('concluida_em')
+            ->where('desfecho', '!=', Fiscalizacao::NADA_ENCONTRADO)
+            ->where('concluida_em', '>=', $hoje->copy()->subDays(self::DIAS_DE_CALOR))
+            ->get(['latitude', 'longitude', 'bairro', 'concluida_em'])
+            ->map(fn (Fiscalizacao $f) => [
+                'lat' => (float) $f->latitude,
+                'lng' => (float) $f->longitude,
+                'peso' => 1.0,
+                // A tela recorta por "até N dias": a de hoje conta como 1.
+                'haDias' => (int) $f->concluida_em->copy()->startOfDay()->diffInDays($hoje) + 1,
+                'regiao' => (string) $f->bairro,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * As operações abertas que chegam a esta pessoa (as das equipes dela e as em
+     * que ela foi posta à parte), na ordem em que começam.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function operacoes(CampoDoFiscal $campo): array
+    {
+        $hoje = Date::today();
+
+        return Operacao::query()
+            ->with('bairros')
+            ->whereIn('id', $campo->operacoes())
+            ->orderBy('inicio')
+            ->get()
+            ->map(function (Operacao $o) use ($hoje): array {
+                $inicio = $o->inicio->copy()->startOfDay();
+                $bairros = $o->bairros->pluck('bairro')->all();
+                $emCurso = $inicio->lte($hoje) && ($o->fim === null || $o->fim->copy()->startOfDay()->gte($hoje));
+
+                return [
+                    'id' => 'op-'.$o->id,
+                    'nome' => $o->nome,
+                    'local' => (string) ($o->foco ?: (implode(', ', array_slice($bairros, 0, 3)) ?: ($o->regiao ?? ''))),
+                    'regiao' => (string) ($bairros[0] ?? $o->regiao ?? ''),
+                    'quando' => match (true) {
+                        $emCurso => 'Em andamento',
+                        $inicio->equalTo($hoje->copy()->addDay()) => 'Amanhã, '.self::dataBr($inicio),
+                        default => self::dataBr($inicio),
+                    },
+                    'horario' => $o->fim !== null ? 'até '.self::dataBr($o->fim) : 'sem data de fim',
+                    'fiscais' => count($o->fiscaisQueRecebem()),
+                    'tom' => $emCurso ? 'agora' : ($inicio->equalTo($hoje->copy()->addDay()) ? 'proxima' : 'planejada'),
+                    'observacao' => (string) ($o->observacao ?? ''),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * As equipes ativas da cidade, para o cabeçalho do levantamento (duas
+     * equipes podem levantar a mesma rua) — com o encarregado de cada uma.
+     *
+     * @return list<array{equipe: string, regiao: string, encarregado: string}>
+     */
+    public static function equipesDaCidade(): array
+    {
+        return Equipe::query()->ativas()->with(['area', 'lider'])->orderBy('codigo')->get()
+            ->map(fn (Equipe $e) => [
+                'equipe' => $e->codigo,
+                'regiao' => (string) ($e->area?->nome ?? ''),
+                'encarregado' => $e->nomeDoLider(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Os levantamentos das equipes de quem entrou nos últimos 30 dias, os mais
+     * novos primeiro.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function levantamentos(CampoDoFiscal $campo): array
+    {
+        $codigos = $campo->equipes()->pluck('codigo')->all();
+
+        return Levantamento::query()
+            ->withCount('linhas')
+            ->where('concluido_em', '>=', Date::now()->subDays(CampoDoFiscal::DIAS_DE_HISTORICO))
+            ->latest('concluido_em')
+            ->get()
+            ->filter(fn (Levantamento $l) => $l->user_id === $campo->user->id || array_intersect($l->equipes, $codigos) !== [])
+            ->map(self::levantamento(...))
+            ->values()
+            ->all();
+    }
+
+    /** @return array<string, mixed> */
+    public static function levantamento(Levantamento $levantamento): array
+    {
+        return [
+            'id' => 'lev-'.$levantamento->id,
+            'clientId' => $levantamento->client_id,
+            'protocolo' => $levantamento->protocolo,
+            'rua' => $levantamento->rua,
+            'bairro' => $levantamento->bairro,
+            'equipes' => $levantamento->equipes,
+            'encarregados' => $levantamento->encarregados,
+            'dataBr' => self::dataBr($levantamento->concluido_em),
+            'linhas' => (int) ($levantamento->linhas_count ?? $levantamento->linhas()->count()),
+            'situacao' => 'concluido',
         ];
     }
 

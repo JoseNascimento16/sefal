@@ -259,10 +259,12 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
             ocorrencias: marcadas,
             relato: relato.trim(),
             fotos: fotos.filter((f) => f.arquivo !== null).length,
-            /* Só as fotos de verdade sobem; a "simulada" é ensaio de tela. */
             arquivos: fotos.flatMap((f) => (f.arquivo ? [f.arquivo] : [])),
             precisaoM: posicaoReal ? (posicao?.precisao ?? null) : null,
             ambulante: vinculo,
+            /* O id do cadastro só vale enquanto o vínculo é o do pino de onde o
+               registro saiu; trocar o nome desfaz a identificação. */
+            ambulanteId: doMapa && vinculo === doMapa.apelido ? (doMapa.servidorId ?? null) : null,
             retornoBr: retorno ? dataBrDaqui(prazo.dias) : null,
             lat: posicao?.lat ?? CENTRO_SALVADOR.lat,
             lng: posicao?.lng ?? CENTRO_SALVADOR.lng,
@@ -424,7 +426,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                         )}
                         {!doMapa && !dirigida && !posicaoReal && posicao && (
                             <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
-                                Coordenada simulada — o aparelho não liberou a localização.
+                                Coordenada aproximada — o aparelho não liberou a localização. Libere o GPS para o ponto sair exato.
                             </p>
                         )}
                     </div>
@@ -461,16 +463,6 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                             <Icone nome="camera" tamanho={28} />
                         </button>
 
-                        <button
-                            type="button"
-                            className="pw-foto pw-foto-add"
-                            onClick={() =>
-                                setFotos((a) => [...a, { id: `simulada-${Date.now()}`, url: null, arquivo: null }])
-                            }
-                            title="Foto simulada, para ver a tela cheia sem câmera"
-                        >
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>Simular</span>
-                        </button>
                     </div>
 
                     <input
