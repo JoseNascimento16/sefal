@@ -67,6 +67,8 @@ final class AplicativoParaTela
                 'recorte' => in_array($area?->recorte, ['bairros', 'corredores', 'cidade'], true) ? $area->recorte : 'bairros',
                 'turno' => $equipe->turno ?? '',
                 'bairros' => $area?->bairros()->orderBy('bairro')->pluck('bairro')->all() ?? [],
+                // O desenho que a Retaguarda guarda (tela Áreas): contorno ou corredores.
+                ...($area?->geometria() ?? ['contorno' => null, 'corredores' => null]),
             ],
             'equipes' => $equipes->pluck('codigo')->all(),
         ];

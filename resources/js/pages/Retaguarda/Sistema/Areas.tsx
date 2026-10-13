@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
+import type { Corredor, Ponto } from '@/components/retaguarda/desenho-da-area';
+import { DesenhoDaArea } from '@/components/retaguarda/desenho-da-area';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
@@ -39,6 +41,8 @@ interface Area {
     bairros: string[];
     equipes: string[];
     tem_historico: boolean;
+    contorno: Ponto[] | null;
+    corredores: Corredor[] | null;
 }
 
 interface Formulario {
@@ -48,6 +52,8 @@ interface Formulario {
     turno: string;
     ativa: boolean;
     bairros: string[];
+    contorno: Ponto[] | null;
+    corredores: Corredor[] | null;
 }
 
 type Aba = 'localizar' | 'registro';
@@ -75,6 +81,8 @@ function formularioDe(a: Area | null, recortes: string[], turnos: string[]): For
         turno: a?.turno || turnos[0] || '',
         ativa: a?.ativa ?? true,
         bairros: a?.bairros ?? [],
+        contorno: a?.contorno ?? null,
+        corredores: a?.corredores ?? null,
     };
 }
 
@@ -581,6 +589,27 @@ export default function Areas({
                                 sugestões. {form.recorte === 'cidade' && 'Área que cobre a cidade inteira não precisa de bairros.'}
                             </p>
                             {erros.bairros && <p className="form-erro">{erros.bairros}</p>}
+                        </div>
+
+                        <div className="form-group">
+                            <p className="form-label">Desenho no mapa</p>
+                            <DesenhoDaArea
+                                recorte={form.recorte}
+                                contorno={form.contorno}
+                                corredores={form.corredores}
+                                somenteLeitura={somenteLeitura}
+                                aoMudar={(contorno, corredores) =>
+                                    setForm((f) => (f.recorte === 'bairros' ? { ...f, contorno } : { ...f, corredores }))
+                                }
+                            />
+                            {Object.entries(erros)
+                                .filter(([campo]) => campo.startsWith('contorno') || campo.startsWith('corredores'))
+                                .slice(0, 1)
+                                .map(([campo, mensagem]) => (
+                                    <p key={campo} className="form-erro">
+                                        {mensagem}
+                                    </p>
+                                ))}
                         </div>
 
                         <div className="form-group">

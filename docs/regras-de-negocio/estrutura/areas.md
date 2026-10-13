@@ -44,3 +44,4 @@ desmarca-se **Ativa**.
 |---|---|---|---|---|
 | 25/09/2026 | José Nascimento | Áreas | Nasce a tela (RN-01 a RN-04), com a migration `2026_09_25_140000_concede_a_tela_de_areas`. | Pedido do dono. |
 | 25/09/2026 | José Nascimento | Áreas | Os chips passam a vir do catálogo de [Bairros](bairros.md) (os ativos); o bairro acrescentado numa área entra no catálogo, e a coordenada vem de lá. | Pedido do dono. |
+| 13/10/2026 | José Nascimento | Áreas | **Desenho no mapa:** bloco de bairros desenha o CONTORNO; corredores desenham LINHAS com nome; cidade inteira não tem desenho. Clicar no mapa acrescenta ponto, arrastar ajusta, "Desfazer último ponto" volta um passo; ponto fora de Salvador é recusado. Guardado em `areas.poligono` (GeoJSON), semeado com os contornos que o protótipo do aplicativo trazia (migration `2026_10_13_120000_geometria_das_areas`). É o desenho que o fiscal vê no aplicativo. | Pedido do dono: a geometria das áreas. |

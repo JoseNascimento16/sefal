@@ -11,11 +11,11 @@
    só se conhecem depois do login; em ESM a importação é uma ligação viva, então
    os módulos que importam estes nomes veem o valor novo.
 
-   O CONTORNO da área ainda vem do desenho do aplicativo (`dados-equipes.ts`),
-   achado pelo código da equipe: o banco não guarda geometria de área.
+   O CONTORNO da área (ou os corredores) também vem do servidor: é o desenho
+   que a Retaguarda guarda na tela de Áreas.
    ============================================================================ */
 
-import { RECORTES, areaDaEquipe, type Anel, type Identidade, type Recorte } from './dados-equipes';
+import { RECORTES, type Anel, type Identidade, type Recorte } from './dados-equipes';
 
 /** A equipe do fiscal, do jeito que as telas precisam dela. */
 export type EquipeAtual = {
@@ -51,6 +51,8 @@ export type SessaoDoServidor = {
         recorte: Recorte;
         turno: string;
         bairros: string[];
+        contorno: Anel | null;
+        corredores: { nome: string; linha: Anel }[] | null;
     } | null;
     equipes: string[];
 };
@@ -88,11 +90,6 @@ export function aplicarSessao(sessao: SessaoDoServidor): void {
         return;
     }
 
-    /* O desenho só vale se for o desta equipe: `areaDaEquipe` cai num padrão
-       quando não conhece o código, e um contorno alheio enganaria o fiscal. */
-    const desenho = areaDaEquipe(e.codigo);
-    const doMesmo = desenho.equipe === e.codigo;
-
     EQUIPE = {
         codigo: e.codigo,
         nome: e.nome,
@@ -104,8 +101,8 @@ export function aplicarSessao(sessao: SessaoDoServidor): void {
         recorteExplicacao: RECORTES[e.recorte].explicacao,
         turno: e.turno,
         bairros: e.bairros,
-        contorno: doMesmo ? desenho.contorno : null,
-        corredores: doMesmo ? desenho.corredores : null,
+        contorno: e.contorno,
+        corredores: e.corredores,
     };
 }
 

@@ -147,4 +147,76 @@ class Area extends Model
     {
         $query->where('ativa', true);
     }
+
+    // ── O desenho da área no mapa ──────────────────────────────────────────
+
+    /**
+     * O desenho da área, no formato das telas: o CONTORNO do bloco (anel de
+     * `[lat, lng]`) e os CORREDORES (linhas com nome). Guardado em `poligono`
+     * como GeoJSON (`[lng, lat]`, anel fechado); aqui sai aberto e em
+     * `[lat, lng]`, que é como o Leaflet desenha.
+     *
+     * @return array{contorno: list<array{0: float, 1: float}>|null, corredores: list<array{nome: string, linha: list<array{0: float, 1: float}>}>|null}
+     */
+    public function geometria(): array
+    {
+        $dado = json_decode((string) $this->poligono, true);
+        $contorno = null;
+        $corredores = [];
+
+        foreach ((array) ($dado['features'] ?? []) as $feature) {
+            $tipo = $feature['geometry']['type'] ?? null;
+            $coordenadas = (array) ($feature['geometry']['coordinates'] ?? []);
+
+            if ($tipo === 'Polygon' && $contorno === null) {
+                $anel = array_map(static fn (array $p): array => [(float) $p[1], (float) $p[0]], (array) ($coordenadas[0] ?? []));
+                // O GeoJSON fecha o anel repetindo o primeiro ponto; a tela não.
+                $contorno = count($anel) > 1 && $anel[0] === $anel[count($anel) - 1] ? array_slice($anel, 0, -1) : $anel;
+            }
+
+            if ($tipo === 'LineString') {
+                $corredores[] = [
+                    'nome' => (string) ($feature['properties']['nome'] ?? 'Corredor'),
+                    'linha' => array_map(static fn (array $p): array => [(float) $p[1], (float) $p[0]], $coordenadas),
+                ];
+            }
+        }
+
+        return ['contorno' => $contorno ?: null, 'corredores' => $corredores ?: null];
+    }
+
+    /**
+     * O GeoJSON de `poligono` a partir do desenho das telas — `null` quando não
+     * há desenho (a área que cobre a cidade inteira).
+     *
+     * @param  list<array{0: float, 1: float}>|null  $contorno
+     * @param  list<array{nome: string, linha: list<array{0: float, 1: float}>}>|null  $corredores
+     */
+    public static function geoJson(?array $contorno, ?array $corredores): ?string
+    {
+        $features = [];
+
+        if ($contorno !== null && count($contorno) >= 3) {
+            $anel = array_map(static fn (array $p): array => [(float) $p[1], (float) $p[0]], array_values($contorno));
+            $anel[] = $anel[0];
+            $features[] = ['type' => 'Feature', 'properties' => (object) [], 'geometry' => ['type' => 'Polygon', 'coordinates' => [$anel]]];
+        }
+
+        foreach ($corredores ?? [] as $corredor) {
+            if (count($corredor['linha']) < 2) {
+                continue;
+            }
+
+            $features[] = [
+                'type' => 'Feature',
+                'properties' => ['nome' => $corredor['nome']],
+                'geometry' => [
+                    'type' => 'LineString',
+                    'coordinates' => array_map(static fn (array $p): array => [(float) $p[1], (float) $p[0]], array_values($corredor['linha'])),
+                ],
+            ];
+        }
+
+        return $features === [] ? null : (string) json_encode(['type' => 'FeatureCollection', 'features' => $features], JSON_UNESCAPED_UNICODE);
+    }
 }

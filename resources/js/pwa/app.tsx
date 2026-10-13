@@ -516,7 +516,9 @@ export function App() {
                 }
             })
             .catch((erro) => {
-                if (erro instanceof ErroDoServidor && erro.status === 0) {
+                /* 401 é só "ainda não entrou". Sem sinal (0) ou conta recusada
+                   (403: fora de equipe) a porta diz o motivo. */
+                if (erro instanceof ErroDoServidor && erro.status !== 401) {
                     setAviso(erro.message);
                 }
             })
