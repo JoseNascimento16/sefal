@@ -50,9 +50,14 @@ class Levantamento extends Model
         return $this->hasMany(LevantamentoLinha::class)->orderBy('item');
     }
 
-    /** @return BelongsTo<User, $this> */
+    /**
+     * Quem levantou — mesmo que a conta tenha sido excluída depois: o nome de
+     * quem esteve na rua continua sendo parte do registro.
+     *
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 }

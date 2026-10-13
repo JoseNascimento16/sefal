@@ -3,6 +3,7 @@ import {
     Activity,
     CircleDot,
     ClipboardCheck,
+    ClipboardList,
     FileBarChart,
     Flame,
     Inbox,
@@ -51,6 +52,7 @@ const ICONES: Record<string, LucideIcon> = {
     mapa: MapPinned,
     // O de calor tem a chama: ele mostra onde a coisa se concentra.
     calor: Flame,
+    levantamentos: ClipboardList,
     areas: Map,
     usuarios: Users,
     documentos: ScrollText,

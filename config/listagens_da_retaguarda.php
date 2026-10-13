@@ -164,6 +164,61 @@ return [
         ],
 
         /*
+        | Levantamentos — o censo de ambulantes por rua (aplicativo do fiscal).
+        |
+        | Quem varre quer achar A RUA: rua, bairro, equipes, data e quantos
+        | ambulantes. Protocolo, encarregados e quem levantou descem para a ficha.
+        */
+        'levantamentos' => [
+            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Levantamentos.tsx',
+            'grade' => [
+                ['chave' => 'rua', 'titulo' => 'Rua', 'largura' => 260],
+                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 180],
+                ['chave' => 'equipes', 'titulo' => 'Equipes', 'largura' => 120],
+                ['chave' => 'data', 'titulo' => 'Data', 'largura' => 110, 'alinhar' => 'center'],
+                ['chave' => 'ambulantes', 'titulo' => 'Ambulantes', 'largura' => 120, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['protocolo', 'encarregados', 'fiscal'],
+            'exportacao' => [
+                ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
+                ['chave' => 'rua', 'titulo' => 'Rua'],
+                ['chave' => 'bairro', 'titulo' => 'Bairro'],
+                ['chave' => 'equipes', 'titulo' => 'Equipes'],
+                ['chave' => 'encarregados', 'titulo' => 'Encarregados'],
+                ['chave' => 'fiscal', 'titulo' => 'Levantado por'],
+                ['chave' => 'data', 'titulo' => 'Data', 'alinhar' => 'center'],
+                ['chave' => 'ambulantes', 'titulo' => 'Ambulantes', 'alinhar' => 'center'],
+            ],
+        ],
+
+        /*
+        | As LINHAS de um levantamento — a planilha que o setor fazia à mão,
+        | dentro da ficha. O que identifica o ambulante e o ponto fica na grade;
+        | contato e coordenada descem.
+        */
+        'levantamento-linhas' => [
+            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Levantamentos.tsx',
+            'grade' => [
+                ['chave' => 'item', 'titulo' => 'Item', 'largura' => 70, 'alinhar' => 'center'],
+                ['chave' => 'nome', 'titulo' => 'Nome', 'largura' => 240],
+                ['chave' => 'atividade', 'titulo' => 'Atividade', 'largura' => 170],
+                ['chave' => 'referencia', 'titulo' => 'Referência', 'largura' => 150],
+                ['chave' => 'foto', 'titulo' => 'Foto', 'largura' => 90, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['documento', 'contato', 'coordenada'],
+            'exportacao' => [
+                ['chave' => 'item', 'titulo' => 'Item', 'alinhar' => 'center'],
+                ['chave' => 'nome', 'titulo' => 'Nome'],
+                ['chave' => 'documento', 'titulo' => 'CPF / RG'],
+                ['chave' => 'contato', 'titulo' => 'Contato'],
+                ['chave' => 'referencia', 'titulo' => 'Referência'],
+                ['chave' => 'atividade', 'titulo' => 'Atividade'],
+                ['chave' => 'coordenada', 'titulo' => 'Coordenada'],
+                ['chave' => 'foto', 'titulo' => 'Foto', 'alinhar' => 'center'],
+            ],
+        ],
+
+        /*
         |----------------------------------------------------------------------
         | Fiscalização › Cadastro de Operação
         |----------------------------------------------------------------------

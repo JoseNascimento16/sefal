@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Retaguarda;
 use App\Http\Controllers\Controller;
 use App\Models\DemandaAnexo;
 use App\Models\FiscalizacaoFoto;
+use App\Models\LevantamentoLinha;
 use App\Models\User;
 use App\Support\Apresentacao\ArquivoParaTela;
 use App\Support\Papel;
@@ -46,6 +47,18 @@ class ArquivosController extends Controller
         ]);
 
         return $this->entregar($request, $registro->caminho, (string) ($registro->legenda ?? basename($registro->caminho)));
+    }
+
+    /** A foto do equipamento numa linha do levantamento de ambulantes. */
+    public function fotoDoLevantamento(Request $request, int $linha): Response
+    {
+        $registro = LevantamentoLinha::with('levantamento')->findOrFail($linha);
+
+        abort_if($registro->foto === null, 404, 'Esta linha do levantamento não tem foto.');
+
+        $this->exigirEquipe($request->user(), array_values((array) ($registro->levantamento?->equipes ?? [])));
+
+        return $this->entregar($request, $registro->foto, 'equipamento-'.$registro->item.'.'.pathinfo($registro->foto, PATHINFO_EXTENSION));
     }
 
     public function anexo(Request $request, int $anexo): Response

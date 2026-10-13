@@ -14,6 +14,7 @@ use App\Http\Controllers\Retaguarda\EquipesController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\FiscalizacoesController;
 use App\Http\Controllers\Retaguarda\InicioController;
+use App\Http\Controllers\Retaguarda\LevantamentosController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\MapaAoVivoController;
 use App\Http\Controllers\Retaguarda\MapaDeCalorController;
@@ -350,6 +351,16 @@ Route::middleware(['auth'])->group(function () {
             ->defaults('destination', "/retaguarda/caixa-de-entrada/{$antigo}")
             ->defaults('status', 302);
     }
+
+    /*
+     * Levantamentos de ambulantes — o censo por rua que o aplicativo do fiscal
+     * grava (dono, 13/10/2026). Só consulta; a foto do equipamento sai pela
+     * porta única dos arquivos, sob o slug da tela, com o recorte do líder.
+     */
+    Route::prefix('retaguarda/levantamentos')->name('retaguarda.levantamentos.')->group(function () {
+        Route::get('/', [LevantamentosController::class, 'index'])->name('index');
+        Route::get('fotos/{linha}', [ArquivosController::class, 'fotoDoLevantamento'])->whereNumber('linha')->name('foto');
+    });
 
     /*
      * Fiscalizações — TODO registro de fiscalização concluído. PROTÓTIPO.

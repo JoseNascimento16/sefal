@@ -711,6 +711,23 @@ return [
 
         [
             'modulo' => 'Fiscalização',
+            'tela' => 'Levantamentos',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.levantamentos.index',
+            'breadcrumb' => 'Fiscalização › Levantamentos',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: o levantamento de ambulantes por rua que o setor fazia '
+                .'em planilha (exemplar entregue pelo cliente: Rua Barão de Mauá, Arenoso), trazido ao '
+                .'aplicativo do fiscal no protótipo e mantido pelo dono em 13/10/2026 ("pode manter e fazer no '
+                .'retaguarda"). Consulta: lista por rua, bairro, equipes, data e total; a busca casa também o '
+                .'nome do ambulante levantado. A ficha é a planilha da rua (item, nome, atividade, referência, '
+                .'foto), com documento, contato, coordenada e foto ao clicar na linha, e exportação própria. '
+                .'O líder vê só os levantamentos de que as equipes dele participaram.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
             'tela' => 'Mapa de Calor',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.mapa-de-calor.index',

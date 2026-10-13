@@ -298,6 +298,24 @@ return [
                         'lider-de-equipe' => ['apenas_leitura' => true],
                     ],
                 ],
+                /*
+                 * Levantamentos — o censo de ambulantes por rua que o aplicativo
+                 * do fiscal grava (dono, 13/10/2026). CONSULTA: quem levanta é o
+                 * fiscal, na rua; daqui se lê e se exporta. O líder vê só os
+                 * levantamentos de que as equipes dele participaram.
+                 */
+                [
+                    'rotulo' => 'Levantamentos',
+                    'rota' => 'retaguarda.levantamentos.index',
+                    'icone' => 'levantamentos',
+                    'slug' => 'levantamentos',
+                    'curto' => 'CENSO',
+                    'setores' => [
+                        'administrador',
+                        'chefe-de-setor' => ['apenas_leitura' => true],
+                        'lider-de-equipe' => ['apenas_leitura' => true],
+                    ],
+                ],
             ],
         ],
 

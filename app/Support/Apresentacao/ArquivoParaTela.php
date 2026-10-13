@@ -4,6 +4,7 @@ namespace App\Support\Apresentacao;
 
 use App\Models\DemandaAnexo;
 use App\Models\FiscalizacaoFoto;
+use App\Models\LevantamentoLinha;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -33,6 +34,25 @@ class ArquivoParaTela
             'nome' => (string) ($foto->legenda ?? basename($foto->caminho)),
             'imagem' => true,
             'disponivel' => Storage::disk(self::DISCO)->exists($foto->caminho),
+            'url' => $url,
+            'baixar' => $url.'?baixar=1',
+        ];
+    }
+
+    /**
+     * A foto do equipamento de uma linha do levantamento de ambulantes.
+     *
+     * @return array{id: int, nome: string, imagem: bool, disponivel: bool, url: string, baixar: string}
+     */
+    public static function fotoDoLevantamento(LevantamentoLinha $linha): array
+    {
+        $url = route('retaguarda.levantamentos.foto', $linha->id);
+
+        return [
+            'id' => $linha->id,
+            'nome' => 'Equipamento de '.$linha->nome,
+            'imagem' => true,
+            'disponivel' => $linha->foto !== null && Storage::disk(self::DISCO)->exists($linha->foto),
             'url' => $url,
             'baixar' => $url.'?baixar=1',
         ];
