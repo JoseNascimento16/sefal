@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { irPara } from '../app';
+import { irPara, useApp } from '../app';
 import { Selo, SeloSituacao, Topo, atalhoDoPerfil, classes } from '../componentes';
 import { EQUIPE } from '../dados-demandas';
 import { centroDaArea } from '../sessao';
@@ -39,6 +39,7 @@ const foraDaArea = (lat: number, lng: number): boolean =>
    ============================================================================ */
 
 export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
+    const { versao } = useApp();
     const caixa = useRef<HTMLDivElement>(null);
     const mapaRef = useRef<L.Map | null>(null);
     const [selecionado, setSelecionado] = useState<Ambulante | null>(null);
@@ -132,7 +133,7 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
             mapa.remove();
             mapaRef.current = null;
         };
-    }, [modo, centro, regiaoFoco]);
+    }, [modo, centro, regiaoFoco, versao]);
 
     /* A delimitação em efeito PRÓPRIO, e não junto com os pinos: assim acender e
        apagar o contorno não remonta os 25 marcadores do mapa. */
@@ -284,6 +285,7 @@ function PainelLateral({ aoSelecionar }: { aoSelecionar: (a: Ambulante) => void 
 /* --------------------------------- Lista --------------------------------- */
 
 function Lista({ aoSelecionar }: { aoSelecionar: (a: Ambulante) => void }) {
+    const { versao } = useApp();
     const [busca, setBusca] = useState('');
 
     const semAcento = (texto: string) =>
@@ -302,7 +304,7 @@ function Lista({ aoSelecionar }: { aoSelecionar: (a: Ambulante) => void }) {
 
             return termos.every((t) => alvo.includes(t));
         });
-    }, [busca]);
+    }, [busca, versao]);
 
     return (
         <>

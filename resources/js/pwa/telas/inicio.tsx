@@ -25,6 +25,7 @@ import {
 } from '../dados-prototipo';
 import { Icone, type Nome as NomeDeIcone } from '../icones';
 import { criarMapa, pinoAmbulante } from '../mapa';
+import { centroDaArea } from '../sessao';
 import { CartaoDemanda } from './demandas';
 
 /* ============================================================================
@@ -272,6 +273,7 @@ function Numero({
  * o toque em qualquer lugar leva ao mapa de verdade.
  */
 function PreviaDoMapa() {
+    const { versao } = useApp();
     const caixa = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -279,7 +281,8 @@ function PreviaDoMapa() {
             return;
         }
 
-        const mapa = criarMapa(caixa.current, [CENTRO_SALVADOR.lat, CENTRO_SALVADOR.lng], 14, {
+        const centro = centroDaArea() ?? CENTRO_SALVADOR;
+        const mapa = criarMapa(caixa.current, [centro.lat, centro.lng], 14, {
             controles: false,
         });
 
@@ -301,7 +304,7 @@ function PreviaDoMapa() {
         return () => {
             mapa.remove();
         };
-    }, []);
+    }, [versao]);
 
     return (
         <button type="button" className="pw-previa" onClick={() => irPara('mapa')}>

@@ -10,9 +10,9 @@ abre as da Retaguarda.
 >
 > Login, fila, números de documento e o envio do registro são **reais**: o aplicativo conversa com a
 > Retaguarda pelas rotas `/app/api/*` (mesma origem e mesma sessão), e a vistoria despachada entra
-> no banco esperando a leitura do líder. **Ainda com dados de exemplo:** os pinos de ambulante do
-> mapa, o mapa de calor, o levantamento e as operações da tela de início — a faixa "Em implantação"
-> fica visível enquanto for assim.
+> no banco esperando a leitura do líder. Desde a mesma data, também o **mapa** (ambulantes na última
+> posição), o **mapa de calor**, as **operações** e o **levantamento de ambulantes** vêm do servidor
+> (RN-17 a RN-19). A faixa "Em implantação · homologação" fica visível até a versão final.
 >
 > **Origem:** cenário da reunião com o cliente (02/09/2026) e decisões do dono. Não há HU escrita: a
 > linha em [`config/acompanhamento_requisitos.php`](../../../config/acompanhamento_requisitos.php)
@@ -272,6 +272,31 @@ aparece ao lado do registro, com o motivo.
 Na fila de demandas, a que já foi vistoriada e despachada sai de "A vistoriar" e vai para **"Com o
 líder"**, sem ato do fiscal — se o líder mandar voltar, ela volta para "A vistoriar".
 
+### RN-17 — O mapa mostra os ambulantes do cadastro, na última posição conhecida
+
+Os pinos são os ambulantes com posição registrada, cada um no último ponto conhecido, com as últimas
+5 idas da fiscalização no histórico e o retorno vencido calculado pela mesma regra da Retaguarda
+(`MapaDaCidade::retornoVencidoHaDias`). O registro feito **a partir de um pino** leva o ambulante
+identificado (`ambulante_id`) e **move o pino** para onde o fiscal esteve — trocar o nome no
+registro desfaz a identificação. O ícone do pino sai da categoria da atividade.
+
+### RN-18 — O calor é das vistorias com irregularidade; as operações são as da equipe
+
+O mapa de calor recebe as vistorias dos últimos 90 dias com GPS em que havia **irregularidade** no
+ponto: só "Nada encontrado no local" fica de fora ("Regularizado no local" teve ambulante irregular,
+resolvido na hora). A tela recorta 7, 30 ou 90 dias. As operações do início são as **abertas** que
+chegam ao fiscal — as das equipes dele e as em que ele foi posto à parte.
+
+### RN-19 — O levantamento de ambulantes é gravado no servidor
+
+O censo por rua (cabeçalho da força-tarefa + uma linha por ambulante, numerada 001, 002…) é
+concluído no botão **Concluir levantamento** e vai ao servidor com a foto do equipamento e o ponto de
+GPS de cada linha (`levantamentos` / `levantamento_linhas`, protocolo `LEV`). As **equipes** do
+cabeçalho são as do cadastro, e os **encarregados** que assinam saem delas no servidor — o aparelho
+só mostra. Sem sinal, o levantamento fica na fila do aparelho e sobe com a sincronização; recusado
+pelo servidor, volta à tela com o motivo. O levantamento **não** entra no mapa de calor (é censo, não
+incidência). Os atalhos "Preencher exemplo" e "Simular foto" do protótipo saíram.
+
 ## Como demonstrar (protótipo)
 
 Entrada em `/app`. Não há senha a conferir: a **matrícula** decide a identidade e a equipe.
@@ -359,6 +384,7 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 13/10/2026 | José Nascimento | Aplicativo do Fiscal (mapa, calor, início, levantamento) | **Etapa 3: os dados de campo deixam de ser fictícios.** Pinos de ambulante do cadastro na última posição, com histórico e retorno vencido; registro a partir do pino liga a vistoria ao ambulante e move o pino (RN-17). Calor das vistorias com irregularidade e operações da equipe (RN-18). Levantamento gravado no servidor com foto e GPS por linha, encarregados do cadastro, fila no aparelho (RN-19). Saem as sementes de ambulantes, calor, operações e registros, e os atalhos de exemplo. Migration `2026_10_13_100000_levantamento_de_ambulantes`. | Pedido do dono (13/10/2026): seguir para as próximas etapas, sem versão instalável. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (todas) | **O aplicativo passa a falar com o servidor.** Login real (RN-15); fila da equipe vinda do banco, no vocabulário da Retaguarda (canais e situações sem tradução); o despacho grava a vistoria esperando o LÍDER, ligada à Fiscalização e ao trâmite da demanda (RN-12, RN-16); números de NP/AA reservados pelo servidor por fiscal (RN-08); fila do aparelho com as fotos, reenvio quando o sinal volta; bloco "Com o líder" na fila. As 22 demandas fictícias saíram do aplicativo. Rotas `/app/api/*` protegidas por `AplicativoDoFiscal`; migration `2026_10_13_090000_aplicativo_do_fiscal_fala_com_o_servidor`. | Pedido do dono (13/10/2026): ajustar o PWA para se comunicar de verdade com a Retaguarda. |
 | 04/09/2026 | José Nascimento | Aplicativo do Fiscal (despacho) | **O catálogo de recomendações passa a ser o mesmo da Retaguarda, unificado pela CHAVE.** A lista sai de 7 para 11 atalhos (entram `reprogramar`, `passagem`, `chefia` e `outro-orgao`), todos com a redação **curta** — a explícita, que quem decide lê, mora do lado da Retaguarda, na mesma chave. Nenhuma chave antiga saiu, então os registros já semeados continuam válidos. | O catálogo tinha nascido em duas versões incompatíveis: o aplicativo gravava chave e a Retaguarda esperava a frase inteira, com outra redação e sem o `seab` — que foi justamente o exemplo dado pelo dono. Assim a recomendação chegaria do outro lado como coisa que ele não sabe ler nem somar. Decisão do dono: redação curta no aplicativo, explícita na Retaguarda, chave como contrato. |
 | 03/09/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, registro) | **O aplicativo passa a falar a língua do módulo de Denúncias.** (1) A fila deixa de espelhar a Caixa de Entrada (`CXE-NNNN`, situações `Aguardando triagem`/`Encaminhada`) e passa a espelhar `config/prototipo_denuncias.php`: protocolo `DEN-NNNN`, os dois canais das ouvidorias e o catálogo fechado de 10 situações. (2) A régua do que chega ao campo passa a ser explícita — o fiscal não vê denúncia em triagem — e a fila é dividida pelo ato devido (a vistoriar, aguardando regularização, encerradas). (3) O registro passa a terminar num **desfecho** da lista fechada de seis, com a leitura "regular/irregular" derivada dele, e nasce o **retorno** para a denúncia com prazo de notificação correndo. (4) A amostra traz as denúncias que a Retaguarda semeou para as equipes, com o mesmo protocolo, requerente, endereço, prazo, registro de campo e documento — inclusive a NP 194903 da DEN-0029, que também está no turno do aparelho. (5) A faixa de números reservados no aparelho passa a começar depois dos documentos já semeados do outro lado. | Decisão do dono (03/09/2026): alinhar o protótipo do aplicativo ao vocabulário novo para os dois lados contarem a MESMA história na demonstração, **sem** implementar sincronização — "só vale a pena avançar para as outras etapas quando tivermos requisitos e fluxos mais concretos". |

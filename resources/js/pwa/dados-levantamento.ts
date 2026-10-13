@@ -1,5 +1,5 @@
 /* ============================================================================
-   PROTÓTIPO — o LEVANTAMENTO de ambulantes (censo por rua)
+   O LEVANTAMENTO de ambulantes (censo por rua)
    ----------------------------------------------------------------------------
    Isto não é uma ideia nossa: o SEFAL já faz esse trabalho, em planilha. O
    cliente entregou um exemplar pronto — "LEVANTAMENTO AMBULANTES · RUA BARÃO
@@ -16,9 +16,9 @@
    2. É trabalho CONJUNTO. Duas equipes e dois encarregados assinam o mesmo
       levantamento, então o cabeçalho não é do fiscal: é da força-tarefa.
 
-   E é o insumo do mapa de calor: cada linha levantada é um ponto que o mapa
-   passa a conhecer. Hoje o calor se alimenta só das fiscalizações; com o
-   levantamento ele passa a saber onde estão os ambulantes ANTES da ocorrência.
+   O levantamento concluído vai ao SERVIDOR (`/app/api/levantamentos`), com a
+   foto e o GPS de cada linha; sem sinal, espera na fila do aparelho. Os
+   encarregados que assinam saem do cadastro das equipes, não do aparelho.
    ============================================================================ */
 
 export type LinhaLevantamento = {
@@ -30,9 +30,14 @@ export type LinhaLevantamento = {
     contato: string;
     referencia: string;
     atividade: string;
-    /** URL da foto tirada na hora, ou null quando é foto encenada. */
+    /** URL da foto tirada na hora (para a miniatura). */
     foto: string | null;
     temFoto: boolean;
+    /** O arquivo da foto — é ele que sobe ao servidor. */
+    arquivo?: Blob | null;
+    /** Onde o fiscal estava ao somar a linha. */
+    latitude?: number | null;
+    longitude?: number | null;
 };
 
 /** As atividades que aparecem na coluna ATIVIDADE do levantamento real. */
@@ -51,6 +56,9 @@ export const ATIVIDADES_LEVANTAMENTO = [
 
 export type Levantamento = {
     id: string;
+    /** O id que o aparelho deu — casa o recente do servidor com o da fila local. */
+    clientId?: string;
+    protocolo?: string;
     rua: string;
     bairro: string;
     equipes: string[];
@@ -61,63 +69,19 @@ export type Levantamento = {
 };
 
 /** Levantamentos que a força-tarefa já fechou — o primeiro é o do cliente. */
-export const LEVANTAMENTOS_RECENTES: Levantamento[] = [
-    {
-        id: 'lev-01',
-        rua: 'Rua Barão de Mauá',
-        bairro: 'Arenoso',
-        equipes: ['A1', 'C1'],
-        encarregados: ['César Amaral', 'Tânia Ornelas'],
-        dataBr: '19/08/2026',
-        linhas: 11,
-        situacao: 'concluido',
-    },
-    {
-        id: 'lev-02',
-        rua: 'Largo da Mariquita',
-        bairro: 'Rio Vermelho',
-        equipes: ['C2'],
-        encarregados: ['José Roberto'],
-        dataBr: '12/08/2026',
-        linhas: 23,
-        situacao: 'concluido',
-    },
-    {
-        id: 'lev-03',
-        rua: 'Av. Oceânica — Farol ao Morro do Cristo',
-        bairro: 'Barra',
-        equipes: ['C2', 'I1'],
-        encarregados: ['José Roberto', 'Roberto Moraes'],
-        dataBr: '05/08/2026',
-        linhas: 41,
-        situacao: 'concluido',
-    },
-];
+/** Os levantamentos recentes das equipes do fiscal, como o servidor entregou no `kit`. */
+export let LEVANTAMENTOS_RECENTES: Levantamento[] = [];
 
-/** Ruas que a chefia já indicou para levantar — atalho do cabeçalho. */
-export const RUAS_SUGERIDAS = [
-    { rua: 'Rua Marquês de Caravelas', bairro: 'Barra' },
-    { rua: 'Rua da Paciência', bairro: 'Rio Vermelho' },
-    { rua: 'Rua Alfredo de Brito', bairro: 'Centro Histórico' },
-    { rua: 'Praça Cairu', bairro: 'Comércio' },
-    { rua: 'Rua Carlos Gomes', bairro: 'Barris' },
-];
+/** As equipes ativas da cidade — o cabeçalho escolhe entre elas. */
+export let EQUIPES_DA_CIDADE: { equipe: string; regiao: string; encarregado: string }[] = [];
 
-/**
- * Nomes para a foto encenada e para o preenchimento de demonstração.
- *
- * O botão "Preencher exemplo" existe para o dono ver a tela CHEIA sem digitar
- * onze linhas no celular — a mesma razão do botão "Simular" nas fotos do
- * registro rápido.
- */
-export const EXEMPLOS_LEVANTAMENTO: Omit<LinhaLevantamento, 'id' | 'item'>[] = [
-    { nome: 'Larissa Souza Reis', documento: '084.317.155-37', contato: '(71) 99148-8613', referencia: 'Nº 02', atividade: 'Barraca de chapa', foto: null, temFoto: true },
-    { nome: 'Renata Ferreira de Jesus', documento: '292.839.305-68', contato: '(71) 98651-6602', referencia: 'Nº 01', atividade: 'Barraca de chapa', foto: null, temFoto: true },
-    { nome: 'Célia Assis Silva', documento: '130.459.705-91', contato: '(71) 98894-3263', referencia: 'Nº 04', atividade: 'Baiana de acarajé', foto: null, temFoto: true },
-    { nome: 'Marineide de Jesus de Souza', documento: '811.841.235-00', contato: '(71) 98251-5513', referencia: 'Nº 06', atividade: 'Banca de frutas', foto: null, temFoto: true },
-    { nome: 'Erasmo Carlos Lima da Silva', documento: '549.435.745-72', contato: '(71) 99415-9796', referencia: 'Nº 09', atividade: 'Carrinho de lanche', foto: null, temFoto: false },
-    { nome: 'Daiane Xavier Carvalho', documento: '864.574.265-90', contato: '(71) 98470-3986', referencia: 'Nº 05', atividade: 'Água e refrigerante', foto: null, temFoto: true },
-];
+export function carregarLevantamentos(
+    recentes: Levantamento[],
+    equipes: { equipe: string; regiao: string; encarregado: string }[],
+): void {
+    LEVANTAMENTOS_RECENTES = recentes;
+    EQUIPES_DA_CIDADE = equipes;
+}
 
 export const numeroDoItem = (indice: number): string => String(indice + 1).padStart(3, '0');
 
