@@ -1,16 +1,21 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { api, ErroDoServidor } from './api';
 import { BarraInferior, type Aba } from './componentes';
-import { LOCAL_APOS_O_DESFECHO, demandasVencidas, type Desfecho } from './dados-demandas';
-import { entrarComMatricula } from './sessao';
+import { LOCAL_APOS_O_DESFECHO, carregarDemandas, demandasVencidas, type Demanda, type Desfecho } from './dados-demandas';
+import { carregarNumeros } from './dados-documentos';
 import {
     HOJE_BR,
-    REGISTROS,
+    carregarBairros,
     horaAgora,
+    type DocumentoParaEnvio,
     type OrigemRegistro,
+    type Regiao,
     type Registro,
     type ViaImpressa,
 } from './dados-prototipo';
+import { filaDe, guardarNaFila, tirarDaFila } from './fila-local';
+import { FISCAL, aplicarSessao, type SessaoDoServidor } from './sessao';
 import { TelaApreensao } from './telas/apreensao';
 import { TelaCalor } from './telas/calor';
 import { TelaDemanda } from './telas/demanda';
@@ -29,21 +34,24 @@ import { TelaSincronizacao } from './telas/sincronizacao';
 import { TelaVia } from './telas/via';
 
 /* ============================================================================
-   PROTÓTIPO — aplicativo do fiscal (SEFAL)
+   Aplicativo do fiscal (SEFAL)
    ----------------------------------------------------------------------------
    Uma página só, sem Inertia e sem biblioteca de rotas: o endereço vive no
    fragmento (`#/mapa`, `#/recibo/reg-013`) e um `switch` decide a tela. São
    quinze telas; uma biblioteca de roteamento aqui pesaria mais que o
    aplicativo.
 
-   A barra de baixo tem SEIS destinos porque o trabalho do fiscal passou a ter
-   duas entradas, não uma: além do que ele acha andando a rua (o mapa), há a
-   fila do que o Coordenador encaminhou à equipe (as demandas). Esconder a
-   fila atrás de outra tela seria esconder metade do serviço.
+   A barra de baixo tem SEIS destinos porque o trabalho do fiscal tem duas
+   entradas, não uma: além do que ele acha andando a rua (o mapa), há a fila do
+   que o líder enviou à equipe (as demandas). Esconder a fila atrás de outra
+   tela seria esconder metade do serviço.
 
-   O estado também é deliberadamente simples — o que o fiscal registra fica na
-   memória da aba. É protótipo: não há servidor do outro lado, e fingir que há
-   seria esconder do dono exatamente o que ainda falta construir.
+   O SERVIDOR é a Retaguarda, na mesma origem e na mesma sessão (`api.ts`). Ao
+   abrir, o aplicativo pergunta quem está logado e carrega o "kit" do turno: a
+   fila da equipe, os registros do fiscal, o catálogo de bairros e os números
+   oficiais reservados para ele. O registro nasce no aparelho — e fica guardado
+   na fila local (`fila-local.ts`), com as fotos — e sobe ao servidor quando o
+   fiscal o despacha, ou quando o sinal voltar.
    ============================================================================ */
 
 export type NovoRegistro = {
@@ -54,6 +62,9 @@ export type NovoRegistro = {
     ocorrencias: string[];
     relato: string;
     fotos: number;
+    /** Os arquivos das fotos — sobem junto com o registro. */
+    arquivos: Blob[];
+    precisaoM: number | null;
     ambulante: string | null;
     retornoBr: string | null;
     lat: number;
@@ -71,10 +82,14 @@ type Contexto = {
     tema: 'claro' | 'escuro';
     alternarTema: () => void;
     registrar: (novo: NovoRegistro) => string;
-    anexarDocumento: (id: string, via: ViaImpressa, nome: string | null) => void;
-    /** Fecha o registro e o manda à caixa de entrada do Chefe de Setor da área. */
+    anexarDocumento: (id: string, via: ViaImpressa, nome: string | null, documento: DocumentoParaEnvio) => void;
+    /** Fecha o registro e o envia ao servidor — ele vai ao líder da equipe. */
     despachar: (id: string, consideracoes: string, recomendacoes: string[]) => void;
-    esvaziarFila: () => void;
+    /** Envia o que está na fila e recarrega a fila da equipe e os números. */
+    sincronizar: () => Promise<void>;
+    sincronizando: boolean;
+    /** A frase do último problema de carga (sem sinal, sessão expirada…). */
+    aviso: string | null;
     sair: () => void;
 };
 
@@ -156,108 +171,317 @@ const temaInicial = (): 'claro' | 'escuro' => {
     return 'claro';
 };
 
+/* ------------------------------ Servidor ------------------------------ */
+
+type Kit = {
+    demandas: Demanda[];
+    registros: Registro[];
+    bairros: Regiao[];
+    numeros: { np: string[]; aa: string[] };
+};
+
+const novoId = (): string =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+
+const paraFila = (registro: Registro, fotos: Blob[]) => ({ matricula: FISCAL.matricula, registro, fotos });
+
+/** Monta o envio: o registro inteiro, as fotos e o documento lavrado. */
+function corpoDoEnvio(r: Registro, fotos: Blob[]): FormData {
+    const corpo = new FormData();
+    const por = (chave: string, valor: string | number | null | undefined) => {
+        if (valor !== null && valor !== undefined && valor !== '') {
+            corpo.append(chave, String(valor));
+        }
+    };
+
+    por('client_id', r.clientId);
+    por('demanda_id', r.demandaId?.startsWith('den-') ? r.demandaId.slice(4) : null);
+    por('desfecho', r.desfecho);
+    por('relato', r.relato);
+    por('ambulante', r.ambulante);
+    por('latitude', r.lat);
+    por('longitude', r.lng);
+    por('precisao_m', r.precisaoM);
+    por('endereco', r.endereco);
+    por('bairro', r.regiao);
+    por('aberta_em', r.abertaEm);
+    por('consideracoes', r.consideracoes);
+
+    if (r.retornoBr) {
+        const [dia, mes, ano] = r.retornoBr.split('/');
+        por('retorno_em', `${ano}-${mes}-${dia}`);
+    }
+
+    r.ocorrencias.forEach((o) => corpo.append('ocorrencias[]', o));
+    r.recomendacoes.forEach((c) => corpo.append('recomendacoes[]', c));
+    fotos.forEach((f, i) => corpo.append('fotos[]', f, `foto-${i + 1}.${f.type === 'image/png' ? 'png' : 'jpg'}`));
+
+    if (r.documentoDados) {
+        por('documento', JSON.stringify(r.documentoDados));
+    }
+
+    return corpo;
+}
+
 /* ---------------------------------- Tela ---------------------------------- */
 
 export function App() {
     const { tela, parametro } = useRota();
+    const [verificando, setVerificando] = useState(true);
     const [entrou, setEntrou] = useState(false);
-    const [registros, setRegistros] = useState<Registro[]>(REGISTROS);
+    const [registros, setRegistros] = useState<Registro[]>([]);
+    const [aviso, setAviso] = useState<string | null>(null);
+    const [sincronizando, setSincronizando] = useState(false);
+    /* A fila, os bairros e os números moram em módulos (ligações vivas); trocar
+       esta versão é o que faz as telas lerem de novo depois de um kit novo. */
+    const [, setVersao] = useState(0);
     const [tema, setTema] = useState<'claro' | 'escuro'>(temaInicial);
+    const fotos = useRef(new Map<string, Blob[]>());
+    const atuais = useRef<Registro[]>([]);
+
+    useEffect(() => {
+        atuais.current = registros;
+    }, [registros]);
 
     useEffect(() => {
         document.documentElement.dataset.tema = tema;
     }, [tema]);
 
-    const registrar = useCallback((novo: NovoRegistro): string => {
-        const id = `reg-novo-${Date.now()}`;
-        /* O protocolo carrega a data de HOJE, calculada — escrita à mão, ela
-           envelheceria e o registro de hoje sairia com a data da semana passada. */
-        const [dia, mes, ano] = HOJE_BR.split('/');
+    /** Busca o kit e junta os registros do servidor com os que só existem no aparelho. */
+    const carregarKit = useCallback(async () => {
+        try {
+            const kit = await api.get<Kit>('kit');
 
-        setRegistros((atuais) => [
-            {
-                id,
-                protocolo: `FA${ano}${mes}${dia}${String(atuais.length + 1).padStart(3, '0')}`,
-                dataBr: HOJE_BR,
-                hora: horaAgora(),
-                regiao: novo.regiao,
-                endereco: novo.endereco,
-                lat: novo.lat,
-                lng: novo.lng,
-                desfecho: novo.desfecho,
-                status: LOCAL_APOS_O_DESFECHO[novo.desfecho],
-                ocorrencias: novo.ocorrencias,
-                relato: novo.relato,
-                fotos: novo.fotos,
-                ambulante: novo.ambulante,
-                retornoBr: novo.retornoBr,
-                envio: 'pendente',
-                documento: null,
-                documentoTipo: null,
-                via: null,
-                origem: novo.origem,
-                demandaId: novo.demandaId,
-                referencia: novo.referencia,
-                /* O registro nasce ABERTO: quem escreve as considerações finais é
-                   a tela de conclusão, no passo seguinte ao despacho. */
-                consideracoes: '',
-                recomendacoes: [],
-                despachadoBr: null,
-            },
-            ...atuais,
-        ]);
+            carregarDemandas(kit.demandas);
+            carregarBairros(kit.bairros);
+            carregarNumeros(kit.numeros);
+
+            const naFila = await filaDe(FISCAL.matricula);
+            const doServidor = new Set(kit.registros.map((r) => r.clientId).filter(Boolean));
+
+            for (const entrada of naFila) {
+                const id = entrada.registro.clientId as string;
+
+                if (doServidor.has(id)) {
+                    /* Chegou por um envio cuja resposta se perdeu: sai da fila. */
+                    await tirarDaFila(id);
+                } else {
+                    fotos.current.set(id, entrada.fotos);
+                }
+            }
+
+            const soNoAparelho = naFila.map((e) => e.registro).filter((r) => !doServidor.has(r.clientId));
+
+            atuais.current = [...soNoAparelho, ...kit.registros];
+            setRegistros(atuais.current);
+            setAviso(null);
+            setVersao((v) => v + 1);
+        } catch (erro) {
+            if (erro instanceof ErroDoServidor && erro.status === 401) {
+                setEntrou(false);
+                irPara('entrada');
+            }
+
+            setAviso(erro instanceof Error ? erro.message : 'Não foi possível carregar a fila.');
+        }
+    }, []);
+
+    /** Envia um registro despachado. Devolve se chegou. */
+    const enviar = useCallback(async (registro: Registro): Promise<boolean> => {
+        const id = registro.clientId as string;
+
+        try {
+            const resposta = await api.post<{ registro: Registro; numeros: Kit['numeros'] }>(
+                'fiscalizacoes',
+                corpoDoEnvio(registro, fotos.current.get(id) ?? []),
+            );
+
+            carregarNumeros(resposta.numeros);
+            await tirarDaFila(id);
+            fotos.current.delete(id);
+            /* Fica o id local: a tela que estiver aberta continua achando o registro. */
+            atuais.current = atuais.current.map((r) =>
+                r.clientId === id ? { ...resposta.registro, id: r.id, via: r.via ?? resposta.registro.via } : r,
+            );
+            setRegistros(atuais.current);
+
+            return true;
+        } catch (erro) {
+            const passageiro = erro instanceof ErroDoServidor ? erro.passageiro : true;
+            const frase = erro instanceof Error ? erro.message : 'Falha no envio.';
+
+            atuais.current = atuais.current.map((r) =>
+                r.clientId === id ? { ...r, envio: passageiro ? 'pendente' : 'erro', erroEnvio: frase } : r,
+            );
+            setRegistros(atuais.current);
+
+            return false;
+        }
+    }, []);
+
+    const sincronizar = useCallback(async () => {
+        setSincronizando(true);
+
+        try {
+            const fila = atuais.current.filter((r) => r.envio !== 'enviado' && r.despachadoBr !== null);
+
+            for (const registro of fila) {
+                await enviar(registro);
+            }
+
+            await carregarKit();
+        } finally {
+            setSincronizando(false);
+        }
+    }, [enviar, carregarKit]);
+
+    /* Ao abrir: quem está logado? Com sessão, carrega o kit; sem, mostra a porta. */
+    useEffect(() => {
+        api.get<SessaoDoServidor>('sessao')
+            .then(async (sessao) => {
+                aplicarSessao(sessao);
+                setEntrou(true);
+                await carregarKit();
+
+                if (lerHash() === 'entrada') {
+                    irPara('inicio');
+                }
+            })
+            .catch((erro) => {
+                if (erro instanceof ErroDoServidor && erro.status === 0) {
+                    setAviso(erro.message);
+                }
+            })
+            .finally(() => setVerificando(false));
+    }, [carregarKit]);
+
+    /* Voltou o sinal: o que esperava na fila sobe sozinho. */
+    useEffect(() => {
+        const aoVoltar = () => {
+            if (entrou) {
+                void sincronizar();
+            }
+        };
+
+        window.addEventListener('online', aoVoltar);
+
+        return () => window.removeEventListener('online', aoVoltar);
+    }, [entrou, sincronizar]);
+
+    const registrar = useCallback((novo: NovoRegistro): string => {
+        const clientId = novoId();
+        const id = `reg-${clientId}`;
+
+        const registro: Registro = {
+            id,
+            /* O protocolo oficial (FIS…) é o servidor que dá; até lá, o registro
+               diz que ainda está no aparelho. */
+            protocolo: 'No aparelho',
+            dataBr: HOJE_BR,
+            hora: horaAgora(),
+            regiao: novo.regiao,
+            endereco: novo.endereco,
+            lat: novo.lat,
+            lng: novo.lng,
+            desfecho: novo.desfecho,
+            status: LOCAL_APOS_O_DESFECHO[novo.desfecho],
+            ocorrencias: novo.ocorrencias,
+            relato: novo.relato,
+            fotos: novo.fotos,
+            ambulante: novo.ambulante,
+            retornoBr: novo.retornoBr,
+            envio: 'pendente',
+            documento: null,
+            documentoTipo: null,
+            via: null,
+            origem: novo.origem,
+            demandaId: novo.demandaId,
+            referencia: novo.referencia,
+            /* O registro nasce ABERTO: quem escreve as considerações finais é
+               a tela de conclusão, no passo seguinte. */
+            consideracoes: '',
+            recomendacoes: [],
+            despachadoBr: null,
+            clientId,
+            abertaEm: new Date().toISOString(),
+            precisaoM: novo.precisaoM,
+            documentoDados: null,
+            erroEnvio: null,
+        };
+
+        fotos.current.set(clientId, novo.arquivos);
+        void guardarNaFila(paraFila(registro, novo.arquivos));
+        atuais.current = [registro, ...atuais.current];
+        setRegistros(atuais.current);
 
         return id;
     }, []);
 
+    /** Aplica a mudança, guarda na fila local e devolve o registro novo. */
+    const alterar = useCallback((id: string, mudar: (r: Registro) => Registro): Registro | null => {
+        const antes = atuais.current.find((r) => r.id === id);
+
+        if (!antes) {
+            return null;
+        }
+
+        const depois = mudar(antes);
+
+        atuais.current = atuais.current.map((r) => (r.id === id ? depois : r));
+        setRegistros(atuais.current);
+
+        if (depois.clientId && depois.envio !== 'enviado') {
+            void guardarNaFila(paraFila(depois, fotos.current.get(depois.clientId) ?? []));
+        }
+
+        return depois;
+    }, []);
+
     /**
-     * O despacho: guarda as considerações finais e fecha o registro.
-     *
-     * Não há servidor, então o envio continua sendo encenado — mas o DADO é
-     * verdadeiro: o registro passa a ter o que o fiscal recomendou e a data do
-     * despacho, que é o que a fila de envio leva à caixa de entrada do Chefe de
-     * Setor da área da equipe.
+     * O despacho: guarda as considerações finais, fecha o registro e o envia.
+     * Sem sinal, ele fica na fila e sobe quando o sinal voltar.
      */
     const despachar = useCallback(
         (id: string, consideracoes: string, recomendacoes: string[]) => {
-            setRegistros((atuais) =>
-                atuais.map((r) =>
-                    r.id === id
-                        ? { ...r, consideracoes, recomendacoes, despachadoBr: HOJE_BR }
-                        : r,
-                ),
-            );
+            const fechado = alterar(id, (r) => ({
+                ...r,
+                consideracoes,
+                recomendacoes,
+                despachadoBr: HOJE_BR,
+                erroEnvio: null,
+            }));
+
+            if (fechado) {
+                void enviar(fechado).then((chegou) => (chegou ? carregarKit() : undefined));
+            }
         },
-        [],
+        [alterar, enviar, carregarKit],
     );
 
-    const anexarDocumento = useCallback((id: string, via: ViaImpressa, nome: string | null) => {
-        setRegistros((atuais) =>
-            atuais.map((r) =>
-                r.id === id
-                    ? {
-                          ...r,
-                          documento: `${via.tipo === 'np' ? 'NP' : 'AA'} ${via.numero}`,
-                          documentoTipo: via.tipo,
-                          via,
-                          ambulante: nome ?? r.ambulante,
-                      }
-                    : r,
-            ),
-        );
-    }, []);
+    const anexarDocumento = useCallback(
+        (id: string, via: ViaImpressa, nome: string | null, documento: DocumentoParaEnvio) => {
+            alterar(id, (r) => ({
+                ...r,
+                documento: `${via.tipo === 'np' ? 'NP' : 'AA'} ${via.numero}`,
+                documentoTipo: via.tipo,
+                via,
+                documentoDados: documento,
+                ambulante: nome ?? r.ambulante,
+            }));
+        },
+        [alterar],
+    );
 
-    /* Sobe só o que foi DESPACHADO: registro aberto (sem considerações, ainda sem
-       conclusão) não tem para onde ir — a caixa do Chefe de Setor recebe registro
-       concluído, e mandar o meio-registro criaria trabalho que ninguém pediu. */
-    const esvaziarFila = useCallback(() => {
-        setRegistros((atuais) =>
-            atuais.map((r) => (r.despachadoBr ? { ...r, envio: 'enviado' as const } : r)),
-        );
-    }, []);
-
+    /* O que ficou na fila local NÃO é apagado: é do fiscal que saiu, e sobe na
+       próxima vez que ele entrar neste aparelho. */
     const sair = useCallback(() => {
+        void api.post('sair').catch(() => undefined);
         setEntrou(false);
+        atuais.current = [];
+        setRegistros([]);
+        carregarDemandas([]);
         irPara('entrada');
     }, []);
 
@@ -292,11 +516,17 @@ export function App() {
             registrar,
             anexarDocumento,
             despachar,
-            esvaziarFila,
+            sincronizar,
+            sincronizando,
+            aviso,
             sair,
         }),
-        [registros, pendentes, tema, registrar, anexarDocumento, despachar, esvaziarFila, sair],
+        [registros, pendentes, tema, registrar, anexarDocumento, despachar, sincronizar, sincronizando, aviso, sair],
     );
+
+    if (verificando) {
+        return <div className="pw-entrada-tela" aria-busy="true" />;
+    }
 
     /* Quem ainda não entrou só vê a porta — inclusive quem chegar por um endereço
        interno colado no navegador. */
@@ -305,13 +535,23 @@ export function App() {
             <ContextoApp.Provider value={contexto}>
                 <FaixaPrototipo />
                 <TelaEntrada
-                    aoEntrar={(matricula) => {
-                        /* A identidade é trocada ANTES de a árvore autenticada
-                           montar: é ela que decide a equipe e, com a equipe, a
-                           fila e o contorno da área no mapa. */
-                        entrarComMatricula(matricula);
-                        setEntrou(true);
-                        irPara('inicio');
+                    aviso={aviso}
+                    aoEntrar={async (login, senha) => {
+                        try {
+                            const sessao = await api.post<SessaoDoServidor>('entrar', { login, password: senha });
+
+                            /* A identidade é trocada ANTES de a árvore autenticada
+                               montar: é ela que decide a equipe e, com a equipe, a
+                               fila e o contorno da área no mapa. */
+                            aplicarSessao(sessao);
+                            setEntrou(true);
+                            await carregarKit();
+                            irPara('inicio');
+
+                            return null;
+                        } catch (erro) {
+                            return erro instanceof Error ? erro.message : 'Não foi possível entrar.';
+                        }
                     }}
                 />
             </ContextoApp.Provider>
@@ -358,6 +598,8 @@ export function App() {
     );
 }
 
+/* A fila, os registros e o envio já são reais; o mapa de pontos, o mapa de
+   calor, o levantamento e as operações do início ainda mostram exemplo. */
 function FaixaPrototipo() {
-    return <div className="pw-faixa-prototipo">Protótipo · dados fictícios</div>;
+    return <div className="pw-faixa-prototipo">Em implantação · mapa e calor com dados de exemplo</div>;
 }

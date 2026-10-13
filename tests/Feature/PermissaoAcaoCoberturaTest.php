@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AplicativoDoFiscal;
 use App\Http\Middleware\PermissaoAcao;
 use App\Services\PermissaoService;
 use Illuminate\Support\Facades\Route;
@@ -29,9 +30,8 @@ use Illuminate\Support\Facades\Route;
  * Gerente, e a cobertura abaixo não a veria. Por isso a lista é FECHADA — e cada
  * entrada é uma rota que, por natureza, não pode depender de permissão de tela.
  *
- * A API do PWA do fiscal (Fase 4) virá sob o prefixo `api/`, com guarda própria
- * (token Sanctum + regra de fiscalização). Quando ela chegar, o prefixo entra
- * aqui como grupo — não rota por rota.
+ * A API do aplicativo do fiscal mora sob `app/api/`, com guarda própria — ver
+ * {@see PREFIXOS_COM_GUARDA_PROPRIA}. Só a porta (entrar/sair) fica nesta lista.
  */
 const FORA_DO_ALCANCE = [
     // Autenticação: quem ainda não entrou não tem permissão a conferir; quem sai
@@ -47,6 +47,22 @@ const FORA_DO_ALCANCE = [
     // Rota que o próprio framework registra para servir o disco local em
     // desenvolvimento — não é tela do sistema.
     'storage.local.upload',
+    // A porta do aplicativo do fiscal: quem entra ainda não tem sessão, quem sai
+    // não pode ser barrado de sair. Mesma natureza de `login.store`/`logout`.
+    'aplicativo.entrar',
+    'aplicativo.sair',
+];
+
+/*
+ * Prefixos FORA de `/retaguarda` que têm guarda PRÓPRIA — e a guarda exigida.
+ *
+ * Não é exceção cega: a rota do prefixo só passa se a guarda declarada estiver
+ * de fato montada nela. Rota nova sob o prefixo sem a guarda reprova aqui.
+ */
+const PREFIXOS_COM_GUARDA_PROPRIA = [
+    // O aplicativo do fiscal: autenticado e em alguma equipe (a fila, a reserva
+    // de números e a gravação são da equipe).
+    'app/api/' => AplicativoDoFiscal::class,
 ];
 
 test('nenhuma mutacao mora fora do alcance do controle de acesso sem estar declarada', function () {
@@ -73,6 +89,12 @@ test('nenhuma mutacao mora fora do alcance do controle de acesso sem estar decla
 
         if (in_array($r->getName(), FORA_DO_ALCANCE, true)) {
             continue;
+        }
+
+        foreach (PREFIXOS_COM_GUARDA_PROPRIA as $prefixo => $guarda) {
+            if (str_starts_with($r->uri(), $prefixo) && in_array($guarda, $r->gatherMiddleware(), true)) {
+                continue 2;
+            }
         }
 
         $foraDoPrefixo[] = ($r->getName() ?? '(sem nome)').' → '.$r->uri();

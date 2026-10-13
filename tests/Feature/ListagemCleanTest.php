@@ -333,15 +333,24 @@ it('não gasta coluna do acompanhamento com o que é igual em TODA linha — e a
     /*
      * A mesma lei da coluna condicional, com a condição resolvida pelo outro
      * lado: nas Fiscalizações quem decide é QUEM olha; aqui é o que os dados
-     * TÊM. Hoje o mapa é todo "Retaguarda" e nenhuma linha aponta HU — as duas
+     * TÊM. Num mapa todo "Retaguarda" e sem nenhuma linha apontando HU, as duas
      * colunas seriam a mesma palavra, ou o mesmo travessão, repetidos em toda
      * linha; e o selo "Sem requisito" já diz isso uma vez, no lugar certo.
+     *
+     * O mapa REAL já tem a linha do aplicativo do fiscal (origem "PWA"), então a
+     * primeira metade fixa um mapa uniforme — senão ela testaria o dado do dia,
+     * e não a regra.
      *
      * O FLIP é a metade que importa: sem ele, uma condição travada em `false`
      * passaria neste teste para sempre, e a coluna nunca voltaria no dia em que
      * fizesse falta.
      */
     $admin = administradorDaListagem();
+
+    config(['acompanhamento_requisitos.telas' => collect(config('acompanhamento_requisitos.telas'))
+        ->where('origem', 'Retaguarda')
+        ->map(fn (array $linha) => [...$linha, 'hus' => []])
+        ->values()->all()]);
 
     $this->actingAs($admin)->get('/retaguarda/acompanhamento-de-requisitos')
         ->assertOk()

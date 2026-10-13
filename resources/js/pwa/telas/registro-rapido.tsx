@@ -27,6 +27,8 @@ import {
     REGIOES,
     dataBrDaqui,
     nomeRegiao,
+    BAIRROS,
+    bairroMaisProximo,
 } from '../dados-prototipo';
 import { Icone } from '../icones';
 
@@ -52,13 +54,17 @@ import { Icone } from '../icones';
    documento, porque é ele que vai para o campo REFERÊNCIA do papel.
    ============================================================================ */
 
-type Foto = { id: string; url: string | null };
+type Foto = { id: string; url: string | null; arquivo: Blob | null };
 
 const distancia = (aLat: number, aLng: number, bLat: number, bLng: number): number =>
     Math.hypot(aLat - bLat, aLng - bLng);
 
-/** Sem serviço de endereços no protótipo: a região mais próxima é o palpite. */
+/**
+ * Sem serviço de endereços: o bairro do catálogo mais perto do GPS é o palpite.
+ * Sem catálogo carregado (primeiro uso sem sinal), cai nas regiões do mapa.
+ */
 const regiaoMaisProxima = (lat: number, lng: number): string =>
+    bairroMaisProximo(lat, lng)?.id ??
     REGIOES.reduce((perto, r) =>
         distancia(lat, lng, r.lat, r.lng) < distancia(lat, lng, perto.lat, perto.lng) ? r : perto,
     ).id;
@@ -89,7 +95,11 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const [demanda, setDemanda] = useState<Demanda | null>(daFila);
     const [escolhendoDemanda, setEscolhendoDemanda] = useState(false);
 
-    const centroDaDemanda = demanda ? (REGIOES.find((r) => r.id === demanda.regiao) ?? null) : null;
+    const centroDaDemanda = demanda
+        ? demanda.lat !== null && demanda.lng !== null
+            ? { lat: demanda.lat, lng: demanda.lng }
+            : (BAIRROS.find((b) => b.id === demanda.bairro) ?? null)
+        : null;
 
     const [posicao, setPosicao] = useState<{ lat: number; lng: number; precisao: number } | null>(
         doMapa ? { lat: doMapa.lat, lng: doMapa.lng, precisao: 12 } : null,
@@ -199,7 +209,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     );
 
     const endereco =
-        demanda?.endereco ?? doMapa?.endereco ?? ENDERECOS_APROXIMADOS[regiao] ?? 'Endereço aproximado';
+        demanda?.endereco ?? doMapa?.endereco ?? ENDERECOS_APROXIMADOS[regiao] ?? `Proximidades de ${nomeRegiao(regiao)}`;
 
     const sugestoes = useMemo(() => {
         const termo = busca.trim().toLowerCase();
@@ -225,7 +235,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
 
         for (const arquivo of Array.from(arquivos)) {
             const url = URL.createObjectURL(arquivo);
-            setFotos((atuais) => [...atuais, { id: `${Date.now()}-${arquivo.name}`, url }]);
+            setFotos((atuais) => [...atuais, { id: `${Date.now()}-${arquivo.name}`, url, arquivo }]);
         }
     };
 
@@ -248,7 +258,10 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
             desfecho,
             ocorrencias: marcadas,
             relato: relato.trim(),
-            fotos: fotos.length,
+            fotos: fotos.filter((f) => f.arquivo !== null).length,
+            /* Só as fotos de verdade sobem; a "simulada" é ensaio de tela. */
+            arquivos: fotos.flatMap((f) => (f.arquivo ? [f.arquivo] : [])),
+            precisaoM: posicaoReal ? (posicao?.precisao ?? null) : null,
             ambulante: vinculo,
             retornoBr: retorno ? dataBrDaqui(prazo.dias) : null,
             lat: posicao?.lat ?? CENTRO_SALVADOR.lat,
@@ -452,7 +465,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                             type="button"
                             className="pw-foto pw-foto-add"
                             onClick={() =>
-                                setFotos((a) => [...a, { id: `simulada-${Date.now()}`, url: null }])
+                                setFotos((a) => [...a, { id: `simulada-${Date.now()}`, url: null, arquivo: null }])
                             }
                             title="Foto simulada, para ver a tela cheia sem câmera"
                         >

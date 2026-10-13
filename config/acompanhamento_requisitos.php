@@ -817,7 +817,7 @@ return [
          */
         [
             'modulo' => 'Aplicativo do Fiscal',
-            'tela' => 'Fila de denúncias dirigidas e registro de vistoria (protótipo)',
+            'tela' => 'Fila de denúncias dirigidas e registro de vistoria',
             'origem' => 'PWA',
             'rota' => 'pwa',
             'breadcrumb' => 'Aplicativo do Fiscal › /app',
@@ -825,8 +825,11 @@ return [
             'hus' => [],
             'nota' => 'Sem requisito escrito — origem: cenário da reunião com o cliente de 02/09/2026 '
                 .'e decisões do dono de 03 e 04/09/2026; regras em docs/regras-de-negocio/fiscalizacao/'
-                .'aplicativo-do-fiscal.md. PROTÓTIPO, sem servidor: os dados vivem em '
-                .'resources/js/pwa/ e o que o fiscal registra fica na memória da aba. A fila do '
+                .'aplicativo-do-fiscal.md. Desde 13/10/2026 fala com o servidor (rotas /app/api/*): '
+                .'login com a conta da Retaguarda, fila da equipe vinda do banco, números de NP/AA '
+                .'reservados por fiscal e o despacho gravando a vistoria para o LÍDER ler, com fila '
+                .'no aparelho (fotos inclusive) para quando não há sinal. Mapa de pontos, calor, '
+                .'levantamento e operações do início ainda com dados de exemplo. A fila do '
                 .'aplicativo é a da EQUIPE de quem entrou e fala o mesmo vocabulário do módulo de '
                 .'Denúncias — mesmas situações, mesmo protocolo DEN-NNNN e a mesma lista fechada de '
                 .'seis desfechos, que é o que fecha o passo do trâmite na Retaguarda. Denúncia em '

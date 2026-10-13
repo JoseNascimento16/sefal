@@ -6,13 +6,13 @@
 **Quem usa:** o fiscal de campo, no celular. **A Retaguarda não abre estas telas**, e o fiscal não
 abre as da Retaguarda.
 
-> ## ⚠️ ESTE MÓDULO É UM PROTÓTIPO
+> ## 🔌 O APLICATIVO FALA COM O SERVIDOR (desde 13/10/2026)
 >
-> Ele existe para o dono percorrer o trabalho do fiscal e aprovar a forma antes de virar API,
-> banco offline e sincronização. **Não há servidor no meio:** os dados de partida são escritos em
-> TypeScript ([`resources/js/pwa/`](../../../resources/js/pwa/)) e o que o fiscal registra vive na
-> memória da aba. A faixa "Protótipo · dados fictícios" fica visível em todas as telas — protótipo
-> que se disfarça de sistema pronto vira decisão tomada por engano.
+> Login, fila, números de documento e o envio do registro são **reais**: o aplicativo conversa com a
+> Retaguarda pelas rotas `/app/api/*` (mesma origem e mesma sessão), e a vistoria despachada entra
+> no banco esperando a leitura do líder. **Ainda com dados de exemplo:** os pinos de ambulante do
+> mapa, o mapa de calor, o levantamento e as operações da tela de início — a faixa "Em implantação"
+> fica visível enquanto for assim.
 >
 > **Origem:** cenário da reunião com o cliente (02/09/2026) e decisões do dono. Não há HU escrita: a
 > linha em [`config/acompanhamento_requisitos.php`](../../../config/acompanhamento_requisitos.php)
@@ -124,10 +124,13 @@ Os dois documentos são a **Notificação Preliminar** (dá prazo para sanar) e 
 (recolhe material, com guarda no SEGUB). Quem lavra é o fiscal, em rua; a Retaguarda apenas **lê** o
 que foi lavrado.
 
-O número vem de uma **faixa reservada no aparelho**, consumida mesmo sem sinal — é o que faz o
-documento nascer numerado no meio da rua. A faixa começa **depois** dos números que o módulo de
-Denúncias já mostra nos casos semeados (Notificações 194901–194905, Auto de Apreensão 160051): dois
-papéis diferentes com o mesmo número é exatamente o que a reserva existe para impedir.
+O número vem de uma **reserva feita pelo servidor para o fiscal** (`numeros_reservados`): a cada
+conversa com o servidor, o aparelho recebe até **3 números livres de cada tipo**, que ele consome
+mesmo sem sinal — é o que faz o documento nascer numerado no meio da rua. O servidor nunca entrega o
+mesmo número a dois fiscais, e só aceita o documento que volta com um número **reservado para quem o
+envia** (a recusa diz isso e manda atualizar com sinal). A numeração começa **depois** dos números já
+usados (Notificação 194906, Auto de Apreensão 160052, ou depois do maior já lavrado). Sem número no
+estoque, o aplicativo não lavra e diz por quê.
 
 ### RN-09 — Datas em `dd/mm/aaaa`, e no dado tudo é RELATIVO
 
@@ -137,29 +140,18 @@ lado. É isso que faz as duas telas mostrarem a mesma data em qualquer dia que a
 aconteça. Data fixa envelhece: uma semana depois a fila apareceria inteira vencida, e o dono leria
 isso como comportamento do sistema.
 
-### RN-10 — Fonte única: o aplicativo ESPELHA o módulo de Denúncias
+### RN-10 — Fonte única: a fila VEM do módulo de Denúncias
 
-As denúncias do aplicativo são as **mesmas** de `config/prototipo_denuncias.php` (branch
-`feature/prototipo-administrativo`): mesmo protocolo `DEN-NNNN`, mesmo número do canal de origem,
-mesmo requerente, assunto, endereço, bairro, prazo, situação, área, equipe, operação — e, quando a
-denúncia já andou, o mesmo registro de campo e o mesmo documento. Abrir DEN-00NN na Retaguarda e achar
-a mesma denúncia na fila do fiscal é o que prova o fluxo de ponta a ponta.
+A fila do aplicativo é a das demandas do banco, entregue pelo servidor no **kit** do turno
+(`GET /app/api/kit`): as que estão na mão das equipes de quem entrou (*Direcionada aos fiscais*,
+*Em operação*, *Em campo*, *Aguardando regularização*, *Retorno vencido*) e as que elas concluíram nos
+últimos 30 dias. O vocabulário é o da Retaguarda, sem tradução: o canal é a chave de
+`Demanda::CANAIS` e a situação a de `Demanda::SITUACOES`.
 
-⚠️ **É uma segunda cópia, e duas cópias sempre divergem.** Ela existe porque o aplicativo roda sem
-servidor. Enquanto for assim, **mexer num lado exige mexer no outro** — e o de-para foi deixado
-mecânico, campo a campo, na cabeça de
-[`dados-demandas.ts`](../../../resources/js/pwa/dados-demandas.ts). O mesmo vale para a estrutura de
-áreas e equipes ([`dados-equipes.ts`](../../../resources/js/pwa/dados-equipes.ts) ↔
-`config/prototipo_estrutura.php`) e para a redação dos impressos
-([`dados-documentos.ts`](../../../resources/js/pwa/dados-documentos.ts) ↔
-`config/prototipo_documentos_campo.php`) — nesta última, **a cópia que fica é a do servidor**: a
-redação de um formulário legal não pode divergir entre a Retaguarda e o aplicativo.
-
-O que o gate consegue guardar disso está em
-[`tests/Feature/PwaFilaDeDenunciasTest.php`](../../../tests/Feature/PwaFilaDeDenunciasTest.php):
-catálogo de situações e de desfechos idêntico ao da Retaguarda, repartição dos desfechos entre
-vistoria e retorno, nenhuma denúncia na amostra que o outro lado não semeou, as seis formas de trâmite
-que o roteiro percorre, a faixa de números sem colisão e a amostra ainda educativa.
+Os catálogos fechados (situações, desfechos, canais e chaves de recomendação) ainda têm cópia no
+TypeScript, e
+[`tests/Feature/PwaFilaDeDenunciasTest.php`](../../../tests/Feature/PwaFilaDeDenunciasTest.php)
+reprova a cópia que divergir das constantes do servidor.
 
 ### RN-11 — A amostra é majoritariamente EDUCATIVA
 
@@ -170,8 +162,10 @@ cliente — e há teste que reprova a amostra que perder essa proporção.
 
 ### RN-12 — O registro é DESPACHADO ao Chefe de Setor, e leva as considerações finais
 
-O registro não termina no aparelho: **todo registro concluído vai para a caixa de entrada do Chefe de
-Setor da área da equipe**. O botão que fecha a vistoria chama-se, por isso, **Despachar registro**
+O registro não termina no aparelho: **todo registro concluído vai ao LÍDER da equipe** — a vistoria
+entra na Fiscalização da demanda (ou abre uma, quando é avulsa) em *Aguardando leitura*, e o líder
+decide se a equipe volta ao ponto ou se o caso sobe ao Chefe de Setor. _(Revisão de 13/10/2026: antes
+o destino declarado era a caixa do Chefe de Setor; o fluxo real, desde 22/09, passa pelo líder.)_ O botão que fecha a vistoria chama-se, por isso, **Despachar registro**
 (ou **Despachar retorno**) — chamá-lo de "concluir" prometia um fim que não é o dele —, e a tela
 seguinte é a **Conclusão do registro**, que declara o destino com área ("Caixa de entrada do Chefe de
 Setor · Área 5 — Boca do Rio") e fecha com o botão **Concluir registro**.
@@ -257,6 +251,26 @@ de segurança de quem abriu o aplicativo direto num endereço colado, sem histó
 Levar sempre ao mapa mandava o fiscal para longe de onde ele estava.
 
 ---
+
+### RN-15 — Entrar é com a conta da Retaguarda, e quem não está em equipe não entra
+
+A porta pede **matrícula e senha** — a mesma conta da Retaguarda, conferida pelo servidor com as
+mesmas recusas faladas (senha errada, senha ainda não definida, conta inativa). Quem não está em
+**nenhuma equipe** (como fiscal ou como líder) é recusado com o motivo: sem equipe não há fila. A
+sessão fica lembrada no aparelho; sair é pelo "Encerrar plantão".
+
+### RN-16 — O registro despachado sobe ao servidor, e o que não subiu fica no aparelho
+
+Ao despachar, o aplicativo envia o registro inteiro — desfecho, relato, ocorrências, GPS e precisão,
+fotos, considerações, recomendações e o documento lavrado (com as chaves dos catálogos e a via
+impressa). O registro nasce guardado na **fila do aparelho** (IndexedDB, com as fotos) e só sai dela
+quando o servidor confirma; fechar o aplicativo ou ficar sem sinal não perde nada. Voltou o sinal, a
+fila sobe sozinha; "Sincronizar agora", na aba Envio, faz o mesmo e atualiza a fila da equipe e os
+números. O envio repetido do mesmo registro não duplica a vistoria (`client_id`). Recusa do servidor
+aparece ao lado do registro, com o motivo.
+
+Na fila de demandas, a que já foi vistoriada e despachada sai de "A vistoriar" e vai para **"Com o
+líder"**, sem ato do fiscal — se o líder mandar voltar, ela volta para "A vistoriar".
 
 ## Como demonstrar (protótipo)
 
@@ -345,6 +359,7 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 13/10/2026 | José Nascimento | Aplicativo do Fiscal (todas) | **O aplicativo passa a falar com o servidor.** Login real (RN-15); fila da equipe vinda do banco, no vocabulário da Retaguarda (canais e situações sem tradução); o despacho grava a vistoria esperando o LÍDER, ligada à Fiscalização e ao trâmite da demanda (RN-12, RN-16); números de NP/AA reservados pelo servidor por fiscal (RN-08); fila do aparelho com as fotos, reenvio quando o sinal volta; bloco "Com o líder" na fila. As 22 demandas fictícias saíram do aplicativo. Rotas `/app/api/*` protegidas por `AplicativoDoFiscal`; migration `2026_10_13_090000_aplicativo_do_fiscal_fala_com_o_servidor`. | Pedido do dono (13/10/2026): ajustar o PWA para se comunicar de verdade com a Retaguarda. |
 | 04/09/2026 | José Nascimento | Aplicativo do Fiscal (despacho) | **O catálogo de recomendações passa a ser o mesmo da Retaguarda, unificado pela CHAVE.** A lista sai de 7 para 11 atalhos (entram `reprogramar`, `passagem`, `chefia` e `outro-orgao`), todos com a redação **curta** — a explícita, que quem decide lê, mora do lado da Retaguarda, na mesma chave. Nenhuma chave antiga saiu, então os registros já semeados continuam válidos. | O catálogo tinha nascido em duas versões incompatíveis: o aplicativo gravava chave e a Retaguarda esperava a frase inteira, com outra redação e sem o `seab` — que foi justamente o exemplo dado pelo dono. Assim a recomendação chegaria do outro lado como coisa que ele não sabe ler nem somar. Decisão do dono: redação curta no aplicativo, explícita na Retaguarda, chave como contrato. |
 | 03/09/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, registro) | **O aplicativo passa a falar a língua do módulo de Denúncias.** (1) A fila deixa de espelhar a Caixa de Entrada (`CXE-NNNN`, situações `Aguardando triagem`/`Encaminhada`) e passa a espelhar `config/prototipo_denuncias.php`: protocolo `DEN-NNNN`, os dois canais das ouvidorias e o catálogo fechado de 10 situações. (2) A régua do que chega ao campo passa a ser explícita — o fiscal não vê denúncia em triagem — e a fila é dividida pelo ato devido (a vistoriar, aguardando regularização, encerradas). (3) O registro passa a terminar num **desfecho** da lista fechada de seis, com a leitura "regular/irregular" derivada dele, e nasce o **retorno** para a denúncia com prazo de notificação correndo. (4) A amostra traz as denúncias que a Retaguarda semeou para as equipes, com o mesmo protocolo, requerente, endereço, prazo, registro de campo e documento — inclusive a NP 194903 da DEN-0029, que também está no turno do aparelho. (5) A faixa de números reservados no aparelho passa a começar depois dos documentos já semeados do outro lado. | Decisão do dono (03/09/2026): alinhar o protótipo do aplicativo ao vocabulário novo para os dois lados contarem a MESMA história na demonstração, **sem** implementar sincronização — "só vale a pena avançar para as outras etapas quando tivermos requisitos e fluxos mais concretos". |
 | 04/09/2026 | José Nascimento | Aplicativo do Fiscal (registro, conclusão, envio) | **O registro passa a ser DESPACHADO, com considerações finais, e não conclui sem o documento que o desfecho manda lavrar.** (1) Vocabulário novo do domínio: *gestor* → **Chefe de Setor** e *administrativo* → **Coordenador** em tudo que o fiscal lê (matrículas não mudam). (2) O botão que fecha a vistoria virou **Despachar registro**; a tela seguinte virou **Conclusão do registro**, com o destino declarado (caixa de entrada do Chefe de Setor da área da equipe) e o botão **Concluir registro** no lugar do antigo "+ Novo registro". (3) Nasceram as **considerações finais**: atalhos de recomendação (lista fechada) e texto livre, que convivem, viajam com o registro nos campos `consideracoes`/`recomendacoes` e aparecem em leitura quando o registro é reaberto. (4) **RN-13**: concluir sem documento só com "Regularizado no local" ou "Nada encontrado no local"; nos outros dois o impedimento é explícito, com motivo, o que fazer e o formulário a um toque. (5) **Voltar** passou a voltar para a tela anterior. (6) A fila de envio passou a dizer o destino, e registro ainda aberto saiu da fila para o bloco "Falta concluir". | Decisão do dono (04/09/2026): o registro de campo é uma entrega a alguém — o Chefe de Setor —, e é pela recomendação do fiscal que esse alguém decide o encaminhamento; o impedimento evita denúncia com desfecho que promete papel inexistente. |

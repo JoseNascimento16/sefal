@@ -109,7 +109,7 @@ export function TelaDocumentos({ id }: { id: string | null }) {
                                 <span className="pw-forte" style={{ fontSize: 16.5 }}>
                                     {doc.titulo}
                                 </span>
-                                <Selo tom="neutro">Nº {numeroReservado(doc.id as Faixa)}</Selo>
+                                <Selo tom="neutro">Nº {numeroReservado(doc.id as Faixa) ?? '—'}</Selo>
                             </span>
                             <span className="pw-fraco" style={{ display: 'block', fontSize: 14 }}>
                                 {doc.descricao}

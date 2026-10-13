@@ -214,10 +214,10 @@ function ComoChegou({ demanda }: { demanda: Demanda }) {
                         Encaminhada à {demanda.area ?? 'área não definida'}
                         <br />
                         <span className="pw-fraco">
-                            O Coordenador tria o que a ouvidoria entrega e escolhe a área pelo bairro.
+                            O Chefe de Setor tria o que o canal entrega e escolhe a área pelo bairro.
                         </span>
                     </dd>
-                    <dt>Chefe de Setor</dt>
+                    <dt>Líder da equipe</dt>
                     <dd>
                         {demanda.operacao
                             ? `Anexada à ${demanda.operacao}`
@@ -380,9 +380,11 @@ function AtoDevido({ demanda, emRetorno }: { demanda: Demanda; emRetorno: boolea
         return (
             <div className="pw-card" style={{ marginTop: 20 }}>
                 <p style={{ margin: 0, fontSize: 14.5 }}>
-                    {demanda.situacao === 'Retorno vencido'
-                        ? 'O prazo venceu com a situação mantida, e a denúncia voltou ao Chefe de Setor da área para a próxima medida. A equipe não tem ato pendente aqui.'
-                        : 'Denúncia encerrada. Não há ato pendente para a equipe.'}
+                    {demanda.aguardaLider
+                        ? 'A vistoria já foi despachada e está com o líder da equipe. Se ele pedir nova vistoria, a demanda volta para a fila.'
+                        : demanda.situacao === 'Retorno vencido'
+                          ? 'O prazo venceu com a situação mantida, e a denúncia voltou ao Chefe de Setor da área para a próxima medida. A equipe não tem ato pendente aqui.'
+                          : 'Denúncia encerrada. Não há ato pendente para a equipe.'}
                 </p>
             </div>
         );

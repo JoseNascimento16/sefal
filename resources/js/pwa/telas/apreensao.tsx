@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import { contar } from '../../lib/plural';
 import { irPara, useApp } from '../app';
 import { Assinatura, Marcavel, Selo, Topo, Vazio, classes } from '../componentes';
 import { acharDemanda } from '../dados-demandas';
@@ -103,7 +104,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
     };
 
     const totalDeItens = itens.reduce((soma, i) => soma + i.quantidade, 0);
-    const podeLavrar = nome.trim().length > 2 && itens.length > 0;
+    const podeLavrar = numero !== null && nome.trim().length > 2 && itens.length > 0;
 
     const montarVia = (emitido: string): ViaImpressa => ({
         tipo: 'aa',
@@ -117,8 +118,8 @@ export function TelaApreensao({ id }: { id: string | null }) {
             { rotulo: 'Como atividade', valor: atividade.trim() || '—' },
             { rotulo: 'Localizado na', valor: local.trim() || '—' },
             { rotulo: 'Fundamento', valor: FUNDAMENTACAO.lei },
-            { rotulo: 'Decreto(s)', valor: decretos.join('; ') || '—' },
-            { rotulo: 'Art(s) nºs', valor: artigos.trim() || '—' },
+            { rotulo: decretos.length === 1 ? 'Decreto' : 'Decretos', valor: decretos.join('; ') || '—' },
+            { rotulo: 'Artigos nºs', valor: artigos.trim() || '—' },
             { rotulo: 'Portaria nº', valor: portaria.trim() || '—' },
             { rotulo: 'Guarda', valor: `${SEGUB.nome} — ${SEGUB.endereco}` },
             { rotulo: 'Prazo máximo', valor: `${prazo.rotulo} (${prazo.extenso})` },
@@ -132,7 +133,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
             },
         ],
         assinaturas: [{ rotulo: 'Notificado', estado: notificado }],
-        rodape: `${totalDeItens} volume(s) recolhido(s) e encaminhado(s) ao SEGUB — Av. San Martins, s/n`,
+        rodape: `${contar(totalDeItens, 'volume recolhido e encaminhado', 'volumes recolhidos e encaminhados')} ao SEGUB — Av. San Martins, s/n`,
     });
 
     const lavrar = () => {
@@ -141,7 +142,36 @@ export function TelaApreensao({ id }: { id: string | null }) {
         }
 
         const emitido = consumirNumero('aa');
-        anexarDocumento(registro.id, montarVia(emitido), nome.trim() || null);
+
+        if (emitido === null) {
+            return;
+        }
+
+        const via = montarVia(emitido);
+
+        anexarDocumento(registro.id, via, nome.trim() || null, {
+            tipo: 'aa',
+            numero: emitido,
+            notificado: nome.trim() || null,
+            documento_notificado: cpf.trim() || null,
+            prazo: null,
+            motivos: [],
+            sancoes: [],
+            itens: itens.map((i) => ({ quantidade: i.quantidade, unidade: i.unidade, descricao: i.descricao })),
+            guarda_prazo: prazo.id,
+            /* A chave do catálogo do servidor, na ordem da lista da tela. */
+            guarda_destinacao: ['devolucao', 'doacao', 'leilao', 'destruicao'][DESTINACOES_SEGUB.indexOf(destinacao)] ?? null,
+            dados: {
+                equipamento: equipamento.trim(),
+                atividade: atividade.trim(),
+                local: local.trim(),
+                decretos,
+                artigos: artigos.trim(),
+                portaria: portaria.trim(),
+                assinaturas: via.assinaturas,
+                via,
+            },
+        });
         setLavrado(emitido);
         irPara(`via/${registro.id}`);
     };
@@ -153,7 +183,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
         <div className="pw-tela">
             <Topo
                 titulo="Auto de Apreensão"
-                subtitulo={`Nº ${numero}`}
+                subtitulo={numero ? `Nº ${numero}` : 'Sem número reservado'}
                 aoVoltar={() => irPara(`documentos/${registro.id}`)}
             />
 
@@ -168,7 +198,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
                                 Setor de Fiscalização em Logradouro Público — SEFAL
                             </p>
                         </div>
-                        <span className="pw-numero-documento">{numero}</span>
+                        <span className="pw-numero-documento">{numero ?? '—'}</span>
                     </div>
 
                     <p style={{ margin: '12px 0 0', fontSize: 14, lineHeight: 1.55 }}>
@@ -302,7 +332,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
                         </div>
 
                         <label className="pw-campo" style={{ marginTop: 14 }}>
-                            <span>Art(s) nºs</span>
+                            <span>Artigos nºs</span>
                             <input
                                 className="pw-entrada"
                                 value={artigos}
@@ -526,9 +556,15 @@ export function TelaApreensao({ id }: { id: string | null }) {
                             disabled={!podeLavrar}
                         >
                             <Icone nome="pacote" tamanho={20} />
-                            Lavrar apreensão Nº {numero}
+                            Lavrar apreensão Nº {numero ?? '—'}
                         </button>
-                        {!podeLavrar && (
+                        {numero === null && (
+                            <p className="pw-fraco" style={{ textAlign: 'center', marginTop: 10, fontSize: 13 }}>
+                                Não há número de Auto de Apreensão reservado neste aparelho. Com sinal, abra a aba Envio e toque
+                                em “Sincronizar agora” para receber números novos.
+                            </p>
+                        )}
+                        {!podeLavrar && numero !== null && (
                             <p className="pw-fraco" style={{ textAlign: 'center', marginTop: 10, fontSize: 13 }}>
                                 Falta o nome de quem sofreu a apreensão e ao menos um bem discriminado.
                             </p>

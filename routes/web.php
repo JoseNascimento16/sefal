@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Aplicativo\AplicativoController;
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
 use App\Http\Controllers\Retaguarda\AgrupamentoDeDemandasController;
 use App\Http\Controllers\Retaguarda\AmbulantesController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
 use App\Http\Controllers\Retaguarda\RetornoAoCanalController;
 use App\Http\Controllers\Retaguarda\UsuariosController;
+use App\Http\Middleware\AplicativoDoFiscal;
 use App\Http\Middleware\SoChefeDeSetor;
 use App\Models\Demanda;
 use Illuminate\Routing\RedirectController;
@@ -480,13 +482,30 @@ Route::middleware(['auth'])->group(function () {
 });
 
 /*
- * PROTÓTIPO do aplicativo do fiscal (PWA).
+ * O aplicativo do fiscal falando com o servidor (JSON, mesma sessão da
+ * Retaguarda). Fica ANTES da casca abaixo, que responde a qualquer caminho em
+ * `/app`. Fora de `/retaguarda/`, a guarda de telas não alcança estas rotas:
+ * quem as protege é o `AplicativoDoFiscal` (autenticado e em alguma equipe).
+ */
+Route::prefix('app/api')->name('aplicativo.')->group(function () {
+    Route::post('entrar', [AplicativoController::class, 'entrar'])->middleware('throttle:login')->name('entrar');
+    Route::post('sair', [AplicativoController::class, 'sair'])->name('sair');
+
+    Route::middleware(AplicativoDoFiscal::class)->group(function () {
+        Route::get('sessao', [AplicativoController::class, 'sessao'])->name('sessao');
+        Route::get('kit', [AplicativoController::class, 'kit'])->name('kit');
+        Route::post('numeros', [AplicativoController::class, 'numeros'])->name('numeros');
+        Route::post('fiscalizacoes', [AplicativoController::class, 'registrar'])->name('fiscalizacoes');
+    });
+});
+
+/*
+ * A casca do aplicativo do fiscal (PWA).
  *
  * Não é tela da Retaguarda: é uma aplicação de página única, servida por uma
- * casca própria (`resources/views/pwa.blade.php`), com dados FICTÍCIOS escritos
- * no próprio navegador. Enquanto for protótipo ela não tem servidor por trás —
- * nada é lido do banco e NADA é gravado —, e por isso mora fora da autenticação
- * e responde apenas a GET.
+ * casca própria (`resources/views/pwa.blade.php`). A casca é pública — quem
+ * decide quem entra são as rotas `app/api/*` acima, e a porta do aplicativo
+ * pede matrícula e senha.
  *
  * O caminho é livre depois de `/app` porque a navegação interna é do lado do
  * cliente: quem recarregar a página em qualquer ponto do fluxo recebe a mesma
