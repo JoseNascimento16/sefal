@@ -305,6 +305,24 @@ de novo, e oferece **Enviar agora**, **Sair assim mesmo** ou **Continuar no plan
 marcadas no registro são chaves do catálogo do servidor (`ocorrencias_do_fiscal`); chave fora dele é
 recusada no envio.
 
+### RN-21 — A via sai na térmica pelo diálogo de impressão do aparelho
+
+Como no CODECON (mesma impressora de 80 mm): o cupom é montado em HTML (brasão binarizado embutido,
+sans-serif em negrito, margem zero com recuo simétrico) e entregue ao diálogo de impressão do Android;
+a impressora Bluetooth é alcançada pelo serviço de impressão dela, pareado no aparelho. Sem
+impressora, o mesmo diálogo salva em PDF. Falha ao abrir a impressão aparece na tela.
+
+### RN-22 — O relato pode ser ditado
+
+O botão **Ditar** usa o reconhecimento de voz do Chrome, em português: cada frase reconhecida entra no
+fim do relato, sem apagar o que já foi escrito. Precisa de sinal e da permissão do microfone; sem um
+deles, o botão diz o motivo.
+
+### RN-23 — O contorno da área vem do servidor
+
+O contorno do bloco (ou os corredores) que o mapa do aplicativo desenha é o que a Retaguarda guarda
+na tela de Áreas; o aplicativo não traz mais desenho próprio.
+
 ## Como demonstrar (protótipo)
 
 Entrada em `/app`. Não há senha a conferir: a **matrícula** decide a identidade e a equipe.
@@ -392,6 +410,7 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 13/10/2026 | José Nascimento | Aplicativo do Fiscal (via, registro, mapa) | Impressão real da via na térmica 80 mm pelo mesmo caminho do CODECON (RN-21); ditado do relato pelo reconhecimento de voz (RN-22); contorno da área vindo do servidor (RN-23). A porta do aplicativo passa a dizer o motivo da recusa da conta. | Pedido do dono. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (perfil, envio) | Encerrar plantão avisa o que ficou só no aparelho (RN-20); ocorrências validadas pelo catálogo do servidor e mostradas ao líder na Retaguarda. | Aparelho compartilhado: sair em silêncio deixava registro parado sem o fiscal saber. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (mapa, calor, início, levantamento) | **Etapa 3: os dados de campo deixam de ser fictícios.** Pinos de ambulante do cadastro na última posição, com histórico e retorno vencido; registro a partir do pino liga a vistoria ao ambulante e move o pino (RN-17). Calor das vistorias com irregularidade e operações da equipe (RN-18). Levantamento gravado no servidor com foto e GPS por linha, encarregados do cadastro, fila no aparelho (RN-19). Saem as sementes de ambulantes, calor, operações e registros, e os atalhos de exemplo. Migration `2026_10_13_100000_levantamento_de_ambulantes`. | Pedido do dono (13/10/2026): seguir para as próximas etapas, sem versão instalável. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (todas) | **O aplicativo passa a falar com o servidor.** Login real (RN-15); fila da equipe vinda do banco, no vocabulário da Retaguarda (canais e situações sem tradução); o despacho grava a vistoria esperando o LÍDER, ligada à Fiscalização e ao trâmite da demanda (RN-12, RN-16); números de NP/AA reservados pelo servidor por fiscal (RN-08); fila do aparelho com as fotos, reenvio quando o sinal volta; bloco "Com o líder" na fila. As 22 demandas fictícias saíram do aplicativo. Rotas `/app/api/*` protegidas por `AplicativoDoFiscal`; migration `2026_10_13_090000_aplicativo_do_fiscal_fala_com_o_servidor`. | Pedido do dono (13/10/2026): ajustar o PWA para se comunicar de verdade com a Retaguarda. |

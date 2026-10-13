@@ -30,6 +30,7 @@ import {
     BAIRROS,
     bairroMaisProximo,
 } from '../dados-prototipo';
+import { useDitado } from '../ditado';
 import { Icone } from '../icones';
 
 /* ============================================================================
@@ -108,7 +109,6 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const [fotos, setFotos] = useState<Foto[]>([]);
     const [marcadas, setMarcadas] = useState<string[]>([]);
     const [relato, setRelato] = useState('');
-    const [ditando, setDitando] = useState(false);
     const [vinculo, setVinculo] = useState<string | null>(
         doMapa ? doMapa.apelido : (daFila?.sgci?.nome ?? null),
     );
@@ -174,31 +174,11 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [doMapa, demanda?.id]);
 
-    /* O ditado é encenação: mostra ao dono ONDE o botão fica e como ele se
-       comporta. A transcrição de verdade entra quando o aplicativo sair do
-       protótipo. */
-    useEffect(() => {
-        if (!ditando) {
-            return;
-        }
-
-        const frase = 'Barraca montada sobre a calçada. Ambulante orientado, desarmou e saiu do ponto.';
-        const prefixo = relato.trim() ? `${relato.trimEnd()} ` : '';
-        let i = 0;
-
-        const relogio = window.setInterval(() => {
-            i += 2;
-            setRelato(prefixo + frase.slice(0, i));
-
-            if (i >= frase.length) {
-                window.clearInterval(relogio);
-                setDitando(false);
-            }
-        }, 45);
-
-        return () => window.clearInterval(relogio);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ditando]);
+    /* O ditado é de verdade (`ditado.ts`): cada frase reconhecida entra no fim
+       do relato, sem apagar o que o fiscal já escreveu. */
+    const ditado = useDitado((frase) =>
+        setRelato((atual) => (atual.trim() ? `${atual.trimEnd()} ${frase}` : frase)),
+    );
 
     const regiao = useMemo(
         () =>
@@ -510,12 +490,23 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                             type="button"
                             className="pw-btn pw-btn-fantasma pw-btn-pequeno"
                             style={{ position: 'absolute', right: 10, bottom: 14 }}
-                            onClick={() => setDitando((d) => !d)}
+                            onClick={() => (ditado.ouvindo ? ditado.parar() : ditado.iniciar())}
+                            aria-pressed={ditado.ouvindo}
                         >
-                            <Icone nome="microfone" tamanho={16} className={ditando ? 'pw-girando' : undefined} />
-                            {ditando ? 'Ouvindo…' : 'Ditar'}
+                            <Icone nome="microfone" tamanho={16} className={ditado.ouvindo ? 'pw-girando' : undefined} />
+                            {ditado.ouvindo ? 'Parar' : 'Ditar'}
                         </button>
                     </div>
+                    {ditado.ouvindo && (
+                        <p className="pw-fraco" role="status" style={{ margin: '6px 0 0', fontSize: 13 }}>
+                            Ouvindo…{ditado.parcial ? ` “${ditado.parcial}”` : ' fale o relato.'}
+                        </p>
+                    )}
+                    {ditado.erro && (
+                        <p className="pw-fraco" role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--pw-perigo)' }}>
+                            {ditado.erro}
+                        </p>
+                    )}
                 </section>
 
                 {/* 5 · Quem ---------------------------------------------- */}

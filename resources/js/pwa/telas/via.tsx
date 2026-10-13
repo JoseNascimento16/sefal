@@ -4,6 +4,7 @@ import { irPara, useApp } from '../app';
 import { Selo, Topo, Vazio } from '../componentes';
 import { FISCAL, nomeRegiao, type Registro, type ViaImpressa } from '../dados-prototipo';
 import { Icone } from '../icones';
+import { htmlDaVia, imprimirHtml } from '../impressao';
 
 /* ============================================================================
    A VIA DO NOTIFICADO — o que sai da impressora de bolso.
@@ -17,8 +18,9 @@ import { Icone } from '../icones';
    prévia aqui tem largura fixa em vez de acompanhar a tela: o fiscal precisa
    ver, antes de imprimir, o que vai caber e o que vai quebrar de linha.
 
-   ⚠️ Encenação: não há impressora. O botão mostra o progresso e diz que
-   imprimiu. O conteúdo, esse, é o de verdade — sai congelado do momento da
+   A impressão é a do CODECON (`impressao.ts`): o cupom vai ao diálogo de
+   impressão do aparelho, que alcança a térmica Bluetooth pelo serviço de
+   impressão pareado — ou salva em PDF. O conteúdo sai congelado do momento da
    lavratura (`registro.via`), e não remontado a partir de tela nenhuma.
    ============================================================================ */
 
@@ -27,6 +29,7 @@ export function TelaVia({ id }: { id: string | null }) {
     const registro = registros.find((r) => r.id === id);
     const [saindo, setSaindo] = useState(false);
     const [saiu, setSaiu] = useState(0);
+    const [falha, setFalha] = useState<string | null>(null);
 
     if (!registro || !registro.documento) {
         return (
@@ -46,12 +49,22 @@ export function TelaVia({ id }: { id: string | null }) {
     const via = registro.via ?? viaReconstituida(registro);
     const naSessao = registro.via !== null;
 
-    const imprimir = () => {
+    const imprimir = async () => {
+        if (saindo) {
+            return;
+        }
+
         setSaindo(true);
-        window.setTimeout(() => {
-            setSaindo(false);
+        setFalha(null);
+
+        try {
+            await imprimirHtml(htmlDaVia(via, FISCAL));
             setSaiu((n) => n + 1);
-        }, 1400);
+        } catch (erro) {
+            setFalha(erro instanceof Error ? erro.message : 'Não foi possível imprimir.');
+        } finally {
+            setSaindo(false);
+        }
     };
 
     return (
@@ -78,8 +91,8 @@ export function TelaVia({ id }: { id: string | null }) {
 
                 {!naSessao && (
                     <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 13 }}>
-                        Documento lavrado antes desta sessão do protótipo — a via foi remontada com o que o
-                        registro guarda.
+                        A via original não veio com este registro — ela foi remontada com o que o registro
+                        guarda.
                     </p>
                 )}
 
@@ -149,9 +162,6 @@ export function TelaVia({ id }: { id: string | null }) {
                         <hr className="pw-bobina-corte" />
 
                         <p className="pw-bobina-rodape">{via.rodape}</p>
-                        <p className="pw-bobina-rodape pw-bobina-aviso">
-                            Protótipo · documento de demonstração, sem valor legal
-                        </p>
                     </div>
                 </div>
 
@@ -159,7 +169,7 @@ export function TelaVia({ id }: { id: string | null }) {
                     type="button"
                     className="pw-btn pw-btn-acao"
                     style={{ marginTop: 20, minHeight: 58 }}
-                    onClick={imprimir}
+                    onClick={() => void imprimir()}
                     disabled={saindo}
                 >
                     <Icone
@@ -169,6 +179,17 @@ export function TelaVia({ id }: { id: string | null }) {
                     />
                     {saindo ? 'Imprimindo…' : saiu > 0 ? 'Imprimir outra via' : 'Imprimir e entregar'}
                 </button>
+
+                {falha && (
+                    <p role="alert" className="pw-fraco" style={{ margin: '10px 0 0', color: 'var(--pw-perigo)' }}>
+                        {falha}
+                    </p>
+                )}
+
+                <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 12.5 }}>
+                    Abre a impressão do aparelho: escolha a impressora térmica (pareada por Bluetooth, com o serviço de
+                    impressão dela instalado) ou "Salvar como PDF".
+                </p>
 
                 <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 13.5, lineHeight: 1.6 }}>
                     {via.tipo === 'aa'

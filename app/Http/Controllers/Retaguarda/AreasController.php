@@ -44,6 +44,8 @@ class AreasController extends Controller
                 'bairros' => $a->bairros->pluck('bairro')->sort(fn ($x, $y) => Area::chaveDeBairro($x) <=> Area::chaveDeBairro($y))->values()->all(),
                 'equipes' => $a->equipes->pluck('codigo')->sort()->values()->all(),
                 'tem_historico' => $this->pendurado($a) > 0,
+                // O desenho no mapa: contorno do bloco ou corredores (ver Area::geometria).
+                ...$a->geometria(),
             ]);
 
         return Inertia::render('Retaguarda/Sistema/Areas', [
@@ -116,7 +118,23 @@ class AreasController extends Controller
             'ativa' => ['boolean'],
             'bairros' => ['array'],
             'bairros.*' => ['string', 'max:80', new NomeDeCadastro],
+            // O desenho no mapa — só pontos dentro de Salvador, para um clique
+            // fora do lugar não virar uma área que atravessa o oceano.
+            'contorno' => ['nullable', 'array', 'max:300'],
+            'contorno.*' => ['array', 'size:2'],
+            'contorno.*.0' => ['numeric', 'between:-13.2,-12.7'],
+            'contorno.*.1' => ['numeric', 'between:-38.8,-38.2'],
+            'corredores' => ['nullable', 'array', 'max:40'],
+            'corredores.*.nome' => ['required', 'string', 'max:80'],
+            'corredores.*.linha' => ['required', 'array', 'min:2', 'max:300'],
+            'corredores.*.linha.*' => ['array', 'size:2'],
+            'corredores.*.linha.*.0' => ['numeric', 'between:-13.2,-12.7'],
+            'corredores.*.linha.*.1' => ['numeric', 'between:-38.8,-38.2'],
         ], [
+            'contorno.*.0.between' => 'Um ponto do contorno ficou fora de Salvador. Desfaça o último ponto e desenhe de novo.',
+            'contorno.*.1.between' => 'Um ponto do contorno ficou fora de Salvador. Desfaça o último ponto e desenhe de novo.',
+            'corredores.*.nome.required' => 'Dê um nome a cada corredor (ex.: Avenida Sete de Setembro).',
+            'corredores.*.linha.min' => 'Cada corredor precisa de ao menos dois pontos no mapa.',
             'nome.required' => 'Informe o nome da área.',
             'regiao.required' => 'Informe a região que a área cobre.',
             'recorte.required' => 'Diga se a área cobre bairros, corredores ou a cidade inteira.',
@@ -134,6 +152,21 @@ class AreasController extends Controller
             'turno' => $dados['turno'],
             'ativa' => $dados['ativa'],
         ]);
+
+        /*
+         * O desenho segue o RECORTE: bloco de bairros guarda o contorno;
+         * corredores guardam as linhas; cidade inteira não tem desenho. Só mexe
+         * quando a tela mandou o desenho — quem grava sem ele não apaga o mapa.
+         */
+        if (array_key_exists('contorno', $dados) || array_key_exists('corredores', $dados)) {
+            $area->poligono = Area::geoJson(
+                $dados['recorte'] === 'bairros' ? ($dados['contorno'] ?? null) : null,
+                $dados['recorte'] === 'corredores' ? ($dados['corredores'] ?? null) : null,
+            );
+        } elseif ($dados['recorte'] === 'cidade') {
+            $area->poligono = null;
+        }
+
         $area->save();
 
         /*
