@@ -810,6 +810,38 @@ return [
                 .'O fiscal lê esse texto no aparelho, então ele precisa dizer o que corrigir.',
         ],
 
+        /*
+         * O aplicativo do fiscal. Entra aqui como as demais: o mapa é de
+         * funcionalidade ENTREGUE, e não de linha do menu da Retaguarda — o que
+         * não tem item de menu entra igual, senão nunca é cobrado.
+         */
+        [
+            'modulo' => 'Aplicativo do Fiscal',
+            'tela' => 'Fila de denúncias dirigidas e registro de vistoria (protótipo)',
+            'origem' => 'PWA',
+            'rota' => 'pwa',
+            'breadcrumb' => 'Aplicativo do Fiscal › /app',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: cenário da reunião com o cliente de 02/09/2026 '
+                .'e decisões do dono de 03 e 04/09/2026; regras em docs/regras-de-negocio/fiscalizacao/'
+                .'aplicativo-do-fiscal.md. PROTÓTIPO, sem servidor: os dados vivem em '
+                .'resources/js/pwa/ e o que o fiscal registra fica na memória da aba. A fila do '
+                .'aplicativo é a da EQUIPE de quem entrou e fala o mesmo vocabulário do módulo de '
+                .'Denúncias — mesmas situações, mesmo protocolo DEN-NNNN e a mesma lista fechada de '
+                .'seis desfechos, que é o que fecha o passo do trâmite na Retaguarda. Denúncia em '
+                .'triagem não chega ao fiscal; denúncia com Notificação em prazo oferece o registro '
+                .'do RETORNO. O registro é DESPACHADO à caixa de entrada do Chefe de Setor da área '
+                .'da equipe, com as CONSIDERAÇÕES FINAIS do fiscal (texto livre e atalhos de '
+                .'recomendação, os MESMOS 11 do catálogo da Retaguarda, aqui na redação CURTA — a '
+                .'chave é o que viaja, e a redação explícita mora do lado de quem decide), e não '
+                .'conclui sem o documento quando o desfecho lavra documento — o '
+                .'impedimento diz o motivo e abre o formulário que falta. Vocabulário novo do '
+                .'domínio: Chefe de Setor (antes "gestor") e Coordenador (antes "administrativo"). '
+                .'Falta a sincronização de verdade (endpoint, banco offline, fila de '
+                .'envio): enquanto isso, os dados são segunda cópia dos do servidor.',
+        ],
+
     ],
 
 ];
