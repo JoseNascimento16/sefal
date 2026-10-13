@@ -484,9 +484,12 @@ JSON;
 
     public function up(): void
     {
-        foreach ((array) json_decode(self::GEOMETRIAS, true) as $nome => $geometria) {
+        // Objetos, e não arrays: `properties: {}` tem de continuar objeto no GeoJSON.
+        foreach (get_object_vars(json_decode(self::GEOMETRIAS)) as $nome => $geometria) {
+            // Só `null`: no Oracle a coluna é CLOB (não se compara com '') e a
+            // string vazia já é nula.
             Area::where('nome', $nome)
-                ->where(fn ($q) => $q->whereNull('poligono')->orWhere('poligono', ''))
+                ->whereNull('poligono')
                 ->update(['poligono' => json_encode($geometria, JSON_UNESCAPED_UNICODE)]);
         }
     }
