@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { irPara, useApp } from '../app';
 import { Interruptor, Selo, Topo } from '../componentes';
 import { EQUIPE } from '../dados-demandas';
@@ -11,7 +13,16 @@ import { Icone } from '../icones';
  * do sol ou da noite e onde se encerra o plantão. O resto é conferência.
  */
 export function TelaPerfil() {
-    const { tema, alternarTema, registros, pendentes, sair } = useApp();
+    const { tema, alternarTema, registros, pendentes, sair, sincronizar, sincronizando } = useApp();
+    const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+    /* O que ainda está só no aparelho: o despachado sem sinal e o aberto. */
+    const abertos = registros.filter((r) => r.despachadoBr === null).length;
+    const naoEnviados = pendentes + abertos;
+
+    /* O aparelho é compartilhado: sair com registro só no aparelho é deixá-lo
+       parado até ESTE fiscal entrar de novo. A saída avisa antes — nunca em
+       silêncio. */
+    const pedirSaida = () => (naoEnviados > 0 ? setConfirmandoSaida(true) : sair());
     const doDia = registros.filter((r) => r.dataBr === HOJE_BR);
     const irregulares = doDia.filter((r) => r.status === 'irregular').length;
 
@@ -96,8 +107,8 @@ export function TelaPerfil() {
                     )}
 
                     <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 12.5 }}>
-                        {EQUIPE.recorteExplicacao} As demandas do e-Salvador, do Salvador Digital, de
-                        licença nova e de ofício caem na equipe da área onde fica o endereço.
+                        {EQUIPE.recorteExplicacao} As demandas chegam à equipe da área onde fica o
+                        endereço: o Chefe de Setor encaminha ao líder, e o líder envia aos fiscais.
                     </p>
                 </div>
 
@@ -158,15 +169,49 @@ export function TelaPerfil() {
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    className="pw-btn pw-btn-contorno"
-                    style={{ marginTop: 22 }}
-                    onClick={sair}
-                >
-                    <Icone nome="sair" tamanho={19} />
-                    Encerrar plantão e sair
-                </button>
+                {confirmandoSaida ? (
+                    <div className="pw-card" role="alertdialog" aria-label="Há registros não enviados" style={{ marginTop: 22 }}>
+                        <p className="pw-forte" style={{ margin: 0, fontSize: 16 }}>
+                            <Icone nome="alerta" tamanho={18} />{' '}
+                            {naoEnviados === 1 ? '1 registro ainda está só neste aparelho' : `${naoEnviados} registros ainda estão só neste aparelho`}
+                        </p>
+                        <p className="pw-fraco" style={{ margin: '8px 0 0' }}>
+                            {pendentes > 0 && 'Há envio esperando sinal. '}
+                            {abertos > 0 && 'Há registro aberto, sem conclusão. '}
+                            Se você sair, eles ficam guardados aqui e só sobem quando você entrar de novo neste
+                            aparelho — o líder não os recebe até lá.
+                        </p>
+                        {pendentes > 0 && (
+                            <button
+                                type="button"
+                                className="pw-btn pw-btn-acao"
+                                style={{ marginTop: 14 }}
+                                disabled={sincronizando}
+                                onClick={() => void sincronizar().then(() => setConfirmandoSaida(false))}
+                            >
+                                <Icone nome="atualizar" tamanho={19} className={sincronizando ? 'pw-girando' : undefined} />
+                                {sincronizando ? 'Enviando…' : 'Enviar agora'}
+                            </button>
+                        )}
+                        <button type="button" className="pw-btn pw-btn-contorno" style={{ marginTop: 10 }} onClick={sair}>
+                            <Icone nome="sair" tamanho={19} />
+                            Sair assim mesmo
+                        </button>
+                        <button
+                            type="button"
+                            className="pw-btn pw-btn-fantasma"
+                            style={{ marginTop: 6 }}
+                            onClick={() => setConfirmandoSaida(false)}
+                        >
+                            Continuar no plantão
+                        </button>
+                    </div>
+                ) : (
+                    <button type="button" className="pw-btn pw-btn-contorno" style={{ marginTop: 22 }} onClick={pedirSaida}>
+                        <Icone nome="sair" tamanho={19} />
+                        Encerrar plantão e sair
+                    </button>
+                )}
 
                 {/* Brasão oficial no rodapé: aqui o fundo muda com o tema, então
                     entra a versão colorida no claro e a branca no escuro. */}
@@ -186,7 +231,7 @@ export function TelaPerfil() {
                 />
 
                 <p className="pw-fraco" style={{ textAlign: 'center', marginTop: 4 }}>
-                    SEFAL · Aplicativo de campo — protótipo de demonstração
+                    SEFAL · Aplicativo de campo — em implantação
                     <br />
                     SEMOP · Secretaria Municipal de Ordem Pública
                 </p>

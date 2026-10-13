@@ -75,6 +75,12 @@ export interface Registro {
         prazo_rotulo: string | null;
     } | null;
     consideracoes: string | null;
+    /** O que o fiscal escreveu no ponto (registro rápido do aplicativo). */
+    relato?: string | null;
+    /** As ocorrências que ele marcou, já por extenso. */
+    ocorrencias?: string[];
+    /** O retorno que ele combinou no ponto (ISO), quando combinou. */
+    retorno_combinado?: string | null;
     /**
      * As **CHAVES** dos atalhos que o fiscal assinalou (`retorno`, `sgci`…),
      * nunca a frase: é a chave que o aplicativo dele grava, e é por ela que o
@@ -257,6 +263,12 @@ export function DetalheDaVistoria({
                                     </dd>
                                 </div>
                             )}
+                            {r.retorno_combinado != null && (
+                                <div>
+                                    <dt>Retorno combinado no ponto</dt>
+                                    <dd>{dataBR(r.retorno_combinado)}</dd>
+                                </div>
+                            )}
                             {r.ponto_de_referencia !== null && (
                                 <div style={{ gridColumn: '1 / -1' }}>
                                     <dt>Ponto de referência</dt>
@@ -287,6 +299,24 @@ export function DetalheDaVistoria({
                                     {plural(r.arquivos?.length ?? 0, 'registrada', 'registradas')} no ponto:
                                 </p>
                                 <ListaDeArquivos arquivos={r.arquivos ?? []} />
+                            </div>
+                        )}
+
+                        {(Boolean(r.relato) || (r.ocorrencias?.length ?? 0) > 0) && (
+                            <div style={{ marginTop: 12 }}>
+                                <p className="form-ajuda" style={{ marginBottom: 4 }}>
+                                    <strong>No ponto, o fiscal registrou:</strong>
+                                </p>
+                                {(r.ocorrencias?.length ?? 0) > 0 && (
+                                    <div style={{ margin: '2px 0 6px' }}>
+                                        {r.ocorrencias?.map((o) => (
+                                            <span key={o} className="selo selo-neutro" style={{ marginRight: 6, marginBottom: 4 }}>
+                                                {o}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                                {r.relato ? <p style={{ margin: 0 }}>{r.relato}</p> : null}
                             </div>
                         )}
 

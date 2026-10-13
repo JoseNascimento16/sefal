@@ -164,7 +164,7 @@ class AplicativoController extends Controller
             'demanda_id' => ['nullable', 'integer'],
             'desfecho' => ['required', Rule::in(Fiscalizacao::DESFECHOS)],
             'ocorrencias' => ['nullable', 'array', 'max:20'],
-            'ocorrencias.*' => ['string', 'max:40'],
+            'ocorrencias.*' => ['string', Rule::in(array_keys((array) config('prototipo_denuncias.ocorrencias_do_fiscal', [])))],
             'relato' => ['nullable', 'string', 'max:4000'],
             'ambulante' => ['nullable', 'string', 'max:255'],
             'ambulante_id' => ['nullable', 'integer', 'exists:ambulantes,id'],

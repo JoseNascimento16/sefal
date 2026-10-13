@@ -210,6 +210,15 @@ class PwaFilaDeDenunciasTest extends TestCase
         $this->assertSame(Demanda::CANAIS, $canais[1]);
     }
 
+    public function test_as_ocorrencias_do_aplicativo_sao_as_do_catalogo_do_servidor()
+    {
+        $fonte = $this->fonteDoAplicativo('dados-prototipo.ts');
+        preg_match('/export const OCORRENCIAS = \[(?<itens>.*?)\R\];/s', $fonte, $bloco);
+        preg_match_all("/id: '([a-z-]+)'/", $bloco['itens'] ?? '', $ids);
+
+        $this->assertSame(array_keys((array) config('prototipo_denuncias.ocorrencias_do_fiscal')), $ids[1]);
+    }
+
     public function test_as_chaves_de_recomendacao_sao_as_do_servidor()
     {
         $this->assertSame(RecomendacoesDoFiscal::chaves(), self::RECOMENDACOES_DA_RETAGUARDA);

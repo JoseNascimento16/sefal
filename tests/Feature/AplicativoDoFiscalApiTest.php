@@ -69,7 +69,7 @@ function registroDoAplicativo(array $extra = []): array
         'client_id' => 'c-'.uniqid(),
         'desfecho' => Fiscalizacao::REGULARIZADO_NO_LOCAL,
         'relato' => 'Orientado, desmontou na hora.',
-        'ocorrencias' => ['passeio'],
+        'ocorrencias' => ['calcada'],
         'latitude' => -12.98,
         'longitude' => -38.45,
         'precisao_m' => 7.6,
@@ -159,7 +159,7 @@ it('o registro despachado vira vistoria aguardando o líder, com fotos, e move a
         ->and($vistoria->equipe_id)->toBe($equipe->id)
         ->and($vistoria->ciclo_id)->not->toBeNull()
         ->and($vistoria->relato)->toBe('Orientado, desmontou na hora.')
-        ->and($vistoria->ocorrencias)->toBe(['passeio'])
+        ->and($vistoria->ocorrencias)->toBe(['calcada'])
         ->and($vistoria->precisao_m)->toBe(8)
         ->and($vistoria->recomendacoes()->pluck('chave')->all())->toBe(['nada'])
         ->and($vistoria->fotos)->toHaveCount(1)
@@ -270,7 +270,11 @@ it('o líder vê na Retaguarda a vistoria vinda do aplicativo e, mandando voltar
     $vistoria = Fiscalizacao::firstOrFail();
 
     $props = $this->actingAs($admin)->get(route('retaguarda.fiscalizacoes.index'))->assertOk()->viewData('page')['props'];
-    expect(json_encode($props['fiscalizacoes'], JSON_UNESCAPED_UNICODE))->toContain($vistoria->protocolo);
+    expect(json_encode($props['fiscalizacoes'], JSON_UNESCAPED_UNICODE))
+        ->toContain($vistoria->protocolo)
+        // O que o fiscal registrou no ponto chega ao líder, com a ocorrência por extenso.
+        ->toContain('Orientado, desmontou na hora.')
+        ->toContain('Obstrução de calçada');
 
     $this->actingAs($admin)->post(route('retaguarda.fiscalizacoes.nova-vistoria'), [
         'ids' => [$vistoria->ciclo_id],
@@ -405,4 +409,12 @@ it('recomendação com chave fora do catálogo é recusada — a chave é o que 
         ->assertJsonValidationErrors('recomendacoes.0');
 
     expect(Fiscalizacao::count())->toBe(0);
+});
+
+it('ocorrência com chave fora do catálogo é recusada', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo(['ocorrencias' => ['inventada']]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('ocorrencias.0');
 });

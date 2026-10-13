@@ -68,6 +68,14 @@ class FiscalizacaoParaTela
 
             'desfecho' => $f->desfecho,
             'consideracoes' => $f->consideracoes,
+            // O que o fiscal escreveu NO PONTO (o relato) e marcou em chips (as
+            // ocorrências, por extenso) — diferente das considerações do despacho.
+            'relato' => $f->relato,
+            'ocorrencias' => array_values(array_map(
+                static fn (string $chave): string => (string) (config('prototipo_denuncias.ocorrencias_do_fiscal')[$chave] ?? $chave),
+                (array) ($f->ocorrencias ?? []),
+            )),
+            'retorno_combinado' => $f->retorno_em?->format('Y-m-d'),
             'recomendacoes' => $f->relationLoaded('recomendacoes') ? $f->chavesDeRecomendacao() : [],
 
             'documento' => self::documento($f->documento),
