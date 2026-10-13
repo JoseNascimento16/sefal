@@ -35,6 +35,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Liberação de comandos destrutivos (só do dono, só no SQLite local)
+    |--------------------------------------------------------------------------
+    |
+    | migrate:fresh/refresh/reset/rollback e db:wipe ficam BLOQUEADOS em todos os
+    | ambientes. Esta chave os libera apenas com APP_ENV=local e banco SQLite —
+    | nunca no Oracle. Ver App\Support\TravaDeComandosDestrutivos.
+    |
+    */
+
+    'liberar_comandos_destrutivos' => (bool) env('LIBERAR_COMANDOS_DESTRUTIVOS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
     |
