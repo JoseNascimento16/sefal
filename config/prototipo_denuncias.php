@@ -229,13 +229,10 @@ return [
      * arquivos separados, uma renomeação ajustaria só uma delas.
      *
      * ⚠️ O `curto` não é lido por nenhuma tela da Retaguarda hoje — ele está aqui
-     * porque este catálogo é o LADO QUE FICA: quando o aplicativo falar com o
-     * servidor, é daqui que a lista de atalhos dele vai sair. Enquanto isso, o
-     * espelho do aplicativo vive em `resources/js/pwa/dados-demandas.ts`
-     * (`RECOMENDACOES`), na branch `feature/pwa-prototipo` — e as duas branches
-     * não se veem, então NENHUM teste consegue comparar as duas listas. Atalho
-     * novo, chave renomeada ou redação mexida entra nos dois lados no mesmo
-     * passo, à mão. É a dívida registrada como PEND-016.
+     * porque este catálogo é o LADO QUE FICA. O aplicativo tem um espelho em
+     * `resources/js/pwa/dados-demandas.ts` (`RECOMENDACOES`), e desde 13/10/2026
+     * os dois lados vivem na mesma branch: `PwaFilaDeDenunciasTest` reprova as
+     * chaves que divergirem, e o servidor recusa chave fora deste catálogo.
      */
     'recomendacoes_do_fiscal' => [
         'retorno' => [
@@ -288,6 +285,26 @@ return [
             'curto' => 'Sem providência adicional',
             'explicito' => 'Nada mais a fazer no ponto',
         ],
+    ],
+
+    /*
+     * As OCORRÊNCIAS que o fiscal marca no registro rápido — chips de um toque
+     * (aplicativo, 13/10/2026). Viajam como CHAVE, como as recomendações, e a
+     * Retaguarda as escreve por extenso com este catálogo. O espelho do
+     * aplicativo é `OCORRENCIAS`, em `resources/js/pwa/dados-prototipo.ts`;
+     * `PwaFilaDeDenunciasTest` reprova as chaves que divergirem.
+     */
+    'ocorrencias_do_fiscal' => [
+        'desarmou' => 'Desarmou e saiu',
+        'orientado' => 'Orientado no local',
+        'recusou' => 'Recusou sair',
+        'vazio' => 'Local vazio na chegada',
+        'reincidente' => 'Reincidente',
+        'calcada' => 'Obstrução de calçada',
+        'sem-permissao' => 'Sem permissão',
+        'bebida' => 'Venda de bebida',
+        'alimento' => 'Manipulação de alimento',
+        'apoio' => 'Apoio da guarda municipal',
     ],
 
     /*
