@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-
 import { irPara, useApp } from '../app';
 import { Selo, Topo, atalhoDoPerfil } from '../componentes';
 import { EQUIPE } from '../dados-demandas';
@@ -25,31 +23,7 @@ import { Icone } from '../icones';
    ============================================================================ */
 
 export function TelaSincronizacao() {
-    const { registros, pendentes, esvaziarFila } = useApp();
-    const [enviando, setEnviando] = useState(false);
-    const [progresso, setProgresso] = useState(0);
-
-    useEffect(() => {
-        if (!enviando) {
-            return;
-        }
-
-        const relogio = window.setInterval(() => {
-            setProgresso((p) => {
-                if (p >= 100) {
-                    window.clearInterval(relogio);
-                    setEnviando(false);
-                    esvaziarFila();
-
-                    return 100;
-                }
-
-                return p + 8;
-            });
-        }, 90);
-
-        return () => window.clearInterval(relogio);
-    }, [enviando, esvaziarFila]);
+    const { registros, pendentes, sincronizar, sincronizando: enviando, aviso } = useApp();
 
     const fila = registros.filter((r) => r.envio !== 'enviado' && r.despachadoBr !== null);
     const abertos = registros.filter((r) => r.despachadoBr === null);
@@ -76,8 +50,8 @@ export function TelaSincronizacao() {
                             </p>
                             <p className="pw-fraco" style={{ margin: 0 }}>
                                 {enviados === 1
-                                    ? '1 já na caixa do Chefe de Setor'
-                                    : `${enviados} já na caixa do Chefe de Setor`}
+                                    ? '1 já entregue ao líder da equipe'
+                                    : `${enviados} já entregues ao líder da equipe`}
                             </p>
                         </div>
                         <Selo tom={pendentes === 0 ? 'ok' : 'alerta'}>
@@ -86,21 +60,18 @@ export function TelaSincronizacao() {
                         </Selo>
                     </div>
 
-                    {enviando && (
-                        <div className="pw-progresso">
-                            <div style={{ width: `${progresso}%` }} />
-                        </div>
+                    {aviso && (
+                        <p className="pw-fraco" role="alert" style={{ margin: '12px 0 0', color: 'var(--pw-perigo)' }}>
+                            {aviso}
+                        </p>
                     )}
 
                     <button
                         type="button"
                         className="pw-btn pw-btn-acao"
                         style={{ marginTop: 14 }}
-                        onClick={() => {
-                            setProgresso(0);
-                            setEnviando(true);
-                        }}
-                        disabled={enviando || pendentes === 0}
+                        onClick={() => void sincronizar()}
+                        disabled={enviando}
                     >
                         <Icone
                             nome="atualizar"
@@ -112,7 +83,7 @@ export function TelaSincronizacao() {
                 </div>
 
                 <p className="pw-titulo-secao">
-                    Na fila para o Chefe de Setor · {EQUIPE.area}
+                    Na fila para o líder da equipe · {EQUIPE.nome}
                 </p>
 
                 {fila.length === 0 ? (
@@ -128,8 +99,8 @@ export function TelaSincronizacao() {
                                 Nenhum registro esperando
                             </span>
                             <span className="pw-fraco">
-                                Tudo o que você despachou já chegou à caixa de entrada do Chefe de
-                                Setor · {EQUIPE.area} — {EQUIPE.areaNome}.
+                                Tudo o que você despachou já chegou ao líder da {EQUIPE.nome}, que lê
+                                e decide o próximo passo.
                             </span>
                         </span>
                     </div>
@@ -154,12 +125,18 @@ export function TelaSincronizacao() {
                                     {r.endereco} ·{' '}
                                     {r.fotos === 1 ? '1 foto' : `${r.fotos} fotos`}
                                 </span>
+                                {r.envio === 'pendente' && r.erroEnvio && (
+                                    <span className="pw-fraco" style={{ display: 'block' }}>
+                                        {r.erroEnvio}
+                                    </span>
+                                )}
                                 {r.envio === 'erro' && (
                                     <span
                                         className="pw-fraco"
                                         style={{ display: 'block', color: 'var(--pw-perigo)' }}
                                     >
-                                        Falhou no envio anterior — será tentado de novo.
+                                        {r.erroEnvio ?? 'O servidor recusou o registro.'} Corrija e toque em
+                                        “Sincronizar agora”.
                                     </span>
                                 )}
                             </span>
@@ -196,7 +173,7 @@ export function TelaSincronizacao() {
                                         {r.hora} · {nomeRegiao(r.regiao)}
                                     </span>
                                     <span className="pw-fraco">
-                                        Registro aberto — conclua para despachar ao Chefe de Setor.
+                                        Registro aberto — conclua para despachar ao líder da equipe.
                                     </span>
                                 </span>
                                 <Icone nome="seta" tamanho={18} />
@@ -212,10 +189,11 @@ export function TelaSincronizacao() {
                         <li>Você registra: fica gravado no aparelho, com foto e coordenada.</li>
                         <li>Sem rede, o registro espera aqui — nada se perde e você segue trabalhando.</li>
                         <li>
-                            Voltou o sinal, ele sobe sozinho para a caixa de entrada do Chefe de
-                            Setor da sua área e o selo vira “Enviado”.
+                            Voltou o sinal, ele sobe sozinho para o líder da sua equipe e o selo vira
+                            “Enviado”.
                         </li>
-                        <li>Se o envio falhar, o aplicativo tenta de novo e avisa nesta tela.</li>
+                        <li>Se o servidor recusar, o motivo aparece nesta tela, ao lado do registro.</li>
+                        <li>“Sincronizar agora” também atualiza a fila da equipe e os números de documento.</li>
                     </ol>
                 </div>
             </div>

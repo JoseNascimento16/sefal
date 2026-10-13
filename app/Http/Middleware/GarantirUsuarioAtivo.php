@@ -33,6 +33,12 @@ class GarantirUsuarioAtivo
                 $request->session()->regenerateToken();
             }
 
+            // O aplicativo do fiscal fala JSON: redirecionar para a tela de login
+            // da Retaguarda não diria nada a ele. A mesma frase, no formato dele.
+            if ($request->expectsJson()) {
+                return response()->json(['message' => AutenticarPorMatricula::USUARIO_INATIVO], 401);
+            }
+
             // 303 ("See Other") quando o método não é GET: o navegador tem de repetir o
             // caminho como GET. Com 302 ele repetiria o PUT/PATCH/DELETE contra a tela de
             // login, que não aceita esses verbos — a pessoa levaria um 405 no lugar da

@@ -7,6 +7,7 @@ import {
     ORIGENS,
     TOM_DA_SITUACAO,
     demandasAVistoriar,
+    demandasComOLider,
     demandasDeOutrasEquipes,
     demandasEmRegularizacao,
     demandasEncerradas,
@@ -73,10 +74,12 @@ export function TelaDemandas() {
         return mapa;
     }, [registros]);
 
-    const aVistoriar = useMemo(() => demandasAVistoriar(), []);
-    const emRegularizacao = useMemo(() => demandasEmRegularizacao(), []);
-    const encerradas = useMemo(() => demandasEncerradas(), []);
-    const deOutras = useMemo(() => demandasDeOutrasEquipes(), []);
+    /* Sem memorizar: a fila muda quando o kit chega do servidor. */
+    const aVistoriar = demandasAVistoriar();
+    const emRegularizacao = demandasEmRegularizacao();
+    const encerradas = demandasEncerradas();
+    const comOLider = demandasComOLider();
+    const deOutras = demandasDeOutrasEquipes();
 
     /* O filtro por canal recorta os três blocos com a mesma régua — filtrar só
        o primeiro deixaria os números do topo brigando com a lista de baixo. */
@@ -86,10 +89,11 @@ export function TelaDemandas() {
     const fila = recortar(aVistoriar);
     const emPrazo = recortar(emRegularizacao);
     const fechadas = recortar(encerradas);
+    const noLider = recortar(comOLider);
 
     const vencidas = fila.filter((d) => d.prazoDias < 0).length;
     const hoje = fila.filter((d) => d.prazoDias === 0).length;
-    const nada = fila.length === 0 && emPrazo.length === 0 && fechadas.length === 0;
+    const nada = fila.length === 0 && emPrazo.length === 0 && fechadas.length === 0 && noLider.length === 0;
 
     return (
         <div className="pw-tela">
@@ -115,8 +119,8 @@ export function TelaDemandas() {
                 </div>
 
                 <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13.5 }}>
-                    O Chefe de Setor direciona a denúncia à equipe, ou a anexa a uma operação. Toda a
-                    equipe vê esta fila — e só ela.
+                    O líder envia a demanda aos fiscais, ou a anexa a uma operação. Toda a equipe vê
+                    esta fila — e só ela.
                     {deOutras > 0 && (
                         <>
                             {' '}
@@ -173,7 +177,7 @@ export function TelaDemandas() {
                         <Vazio
                             icone="📭"
                             titulo="Nenhuma denúncia direcionada à sua equipe"
-                            texto={`O Chefe de Setor ainda não direcionou nada à ${EQUIPE.nome} · ${EQUIPE.area}. As denúncias de outras equipes não aparecem aqui — cada equipe vê o trabalho da área dela.`}
+                            texto={`O líder ainda não enviou nada à ${EQUIPE.nome}. As demandas de outras equipes não aparecem aqui — cada equipe vê o trabalho dela.`}
                         />
                     </>
                 ) : (
@@ -204,6 +208,23 @@ export function TelaDemandas() {
                                     equipe volta ao ponto quando o prazo vencer.
                                 </p>
                                 {emPrazo.map((demanda) => (
+                                    <CartaoDemanda
+                                        key={demanda.id}
+                                        demanda={demanda}
+                                        registrado={registrado.get(demanda.id) ?? null}
+                                    />
+                                ))}
+                            </>
+                        )}
+
+                        {noLider.length > 0 && (
+                            <>
+                                <p className="pw-titulo-secao">Com o líder</p>
+                                <p className="pw-fraco" style={{ margin: '0 0 10px', fontSize: 13.5 }}>
+                                    Vistoria feita e despachada. O líder lê o registro e decide se a equipe
+                                    volta ao ponto ou se o caso sobe ao Chefe de Setor.
+                                </p>
+                                {noLider.map((demanda) => (
                                     <CartaoDemanda
                                         key={demanda.id}
                                         demanda={demanda}
@@ -245,7 +266,9 @@ export function CartaoDemanda({
 }) {
     const origem = ORIGENS[demanda.origem];
     const emRetorno = podeRegistrarRetorno(demanda);
-    const encerrada = demanda.situacao === 'Concluída' || demanda.situacao === 'Retorno vencido';
+    /* Sem ato do fiscal: encerrada, ou já despachada e esperando o líder. */
+    const encerrada =
+        demanda.situacao === 'Concluída' || demanda.situacao === 'Retorno vencido' || demanda.aguardaLider;
     const documento = demanda.documento;
 
     return (

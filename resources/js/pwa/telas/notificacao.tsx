@@ -90,7 +90,8 @@ export function TelaNotificacao({ id }: { id: string | null }) {
     const alternar = (lista: string[], id: string): string[] =>
         lista.includes(id) ? lista.filter((x) => x !== id) : [...lista, id];
 
-    const podeLavrar = nome.trim().length > 2 && (motivos.length > 0 || outros.trim().length > 2);
+    const podeLavrar =
+        numero !== null && nome.trim().length > 2 && (motivos.length > 0 || outros.trim().length > 2);
 
     /**
      * A via sai CONGELADA no momento da lavratura.
@@ -120,7 +121,7 @@ export function TelaNotificacao({ id }: { id: string | null }) {
         ],
         listas: [
             {
-                titulo: 'Motivo(s) assinalado(s)',
+                titulo: motivos.length + (outros.trim() ? 1 : 0) === 1 ? 'Motivo assinalado' : 'Motivos assinalados',
                 itens: [
                     ...MOTIVOS_NP.filter((m) => motivos.includes(m.id)).map((m) =>
                         m.complemento && complementos[m.id]?.trim()
@@ -149,7 +150,39 @@ export function TelaNotificacao({ id }: { id: string | null }) {
         }
 
         const emitido = consumirNumero('np');
-        anexarDocumento(registro.id, montarVia(emitido), nome.trim() || null);
+
+        if (emitido === null) {
+            return;
+        }
+
+        const via = montarVia(emitido);
+
+        /* O que o servidor guarda: as CHAVES dos catálogos (é por elas que o
+           relatório soma) e o resto do impresso, com a própria via, para a
+           reimpressão sair igual ao que o notificado assinou. */
+        anexarDocumento(registro.id, via, nome.trim() || null, {
+            tipo: 'np',
+            numero: emitido,
+            notificado: nome.trim() || null,
+            documento_notificado: null,
+            prazo: prazo.id,
+            motivos,
+            sancoes,
+            itens: [],
+            guarda_prazo: null,
+            guarda_destinacao: null,
+            dados: {
+                endereco: enderecoNotificado.trim(),
+                inscricao: inscricao.trim(),
+                atividade: atividade.trim(),
+                local: localAtividade.trim(),
+                equipamento: equipamento.trim(),
+                complementos,
+                outros: outros.trim(),
+                assinaturas: via.assinaturas,
+                via,
+            },
+        });
         setLavrado(emitido);
         irPara(`via/${registro.id}`);
     };
@@ -158,7 +191,7 @@ export function TelaNotificacao({ id }: { id: string | null }) {
         <div className="pw-tela">
             <Topo
                 titulo="Notificação Preliminar"
-                subtitulo={`Nº ${numero}`}
+                subtitulo={numero ? `Nº ${numero}` : 'Sem número reservado'}
                 aoVoltar={() => irPara(`documentos/${registro.id}`)}
             />
 
@@ -173,7 +206,7 @@ export function TelaNotificacao({ id }: { id: string | null }) {
                                 Setor de Fiscalização em Logradouro Público — SEFAL
                             </p>
                         </div>
-                        <span className="pw-numero-documento">{numero}</span>
+                        <span className="pw-numero-documento">{numero ?? '—'}</span>
                     </div>
 
                     <div className="pw-linha" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
@@ -493,9 +526,15 @@ export function TelaNotificacao({ id }: { id: string | null }) {
                             disabled={!podeLavrar}
                         >
                             <Icone nome="documento" tamanho={20} />
-                            Lavrar notificação Nº {numero}
+                            Lavrar notificação Nº {numero ?? '—'}
                         </button>
-                        {!podeLavrar && (
+                        {numero === null && (
+                            <p className="pw-fraco" style={{ textAlign: 'center', marginTop: 10, fontSize: 13 }}>
+                                Não há número de Notificação reservado neste aparelho. Com sinal, abra a aba Envio e toque
+                                em “Sincronizar agora” para receber números novos.
+                            </p>
+                        )}
+                        {!podeLavrar && numero !== null && (
                             <p className="pw-fraco" style={{ textAlign: 'center', marginTop: 10, fontSize: 13 }}>
                                 Falta o nome do notificado e ao menos um motivo assinalado.
                             </p>

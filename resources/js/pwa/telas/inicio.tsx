@@ -152,8 +152,8 @@ export function TelaInicio() {
                 {chamada.length === 0 ? (
                     <div className="pw-card">
                         <p className="pw-fraco" style={{ margin: 0, fontSize: 14 }}>
-                            O Chefe de Setor ainda não direcionou nenhuma denúncia à {EQUIPE.nome}. Você
-                            continua com o trabalho avulso: andar a rua, ver e registrar.
+                            O líder ainda não enviou nenhuma demanda à {EQUIPE.nome}. Você continua com
+                            o trabalho avulso: andar a rua, ver e registrar.
                         </p>
                     </div>
                 ) : (

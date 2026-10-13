@@ -225,8 +225,10 @@ function Conclusao({ registro }: { registro: Registro }) {
                         <dd>
                             <Selo tom={registro.envio === 'enviado' ? 'ok' : 'neutro'}>
                                 {registro.envio === 'enviado'
-                                    ? 'Enviado ao Chefe de Setor'
-                                    : 'Na fila — sai no sinal'}
+                                    ? `Enviado · ${registro.protocolo}`
+                                    : registro.envio === 'erro'
+                                      ? 'Recusado — veja em Envio'
+                                      : 'Na fila — sai no sinal'}
                             </Selo>
                         </dd>
                     </dl>
@@ -246,13 +248,13 @@ function Conclusao({ registro }: { registro: Registro }) {
                         </Selo>
                     </div>
                     <p style={{ margin: 0, fontSize: 15, color: 'var(--pw-texto)' }}>
-                        Caixa de entrada do <strong>Chefe de Setor</strong> · {EQUIPE.area} —{' '}
-                        {EQUIPE.areaNome}
+                        <strong>Líder da {EQUIPE.nome}</strong> · {EQUIPE.area}
+                        {EQUIPE.areaNome ? ` — ${EQUIPE.areaNome}` : ''}
                     </p>
                     <p className="pw-fraco" style={{ margin: '6px 0 0', fontSize: 13 }}>
-                        Todo registro concluído entra nessa caixa, com as considerações finais que
-                        você escrever aqui. É por elas que o Chefe de Setor e o Coordenador entendem a
-                        sua recomendação e sabem para onde direcionar.
+                        Todo registro concluído vai ao líder da equipe, com as considerações finais que
+                        você escrever aqui. Ele decide se a equipe volta ao ponto ou se o caso sobe ao
+                        Chefe de Setor.
                     </p>
                 </div>
 
@@ -323,7 +325,7 @@ function Conclusao({ registro }: { registro: Registro }) {
                             style={{ marginTop: 14 }}
                             value={consideracoes}
                             onChange={(e) => setConsideracoes(e.target.value)}
-                            placeholder="O que o Chefe de Setor precisa saber (opcional)"
+                            placeholder="O que o líder precisa saber (opcional)"
                         />
                     </>
                 )}

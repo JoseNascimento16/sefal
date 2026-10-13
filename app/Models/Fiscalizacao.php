@@ -44,6 +44,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $despachada_em
  * @property string|null $desfecho
  * @property string|null $consideracoes
+ * @property string|null $relato
+ * @property list<string>|null $ocorrencias
+ * @property Carbon|null $retorno_em
  * @property string $situacao
  * @property-read Collection<int, FiscalizacaoFoto> $fotos
  * @property-read DocumentoCampo|null $documento
@@ -54,7 +57,7 @@ use Illuminate\Support\Carbon;
     'logradouro', 'numero', 'bairro', 'ponto_de_referencia',
     'latitude', 'longitude', 'precisao_m', 'gps_em',
     'aberta_em', 'concluida_em', 'despachada_em', 'sincronizada_em',
-    'desfecho', 'consideracoes', 'situacao', 'assinatura', 'motivo_recusa_id',
+    'desfecho', 'consideracoes', 'relato', 'ocorrencias', 'retorno_em', 'situacao', 'assinatura', 'motivo_recusa_id',
     'decidida_por_id', 'decidida_em', 'decisao_detalhe',
 ])]
 class Fiscalizacao extends Model
@@ -124,6 +127,14 @@ class Fiscalizacao extends Model
     public const DESFECHOS_COM_DOCUMENTO = [self::NOTIFICACAO_EMITIDA, self::AUTO_LAVRADO];
 
     /**
+     * QUAL documento cada desfecho de {@see DESFECHOS_COM_DOCUMENTO} exige —
+     * `np` (Notificação Preliminar) ou `aa` (Auto de Apreensão).
+     *
+     * @var array<string, string>
+     */
+    public const DOCUMENTO_DO_DESFECHO = [self::NOTIFICACAO_EMITIDA => 'np', self::AUTO_LAVRADO => 'aa'];
+
+    /**
      * O que cada desfecho implica para a DEMANDA que originou a vistoria.
      *
      * É a ponte entre o que aconteceu na rua e o que o cidadão que denunciou vai
@@ -188,6 +199,8 @@ class Fiscalizacao extends Model
             'sincronizada_em' => 'datetime',
             'gps_em' => 'datetime',
             'decidida_em' => 'datetime',
+            'retorno_em' => 'date',
+            'ocorrencias' => 'array',
             'latitude' => 'float',
             'longitude' => 'float',
         ];

@@ -168,27 +168,27 @@ export type ItemApreendido = {
  * lado — dois documentos diferentes com o mesmo número é exatamente o que a
  * reserva por aparelho existe para impedir.
  *
- * ⚠️ Aqui é encenação: o contador vive na memória da aba e a faixa é fictícia.
+ * Os números vêm do SERVIDOR (`numeros` do `kit`): ele separa um pequeno
+ * estoque de cada tipo para o fiscal e só o dá por usado quando o documento
+ * chega preso a um registro. Lavrar sem estoque não é possível — a tela diz
+ * para atualizar o aplicativo com sinal.
  */
-const FAIXAS = {
-    np: { inicio: 194906, fim: 195000, usados: 0 },
-    aa: { inicio: 160052, fim: 160100, usados: 0 },
-};
+const ESTOQUE: Record<'np' | 'aa', string[]> = { np: [], aa: [] };
 
-export type Faixa = keyof typeof FAIXAS;
+export type Faixa = 'np' | 'aa';
 
-export const numeroReservado = (faixa: Faixa): string =>
-    String(FAIXAS[faixa].inicio + FAIXAS[faixa].usados);
+export function carregarNumeros(numeros: Partial<Record<Faixa, string[]>>): void {
+    ESTOQUE.np = [...(numeros.np ?? [])];
+    ESTOQUE.aa = [...(numeros.aa ?? [])];
+}
 
-export const consumirNumero = (faixa: Faixa): string => {
-    const numero = numeroReservado(faixa);
-    FAIXAS[faixa].usados += 1;
+/** O próximo número livre — `null` quando o estoque acabou. */
+export const numeroReservado = (faixa: Faixa): string | null => ESTOQUE[faixa][0] ?? null;
 
-    return numero;
-};
+/** Tira o número do estoque ao lavrar o documento. */
+export const consumirNumero = (faixa: Faixa): string | null => ESTOQUE[faixa].shift() ?? null;
 
-export const restamNaFaixa = (faixa: Faixa): number =>
-    FAIXAS[faixa].fim - FAIXAS[faixa].inicio + 1 - FAIXAS[faixa].usados;
+export const restamNaFaixa = (faixa: Faixa): number => ESTOQUE[faixa].length;
 
 export const nomeDoDocumento = (faixa: Faixa): string =>
     faixa === 'np' ? 'Notificação Preliminar' : 'Auto de Apreensão';

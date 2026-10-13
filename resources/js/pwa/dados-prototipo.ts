@@ -146,6 +146,32 @@ export type Registro = {
      * está aberto: a tela de conclusão ainda aceita considerações.
      */
     despachadoBr: string | null;
+    /** O identificador que o APARELHO deu ao registro — é o que torna o reenvio seguro. */
+    clientId: string | null;
+    /** Quando o registro foi aberto no ponto (ISO). */
+    abertaEm: string | null;
+    /** A precisão do GPS, em metros, quando houve GPS. */
+    precisaoM: number | null;
+    /** O documento lavrado, nos campos que o servidor guarda (chaves dos catálogos). */
+    documentoDados: DocumentoParaEnvio | null;
+    /** A frase da última recusa do servidor, quando o envio falhou. */
+    erroEnvio: string | null;
+};
+
+/** O documento (NP ou Auto) como o servidor o recebe. */
+export type DocumentoParaEnvio = {
+    tipo: 'np' | 'aa';
+    numero: string;
+    notificado: string | null;
+    documento_notificado: string | null;
+    prazo: string | null;
+    motivos: string[];
+    sancoes: string[];
+    itens: { quantidade: number; unidade: string; descricao: string }[];
+    guarda_prazo: string | null;
+    guarda_destinacao: string | null;
+    /** O resto do impresso, e a própria via, para a reimpressão. */
+    dados: Record<string, unknown>;
 };
 
 /* Quem está com o aparelho na mão sai do módulo de sessão: é a matrícula
@@ -284,7 +310,28 @@ const SEMENTES: Semente[] = [
 
 const centroDe = (id: string): Regiao => REGIOES.find((r) => r.id === id) ?? REGIOES[0];
 
-export const nomeRegiao = (id: string): string => centroDe(id).nome;
+/**
+ * O nome do lugar. As regiões do mapa de exemplo têm id próprio; nos registros
+ * e demandas reais o "id" já é o nome do bairro, e volta como veio.
+ */
+export const nomeRegiao = (id: string): string => REGIOES.find((r) => r.id === id)?.nome ?? id;
+
+/** O catálogo de bairros com coordenada, como o servidor entregou no `kit`. */
+export let BAIRROS: Regiao[] = [];
+
+export function carregarBairros(lista: Regiao[]): void {
+    BAIRROS = lista;
+}
+
+/** O bairro do catálogo mais perto do ponto — `null` sem catálogo carregado. */
+export const bairroMaisProximo = (lat: number, lng: number): Regiao | null =>
+    BAIRROS.reduce<Regiao | null>(
+        (perto, b) =>
+            perto === null || Math.hypot(lat - b.lat, lng - b.lng) < Math.hypot(lat - perto.lat, lng - perto.lng)
+                ? b
+                : perto,
+        null,
+    );
 
 const historicoDe = (s: Semente, indice: number): EventoHistorico[] => {
     const base: EventoHistorico[] = [
@@ -447,6 +494,11 @@ export const REGISTROS: Registro[] = SEMENTES_REGISTRO.map((s, i) => {
            que foi registrado. Deixá-los abertos faria a tela de conclusão
            oferecer despacho para uma fiscalização de três dias atrás. */
         despachadoBr: dataBr,
+        clientId: null,
+        abertaEm: null,
+        precisaoM: null,
+        documentoDados: null,
+        erroEnvio: null,
     };
 });
 
@@ -657,16 +709,12 @@ export const OPERACOES: Operacao[] = [
 ];
 
 
-/** Saudação pela hora do aparelho — o aplicativo abre falando com gente. */
-export const saudacao = (): string => {
-    const hora = new Date().getHours();
-
-    if (hora < 12) {
-        return 'Bom dia';
-    }
-
-    return hora < 18 ? 'Boa tarde' : 'Boa noite';
-};
+/**
+ * Saudação pela hora do aparelho — o aplicativo abre falando com gente. A regra
+ * das faixas tem UM dono (`lib/saudacao.ts`, o mesmo da Retaguarda): com a cópia
+ * antiga, cortando em `hora < 12`, quem entrava às 3h recebia "Bom dia".
+ */
+export { saudacaoAgora as saudacao } from '../lib/saudacao';
 
 /**
  * A data de hoje por extenso, com a primeira letra maiúscula.

@@ -1,29 +1,57 @@
 import { useState, type FormEvent } from 'react';
 
-import { classes } from '../componentes';
 import { Icone } from '../icones';
 
 /**
  * A porta do aplicativo de campo.
  *
- * No protótipo qualquer matrícula entra — não há servidor do outro lado para
- * conferir senha. Mas a matrícula NÃO é decorativa: é ela que decide quem
- * entrou e, com isso, a EQUIPE de quem entrou — e a equipe é o que define a
- * fila de demandas e o contorno da área no mapa. `fiscal`, o login da
- * demonstração, entra como César Amaral, encarregado da Equipe C1 · Área 5.
+ * Matrícula e senha são as MESMAS da Retaguarda — é a mesma conta. Quem confere
+ * é o servidor, e a recusa vem com a frase dele (senha errada, senha ainda não
+ * definida, conta inativa, conta fora de equipe): ninguém fica parado na porta
+ * sem saber por quê.
+ *
+ * A sessão fica lembrada no aparelho: o fiscal não digita senha a cada vez que
+ * o celular bloqueia. Quem sai é quem toca em "Encerrar plantão", no perfil.
  *
  * A outra coisa que esta tela decide é o tamanho do alvo de toque de quem
  * digita em pé, no sol, segurando o celular com uma mão só.
  */
-export function TelaEntrada({ aoEntrar }: { aoEntrar: (matricula: string) => void }) {
-    const [matricula, setMatricula] = useState('fiscal');
-    const [senha, setSenha] = useState('••••••••');
-    const [lembrar, setLembrar] = useState(true);
+export function TelaEntrada({
+    aviso,
+    aoEntrar,
+}: {
+    aviso: string | null;
+    aoEntrar: (login: string, senha: string) => Promise<string | null>;
+}) {
+    const [matricula, setMatricula] = useState('');
+    const [senha, setSenha] = useState('');
+    const [entrando, setEntrando] = useState(false);
+    const [erro, setErro] = useState<string | null>(null);
 
-    const enviar = (evento: FormEvent) => {
+    const enviar = async (evento: FormEvent) => {
         evento.preventDefault();
-        aoEntrar(matricula);
+
+        if (entrando) {
+            return;
+        }
+
+        if (!matricula.trim() || !senha) {
+            setErro('Informe a matrícula e a senha.');
+
+            return;
+        }
+
+        setEntrando(true);
+        setErro(null);
+        const recusa = await aoEntrar(matricula.trim(), senha);
+        setEntrando(false);
+
+        if (recusa) {
+            setErro(recusa);
+        }
     };
+
+    const mensagem = erro ?? aviso;
 
     return (
         <form className="pw-entrada-tela pw-com-faixa" onSubmit={enviar}>
@@ -49,19 +77,10 @@ export function TelaEntrada({ aoEntrar }: { aoEntrar: (matricula: string) => voi
                     className="pw-entrada"
                     value={matricula}
                     onChange={(e) => setMatricula(e.target.value)}
-                    placeholder="F-00000"
                     autoComplete="username"
+                    autoCapitalize="none"
                 />
             </label>
-
-            {/* A dica existe porque a matrícula muda o que o aplicativo mostra:
-                sem ela, quem abre a demonstração não descobriria que trocar de
-                matrícula troca a equipe — e a fila com ela. */}
-            <p className="pw-dica-entrada">
-                A matrícula decide a equipe: <strong>fiscal</strong> entra na Equipe C1 · Área 5 (Boca
-                do Rio). <strong>F-2801</strong> entra na Itinerante, <strong>F-2461</strong> na
-                Equipe B2.
-            </p>
 
             <label className="pw-campo">
                 <span>Senha</span>
@@ -74,17 +93,27 @@ export function TelaEntrada({ aoEntrar }: { aoEntrar: (matricula: string) => voi
                 />
             </label>
 
-            <button type="button" className="pw-lembrar" onClick={() => setLembrar((v) => !v)}>
-                <span className={classes('pw-caixa', lembrar && 'pw-caixa-marcada')}>
-                    {lembrar && <Icone nome="certo" tamanho={16} />}
-                </span>
-                Lembrar-me neste aparelho
+            {mensagem && (
+                <p className="pw-dica-entrada" role="alert">
+                    {mensagem}
+                </p>
+            )}
+
+            <button
+                type="submit"
+                className="pw-btn pw-btn-acao"
+                style={{ minHeight: 60, fontSize: 18 }}
+                disabled={entrando}
+                aria-busy={entrando}
+            >
+                {entrando ? 'Entrando…' : 'Entrar no plantão'}
+                <Icone nome={entrando ? 'atualizar' : 'seta'} tamanho={20} className={entrando ? 'pw-girando' : undefined} />
             </button>
 
-            <button type="submit" className="pw-btn pw-btn-acao" style={{ minHeight: 60, fontSize: 18 }}>
-                Entrar no plantão
-                <Icone nome="seta" tamanho={20} />
-            </button>
+            <p className="pw-dica-entrada">
+                Use a mesma matrícula e senha da Retaguarda. Primeiro acesso? Defina a senha pelo convite que chegou
+                no seu e-mail.
+            </p>
 
             <footer className="pw-rodape-entrada">
                 <img
@@ -95,8 +124,6 @@ export function TelaEntrada({ aoEntrar }: { aoEntrar: (matricula: string) => voi
                     height={75}
                 />
                 Prefeitura Municipal do Salvador · SEMOP
-                <br />
-                Aplicativo de campo — versão de demonstração
             </footer>
         </form>
     );
