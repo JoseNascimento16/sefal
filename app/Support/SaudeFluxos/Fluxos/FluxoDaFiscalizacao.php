@@ -87,7 +87,7 @@ final class FluxoDaFiscalizacao implements Fluxo
                     'descricao' => 'A demanda entra na fila do aplicativo dos fiscais da equipe.'],
                 ['id' => 'em-operacao', 'rotulo' => "Em operação\ndemandas anexadas", 'tipo' => 'etapa', 'setor' => 'Líder de Equipe', 'col' => 4, 'lin' => 6, 'situacao' => $a,
                     'tela' => 'Operações › Cadastro de Operação; Aplicativo › Operação',
-                    'descricao' => 'A demanda vai a campo com a operação: entra na fila dos fiscais da operação e aparece na tela da operação no aplicativo.'],
+                    'descricao' => 'A demanda vai a campo com a operação: entra na fila dos fiscais da operação e aparece na tela da operação no aplicativo. Na tela da operação, o fiscal também registra a avulsa ligada a ela.'],
 
                 // ── Aplicativo do fiscal
                 ['id' => 'app-entrada', 'rotulo' => "APP · entrar no plantão\nkit do turno", 'tipo' => 'entrada', 'setor' => 'APP do fiscal', 'col' => 1, 'lin' => 7, 'situacao' => $a,
@@ -182,6 +182,7 @@ final class FluxoDaFiscalizacao implements Fluxo
                 ['de' => 'app-entrada', 'para' => 'app-fila'],
                 ['de' => 'app-fila', 'para' => 'app-vistoria', 'rotulo' => 'Fiscalizar'],
                 ['de' => 'entrada-ronda', 'para' => 'app-vistoria', 'rotulo' => 'avulsa'],
+                ['de' => 'em-operacao', 'para' => 'app-vistoria', 'rotulo' => 'avulsa na operação'],
                 ['de' => 'app-vistoria', 'para' => 'app-desfecho'],
                 ['de' => 'app-desfecho', 'para' => 'app-concluir', 'rotulo' => 'sem documento'],
                 ['de' => 'app-desfecho', 'para' => 'app-documento', 'rotulo' => 'Notificação ou Auto'],
@@ -223,7 +224,7 @@ final class FluxoDaFiscalizacao implements Fluxo
                 ]],
                 ['setor' => 'Aplicativo do fiscal', 'titulo' => 'A vistoria no ponto', 'nos' => ['app-entrada', 'app-fila', 'entrada-ronda', 'app-vistoria', 'app-desfecho', 'app-documento', 'app-concluir'], 'itens' => [
                     'O fiscal entra com a conta da Retaguarda e recebe o **kit do turno**: a fila da equipe e os **números reservados** de Notificação e de Auto.',
-                    'Na vistoria, a coordenada é a **medida pelo GPS** (sem GPS, o registro diz o motivo), com fotos, ocorrências e relato. A **ronda** registra o que o fiscal encontra sem demanda.',
+                    'Na vistoria, a coordenada é a **medida pelo GPS** (sem GPS, o registro diz o motivo), com fotos, ocorrências e relato. A **ronda** registra o que o fiscal encontra sem demanda; feita na tela de uma operação, a avulsa fica ligada a ela.',
                     'O **desfecho** é de uma lista fechada; Notificação Preliminar e Auto de Apreensão exigem o documento, com a **via impressa** na térmica.',
                     'Concluído, o registro **sobe ao servidor** — ou fica no aparelho, com as fotos, até o sinal voltar.',
                 ]],
