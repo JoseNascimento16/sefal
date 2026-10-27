@@ -84,6 +84,10 @@ class HandleInertiaRequests extends Middleware
             // confirmação no meio da tela (dono, 25/09/2026). Vale uma vez (flash).
             'demandaRegistrada' => fn () => $request->hasSession() ? $request->session()->get('demanda_registrada') : null,
             'painel' => $this->painel($request),
+            // O ambiente de DEMONSTRAÇÃO (Render) roda com cadastro de exemplo; só
+            // ali as telas dizem que os registros são exemplos. Em homologação e
+            // em produção o aviso seria falso, então ele não aparece.
+            'demonstracao' => app()->environment('demonstracao'),
         ];
     }
 

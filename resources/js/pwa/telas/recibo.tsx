@@ -50,7 +50,7 @@ export function TelaRecibo({ id }: { id: string | null }) {
                     <Vazio
                         icone="🧾"
                         titulo="Registro não encontrado"
-                        texto="Ele pode ter sido aberto noutra sessão do protótipo."
+                        texto="Ele pode ter sido feito em outro aparelho. Volte a Meus registros e abra por lá."
                     />
                 </div>
             </div>

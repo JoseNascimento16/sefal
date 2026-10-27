@@ -1,11 +1,10 @@
 /* ============================================================================
-   PROTÓTIPO — os documentos oficiais de campo, como o cliente os imprime hoje
+   Os documentos oficiais de campo, como o cliente os imprime hoje
    ----------------------------------------------------------------------------
    Este módulo NÃO é invenção nossa: cada lista aqui foi transcrita dos blocos
    de papel que o SEFAL usa em rua — a **Notificação Preliminar** (Cód. 26...)
    e o **Auto de Apreensão** —, mais o "Manual para o NTI" que o cliente
-   entregou junto. Quando o aplicativo sair do protótipo, os textos continuam
-   valendo: é o formulário legal, não um rascunho de tela.
+   entregou junto. É o formulário legal, não um rascunho de tela.
 
    ⚠️ Fidelidade ao papel: o bloco de motivos da Notificação tem 20 caixas, das
    quais a última é "Outros" (campo livre) e a primeira pede complemento ("no

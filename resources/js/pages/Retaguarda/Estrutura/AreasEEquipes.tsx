@@ -18,7 +18,7 @@ import { BotaoAcao } from '@/components/retaguarda/acao';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { SeloDemonstracao } from '@/components/retaguarda/selo-demonstracao';
 import type { Area, Recorte } from '@/dados-prototipo/administrativo';
 import { RECORTES } from '@/dados-prototipo/administrativo';
 import { useAcoes } from '@/hooks/use-acoes';
@@ -35,7 +35,7 @@ import {
 } from '@/routes/retaguarda/areas-e-equipes';
 
 /**
- * Áreas e Equipes — PROTÓTIPO da estrutura permanente de fiscalização.
+ * Áreas e Equipes — a estrutura permanente de fiscalização.
  *
  * "A operação é evento; a equipe é organização." Esta é a divisão com que a
  * SEMOP cobre a cidade — Área › Equipe › encarregado › fiscais › bloco de
@@ -314,14 +314,14 @@ export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
               * com trâmite. O que continua de mentira são os DADOS, e é disso que
               * quem avalia precisa ser avisado antes de tirar conclusão deles.
               */}
-            <SeloPrototipo>
+            <SeloDemonstracao>
                 A estrutura vem transcrita do documento{' '}
                 <strong>"Áreas das equipes — 17/04/2026"</strong>: as áreas, as
                 equipes, os encarregados e os blocos de bairros são os{' '}
                 <strong>REAIS</strong>. Só a lista de fiscais de cada equipe é de
                 exemplo. O que você alterar{' '}
                 <strong>é gravado de verdade</strong>.
-            </SeloPrototipo>
+            </SeloDemonstracao>
 
             <div className="card-premium">
                 <div className="abas" role="tablist" aria-label="Áreas e Equipes">

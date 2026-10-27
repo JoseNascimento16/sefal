@@ -54,8 +54,9 @@ triagem seria deixá-lo escolher o próprio trabalho, e é exatamente por isso q
 concede as telas de Denúncias.
 
 A régua é uma lista só (`SITUACOES_NA_MAO_DA_EQUIPE`, em
-[`dados-demandas.ts`](../../../resources/js/pwa/dados-demandas.ts)), e o dado do protótipo **guarda**
-as denúncias de triagem de propósito: é o que permite a fila provar o recorte em vez de só afirmá-lo.
+[`dados-demandas.ts`](../../../resources/js/pwa/dados-demandas.ts)). O servidor já só entrega ao
+aplicativo as situações de campo (`CampoDoFiscal::fila`); a lista do aplicativo é a segunda
+conferência, não a única.
 
 ### RN-03 — A fila é dividida pelo ATO DEVIDO, não numa lista corrida
 
@@ -132,13 +133,11 @@ envia** (a recusa diz isso e manda atualizar com sinal). A numeração começa *
 usados (Notificação 194906, Auto de Apreensão 160052, ou depois do maior já lavrado). Sem número no
 estoque, o aplicativo não lavra e diz por quê.
 
-### RN-09 — Datas em `dd/mm/aaaa`, e no dado tudo é RELATIVO
+### RN-09 — Datas em `dd/mm/aaaa`, vindas do servidor
 
-Nenhuma data é escrita à mão no dado do protótipo: o recebimento é `agora − N horas`, o prazo do canal
-é `agora + N dias` e cada passo do trâmite é `recebimento + N horas` — a **mesma aritmética** do outro
-lado. É isso que faz as duas telas mostrarem a mesma data em qualquer dia que a demonstração
-aconteça. Data fixa envelhece: uma semana depois a fila apareceria inteira vencida, e o dono leria
-isso como comportamento do sistema.
+Recebimento, prazo e cada passo do trâmite vêm do servidor, as mesmas datas que a Retaguarda mostra,
+sempre em `dd/mm/aaaa`. A hora que o aparelho registra sai em UTC e o servidor a grava no fuso de
+Salvador (RN-16).
 
 ### RN-10 — Fonte única: a fila VEM do módulo de Denúncias
 
@@ -185,7 +184,7 @@ importante da entrega**: é por elas que o Chefe de Setor e o Coordenador entend
 quem esteve no ponto e sabem para onde direcionar. Por isso elas **viajam com o registro**, e a tela
 de detalhe do registro no aplicativo as mostra em leitura depois do despacho.
 
-**Contrato com o outro lado** (o de-para é mecânico, e sem servidor no meio nada acusa renomeação):
+**Contrato com o outro lado** (o servidor recusa chave fora do catálogo, e um teste compara as listas):
 `consideracoes` = texto livre; `recomendacoes` = as **chaves** dos atalhos escolhidos, como já ocorre
 com `ocorrencias` e com os `motivos` do impresso. Chave e não texto porque recomendação o outro lado
 precisa **somar** ("quantos registros pediram operação na área?"), e texto livre não se soma. Do lado
@@ -354,86 +353,43 @@ denúncia anexada, a tela diz que a ronda segue pelos bairros com registro avuls
 primeiro bairro, que era o que o cartão fazia antes. Sem operação aberta, a tela inicial diz isso em vez
 de deixar a seção vazia.
 
-## Como demonstrar (protótipo)
+## Como demonstrar
 
-Entrada em `/app`. Não há senha a conferir: a **matrícula** decide a identidade e a equipe.
+O aplicativo abre em `/app` e entra com a conta da Retaguarda de um fiscal que esteja numa equipe
+(RN-15). Na demonstração (Render), a conta é `fiscal1`, da equipe A1; o líder dela é `lider1`, que lê
+na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no comando
+`sefal:preparar-demonstracao`.
 
-| Matrícula | Quem entra | Fila |
-|---|---|---|
-| `fiscal` (ou `F-2500`) | César Amaral, encarregado | **Equipe C1 · Área 5 — Boca do Rio** |
-| `F-2504` … `F-2571` | os fiscais da C1 | a mesma da C1 |
-| `F-2000` (ou `F-2041`) | José Roberto / Adriana, Equipe C2 | **Área 1 — Centro** |
-| `F-2900` | Alcione Brandão, Equipe N1 | **Noturna** |
-| qualquer outra | fiscal genérico | Equipe C1 · Área 5 |
-
-**As denúncias que aparecem nos dois lados**, por equipe:
-
-| Equipe | Denúncia | Situação | O que ela demonstra no aplicativo |
-|---|---|---|---|
-| **C1 · Área 5** | **DEN-0011** | Em operação | a vistoriar, chegando por **operação** (Operação Verão — Orla) |
-| **C1 · Área 5** | **DEN-0029** | Aguardando regularização | **prazo correndo** (NP 194903, 05 dias) → oferece **Registrar retorno** |
-| **C1 · Área 5** | **DEN-0030** | Retorno vencido | retorno frustrado (NP 194902, notificado **recusou assinar**) → subiu ao Chefe de Setor |
-| **C2 · Área 1** | **DEN-0010** | Direcionada à equipe | vistoria dirigida avulsa, prazo vencendo |
-| **C2 · Área 1** | **DEN-0012** | Em campo | **vistoria aberta**: relato, fotos e coordenada, sem desfecho → "Continuar" |
-| **C2 · Área 1** | **DEN-0013** | Concluída | **Auto de Apreensão** (160051), bens no SEGUB |
-| **C2 · Área 1** | **DEN-0024** | Em operação | anexada à Rotina Centro |
-| **C2 · Área 1** | **DEN-0033** | Concluída | o caminho comum: **regularizado no local**, sem documento |
-| **N1 · Noturna** | **DEN-0025**, **DEN-0038** | Direcionada / Concluída | a **troca de equipe** — trabalho de outra área que caiu na Noturna |
-
-Também estão na amostra, e são de outras equipes: DEN-0027 e DEN-0037 (B2), DEN-0028 e DEN-0036 (I1),
-DEN-0031 e DEN-0032 (A2), DEN-0034 (A1), DEN-0035 (B1, com a segunda notificação em prazo).
-
-**Roteiro do despacho:** no mapa, toque em **Fiscalizar**, escolha "Regularizado no local" e
-**Despachar registro**. Na **Conclusão do registro**, veja o destino (Chefe de Setor · Área 5), marque
-um ou dois atalhos de recomendação, escreva uma linha e toque em **Concluir registro** — o registro
-aparece em **Meus registros** e, reaberto, mostra as considerações em leitura. Repita escolhendo
-"Notificação Preliminar emitida": a conclusão fica **barrada**, com o motivo à vista e o botão que
-abre a Notificação; lavre-a e o botão libera.
-
-**Roteiro curto:** entre como `fiscal`; a tela inicial abre com a chamada da fila. Em **Minhas
-demandas**, abra **DEN-0011** e registre um desfecho (repare que a lista é fechada, e que
-"Notificação Preliminar emitida" avisa que o documento vem em seguida). Volte e abra **DEN-0029**: o
-documento com prazo está à vista, e o botão é **Registrar retorno** — escolha "Regularizado após
-notificação" ou "Retorno com a situação mantida". Abra **DEN-0030** para ver o caso que já subiu ao
-Chefe de Setor (sem ato para a equipe). Depois entre como `F-2000`: a fila é outra, e o que era da C1 não
-aparece — o rodapé da lista diz quantas denúncias estão com equipes diferentes.
+**Roteiro curto:**
+1. Entre como `fiscal1`. A tela inicial mostra a fila da equipe, os retornos vencidos e as operações
+   abertas.
+2. Em **Minhas demandas**, abra uma demanda e toque em **Fiscalizar**. A coordenada vem do GPS do
+   aparelho; sem ele, a tela diz o motivo e o registro segue com a marca (RN-24). Escolha o desfecho
+   e despache. Com "Notificação Preliminar emitida", o documento usa um número reservado ao fiscal
+   (RN-08) e a via sai pela impressão do aparelho (RN-21).
+3. Na **Conclusão do registro**, escreva as considerações e conclua. O registro sobe ao servidor, ou
+   fica no aparelho até o sinal voltar (RN-16).
+4. Na Retaguarda, entre como `lider1` e abra a Fiscalização em **Fiscalização › Fiscalizações**:
+   relato, ocorrências, fotos, coordenada (ou a marca de "sem GPS") e retorno combinado estão lá.
+5. De volta ao aplicativo, toque numa operação da tela inicial para ver as denúncias anexadas a ela
+   (RN-26).
 
 ---
 
-## Pendências que isto abre
+## Pendências
 
-- **Sincronização de verdade.** Não há endpoint, banco offline (IndexedDB), service worker nem fila de
-  envio: a tela de sincronização é encenação. Enquanto isso não existir, a fila e a estrutura são
-  segunda cópia do que a Retaguarda tem (RN-10).
-- **A situação da denúncia não muda no aplicativo.** O que o fiscal registra vira registro do turno
-  (com selo na denúncia: "Neste aparelho: <desfecho>"), mas a situação semeada continua a mesma — sem
-  servidor, mudá-la só no aparelho criaria uma verdade que o outro lado não conhece.
-- **A Caixa de Entrada saiu da fila do aplicativo.** A amostra anterior espelhava
-  `config/prototipo_caixa_entrada.php` (o que chega em **papel**: nova licença, ofício, protocolo
-  `CXE-NNNN`). A fila agora é a das **denúncias das ouvidorias**. Falta a decisão do dono: a Caixa
-  também dirige trabalho ao fiscal? Se sim, ela volta como **segunda fonte**, com o vocabulário dela.
-- **Nenhuma denúncia da Área 5 nas formas "Direcionada à equipe", "Em campo" e "Concluída".** A
-  Retaguarda não semeou esses casos para a C1, e a amostra do aplicativo não os inventa (protocolo que
-  não existe do outro lado quebra a demonstração). Hoje o roteiro cobre essas três formas entrando
-  como fiscal da **C2**. Se o dono quiser as seis formas na fila do aparelho da demonstração, o
-  caminho é semear os casos **na Retaguarda** e espelhá-los aqui.
+- **Ficha do SGCI na demanda.** Não há integração com o SGCI; a ficha do permissionário não aparece.
+- **Abrir sem sinal.** Sem versão instalável (decisão do dono, 13/10/2026), o aplicativo precisa de
+  sinal para abrir. O que o fiscal fizer fica no aparelho e sobe quando o sinal volta.
+- **Impressão e ditado no aparelho.** A via sai pelo diálogo de impressão do Android e chega à
+  térmica pelo serviço de impressão pareado; o ditado precisa de sinal e da permissão do microfone.
+  Os dois foram verificados só no navegador, sem aparelho real.
 - **Redação dos impressos duplicada** (`dados-documentos.ts` ↔ `config/prototipo_documentos_campo.php`).
   Conferidas em 03/09/2026: motivos, penalidades, prazos, fundamentação, SEGUB e destinações estão
-  iguais. A que fica, quando os protótipos se encontrarem, é a do servidor.
-- **Numeração dos blocos** é fictícia (faixa na memória da aba). No sistema ela sai de estoque
-  reservado por aparelho, com reconciliação quando a resposta se perde.
-- **Quem é o Chefe de Setor, com nome?** A tela do despacho nomeia o destino pela **área** ("Chefe de
-  Setor · Área 5 — Boca do Rio") porque a estrutura que o aplicativo conhece
-  ([`dados-equipes.ts`](../../../resources/js/pwa/dados-equipes.ts)) traz o **encarregado da equipe**,
-  não o Chefe de Setor da área — e inventar um nome ali seria pior do que não mostrar nenhum. Falta a
-  parametrização dizer quem ocupa o papel em cada área.
-- **As considerações no histórico do trâmite** dependem do outro lado: aqui elas existem no registro,
-  com os nomes de campo combinados (RN-12); quem as escreve no passo do trâmite da denúncia é o módulo
-  de Denúncias da Retaguarda.
+  iguais. A que fica é a do servidor.
 - **A lista de atalhos de recomendação é proposta**, exceto "Encaminhar ao SEAB", que veio do dono.
-  Os outros seis saíram do vocabulário que o protótipo já usa (SEGUB, SGCI, guarda municipal, operação
-  na área, retorno da equipe) e precisam de confirmação — inclusive se falta algum destino que o
-  fiscal recomenda com frequência.
+  Os outros seis (SEGUB, SGCI, guarda municipal, operação na área, retorno da equipe…) precisam de
+  confirmação — inclusive se falta algum destino que o fiscal recomenda com frequência.
 
 ---
 
@@ -441,6 +397,7 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 27/10/2026 | José Nascimento | Aplicativo do Fiscal e Retaguarda (Caixa, Denúncias, Fiscalizações, Operações, Áreas e Equipes, Ambulantes, mapas) | Sobras do protótipo removidas: a estrutura e os fiscais inventados saem do aplicativo; o selo "PROTÓTIPO · DADOS FICTÍCIOS" vira "DEMONSTRAÇÃO · DADOS DE EXEMPLO" e só aparece no ambiente de demonstração; Ambulantes diz que a carga do SGCI ainda não existe; textos que citavam o protótipo reescritos; seções "Como demonstrar" e "Pendências" deste doc atualizadas. | Pedido do dono: o aviso de dados fictícios era falso em homologação, onde os registros são os do banco. |
 | 14/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, mapa) e Retaguarda (vistoria, trâmite) | Coordenada sempre medida, com recaptura e alerta de margem; sem GPS, o registro vai sem coordenada e com o motivo, mostrado na Retaguarda (RN-24). Endereço do avulso escrito pelo fiscal (RN-25). Operação com tela própria e as denúncias anexadas (RN-26). | O aplicativo mandava o centro do bairro e uma rua fixa do protótipo como se fossem dados medidos. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (via, registro, mapa) | Impressão real da via na térmica 80 mm pelo mesmo caminho do CODECON (RN-21); ditado do relato pelo reconhecimento de voz (RN-22); contorno da área vindo do servidor (RN-23). A porta do aplicativo passa a dizer o motivo da recusa da conta. | Pedido do dono. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (perfil, envio) | Encerrar plantão avisa o que ficou só no aparelho (RN-20); ocorrências validadas pelo catálogo do servidor e mostradas ao líder na Retaguarda. | Aparelho compartilhado: sair em silêncio deixava registro parado sem o fiscal saber. |

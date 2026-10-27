@@ -223,11 +223,11 @@ export function TelaVia({ id }: { id: string | null }) {
 /**
  * A via de um documento lavrado FORA desta sessão.
  *
- * Os registros semeados no protótipo já vêm com número de documento, mas sem o
- * texto — porque nunca passaram pelo formulário. Em vez de mostrar uma tela
- * vazia (e deixar o dono achando que a impressão está quebrada), remontamos o
- * mínimo verificável a partir do próprio registro, e a tela avisa que foi
- * remontado.
+ * Um registro que veio do servidor pode ter número de documento sem a via
+ * guardada — lavrado antes de a via passar a ser gravada, ou em outro
+ * aparelho. Em vez de mostrar uma tela vazia (e parecer que a impressão está
+ * quebrada), remontamos o mínimo verificável a partir do próprio registro, e
+ * a tela avisa que foi remontado.
  */
 const viaReconstituida = (registro: Registro): ViaImpressa => {
     const apreensao = registro.documentoTipo === 'aa';

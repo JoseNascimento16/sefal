@@ -22,9 +22,9 @@
 > pessoa registra, encaminha ou devolve vive na **sessão** dela
 > ([`App\Support\Prototipo\CaixaDeEntradaFicticia`](../../../app/Support/Prototipo/CaixaDeEntradaFicticia.php)).
 >
-> A tela **diz isso em cima**, com o selo "PROTÓTIPO · DADOS FICTÍCIOS": protótipo que se disfarça
-> de sistema pronto vira decisão tomada por engano — alguém vê a grade cheia, conclui que o módulo
-> está no ar e planeja em cima disso.
+> **Selo (27/10/2026):** só no ambiente de demonstração (Render) a tela diz em cima, com o selo
+> "DEMONSTRAÇÃO · DADOS DE EXEMPLO", que os registros são exemplos. Em homologação e em produção os
+> registros são os do banco e o selo não aparece.
 >
 > **Origem:** reunião com o cliente de 02/09/2026 (`docs/cenario-2026-09-02-reuniao-cliente.md`,
 > na branch `ferramental`). Não há HU escrita: a linha em `config/acompanhamento_requisitos.php`

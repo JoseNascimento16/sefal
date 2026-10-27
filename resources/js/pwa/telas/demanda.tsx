@@ -464,8 +464,7 @@ function FichaDoCadastro({ ficha }: { ficha: FichaSgci }) {
                 </dl>
 
                 <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 12.5 }}>
-                    Somente leitura — o cadastro se corrige no SGCI, não em campo. No protótipo, ficha
-                    fictícia: não há integração com o SGCI.
+                    Somente leitura — o cadastro se corrige no SGCI, não em campo.
                 </p>
             </div>
         </>
