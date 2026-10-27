@@ -18,6 +18,15 @@
         </include>
     </source>
     <php>
+        <!--
+            Gerar XLSX consome memória: o PhpSpreadsheet monta a planilha inteira
+            antes de escrever, e a suíte gera vários relatórios seguidos. Com o
+            padrão do PHP (128M) ela morre com "allowed memory size exhausted" no
+            meio do ZipStream — erro que parece defeito do exportador e é só
+            limite de ambiente. Fixado aqui para valer igual na máquina de todo
+            mundo e no CI.
+        -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

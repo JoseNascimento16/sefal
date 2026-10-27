@@ -107,47 +107,63 @@ return [
         ],
 
         /*
-         * CAIXA DE ENTRADA — tudo o que CHEGA de fora, num lugar só (ordem do
-         * dono, 10/09/2026).
+         * CAIXA DE ENTRADA — tudo o que CHEGA de fora, uma caixa por canal (ordem
+         * do dono, 24/09/2026).
          *
-         * Antes a demanda em papel morava na Fiscalização e as ouvidorias tinham
-         * seção própria: quem tria tinha de procurar em dois cantos do menu o
-         * mesmo tipo de trabalho — coisa que entrou e espera decisão. "Geral" é o
-         * que chega ao balcão (ofício, nova licença); a pasta Denúncias são os
-         * canais das ouvidorias.
+         * Eram "Geral" (o que o chefe digitava) e a pasta "Denúncias" (o que os
+         * canais entregavam): dois cantos do menu para o mesmo trabalho, coisa
+         * que entrou e espera decisão. Agora são as QUATRO frentes — e-Salvador
+         * (denúncias e licenças), Fala Salvador, e-Protocolo (atendimento
+         * presencial na sede) e Avulsas —, cada uma com o mesmo fluxo: o chefe
+         * encaminha à equipe, o líder direciona aos fiscais, o retorno sobe ao
+         * líder e ao chefe, e o chefe responde ao canal.
+         *
+         * As quatro declaram o MESMO slug (`caixa-de-entrada`, o primeiro trecho
+         * do caminho): a permissão é UMA, e aparece no Modo Gerente com o nome da
+         * seção. O líder entra — é na caixa que ele recebe o que foi encaminhado
+         * e registra o Fala Salvador. O fiscal não: a demanda chega a ele pelo
+         * aplicativo, já dirigida.
          */
         [
             'rotulo' => 'Caixa de Entrada',
             'vazio' => 'O que chega de fora aparece aqui quando você tiver acesso a essas telas.',
             'itens' => [
                 [
-                    'rotulo' => 'Geral',
-                    'rota' => 'retaguarda.caixa-de-entrada.index',
+                    'rotulo' => 'Caixa de Entrada',
                     'icone' => 'caixa',
-                    'slug' => 'caixa-de-entrada',
                     'curto' => 'ENTRADA',
-                    'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
-                ],
-                [
-                    'rotulo' => 'Denúncias',
-                    'icone' => 'denuncias',
-                    'curto' => 'DENÚNCIA',
                     'filhos' => [
                         [
                             'rotulo' => 'e-Salvador',
                             'rota' => 'retaguarda.denuncias.e-salvador.index',
-                            'icone' => 'denuncias',
-                            'slug' => 'denuncias',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
                             'curto' => 'E-SALV',
-                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                         ],
                         [
-                            'rotulo' => 'Salvador Digital',
-                            'rota' => 'retaguarda.denuncias.salvador-digital.index',
-                            'icone' => 'denuncias',
-                            'slug' => 'denuncias',
+                            'rotulo' => 'Fala Salvador',
+                            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
                             'curto' => 'FALA',
-                            'setores' => ['administrador', 'coordenador', 'chefe-de-setor'],
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
+                        ],
+                        [
+                            'rotulo' => 'e-Protocolo',
+                            'rota' => 'retaguarda.denuncias.e-protocolo.index',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
+                            'curto' => 'E-PROT',
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
+                        ],
+                        [
+                            'rotulo' => 'Avulsas',
+                            'rota' => 'retaguarda.denuncias.avulsas.index',
+                            'icone' => 'caixa',
+                            'slug' => 'caixa-de-entrada',
+                            'curto' => 'AVULSA',
+                            'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                         ],
                     ],
                 ],
@@ -163,45 +179,13 @@ return [
                     'contador' => 'fiscalizacoes-a-decidir',
                     'setores' => [
                         'administrador',
-                        'coordenador',
                         'chefe-de-setor',
+                        'lider-de-equipe',
                         'fiscal' => ['apenas_leitura' => true],
                     ],
                 ],
             ],
         ],
-
-        /*
-         * Denúncias — o que as ouvidorias da Prefeitura entregam por INTEGRAÇÃO.
-         *
-         * Vem ANTES de Fiscalização porque é o começo da cadeia: a denúncia chega
-         * de fora, é triada pelo coordenador, encaminhada à área e direcionada
-         * pelo Chefe de Setor — e só então vira trabalho de rua. O menu desenha a ordem
-         * do trabalho.
-         *
-         * Seção PRÓPRIA, e não itens dentro de Fiscalização, porque estas telas
-         * não são trabalho de campo nem cadastro: são o ciclo ADMINISTRATIVO que
-         * antecede o campo, com dois papéis decidindo em sequência. E são seção
-         * separada da Caixa de Entrada de propósito — lá o coordenador DIGITA
-         * o papel que chegou ao balcão; aqui ninguém digita nada, a denúncia
-         * chega sozinha pela integração.
-         *
-         * ── As duas declaram o MESMO slug, e isso é deliberado ───────────────
-         *
-         * Elas moram sob o mesmo primeiro trecho do caminho
-         * (`/retaguarda/denuncias/…`), que é de onde as guardas deduzem a tela: a
-         * permissão é UMA, para o módulo, e aparece no Modo Gerente com o nome da
-         * seção. Separar a permissão do e-Salvador da do Salvador Digital seria uma
-         * decisão que ninguém precisa tomar — quem cuida de denúncia cuida das
-         * duas origens.
-         *
-         * Concessão inicial: administrador, coordenador e Chefe de Setor, que são
-         * justamente os papéis do fluxo (o coordenador tria; o Chefe de Setor
-         * direciona). O FISCAL
-         * não entra — deixá-lo aqui permitiria escolher o próprio trabalho e
-         * arquivar o que não quisesse atender; a denúncia chega a ele pelo
-         * aplicativo, já dirigida.
-         */
 
         /*
          * Fiscalização — o trabalho em si.
@@ -247,24 +231,6 @@ return [
                  */
 
                 /*
-                 * Caixa de Entrada do Administrativo — PROTÓTIPO (reunião com o
-                 * cliente, 02/09/2026).
-                 *
-                 * Vem ANTES de "Fiscalizações" porque é o começo da cadeia: a
-                 * demanda de fora (e-Salvador, Salvador Digital, pedido de nova
-                 * licença, ofício) entra por aqui, é triada e só então vira
-                 * trabalho dirigido de campo. O menu desenha a ordem do trabalho.
-                 *
-                 * Concessão inicial: coordenador, administrador e Chefe de Setor. O
-                 * COORDENADOR é o dono do trabalho — registrar o que chega em
-                 * papel é a função dele (decisão do dono, 02/09/2026); o Chefe de
-                 * Setor acompanha o que foi encaminhado. O FISCAL não entra — triar o que
-                 * chega, encaminhar e devolver com justificativa é ato
-                 * de coordenação, e a demanda encaminhada chega a ele pelo
-                 * aplicativo, já dirigida. Dar-lhe a caixa permitiria escolher o
-                 * próprio trabalho e arquivar o que não quisesse atender.
-                 */
-                /*
                  * Fiscalizações — TUDO o que a equipe concluiu em rua, numa tela
                  * só (PROTÓTIPO, decisão do dono 09/09/2026).
                  *
@@ -283,9 +249,9 @@ return [
                  * trabalho de rua — e volta para cá. O menu desenha a ordem do
                  * trabalho.
                  *
-                 * Concessão inicial: Chefe de Setor (a fila é dele), Coordenador
-                 * (acompanha o que aconteceu com o que encaminhou, SEM decidir — a
-                 * recusa mora no controller) e administrador.
+                 * Concessão inicial: líder de equipe (a fila da equipe é dele),
+                 * Chefe de Setor (lê tudo e cobre a ausência do líder) e
+                 * administrador.
                  *
                  * ⚠️ O FISCAL entra, em apenas leitura, e isto é decisão do dono
                  * (09/09/2026) COM uma ressalva registrada: **o fiscal é usuário do
@@ -313,6 +279,8 @@ return [
                         'chefe-de-setor',
                         // Saber onde a cidade está agora é do trabalho de rua.
                         'fiscal' => ['apenas_leitura' => true],
+                        // O líder vê o mapa, recortado à área dele (dono, 25/09/2026).
+                        'lider-de-equipe' => ['apenas_leitura' => true],
                     ],
                 ],
                 [
@@ -323,7 +291,52 @@ return [
                     'curto' => 'CALOR',
                     // Concentração histórica serve para PLANEJAR: é leitura de
                     // gestão, não de quem está na calçada agora.
-                    'setores' => ['administrador', 'chefe-de-setor'],
+                    'setores' => [
+                        'administrador',
+                        'chefe-de-setor',
+                        // O líder vê o mapa, recortado à área dele (dono, 25/09/2026).
+                        'lider-de-equipe' => ['apenas_leitura' => true],
+                    ],
+                ],
+                /*
+                 * Levantamentos — o censo de ambulantes por rua que o aplicativo
+                 * do fiscal grava (dono, 13/10/2026). CONSULTA: quem levanta é o
+                 * fiscal, na rua; daqui se lê e se exporta. O líder vê só os
+                 * levantamentos de que as equipes dele participaram.
+                 */
+                [
+                    'rotulo' => 'Levantamentos',
+                    'rota' => 'retaguarda.levantamentos.index',
+                    'icone' => 'levantamentos',
+                    'slug' => 'levantamentos',
+                    'curto' => 'CENSO',
+                    'setores' => [
+                        'administrador',
+                        'chefe-de-setor' => ['apenas_leitura' => true],
+                        'lider-de-equipe' => ['apenas_leitura' => true],
+                    ],
+                ],
+            ],
+        ],
+
+        /*
+         * OPERAÇÕES — menu pai próprio, entre os mapas e o Sistema (dono,
+         * 25/09/2026). O slug continua `operacoes`: mudar de lugar no menu não
+         * mexe na permissão.
+         */
+        [
+            'rotulo' => 'Operações',
+            'itens' => [
+                [
+                    'rotulo' => 'Cadastro de Operação',
+                    'rota' => 'retaguarda.operacoes.index',
+                    'icone' => 'operacoes',
+                    'slug' => 'operacoes',
+                    'curto' => 'OPERAÇÃO',
+                    // O líder monta a operação da equipe dele; o Chefe de
+                    // Setor, de qualquer uma. O fiscal não entra: quem
+                    // executa não desenha o plano.
+                    'setores' => ['administrador', 'chefe-de-setor', 'lider-de-equipe'],
                 ],
             ],
         ],
@@ -448,6 +461,9 @@ return [
                     'icone' => 'perfil',
                     'curto' => 'PERFIL',
                     'setores' => [],
+                    // O atalho mora no menu da CONTA, no canto superior direito
+                    // (dono, 25/09/2026), como no Codecon.
+                    'oculto' => true,
                 ],
 
                 [
@@ -474,6 +490,8 @@ return [
                                 'administrador',
                                 'chefe-de-setor' => ['apenas_leitura' => true],
                                 'fiscal' => ['apenas_leitura' => true],
+                                // O líder consulta o prontuário que o mapa abre (dono, 25/09/2026).
+                                'lider-de-equipe' => ['apenas_leitura' => true],
                             ],
                         ],
                         [
@@ -483,18 +501,101 @@ return [
                             'slug' => 'areas-e-equipes',
                             'curto' => 'ÁREAS',
                             'setores' => ['administrador', 'chefe-de-setor'],
+                            // Fora do menu desde 25/09/2026: a área e os bairros dela
+                            // passaram ao cadastro de Áreas, e quem está em cada equipe,
+                            // ao de Equipes. A tela segue pelo endereço.
+                            'oculto' => true,
                         ],
                         [
-                            'rotulo' => 'Cadastro de Operação',
-                            'rota' => 'retaguarda.operacoes.index',
-                            'icone' => 'operacoes',
-                            'slug' => 'operacoes',
-                            'curto' => 'OPERAÇÃO',
-                            'setores' => [
-                                'administrador',
-                                'chefe-de-setor',
-                                'coordenador' => ['apenas_leitura' => true],
-                            ],
+                            /*
+                             * Áreas — as áreas e os BAIRROS de cada uma, em chips
+                             * (dono, 25/09/2026). Mesma concessão de Equipes.
+                             */
+                            'rotulo' => 'Áreas',
+                            'rota' => 'retaguarda.areas.index',
+                            'icone' => 'areas',
+                            'slug' => 'areas',
+                            'curto' => 'ÁREAS',
+                            'setores' => ['administrador', 'chefe-de-setor'],
+                        ],
+                        [
+                            // O catálogo de bairros (dono, 25/09/2026). Mesma concessão de Áreas.
+                            'rotulo' => 'Bairros',
+                            'rota' => 'retaguarda.bairros.index',
+                            'icone' => 'mapa',
+                            'slug' => 'bairros',
+                            'curto' => 'BAIRROS',
+                            'setores' => ['administrador', 'chefe-de-setor'],
+                        ],
+                        [
+                            /*
+                             * Equipes — quem está em cada equipe: o líder (a conta
+                             * que recebe o trabalho) e os fiscais (dono, 25/09/2026).
+                             * Mesma concessão de Áreas e Equipes: quem desenha a
+                             * estrutura é a gestão.
+                             */
+                            'rotulo' => 'Equipes',
+                            'rota' => 'retaguarda.equipes.index',
+                            'icone' => 'usuarios',
+                            'slug' => 'equipes',
+                            'curto' => 'EQUIPES',
+                            'setores' => ['administrador', 'chefe-de-setor'],
+                        ],
+                        [
+                            'rotulo' => 'Monitoramento',
+                            'rota' => 'retaguarda.monitoramento.index',
+                            'icone' => 'monitoramento',
+                            'curto' => 'MONITOR',
+                            'slug' => 'monitoramento',
+                            /*
+                             * SÓ O ADMINISTRADOR (ordem do dono, 10/09/2026: "somente
+                             * admin pode ver Monitoramento").
+                             *
+                             * O Chefe de Setor tinha a concessão — a leitura era "quem
+                             * responde por 'o sistema está de pé?' é quem administra e
+                             * quem gerencia a operação". O dono decidiu o contrário, e a
+                             * razão cabe no dado: a tela é diagnóstico do AMBIENTE
+                             * (conta de administrador ativa, armazenamento gravável,
+                             * listas obrigatórias vazias) e o que ela mostra quando algo
+                             * está vermelho conta como o sistema é montado por dentro.
+                             * Não é decisão de operação — é de quem administra.
+                             *
+                             * Declarar `['administrador']` é a forma que o projeto usa
+                             * para "só admin", e não `[]`: o administrador NÃO é semeado
+                             * (o seeder o pula, porque o acesso total dele é desvio no
+                             * código), então as duas formas geram ZERO linha de matriz —
+                             * mas esta diz em voz alta a quem a tela pertence, em vez de
+                             * deixar quem lê concluir que alguém esqueceu de preencher.
+                             * É o que Logs e Acompanhamento de Requisitos já fazem.
+                             *
+                             * ⚠️ Mudar esta lista NÃO tira concessão de banco já semeado
+                             * (a semente se aplica uma vez). Quem tira a linha órfã do
+                             * Chefe de Setor é a migration
+                             * `2026_09_10_090000_monitoramento_passa_a_ser_so_do_administrador`.
+                             */
+                            'setores' => ['administrador'],
+                        ],
+                        [
+                            'rotulo' => 'Logs',
+                            'rota' => 'retaguarda.logs.index',
+                            'icone' => 'logs',
+                            'slug' => 'logs',
+                            // Só o administrador: a ocorrência guarda o endereço e o verbo
+                            // de uma requisição que deu errado, e isso conta bastante
+                            // sobre o que existe do outro lado.
+                            'setores' => ['administrador'],
+                        ],
+                        [
+                            'rotulo' => 'Acompanhamento de Requisitos',
+                            'rota' => 'retaguarda.acompanhamento-de-requisitos.index',
+                            'icone' => 'requisitos',
+                            'curto' => 'REQUISITOS',
+                            'slug' => 'acompanhamento-de-requisitos',
+                            // Só o administrador: a tela é o retrato da CONSTRUÇÃO do
+                            // sistema (o que tem requisito escrito, o que divergiu), não
+                            // da operação. Quem fiscaliza e quem gerencia a fiscalização
+                            // não têm decisão a tomar a partir dela.
+                            'setores' => ['administrador'],
                         ],
                     ],
                 ],
@@ -523,10 +624,10 @@ return [
                  * áreas e equipes.
                  *
                  * Concessão inicial: o Chefe de Setor CADASTRA (é ele que responde
-                 * pelo trabalho de rua da área dele) e o COORDENADOR consulta — ele
-                 * tria a entrada e precisa saber que operação existe para onde
-                 * encaminhar a demanda, mas montar a operação não é dele. A recusa
-                 * do ato dele mora no controller, dizendo o motivo.
+                 * pelo trabalho de rua do setor) e o LÍDER DE EQUIPE consulta — ele
+                 * direciona a demanda e precisa saber que operação existe para
+                 * anexá-la, mas montar a operação não é dele. A recusa do ato dele
+                 * mora no controller, dizendo o motivo.
                  *
                  * O FISCAL não entra: planejar operação é ato de gestão, e ele
                  * recebe o trabalho já dirigido, pelo aplicativo.
@@ -535,6 +636,27 @@ return [
                  * ao trocar de seção.
                  */
 
+                /*
+                 * Usuários — quem tem conta, em que setor, e se já fez o primeiro
+                 * acesso (tela trazida do Codecon, 25/09/2026).
+                 *
+                 * Só o administrador, pela mesma razão do Modo Gerente: quem cria
+                 * conta e dá setor distribui acesso. Se o Modo Gerente conceder a
+                 * tela a outro setor, dar ou tirar ADMINISTRADOR continua só de
+                 * administrador (a recusa mora no controller, com o motivo).
+                 */
+                [
+                    'rotulo' => 'Usuários',
+                    'rota' => 'retaguarda.usuarios.index',
+                    'icone' => 'usuarios',
+                    'curto' => 'USUÁRIOS',
+                    'slug' => 'usuarios',
+                    'setores' => ['administrador'],
+                    // Fora do menu lateral: o atalho fica no menu da CONTA, no canto
+                    // superior direito (dono, 25/09/2026). A tela continua na
+                    // matriz do Modo Gerente — `oculto` tira o atalho, não o acesso.
+                    'oculto' => true,
+                ],
                 [
                     'rotulo' => 'Relatórios',
                     'rota' => 'retaguarda.relatorios.index',
@@ -543,62 +665,6 @@ return [
                     // Gestão da operação: o Chefe de Setor emite; o fiscal, que trabalha
                     // em rua pelo aplicativo, não tem o que fazer aqui.
                     'setores' => ['administrador', 'chefe-de-setor'],
-                ],
-                [
-                    'rotulo' => 'Monitoramento',
-                    'rota' => 'retaguarda.monitoramento.index',
-                    'icone' => 'monitoramento',
-                    'curto' => 'MONITOR',
-                    'slug' => 'monitoramento',
-                    /*
-                     * SÓ O ADMINISTRADOR (ordem do dono, 10/09/2026: "somente
-                     * admin pode ver Monitoramento").
-                     *
-                     * O Chefe de Setor tinha a concessão — a leitura era "quem
-                     * responde por 'o sistema está de pé?' é quem administra e
-                     * quem gerencia a operação". O dono decidiu o contrário, e a
-                     * razão cabe no dado: a tela é diagnóstico do AMBIENTE
-                     * (conta de administrador ativa, armazenamento gravável,
-                     * listas obrigatórias vazias) e o que ela mostra quando algo
-                     * está vermelho conta como o sistema é montado por dentro.
-                     * Não é decisão de operação — é de quem administra.
-                     *
-                     * Declarar `['administrador']` é a forma que o projeto usa
-                     * para "só admin", e não `[]`: o administrador NÃO é semeado
-                     * (o seeder o pula, porque o acesso total dele é desvio no
-                     * código), então as duas formas geram ZERO linha de matriz —
-                     * mas esta diz em voz alta a quem a tela pertence, em vez de
-                     * deixar quem lê concluir que alguém esqueceu de preencher.
-                     * É o que Logs e Acompanhamento de Requisitos já fazem.
-                     *
-                     * ⚠️ Mudar esta lista NÃO tira concessão de banco já semeado
-                     * (a semente se aplica uma vez). Quem tira a linha órfã do
-                     * Chefe de Setor é a migration
-                     * `2026_09_10_090000_monitoramento_passa_a_ser_so_do_administrador`.
-                     */
-                    'setores' => ['administrador'],
-                ],
-                [
-                    'rotulo' => 'Logs',
-                    'rota' => 'retaguarda.logs.index',
-                    'icone' => 'logs',
-                    'slug' => 'logs',
-                    // Só o administrador: a ocorrência guarda o endereço e o verbo
-                    // de uma requisição que deu errado, e isso conta bastante
-                    // sobre o que existe do outro lado.
-                    'setores' => ['administrador'],
-                ],
-                [
-                    'rotulo' => 'Acompanhamento de Requisitos',
-                    'rota' => 'retaguarda.acompanhamento-de-requisitos.index',
-                    'icone' => 'requisitos',
-                    'curto' => 'REQUISITOS',
-                    'slug' => 'acompanhamento-de-requisitos',
-                    // Só o administrador: a tela é o retrato da CONSTRUÇÃO do
-                    // sistema (o que tem requisito escrito, o que divergiu), não
-                    // da operação. Quem fiscaliza e quem gerencia a fiscalização
-                    // não têm decisão a tomar a partir dela.
-                    'setores' => ['administrador'],
                 ],
                 [
                     'rotulo' => 'Modo Gerente',
@@ -612,6 +678,10 @@ return [
                     // é dela que sai a permissão (e é ela que alimenta o painel),
                     // então tirá-la deixaria o item fora da matriz.
                     'modal' => 'modo-gerente',
+                    // Fora do menu desde 25/09/2026: o Modo Gerente liga pelo botão no
+                    // pé do menu e abre pelas CHAVES ao lado de cada item, como no
+                    // Codecon. A matriz inteira abre por "Ver todas as telas".
+                    'oculto' => true,
                     // Só o administrador, e por desvio (não por linha semeada):
                     // quem distribui acesso não pode distribuir a si mesmo o
                     // poder de distribuir acesso.

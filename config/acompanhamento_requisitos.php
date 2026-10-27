@@ -78,20 +78,26 @@ $origemPrototipo = 'Sem requisito escrito — origem: reunião com o cliente 202
 $origemDenuncias = 'Sem requisito escrito — origem: pedido do dono 2026-09-02, a partir do cenário '
     .'da reunião com o cliente (docs/cenario-2026-09-02-reuniao-cliente.md). Entregue como PROTÓTIPO.';
 
-$fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o COORDENADOR '
-    .'analisa a denúncia recebida e a encaminha à ÁREA do bairro, com a área sugerida pela estrutura '
-    .'Área › Equipe e editável na própria linha (bairro pertencente a duas áreas tem duas respostas '
-    .'certas), vendo o NOME DO CHEFE DE SETOR que vai receber, ou a retira do fluxo devolvendo ao canal / '
-    .'arquivando, com motivo de lista MAIS justificativa por escrito — denúncia improcedente ou '
-    .'duplicada não deve chegar ao Chefe de Setor; (2) DIRECIONAMENTO — o CHEFE DE SETOR DA ÁREA escolhe entre mandar à '
-    .'EQUIPE (a da área, ou outra, e aí a justificativa passa a ser obrigatória) ou incluir numa '
-    .'OPERAÇÃO já planejada, podendo abrir uma nova dali. As duas etapas operam em LOTE e uma a uma, e '
-    .'a etapa de quem entrou vem do SETOR (coordenador tria, chefe de setor direciona, quem administra o '
-    .'sistema exerce as duas), com selo visível na tela dizendo a etapa E a área. O CHEFE DE SETOR É DE UMA '
-    .'ÁREA: a listagem dele traz só o que foi encaminhado à área que ele responde, e a ação sobre '
-    .'denúncia de outra área é recusada no servidor com o motivo escrito — esconder sem barrar deixaria '
-    .'a fronteira valendo só para quem não sabe montar a requisição. Estados: Recebida › Encaminhada à '
-    .'área › Direcionada à equipe | Em operação › Em campo › Concluída, com Devolvida e Arquivada como '
+$fluxoDenuncias = 'PAPÉIS DESDE 22/09/2026 (decisão do dono): não há coordenador no sistema — os '
+    .'coordenadores trabalham no e-Salvador e mandam para a caixa do setor; o CHEFE DE SETOR é UM SÓ; o '
+    .'LÍDER DE EQUIPE é o encarregado do documento, com conta. O fluxo tem DUAS etapas com DOIS donos: '
+    .'(1) ENCAMINHAMENTO — o CHEFE DE SETOR analisa a denúncia recebida e a encaminha à EQUIPE, sugerida '
+    .'pelo bairro pela estrutura Área › Equipe e editável na própria linha (bairro pertencente a duas '
+    .'áreas tem duas respostas certas), vendo o NOME DO LÍDER que vai receber, ou a retira do fluxo '
+    .'devolvendo ao canal / arquivando, com motivo de lista MAIS justificativa por escrito — denúncia '
+    .'improcedente ou duplicada não deve chegar ao líder; (2) DIRECIONAMENTO — o LÍDER DA EQUIPE manda os '
+    .'fiscais ao ponto com a orientação, ou inclui numa OPERAÇÃO já planejada, podendo abrir uma nova '
+    .'dali. As duas etapas operam em LOTE e uma a uma, e a etapa de quem entrou vem do SETOR (chefe de '
+    .'setor encaminha, líder direciona, quem administra o sistema exerce as duas), com selo visível na '
+    .'tela dizendo a etapa E a equipe. RETORNO AO CANAL (estrutura, 23/09/2026): concluída a denúncia do '
+    .'e-Salvador, o Chefe de Setor registra a RESPOSTA ao processo de origem no detalhe (texto + nº do '
+    .'processo); a avulsa concluída registra a ABERTURA do processo (nº obrigatório). Um retorno por '
+    .'demanda; a API do e-Salvador é de produção e a escrita está proibida — o ato é registrado aqui, '
+    .'feito à mão lá, e a chamada fica atrás de ESALVADOR_LIGADA. O LÍDER É DE UMA EQUIPE: a listagem dele traz só o que foi '
+    .'encaminhado às equipes que ele lidera, e a ação sobre denúncia de outra equipe é recusada no '
+    .'servidor com o motivo escrito — esconder sem barrar deixaria a fronteira valendo só para quem não '
+    .'sabe montar a requisição. Estados: Recebida › Encaminhada ao '
+    .'líder › Direcionada aos fiscais | Em operação › Em campo › Concluída, com Devolvida e Arquivada como '
     .'saídas da triagem. Depois do direcionamento a denúncia vira TRABALHO DE CAMPO, e o que volta é o '
     .'DESFECHO, de lista fechada: regularizado no local (sem documento, o caminho comum — a '
     .'fiscalização é educativa antes de punitiva), nada encontrado no local, Notificação Preliminar '
@@ -108,7 +114,7 @@ $fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o COO
     .'Notificação e Auto de Apreensão é o fiscal, em rua, pelo aplicativo. Cada mudança acrescenta '
     .'linha ao trâmite (quem, quando, por quê). A permissão '
     .'é UMA para o módulo (as duas telas dividem o caminho /retaguarda/denuncias e aparecem no menu '
-    .'como uma PASTA que expande), concedida a coordenador, administrador e chefe de setor — o fiscal não '
+    .'como uma PASTA que expande), concedida a chefe de setor, líder de equipe e administrador — o fiscal não '
     .'entra, senão escolheria o próprio trabalho. ⚠️ É PROTÓTIPO: a integração NÃO existe, não há tabela '
     .'nem gravação — as denúncias de partida vêm de config/prototipo_denuncias.php, o vínculo chefia↔área '
     .'vem de config/prototipo_estrutura.php, a redação dos impressos vem de '
@@ -116,7 +122,7 @@ $fluxoDenuncias = 'O fluxo tem DUAS etapas com DOIS donos: (1) TRIAGEM — o COO
     .'avançados (vistoria, desfecho, documento) são SEMEADOS: quando o aplicativo do fiscal receber a '
     .'denúncia dirigida de verdade, é ele que acrescenta esses passos, e a leitura da tela continua a '
     .'mesma. Pendências que '
-    .'isto abre: contrato das APIs do e-Salvador e do Salvador Digital, prazo real de cada canal, canal de devolução, '
+    .'isto abre: contrato das APIs do e-Salvador e do Fala Salvador, prazo real de cada canal, canal de devolução, '
     .'a MODELAGEM DEFINITIVA do vínculo chefia↔área (em produção é tabela usuário↔área, não arquivo de '
     .'configuração), a numeração definitiva do protocolo, a numeração dos blocos de documento (hoje as '
     .'faixas do papel do cliente, escritas à mão; no sistema saem do estoque reservado por aparelho), a '
@@ -187,7 +193,26 @@ return [
                 .'pergunta antes). Não é uma página: abre como PAINEL sobre a tela em que a pessoa '
                 .'está, pelo item do menu Sistema — quem distribui acesso está no meio de uma '
                 .'conferência, e ir para outra página fazia perder o lugar. Quem chega pelo endereço '
-                .'antigo é levado à tela inicial com o painel abrindo lá.',
+                .'antigo é levado à tela inicial com o painel abrindo lá.'.' Desde 25/09/2026, como no Codecon: um botão no pé do menu liga o modo (estado na sessão) e cada item e pasta do menu ganha uma CHAVE que abre as permissões só daquela tela; a matriz inteira abre por "Ver todas as telas". O item saiu do menu. Quem liga: o administrador ou a conta com a marca "Pode ativar o Modo Gerente".',
+        ],
+
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Usuários',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.usuarios.index',
+            'breadcrumb' => 'Sistema › Usuários',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: tela de Usuários do Codecon, trazida por pedido do dono '
+                .'em 25/09/2026. Quem tem conta e em que setor: inclusão com convite de primeiro acesso por '
+                .'e-mail (a conta nasce sem senha conhecida), alteração de setores e situação, reenvio do '
+                .'convite, exclusão para a lixeira com restauração e remoção definitiva em três dias — menos '
+                .'a conta com histórico, que fica guardada. O Chefe de Setor é um só (marcar outro tira o '
+                .'setor de quem tinha, com aviso antes de salvar); administrador só se dá entre '
+                .'administradores; ninguém tira o próprio acesso de administrador, se desativa ou se exclui. '
+                .'Só o administrador abre a tela. O atalho fica no menu da CONTA, no canto superior direito '
+                .'(com Meu Perfil e Sair), como no Codecon — não no menu lateral.'.' Desde 25/09/2026 o que era "Setores" se chama CARGO na tela, e a conta ganhou as duas marcas do Codecon: pode ativar o Modo Gerente e Administrador de usuários (o poder desta tela sem as outras de administração) — só o administrador as dá ou tira.',
         ],
 
         [
@@ -246,9 +271,9 @@ return [
                 .'que decide quem vê e quem executa; NOME é único, porque é por ele que a equipe '
                 .'reconhece a operação em rua e que a denúncia a registra ao ser anexada; operação '
                 .'ENCERRADA não recebe denúncia nova — sai da escolha do direcionamento e é recusada '
-                .'no servidor, continuando consultável aqui. RECORTE POR ÁREA: o Chefe de Setor '
-                .'cadastra e vê as da área dele; Coordenador e administrador veem o universo, e o '
-                .'Coordenador consulta sem cadastrar (montar operação é de quem responde pela área). '
+                .'no servidor, continuando consultável aqui. RECORTE POR ÁREA: o líder de equipe '
+                .'cadastra e vê as da área das equipes dele; o Chefe de Setor e o administrador veem '
+                .'o universo e cadastram em qualquer área (o chefe recebe a operação pedida de cima). '
                 .'O recorte é do SERVIDOR e a recusa é NOMINAL, dizendo por quais áreas a pessoa '
                 .'responde — na alteração as DUAS áreas são conferidas (a de origem e a de destino), '
                 .'senão bastaria mover a operação alheia para a própria área para poder alterá-la. '
@@ -257,7 +282,7 @@ return [
                 .'o que se cria ou altera vive na sessão de quem navega. Pendências que isto abre: a '
                 .'operação como TABELA, o vínculo dela com os registros de campo que ela produziu '
                 .'(hoje a fiscalização avulsa aponta para a operação por TEXTO, no campo referência) '
-                .'e o encerramento com resultado consolidado, que a spec previa e ninguém definiu.',
+                .'e o encerramento com resultado consolidado, que a spec previa e ninguém definiu.'.' Desde 25/09/2026 é menu pai próprio, entre os mapas e o Sistema; a operação recebe DENÚNCIAS no próprio cadastro (entram Em operação; desmarcadas, voltam à mesa de onde vieram) e FISCAIS de qualquer área, que recebem a fiscalização junto com os fiscais das equipes; escolher a área ou uma equipe marca os bairros dela, desmarcáveis um a um.',
         ],
 
         [
@@ -297,9 +322,9 @@ return [
                 .'identificado, com foto, prazo vencido, prazo correndo, últimos 7 e 30 dias) — e não '
                 .'por filtros segmentados, que é o padrão de busca do projeto. NÃO há terceira aba: '
                 .'"por operação" e "por prazo vencido" não são conjuntos diferentes, são recortes que '
-                .'a busca entrega. RECORTE POR ÁREA: o Chefe de Setor vê só o que as equipes da área '
-                .'dele concluíram; o Coordenador e o administrador veem o universo, porque quem tria '
-                .'precisa saber o que aconteceu com o que encaminhou. O recorte é feito no SERVIDOR, e '
+                .'a busca entrega. RECORTE POR EQUIPE: o líder vê só o que as equipes dele '
+                .'concluíram; o Chefe de Setor e o administrador veem o universo e também decidem, '
+                .'porque o retorno volta para a mesa do chefe. O recorte é feito no SERVIDOR, e '
                 .'há DUAS recusas explicadas ali: quem apenas consulta não decide, e decisão sobre '
                 .'registro de outra área é recusada nominalmente — esconder da lista não é fronteira, '
                 .'e o lote é o caminho fácil para alcançar o que não se vê. O item de menu traz o '
@@ -491,23 +516,27 @@ return [
         ],
 
         [
-            'modulo' => 'Fiscalização',
-            'tela' => 'Caixa de Entrada do Coordenador',
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'Mesa antiga do Chefe de Setor (fora do menu)',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.caixa-de-entrada.index',
-            'breadcrumb' => 'Fiscalização › Caixa de Entrada',
+            'breadcrumb' => 'fora do menu desde 24/09/2026',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemPrototipo.' Porta por onde a demanda de FORA entra: e-Salvador, Fala '
-                .'Salvador 156, pedido de nova licença e ofício chegam em papel e são digitados aqui. '
+            'nota' => $origemPrototipo.' ⚠️ FORA DO MENU desde 24/09/2026: as quatro caixas de canal '
+                .'substituíram esta tela. Ela continua existindo, só para o chefe, porque guarda a '
+                .'PRÉ-TRIAGEM escondida (dono incerto sobre a necessidade) — sai quando isso for decidido. Porta por onde a demanda entra FORA DA INTEGRAÇÃO: papel do '
+                .'e-Salvador, pedido de nova licença, ofício e a AVULSA (ligação ou e-mail de superior ao '
+                .'chefe, canal criado em 22/09/2026) são digitados aqui pelo Chefe de Setor. O Fala Salvador '
+                .'NÃO entra por aqui — é digitado pelo líder, na tela do canal. '
                 .'Denúncia pode ser ANÔNIMA. O bairro sugere a equipe responsável (a estrutura Área › '
-                .'Equipe), e quem confirma é o coordenador — bairro pertencente a duas áreas tem duas '
+                .'Equipe), e quem confirma é o Chefe de Setor — bairro pertencente a duas áreas tem duas '
                 .'respostas certas. Duas saídas: registrar e encaminhar (vira trabalho dirigido da '
                 .'equipe) ou registrar e devolver/arquivar, com motivo de lista MAIS justificativa por '
                 .'escrito, porque é ato administrativo. Cada decisão acrescenta uma linha ao trâmite da '
-                .'demanda (quem, quando, o quê). A tela é do COORDENADOR (concessão '
-                .'acrescentada em 02/09/2026, quando o setor nasceu): registrar o que chega em papel é '
-                .'função dele; o Chefe de Setor acompanha e o administrador cobre. ⚠️ É PROTÓTIPO: não há '
+                .'demanda (quem, quando, o quê). A tela é do CHEFE DE SETOR (um só, desde 22/09/2026 — '
+                .'o setor coordenador foi removido): receber o que chega e encaminhar à EQUIPE é função '
+                .'dele; o líder recebe na tela de Denúncias e o administrador cobre. ⚠️ É PROTÓTIPO: não há '
                 .'tabela nem gravação — as '
                 .'demandas de partida vêm de config/prototipo_caixa_entrada.php e as decisões vivem na '
                 .'sessão de quem navega. Pendências que isto abre: prazo de cada canal, canal de retorno '
@@ -515,40 +544,123 @@ return [
         ],
 
         [
-            'modulo' => 'Denúncias',
-            'tela' => 'Denúncias do e-Salvador',
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'e-Salvador',
             'origem' => 'Retaguarda',
             'rota' => 'retaguarda.denuncias.e-salvador.index',
-            'breadcrumb' => 'Denúncias › e-Salvador',
+            'breadcrumb' => 'Caixa de Entrada › e-Salvador',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemDenuncias.' As denúncias que o portal e-Salvador (Ouvidoria Geral do '
-                .'Município) entrega ao SEFAL por INTEGRAÇÃO — ninguém as digita: a tela não tem botão de '
-                .'cadastrar, e cada denúncia carrega o número que o canal lhe deu e a hora em que a '
-                .'integração a entregou. O que chega em papel ao balcão continua sendo assunto da Caixa '
-                .'de Entrada. Como o cidadão abre a denúncia autenticado, o requerente vem SEMPRE '
-                .'identificado (nome, CPF, e-mail, telefone), o endereço vem estruturado e ele pode '
-                .'anexar foto e documento. '.$fluxoDenuncias,
+            'nota' => $origemDenuncias.' Caixa do e-Salvador (reorganizada em 24/09/2026), com TRÊS abas: '
+                .'DENÚNCIAS (assunto 215), LICENÇAS (a licença chega pelo e-Salvador, assunto 216) e '
+                .'RESPONDIDAS (o que o chefe já respondeu ao processo, ou saiu do fluxo). Grade única: '
+                .'seleção múltipla, protocolo, recebida, bairro, situação em três palavras (Recebida, '
+                .'Encaminhada ao líder, Em fiscalização) e prazo. Enquanto a integração não lê, o chefe '
+                .'cadastra aqui o que chega em papel (denúncia ou licença). Como o cidadão abre a denúncia '
+                .'autenticado, o requerente vem SEMPRE identificado. '.$fluxoDenuncias.' Desde 25/09/2026, nas quatro caixas, quem encaminha tem a coluna "Área (sugerida)": um seletor de equipe (com área e líder) na própria linha, para encaminhar em lote já escolhendo cada destino.',
         ],
 
         [
-            'modulo' => 'Denúncias',
-            'tela' => 'Denúncias do Salvador Digital',
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'Fala Salvador',
             'origem' => 'Retaguarda',
-            'rota' => 'retaguarda.denuncias.salvador-digital.index',
-            'breadcrumb' => 'Denúncias › Salvador Digital',
+            'rota' => 'retaguarda.denuncias.fala-salvador.index',
+            'breadcrumb' => 'Caixa de Entrada › Fala Salvador',
             'hu_status' => 'nao',
             'hus' => [],
-            'nota' => $origemDenuncias.' As denúncias que a central telefônica Salvador Digital (Disque '
-                .'156) entrega ao SEFAL por INTEGRAÇÃO — mesma mecânica da tela do e-Salvador, com o que '
-                .'o telefone muda no dado: a denúncia pode ser ANÔNIMA, o relato é a transcrição do que '
-                .'o atendente ouviu (às vezes sem número nem ponto de referência, e a tela marca isso '
-                .'porque é o que decide se dá para mandar equipe), a categoria é a que o atendente '
-                .'escolheu, e não há anexo. '.$fluxoDenuncias,
+            'nota' => $origemDenuncias.' O canal telefônico da Prefeitura (156) — era "Salvador Digital" até '
+                .'22/09/2026. NÃO TEM INTEGRAÇÃO e SÓ OS LÍDERES DE EQUIPE o acessam: o SEFAL é intermediário '
+                .'de registro. O LÍDER digita aqui o que recebeu por telefone (nº do atendimento, data, '
+                .'anônima ou quem ligou, endereço, bairro, assunto, relato; a equipe fica implícita para '
+                .'quem lidera uma só e é escolhida por quem lidera várias — só entre as suas), e o caso '
+                .'nasce JÁ NA MESA DELE (Encaminhada ao líder), sem passar pelo chefe, para ele direcionar '
+                .'aos fiscais; a resposta ao cidadão continua no Fala Salvador. Desde 25/09/2026 o CHEFE DE '
+                .'SETOR também registra (sem integração, o que chega a ele precisa entrar): o caso dele nasce '
+                .'Recebida, sem equipe, para ele encaminhar. O formulário é o MÍNIMO para o caso existir no '
+                .'fluxo; o específico do canal vem depois (PEND-023). O que o telefone muda no dado: a '
+                .'denúncia pode ser ANÔNIMA, o relato é a transcrição do que o atendente ouviu, e não há '
+                .'anexo. '.$fluxoDenuncias,
         ],
 
         [
-            // Era o módulo 'Estrutura', que era uma seção de menu com UMA tela.
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'e-Protocolo',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.denuncias.e-protocolo.index',
+            'breadcrumb' => 'Caixa de Entrada › e-Protocolo',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemDenuncias.' A quarta frente (24/09/2026): o atendimento PRESENCIAL na sede da '
+                .'SEFAL, protocolado no sistema e-Protocolo. Sem integração: o Chefe de Setor cadastra. Ainda '
+                .'não se sabe se o protocolo passa pelo e-Salvador antes de chegar ao chefe — por isso a caixa '
+                .'é própria, e a resposta fica registrada aqui. Abas DENÚNCIAS e RESPONDIDAS. '.$fluxoDenuncias,
+        ],
+
+        [
+            'modulo' => 'Caixa de Entrada',
+            'tela' => 'Avulsas',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.denuncias.avulsas.index',
+            'breadcrumb' => 'Caixa de Entrada › Avulsas',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => $origemDenuncias.' O pedido que chega ao Chefe de Setor por fora dos canais, em dois '
+                .'tipos: pedido de superior (ligação ou e-mail) e OFÍCIO de órgão ou do Ministério Público — o '
+                .'ofício deixou de ser canal em 25/09/2026 e virou tipo de avulsa, com selo na grade. Lista única, '
+                .'sem abas. O chefe cadastra dizendo como chegou (o número de origem é opcional), encaminha à equipe e, concluída a fiscalização, DELIBERA: abre processo no '
+                .'e-Salvador com o resultado (registrado aqui, feito à mão lá — a escrita na API está '
+                .'proibida) ou encerra só com a fiscalização, sem processo. '.$fluxoDenuncias,
+        ],
+
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Áreas',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.areas.index',
+            'breadcrumb' => 'Sistema › Áreas',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: pedido do dono em 25/09/2026 ("cadastro de Área com '
+                .'possibilidade de definição dos bairros de cada área, selecionáveis via chips"). Nome, região, o '
+                .'que a área cobre (bairros, corredores ou a cidade inteira), turno e os BAIRROS em chips, com '
+                .'busca e inclusão de bairro novo. Dos bairros sai a sugestão de equipe da demanda, os bairros que a '
+                .'operação marca sozinha e o recorte do líder nos mapas. Área com equipe, demanda ou operação não se '
+                .'exclui — inativa-se. Do administrador e do Chefe de Setor.',
+        ],
+
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Bairros',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.bairros.index',
+            'breadcrumb' => 'Sistema › Bairros',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: pedido do dono em 25/09/2026 ("crie também a tela Bairros '
+                .'para cadastro de bairros, para termos um controle melhor. Bairro com Área não se exclui"). O '
+                .'catálogo de bairros: nome (único sem acento — "Imbuí" e "Imbui" são o mesmo) e a coordenada que o '
+                .'mapa usa. Renomear renomeia também nas áreas e operações que citam o bairro; a demanda antiga guarda '
+                .'o nome com que chegou. O cadastro de Áreas oferece os bairros daqui, e o bairro acrescentado lá '
+                .'entra no catálogo. Nasceu com os bairros que as áreas já citavam.',
+        ],
+
+        [
+            'modulo' => 'Sistema',
+            'tela' => 'Equipes',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.equipes.index',
+            'breadcrumb' => 'Sistema › Equipes',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: pedido do dono em 25/09/2026 ("preciso de um cadastro de '
+                .'equipes"). Quem está em cada equipe: código, área, turno, o LÍDER (a conta que recebe o '
+                .'trabalho encaminhado à equipe — só contas ativas do setor Líder de Equipe) e os FISCAIS (só '
+                .'contas ativas do setor Fiscal). É daqui que sai o recorte do líder nas telas. Equipe com '
+                .'histórico (demanda, vistoria, Fiscalização, operação) não se exclui — inativa-se. Do '
+                .'administrador e do Chefe de Setor.',
+        ],
+
+        [
             // A seção foi removida em 10/09/2026 e a tela passou para Sistema
             // (ordem do dono); o módulo acompanha, senão o resumo agruparia por
             // uma seção que ninguém acha mais no menu.
@@ -567,9 +679,10 @@ return [
                 .'(Avenida Sete, Comércio, Joana Angélica) e a Noturna cobre a CIDADE INTEIRA, com '
                 .'recorte por TURNO. Bairro em mais de uma área é caso NORMAL (Mussurunga, Patamares e '
                 .'Jardim das Margaridas), mostrado como aviso informativo: o vínculo bairro↔equipe não é '
-                .'1:1, a Caixa de Entrada sugere e o coordenador confirma. ⚠️ É PROTÓTIPO: a lista de '
+                .'1:1, a Caixa de Entrada sugere e o Chefe de Setor confirma. Cada equipe mostra o LÍDER '
+                .'(o encarregado do documento, com conta lider-<código>). ⚠️ É PROTÓTIPO: a lista de '
                 .'fiscais de cada equipe é fictícia (o documento nomeia só o encarregado), não há tabela '
-                .'nem gravação, e o que a pessoa mexe vive na sessão dela.',
+                .'nem gravação, e o que a pessoa mexe vive na sessão dela.'.' Fora do menu desde 25/09/2026: a área e os bairros passaram ao cadastro de Áreas, e quem está em cada equipe, ao de Equipes. Segue pelo endereço.',
         ],
 
         [
@@ -593,7 +706,24 @@ return [
                 .'coordenadas de Salvador e a área/equipe de cada bairro, não (a derivação sai do mesmo '
                 .'cadastro de Áreas e Equipes). Não há tempo real nem tabela: a tela declara o instante que '
                 .'mostra. Pendências que isto abre: de onde virá a posição do fiscal em campo e com que '
-                .'frequência, e qual é o prazo oficial de retorno de uma notificação.',
+                .'frequência, e qual é o prazo oficial de retorno de uma notificação.'.' Desde 25/09/2026 o líder de equipe também abre o mapa, vendo só as fiscalizações das equipes dele e dos bairros das áreas delas.',
+        ],
+
+        [
+            'modulo' => 'Fiscalização',
+            'tela' => 'Levantamentos',
+            'origem' => 'Retaguarda',
+            'rota' => 'retaguarda.levantamentos.index',
+            'breadcrumb' => 'Fiscalização › Levantamentos',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: o levantamento de ambulantes por rua que o setor fazia '
+                .'em planilha (exemplar entregue pelo cliente: Rua Barão de Mauá, Arenoso), trazido ao '
+                .'aplicativo do fiscal no protótipo e mantido pelo dono em 13/10/2026 ("pode manter e fazer no '
+                .'retaguarda"). Consulta: lista por rua, bairro, equipes, data e total; a busca casa também o '
+                .'nome do ambulante levantado. A ficha é a planilha da rua (item, nome, atividade, referência, '
+                .'foto), com documento, contato, coordenada e foto ao clicar na linha, e exportação própria. '
+                .'O líder vê só os levantamentos de que as equipes dele participaram.',
         ],
 
         [
@@ -615,7 +745,7 @@ return [
                 .'melhor aposta, porque o líder já tem rotina. O ranking exporta em PDF/XLSX/DOCX pelo ponto '
                 .'único, com o recorte impresso. ⚠️ É PROTÓTIPO: a incidência é inventada (coordenadas e '
                 .'estrutura de equipes, não), não há tabela, e criar operação é da tela de Cadastro de '
-                .'Operação — esta apenas leva até lá.',
+                .'Operação — esta apenas leva até lá.'.' Desde 25/09/2026 o líder de equipe também abre o mapa, com o mesmo recorte do Mapa ao Vivo.',
         ],
 
         /*
@@ -695,6 +825,44 @@ return [
             'hus' => [],
             'nota' => $origemSpec.' O que o Chefe de Setor responde ao devolver um cadastro feito em campo. '
                 .'O fiscal lê esse texto no aparelho, então ele precisa dizer o que corrigir.',
+        ],
+
+        /*
+         * O aplicativo do fiscal. Entra aqui como as demais: o mapa é de
+         * funcionalidade ENTREGUE, e não de linha do menu da Retaguarda — o que
+         * não tem item de menu entra igual, senão nunca é cobrado.
+         */
+        [
+            'modulo' => 'Aplicativo do Fiscal',
+            'tela' => 'Fila de denúncias dirigidas e registro de vistoria',
+            'origem' => 'PWA',
+            'rota' => 'pwa',
+            'breadcrumb' => 'Aplicativo do Fiscal › /app',
+            'hu_status' => 'nao',
+            'hus' => [],
+            'nota' => 'Sem requisito escrito — origem: cenário da reunião com o cliente de 02/09/2026 '
+                .'e decisões do dono de 03 e 04/09/2026; regras em docs/regras-de-negocio/fiscalizacao/'
+                .'aplicativo-do-fiscal.md. Desde 13/10/2026 fala com o servidor (rotas /app/api/*): '
+                .'login com a conta da Retaguarda, fila da equipe vinda do banco, números de NP/AA '
+                .'reservados por fiscal e o despacho gravando a vistoria para o LÍDER ler, com fila '
+                .'no aparelho (fotos inclusive) para quando não há sinal. Mapa de ambulantes, calor, '
+                .'operações e levantamento de ambulantes (com foto e GPS por linha) também vêm do '
+                .'servidor. Desde 14/10/2026 a coordenada é sempre a medida pelo GPS (sem GPS, o '
+                .'registro vai sem ela e com o motivo, à vista na Retaguarda), o endereço do avulso '
+                .'é escrito pelo fiscal, e a operação abre tela própria com as denúncias anexadas. A fila do '
+                .'aplicativo é a da EQUIPE de quem entrou e fala o mesmo vocabulário do módulo de '
+                .'Denúncias — mesmas situações, mesmo protocolo DEN-NNNN e a mesma lista fechada de '
+                .'seis desfechos, que é o que fecha o passo do trâmite na Retaguarda. Denúncia em '
+                .'triagem não chega ao fiscal; denúncia com Notificação em prazo oferece o registro '
+                .'do RETORNO. O registro é DESPACHADO à caixa de entrada do Chefe de Setor da área '
+                .'da equipe, com as CONSIDERAÇÕES FINAIS do fiscal (texto livre e atalhos de '
+                .'recomendação, os MESMOS 11 do catálogo da Retaguarda, aqui na redação CURTA — a '
+                .'chave é o que viaja, e a redação explícita mora do lado de quem decide), e não '
+                .'conclui sem o documento quando o desfecho lavra documento — o '
+                .'impedimento diz o motivo e abre o formulário que falta. Vocabulário novo do '
+                .'domínio: Chefe de Setor (antes "gestor") e Coordenador (antes "administrativo"). '
+                .'Falta a sincronização de verdade (endpoint, banco offline, fila de '
+                .'envio): enquanto isso, os dados são segunda cópia dos do servidor.',
         ],
 
     ],

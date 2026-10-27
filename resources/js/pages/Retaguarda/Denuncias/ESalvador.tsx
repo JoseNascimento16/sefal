@@ -4,28 +4,25 @@ import { PainelDeDenuncias } from '@/components/retaguarda/painel-de-denuncias';
 import { index } from '@/routes/retaguarda/denuncias/e-salvador';
 
 /**
- * Denúncias do e-Salvador — PROTÓTIPO.
+ * Caixa de Entrada › e-Salvador.
  *
- * Casca fina de propósito: a mecânica do módulo (as duas etapas, o lote, a
- * derivação bairro → área, o trâmite) vive em `PainelDeDenuncias`, e as duas
- * telas de canal a compartilham. Escrever a tela duas vezes daria dois donos à
- * mesma regra, e um dia só uma delas ganharia o campo novo.
+ * Casca fina, como as outras três caixas: o fluxo inteiro (as abas, o cadastro,
+ * o encaminhamento, o direcionamento, o trâmite e o retorno ao canal) vive em
+ * `PainelDeDenuncias`, e o que muda de uma caixa para outra vem do SERVIDOR —
+ * as abas, quem cadastra, onde o retorno é feito. Quatro telas escritas à parte
+ * dariam quatro donos à mesma regra.
  *
  * O que esta casca declara é o que SÓ ela sabe: o título da aba do navegador e a
- * trilha de navegação — que a `layout` do Inertia recebe como propriedade
- * estática, e por isso não pode sair de um prop do servidor.
+ * trilha de navegação, que a `layout` do Inertia recebe como propriedade
+ * estática.
  *
- * ── O que o e-Salvador tem de diferente ─────────────────────────────────────
- *
- * O cidadão abre a denúncia autenticado no portal, então o requerente vem
- * SEMPRE identificado (nome, CPF, e-mail, telefone), o endereço vem estruturado
- * e ele pode anexar foto e documento. O que a tela mostra a mais ou a menos sai
- * da configuração do canal, no servidor — não de uma condição escrita aqui.
+ * Abas Denúncias, Licenças e Respondidas: a licença chega pelo mesmo portal
+ * (assunto 216) e é respondida no mesmo processo.
  */
 export default function ESalvador(props: ComponentProps<typeof PainelDeDenuncias>) {
     return (
         <>
-            <Head title="Denúncias do e-Salvador" />
+            <Head title="e-Salvador" />
             <PainelDeDenuncias {...props} />
         </>
     );
@@ -33,7 +30,7 @@ export default function ESalvador(props: ComponentProps<typeof PainelDeDenuncias
 
 ESalvador.layout = {
     breadcrumbs: [
-        { title: 'Denúncias', href: index() },
+        { title: 'Caixa de Entrada', href: index() },
         { title: 'e-Salvador', href: index() },
     ],
 };

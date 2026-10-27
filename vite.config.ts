@@ -9,7 +9,15 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.tsx'],
+            // A quarta entrada é o PROTÓTIPO do aplicativo do fiscal: aplicação
+            // própria, servida em `/app`, que não compartilha nem folha de
+            // estilo nem raiz de React com a Retaguarda.
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.tsx',
+                'resources/css/pwa.css',
+                'resources/js/pwa/main.tsx',
+            ],
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {

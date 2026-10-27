@@ -1,13 +1,20 @@
 <?php
 
+use App\Http\Controllers\Aplicativo\AplicativoController;
 use App\Http\Controllers\Retaguarda\AcompanhamentoRequisitosController;
+use App\Http\Controllers\Retaguarda\AgrupamentoDeDemandasController;
 use App\Http\Controllers\Retaguarda\AmbulantesController;
+use App\Http\Controllers\Retaguarda\AreasController;
 use App\Http\Controllers\Retaguarda\AreasEEquipesController;
+use App\Http\Controllers\Retaguarda\ArquivosController;
+use App\Http\Controllers\Retaguarda\BairrosController;
 use App\Http\Controllers\Retaguarda\CaixaDeEntradaController;
 use App\Http\Controllers\Retaguarda\DenunciasController;
+use App\Http\Controllers\Retaguarda\EquipesController;
 use App\Http\Controllers\Retaguarda\ExportacaoListagemController;
 use App\Http\Controllers\Retaguarda\FiscalizacoesController;
 use App\Http\Controllers\Retaguarda\InicioController;
+use App\Http\Controllers\Retaguarda\LevantamentosController;
 use App\Http\Controllers\Retaguarda\LogsController;
 use App\Http\Controllers\Retaguarda\MapaAoVivoController;
 use App\Http\Controllers\Retaguarda\MapaDeCalorController;
@@ -21,6 +28,12 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeInfracaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
+use App\Http\Controllers\Retaguarda\RetornoAoCanalController;
+use App\Http\Controllers\Retaguarda\UsuariosController;
+use App\Http\Middleware\AplicativoDoFiscal;
+use App\Http\Middleware\SoChefeDeSetor;
+use App\Models\Demanda;
+use Illuminate\Routing\RedirectController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -76,6 +89,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('retaguarda/modo-gerente')->name('retaguarda.modo-gerente.')->group(function () {
         Route::get('/', [ModoGerenteController::class, 'index'])->name('index');
         Route::post('/', [ModoGerenteController::class, 'salvar'])->name('salvar');
+        // Liga/desliga as chaves do menu (estado na sessão).
+        Route::post('alternar', [ModoGerenteController::class, 'alternar'])->name('alternar');
     });
 
     /*
@@ -115,6 +130,57 @@ Route::middleware(['auth'])->group(function () {
      * apagar linha daqui apagaria a única trilha de um defeito de produção.
      * `ObservabilidadeTest` reprova se alguma mutação nascer sob este caminho.
      */
+    /*
+     * Usuários — quem tem conta na Retaguarda, e em que setor.
+     *
+     * O caminho começa pelo slug da tela (`usuarios`): é dele que as guardas de
+     * leitura e de ação deduzem a permissão, e a semente a dá só ao
+     * administrador. Excluir é mandar para a lixeira; `restaurar` a tira de lá.
+     * O `{usuario}` da restauração é o número, e não o modelo: a conta excluída
+     * não é encontrada pela busca comum — é justamente o que a lixeira faz.
+     */
+    Route::prefix('retaguarda/usuarios')->name('retaguarda.usuarios.')->group(function () {
+        Route::get('/', [UsuariosController::class, 'index'])->name('index');
+        Route::post('/', [UsuariosController::class, 'store'])->name('store');
+        Route::put('{usuario}', [UsuariosController::class, 'update'])->name('update');
+        Route::delete('{usuario}', [UsuariosController::class, 'destroy'])->name('destroy');
+        Route::post('{usuario}/convite', [UsuariosController::class, 'convite'])->name('convite');
+        Route::post('{usuario}/restaurar', [UsuariosController::class, 'restaurar'])
+            ->whereNumber('usuario')->name('restaurar');
+    });
+
+    /*
+     * Equipes — o cadastro das equipes: código, área, turno, líder e fiscais
+     * (dono, 25/09/2026). O caminho começa pelo slug da tela (`equipes`), que é de
+     * onde as guardas deduzem a permissão.
+     */
+    /*
+     * Áreas — as áreas e os bairros de cada uma (dono, 25/09/2026). Slug `areas`.
+     */
+    Route::prefix('retaguarda/areas')->name('retaguarda.areas.')->group(function () {
+        Route::get('/', [AreasController::class, 'index'])->name('index');
+        Route::post('/', [AreasController::class, 'store'])->name('store');
+        Route::put('{area}', [AreasController::class, 'update'])->name('update');
+        Route::delete('{area}', [AreasController::class, 'destroy'])->name('destroy');
+    });
+
+    /*
+     * Bairros — o catálogo de bairros da cidade (dono, 25/09/2026). Slug `bairros`.
+     */
+    Route::prefix('retaguarda/bairros')->name('retaguarda.bairros.')->group(function () {
+        Route::get('/', [BairrosController::class, 'index'])->name('index');
+        Route::post('/', [BairrosController::class, 'store'])->name('store');
+        Route::put('{bairro}', [BairrosController::class, 'update'])->name('update');
+        Route::delete('{bairro}', [BairrosController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('retaguarda/equipes')->name('retaguarda.equipes.')->group(function () {
+        Route::get('/', [EquipesController::class, 'index'])->name('index');
+        Route::post('/', [EquipesController::class, 'store'])->name('store');
+        Route::put('{equipe}', [EquipesController::class, 'update'])->name('update');
+        Route::delete('{equipe}', [EquipesController::class, 'destroy'])->name('destroy');
+    });
+
     Route::prefix('retaguarda/logs')->name('retaguarda.logs.')->group(function () {
         Route::get('/', [LogsController::class, 'index'])->name('index');
         // O rastro de UMA ocorrência, que a listagem não carrega (campo longo).
@@ -176,11 +242,12 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /*
-     * Caixa de Entrada do Administrativo — PROTÓTIPO.
+     * Caixa de Entrada — a mesa do Chefe de Setor.
      *
-     * A porta por onde a demanda de fora entra: e-Salvador, Salvador Digital,
-     * pedido de nova licença e ofício chegam em PAPEL, e é aqui que o
-     * administrativo digita, decide e encaminha à equipe da área do bairro.
+     * A porta por onde a demanda entra fora da integração: papel do
+     * e-Salvador, pedido de nova licença, ofício e a avulsa (ligação ou e-mail
+     * de superior). É aqui que o chefe digita, decide e encaminha à equipe
+     * sugerida pelo bairro. O Fala Salvador não entra por aqui: é do líder.
      *
      * O primeiro trecho do caminho é o slug da tela (`caixa-de-entrada`), de onde
      * as guardas deduzem a permissão: as mutações abaixo nascem protegidas pela
@@ -190,47 +257,109 @@ Route::middleware(['auth'])->group(function () {
      * O identificador vai como NÚMERO: o WAF da Prefeitura barra assinatura de
      * SQL na URL, e protocolo é texto.
      */
-    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.caixa-de-entrada.')->group(function () {
-        Route::get('/', [CaixaDeEntradaController::class, 'index'])->name('index');
-        Route::post('/', [CaixaDeEntradaController::class, 'store'])->name('store');
-        Route::post('{demanda}/encaminhar', [CaixaDeEntradaController::class, 'encaminhar'])
-            ->name('encaminhar')->whereNumber('demanda');
-        Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
-            ->name('devolver')->whereNumber('demanda');
-        // Só existe porque é protótipo: devolve a caixa ao estado de demonstração.
-        Route::post('reiniciar', [CaixaDeEntradaController::class, 'reiniciar'])->name('reiniciar');
-    });
+    // A mesa antiga do chefe (cadastro com encaminhamento, pré-triagem): fora
+    // do menu desde 24/09/2026 e SÓ do chefe — ver App\Http\Middleware\SoChefeDeSetor.
+    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.caixa-de-entrada.')
+        ->middleware(SoChefeDeSetor::class)->group(function () {
+            Route::get('/', [CaixaDeEntradaController::class, 'index'])->name('index');
+            Route::post('/', [CaixaDeEntradaController::class, 'store'])->name('store');
+            Route::post('{demanda}/encaminhar', [CaixaDeEntradaController::class, 'encaminhar'])
+                ->name('encaminhar')->whereNumber('demanda');
+            Route::post('{demanda}/devolver', [CaixaDeEntradaController::class, 'devolver'])
+                ->name('devolver')->whereNumber('demanda');
+
+            /*
+             * A PRÉ-TRIAGEM: dez denúncias que são um fato.
+             *
+             * As mesmas quatro ações existem sob os dois caminhos (aqui e em
+             * `denuncias`), apontando para o MESMO controller. É de propósito: a
+             * guarda de acesso deduz a tela do primeiro trecho do caminho, então cada
+             * porta herda a permissão da tela onde o chefe já está — em vez de
+             * a pré-triagem virar uma terceira tela, com uma terceira concessão para
+             * alguém esquecer de dar.
+             */
+            Route::post('agrupamento/varrer', [AgrupamentoDeDemandasController::class, 'varrer'])
+                ->name('agrupamento.varrer');
+            Route::post('agrupamento/liberar', [AgrupamentoDeDemandasController::class, 'liberar'])
+                ->name('agrupamento.liberar');
+            Route::post('agrupamento/juntar', [AgrupamentoDeDemandasController::class, 'juntar'])
+                ->name('agrupamento.juntar');
+            Route::post('agrupamento/sugestoes/{sugestao}/aceitar', [AgrupamentoDeDemandasController::class, 'aceitar'])
+                ->name('agrupamento.aceitar')->whereNumber('sugestao');
+            Route::post('agrupamento/sugestoes/{sugestao}/recusar', [AgrupamentoDeDemandasController::class, 'recusar'])
+                ->name('agrupamento.recusar')->whereNumber('sugestao');
+            Route::post('agrupamento/{demanda}/agrupar', [AgrupamentoDeDemandasController::class, 'agrupar'])
+                ->name('agrupamento.agrupar')->whereNumber('demanda');
+            Route::post('agrupamento/{demanda}/desagrupar', [AgrupamentoDeDemandasController::class, 'desagrupar'])
+                ->name('agrupamento.desagrupar')->whereNumber('demanda');
+        });
 
     /*
-     * Denúncias das ouvidorias — PROTÓTIPO.
+     * As CAIXAS DE ENTRADA por canal — as quatro frentes (decisão do dono,
+     * 24/09/2026): e-Salvador (denúncias e licenças), Fala Salvador, e-Protocolo
+     * (atendimento presencial na sede da SEFAL) e Avulsas.
      *
-     * Duas telas, uma por canal (e-Salvador e Salvador Digital), e as mutações do
-     * fluxo de duas etapas: a triagem encaminha à ÁREA ou devolve/arquiva; o
-     * Chefe de Setor da área direciona à EQUIPE ou anexa a uma OPERAÇÃO.
+     * Eram duas seções que faziam o mesmo trabalho — a Caixa de Entrada (o que o
+     * chefe digitava) e as Denúncias (o que chegava pelos canais). Agora cada
+     * canal é uma tela, com o mesmo fluxo: o chefe encaminha à equipe, o líder
+     * direciona aos fiscais, o retorno volta ao líder e ao chefe, e o chefe
+     * responde ao canal.
      *
-     * As duas telas dividem o primeiro trecho do caminho (`denuncias`), e é
-     * dele que as guardas deduzem a permissão: a concessão é UMA, para o
-     * módulo, que é o que "quem cuida de denúncia" quer dizer. Separar a
-     * permissão do e-Salvador da do Salvador Digital seria uma decisão que ninguém
-     * precisa tomar e uma linha a mais na matriz.
-     *
-     * Não há rota de INCLUSÃO, e isso é deliberado: a denúncia entra por
-     * integração, ninguém a digita aqui. Ver o cabeçalho do controller.
+     * Moram sob `caixa-de-entrada` porque é desse primeiro trecho que as guardas
+     * deduzem a permissão: UMA concessão para as quatro. Os NOMES das rotas
+     * continuam `retaguarda.denuncias.*` — é o nome do módulo no código, e é o
+     * que o front importa.
      *
      * As mutações vão no corpo do POST porque carregam lista de identificadores
-     * e texto livre de justificativa — em query string o WAF da Prefeitura
-     * barraria, e a falha voltaria disfarçada de erro de CORS.
+     * e texto livre — em query string o WAF da Prefeitura barraria, e a falha
+     * voltaria disfarçada de erro de CORS.
      */
-    Route::prefix('retaguarda/denuncias')->name('retaguarda.denuncias.')->group(function () {
+    Route::prefix('retaguarda/caixa-de-entrada')->name('retaguarda.denuncias.')->group(function () {
         Route::get('e-salvador', [DenunciasController::class, 'eSalvador'])->name('e-salvador.index');
-        Route::get('salvador-digital', [DenunciasController::class, 'salvadorDigital'])->name('salvador-digital.index');
+        Route::get('fala-salvador', [DenunciasController::class, 'falaSalvador'])->name('fala-salvador.index');
+        Route::get('e-protocolo', [DenunciasController::class, 'eProtocolo'])->name('e-protocolo.index');
+        Route::get('avulsas', [DenunciasController::class, 'avulsas'])->name('avulsas.index');
+        // O arquivo que veio com a demanda — ver ou baixar (`?baixar=1`). Só o número na URL.
+        Route::get('anexos/{anexo}', [ArquivosController::class, 'anexo'])->whereNumber('anexo')->name('anexo');
+
+        /*
+         * O CADASTRO manual, por canal: o chefe digita o que chega a ele (papel
+         * do e-Salvador, licença, e-Protocolo, avulsa); o líder digita o Fala
+         * Salvador, que só ele acessa. Quem pode o quê é regra do controller.
+         */
+        Route::post('{canal}/registrar', [DenunciasController::class, 'registrar'])
+            ->name('registrar')->whereIn('canal', Demanda::CANAIS);
+
+        // O RETORNO AO CANAL — o chefe responde (ou abre o processo da avulsa).
+        Route::post('{demanda}/responder-ao-canal', [RetornoAoCanalController::class, 'store'])
+            ->name('responder-ao-canal')->whereNumber('demanda');
 
         Route::post('encaminhar', [DenunciasController::class, 'encaminhar'])->name('encaminhar');
         Route::post('devolver', [DenunciasController::class, 'devolver'])->name('devolver');
         Route::post('direcionar', [DenunciasController::class, 'direcionar'])->name('direcionar');
         Route::post('operacao', [DenunciasController::class, 'operacao'])->name('operacao');
-        // Só existe porque é protótipo: devolve o módulo ao estado da demonstração.
-        Route::post('reiniciar', [DenunciasController::class, 'reiniciar'])->name('reiniciar');
+    });
+
+    /*
+     * Endereços antigos das telas de canal (até 24/09/2026): quem tinha o link
+     * salvo cai na tela nova, e não num 404.
+     */
+    // Só GET: `Route::redirect` responde a qualquer verbo, e uma "mutação" sem
+    // permissão mapeada é justamente o que a cobertura de ações barra.
+    foreach (['e-salvador', 'fala-salvador'] as $antigo) {
+        Route::get("retaguarda/denuncias/{$antigo}", RedirectController::class)
+            ->defaults('destination', "/retaguarda/caixa-de-entrada/{$antigo}")
+            ->defaults('status', 302);
+    }
+
+    /*
+     * Levantamentos de ambulantes — o censo por rua que o aplicativo do fiscal
+     * grava (dono, 13/10/2026). Só consulta; a foto do equipamento sai pela
+     * porta única dos arquivos, sob o slug da tela, com o recorte do líder.
+     */
+    Route::prefix('retaguarda/levantamentos')->name('retaguarda.levantamentos.')->group(function () {
+        Route::get('/', [LevantamentosController::class, 'index'])->name('index');
+        Route::get('fotos/{linha}', [ArquivosController::class, 'fotoDoLevantamento'])->whereNumber('linha')->name('foto');
     });
 
     /*
@@ -264,11 +393,13 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::prefix('retaguarda/fiscalizacoes')->name('retaguarda.fiscalizacoes.')->group(function () {
         Route::get('/', [FiscalizacoesController::class, 'index'])->name('index');
-        Route::post('ciencia', [FiscalizacoesController::class, 'ciencia'])->name('ciencia');
+        // A foto tirada em campo — ver ou baixar (`?baixar=1`). Só o número na URL.
+        Route::get('fotos/{foto}', [ArquivosController::class, 'foto'])->whereNumber('foto')->name('foto');
+        // Não há "dar ciência" (dono, 24/09/2026): o líder manda voltar ou encaminha ao chefe.
         Route::post('nova-vistoria', [FiscalizacoesController::class, 'novaVistoria'])->name('nova-vistoria');
-        Route::post('devolver', [FiscalizacoesController::class, 'devolver'])->name('devolver');
+        Route::post('encaminhar-ao-chefe', [FiscalizacoesController::class, 'encaminharAoChefe'])->name('encaminhar-ao-chefe');
+        Route::post('arquivar', [FiscalizacoesController::class, 'arquivar'])->name('arquivar');
         // Só existe porque é protótipo: devolve a fila ao estado de demonstração.
-        Route::post('reiniciar', [FiscalizacoesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*
@@ -294,7 +425,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('{operacao}', [OperacoesController::class, 'destroy'])
             ->name('destroy')->whereNumber('operacao');
         // Só existe porque é protótipo: devolve o catálogo ao estado de demonstração.
-        Route::post('reiniciar', [OperacoesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*
@@ -314,7 +444,6 @@ Route::middleware(['auth'])->group(function () {
             ->name('destroy')->whereNumber('area');
         Route::post('{area}/bairros', [AreasEEquipesController::class, 'bairros'])
             ->name('bairros')->whereNumber('area');
-        Route::post('reiniciar', [AreasEEquipesController::class, 'reiniciar'])->name('reiniciar');
     });
 
     /*
@@ -362,5 +491,40 @@ Route::middleware(['auth'])->group(function () {
     Route::post('retaguarda/exportar-listagem', [ExportacaoListagemController::class, 'exportar'])
         ->name('retaguarda.exportar-listagem');
 });
+
+/*
+ * O aplicativo do fiscal falando com o servidor (JSON, mesma sessão da
+ * Retaguarda). Fica ANTES da casca abaixo, que responde a qualquer caminho em
+ * `/app`. Fora de `/retaguarda/`, a guarda de telas não alcança estas rotas:
+ * quem as protege é o `AplicativoDoFiscal` (autenticado e em alguma equipe).
+ */
+Route::prefix('app/api')->name('aplicativo.')->group(function () {
+    Route::post('entrar', [AplicativoController::class, 'entrar'])->middleware('throttle:login')->name('entrar');
+    Route::post('sair', [AplicativoController::class, 'sair'])->name('sair');
+
+    Route::middleware(AplicativoDoFiscal::class)->group(function () {
+        Route::get('sessao', [AplicativoController::class, 'sessao'])->name('sessao');
+        Route::get('kit', [AplicativoController::class, 'kit'])->name('kit');
+        Route::post('numeros', [AplicativoController::class, 'numeros'])->name('numeros');
+        Route::post('fiscalizacoes', [AplicativoController::class, 'registrar'])->name('fiscalizacoes');
+        Route::post('levantamentos', [AplicativoController::class, 'levantar'])->name('levantamentos');
+    });
+});
+
+/*
+ * A casca do aplicativo do fiscal (PWA).
+ *
+ * Não é tela da Retaguarda: é uma aplicação de página única, servida por uma
+ * casca própria (`resources/views/pwa.blade.php`). A casca é pública — quem
+ * decide quem entra são as rotas `app/api/*` acima, e a porta do aplicativo
+ * pede matrícula e senha.
+ *
+ * O caminho é livre depois de `/app` porque a navegação interna é do lado do
+ * cliente: quem recarregar a página em qualquer ponto do fluxo recebe a mesma
+ * casca, e o aplicativo se reencontra sozinho.
+ */
+Route::get('app/{caminho?}', fn () => view('pwa'))
+    ->where('caminho', '.*')
+    ->name('pwa');
 
 require __DIR__.'/settings.php';

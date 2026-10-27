@@ -90,6 +90,22 @@ class RelatoriosController extends Controller
         $resultado->metadados['emitido_por'] = (string) $request->user()->name;
         $resultado->metadados['titulo'] ??= mb_strtoupper($relatorio->titulo());
 
+        /*
+         * O RECORTE — "e-Salvador · de 01/08 a 30/09 · todas as situações" — vai
+         * para a faixa do topo de todos os formatos.
+         *
+         * Os relatórios o declaram como `recorte`; os exportadores leem
+         * `filtros_resumo`, que é o nome que a exportação de listagem usa. Eram
+         * dois nomes para a mesma coisa, e o efeito era silencioso: a planilha
+         * saía SEM dizer de que universo falava, e quem a recebia por e-mail a
+         * lia como se fosse tudo.
+         *
+         * A ponte é feita aqui, num lugar só, em vez de renomear em quatro
+         * relatórios — assim relatório novo que declare `recorte` já nasce com a
+         * faixa preenchida.
+         */
+        $resultado->metadados['filtros_resumo'] ??= (string) ($resultado->metadados['recorte'] ?? '');
+
         $nome = Str::slug($relatorio->titulo()).'-'.now()->format('Ymd-Hi');
 
         return match ($dados['formato']) {

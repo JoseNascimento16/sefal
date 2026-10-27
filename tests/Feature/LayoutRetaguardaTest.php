@@ -50,7 +50,7 @@ test('a senha nao viaja para a tela', function () {
         );
 });
 
-test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () {
+test('o menu traz o inicio e o trabalho da fiscalizacao — o perfil saiu para o menu da conta', function () {
     /*
      * O que se afirma aqui é a MONTAGEM do menu — as seções e os itens que o
      * servidor entrega —, não o controle de acesso. Por isso o usuário é um
@@ -68,15 +68,34 @@ test('o menu traz o inicio, o perfil e o trabalho da fiscalizacao', function () 
         ->assertInertia(function ($p) {
             $menu = collect($p->toArray()['props']['menu']);
 
-            $rotulos = $menu->pluck('itens')->flatten(1)->pluck('rotulo');
+            $itens = $menu->pluck('itens')->flatten(1);
+            $rotulos = $itens->pluck('rotulo');
+
+            // Meu Perfil saiu do menu lateral e foi para o menu da CONTA, no canto
+            // superior direito (dono, 25/09/2026) — ver `MenuDaContaTest`.
             expect($rotulos)
                 ->toContain('Início')
-                ->toContain('Meu Perfil')
-                ->toContain('Ambulantes');
+                ->not->toContain('Meu Perfil');
 
-            $fiscalizacao = $menu->firstWhere('rotulo', 'Fiscalização');
-            expect($fiscalizacao)->not->toBeNull();
-            expect(collect($fiscalizacao['itens'])->pluck('rotulo'))->toContain('Ambulantes');
+            /*
+             * ⚠️ AMBULANTES MUDOU DE LUGAR. Ele era item de primeiro nível da
+             * seção Fiscalização; hoje é FILHO da pasta "Sistema", junto com
+             * Áreas e Equipes e Cadastro de Operação (decisão do dono, 10/09).
+             *
+             * O teste procura no lugar certo em vez de achatar tudo: achatar
+             * passaria a valer para qualquer posição do menu, e o dia em que o
+             * item voltasse ao primeiro nível por acidente ninguém saberia.
+             */
+            $filhos = $itens->pluck('filhos')->filter()->flatten(1)->pluck('rotulo');
+
+            expect($filhos)->toContain('Ambulantes');
+
+            $sistema = $menu->firstWhere('rotulo', 'Sistema');
+            expect($sistema)->not->toBeNull();
+
+            $pasta = collect($sistema['itens'])->firstWhere('rotulo', 'Sistema');
+            expect($pasta)->not->toBeNull()
+                ->and(collect($pasta['filhos'])->pluck('rotulo'))->toContain('Ambulantes');
         });
 });
 

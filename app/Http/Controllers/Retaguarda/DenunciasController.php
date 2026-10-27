@@ -3,29 +3,49 @@
 namespace App\Http\Controllers\Retaguarda;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\Demanda;
+use App\Models\DemandaAnexo;
+use App\Models\DemandaTramite;
+use App\Models\Fiscalizacao;
+use App\Models\Operacao;
 use App\Models\User;
+use App\Rules\ArquivoSeguro;
+use App\Rules\NomeDeCadastro;
+use App\Support\Apresentacao\ArquivoParaTela;
+use App\Support\Apresentacao\DemandaParaTela;
+use App\Support\Apresentacao\OperacaoParaTela;
+use App\Support\CiclosDeFiscalizacao;
+use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
-use App\Support\Prototipo\DenunciasFicticias;
-use App\Support\Prototipo\EstruturaFicticia;
-use App\Support\Prototipo\OperacoesFicticias;
-use App\Support\Prototipo\PapelNaArea;
+use App\Support\Papel;
+use App\Support\Protocolo;
 use App\Support\Prototipo\RecomendacoesDoFiscal;
+use App\Support\TriagemDeDemandas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Denúncias das ouvidorias — PROTÓTIPO.
+ * Denúncias por canal.
  *
- * Duas telas, uma por canal (`e-Salvador` e `Salvador Digital`), com a MESMA
- * mecânica: as denúncias chegam por integração, o coordenador tria e
- * encaminha à área, e o Chefe de Setor da área direciona à equipe ou anexa a uma
- * operação. O que muda entre elas é a origem e o que o formato do canal
- * carrega — o e-Salvador vem com requerente identificado, endereço estruturado
- * e anexos; o Salvador Digital pode ser anônimo e traz a transcrição do
- * atendimento telefônico, às vezes sem número nem ponto de referência.
+ * Duas telas, uma por canal (`e-Salvador` e `Fala Salvador`), com a MESMA
+ * mecânica: o Chefe de Setor ENCAMINHA a denúncia a uma equipe (e, portanto, ao
+ * líder dela) ou a devolve; o líder de equipe DIRECIONA aos fiscais ou anexa a
+ * uma operação. O que muda entre elas é a origem e o que o formato do canal
+ * carrega — o e-Salvador vem com requerente identificado e anexos; o outro
+ * canal pode ser anônimo e traz a transcrição do atendimento, às vezes sem
+ * número nem ponto de referência.
+ *
+ * Até 22/09/2026 a primeira etapa era do coordenador, que escolhia uma ÁREA. Os
+ * coordenadores trabalham no e-Salvador e não entram aqui; o chefe passou a ser
+ * um só, e escolhe a equipe.
  *
  * ── Por que UM controller e UMA tela para os dois canais ─────────────────────
  *
@@ -33,12 +53,12 @@ use Inertia\Response;
  * bairro → área e a exigência de justificativa não mudam com o canal. Dois
  * controllers seriam a mesma regra com dois donos, e um dia só um deles
  * receberia a validação nova. O que varia é declarado em
- * `config/prototipo_denuncias.php` → `canais`, e a tela lê de lá.
+ * `config/demandas.php` → `canais`, e a tela lê de lá.
  *
  * ── Nada é digitado aqui ────────────────────────────────────────────────────
  *
  * Não há rota de inclusão, e isso é deliberado: estas telas não são a Caixa de
- * Entrada (onde o coordenador digita o papel que chegou ao balcão). A
+ * Entrada (onde o Chefe de Setor digita o papel que chegou ao balcão). A
  * denúncia entra pela integração, e cada uma mostra o carimbo de quando o canal
  * a entregou e sob que número. Um botão "cadastrar denúncia" aqui apagaria
  * justamente a distinção que o módulo existe para deixar clara.
@@ -46,9 +66,10 @@ use Inertia\Response;
  * ── As duas etapas têm dois donos, e a tela obedece ─────────────────────────
  *
  * A permissão de ABRIR a tela é uma só (slug `denuncias`, no Modo Gerente). O
- * que separa os papéis é a ETAPA, derivada do setor de quem entrou: o
- * COORDENADOR tria, o CHEFE DE SETOR direciona, e o administrador do sistema exerce
- * as duas — é ele que demonstra o fluxo inteiro e que cobre a ausência do outro.
+ * que separa os papéis é a ETAPA, derivada do setor de quem entrou: o CHEFE DE
+ * SETOR encaminha, o LÍDER DE EQUIPE direciona, e o administrador do sistema
+ * exerce as duas — é ele que demonstra o fluxo inteiro e que cobre a ausência
+ * do outro.
  * A conferência acontece AQUI, no servidor, e não só na tela: esconder o botão é
  * conforto, nunca fronteira.
  *
@@ -61,14 +82,16 @@ use Inertia\Response;
  * ação deixaria a fronteira valendo apenas para quem não sabe mandar a
  * requisição.
  *
- * O administrador continua vendo tudo — é o dono do sistema. O coordenador
- * também, porque quem tria precisa saber o que aconteceu com o que encaminhou.
+ * O administrador continua vendo tudo — é o dono do sistema. O Chefe de Setor
+ * também, porque quem encaminha precisa saber o que aconteceu com o que mandou.
  *
- * ⚠️ PROTÓTIPO: nada é gravado em banco. As denúncias de partida vêm da config
- * e as decisões ficam na sessão de quem está navegando (ver
- * `App\Support\Prototipo\DenunciasFicticias`). A tela diz isso de forma
- * visível — protótipo que se disfarça de sistema pronto vira decisão tomada por
- * engano.
+ * ── O que mudou ao sair do protótipo ───────────────────────────────────────
+ *
+ * As denúncias são linhas de `demandas` — a MESMA tabela da Caixa de Entrada,
+ * separada pela coluna `entrada` (ver o cabeçalho do model). Cada decisão vira
+ * passo de trâmite gravado, e não mais um item de sessão que sumia no logout.
+ *
+ * Não há mais "reiniciar": denúncia recebida não se desfaz.
  *
  * A guarda de acesso deduz a tela do primeiro trecho do caminho
  * (`/retaguarda/denuncias/…`), então as rotas dos dois canais e todas as
@@ -80,59 +103,320 @@ class DenunciasController extends Controller
     /** Quantos itens o lote aceita de uma vez — o mesmo teto da página da grade. */
     private const MAX_LOTE = 200;
 
+    /**
+     * As ABAS de cada caixa (dono, 24/09/2026). A chave diz a fonte: `denuncias`
+     * e `licencas` são as abertas do canal; `respondidas`, as que fecharam.
+     * A caixa das Avulsas não tem abas — é uma lista só.
+     */
+    private const ABAS = [
+        Demanda::CANAL_E_SALVADOR => ['denuncias', 'licencas', 'respondidas'],
+        Demanda::CANAL_FALA_SALVADOR => ['denuncias', 'respondidas'],
+        Demanda::CANAL_E_PROTOCOLO => ['denuncias', 'respondidas'],
+        Demanda::CANAL_AVULSA => [],
+    ];
+
     public function eSalvador(Request $request): Response
     {
-        return $this->tela($request, 'e-salvador', 'ESalvador');
+        return $this->tela($request, Demanda::CANAL_E_SALVADOR, 'ESalvador');
     }
 
-    public function salvadorDigital(Request $request): Response
+    public function falaSalvador(Request $request): Response
     {
-        return $this->tela($request, 'salvador-digital', 'SalvadorDigital');
+        return $this->tela($request, Demanda::CANAL_FALA_SALVADOR, 'FalaSalvador');
+    }
+
+    public function eProtocolo(Request $request): Response
+    {
+        return $this->tela($request, Demanda::CANAL_E_PROTOCOLO, 'EProtocolo');
+    }
+
+    public function avulsas(Request $request): Response
+    {
+        return $this->tela($request, Demanda::CANAL_AVULSA, 'Avulsas');
     }
 
     /**
-     * TRIAGEM — encaminha as denúncias selecionadas às áreas escolhidas.
+     * CADASTRO manual de uma demanda, pelo canal.
      *
-     * O corpo traz `destinos`: uma lista de pares identificador → área. Não é um
-     * identificador por requisição nem uma área para o lote inteiro, porque a
-     * triagem real é os dois casos ao mesmo tempo — chegam dez denúncias de
-     * bairros diferentes, cada uma com a sua área, e o coordenador confirma
-     * todas de uma vez.
+     * Quem digita depende do canal (`registro` em `config/demandas.php`): o
+     * Fala Salvador é do LÍDER — só ele acessa o canal, e o caso nasce na mesa
+     * dele; os demais são do CHEFE — o papel do e-Salvador enquanto a integração
+     * não lê, a licença, o atendimento presencial do e-Protocolo e a avulsa —, e
+     * nascem `Recebida`, esperando o encaminhamento dele.
+     */
+    public function registrar(Request $request, string $canal): RedirectResponse
+    {
+        $configuracao = (array) config("demandas.canais.{$canal}", []);
+        $usuario = $request->user();
+
+        /*
+         * O canal do LÍDER (Fala Salvador) aceita também o registro do chefe
+         * (dono, 25/09/2026: sem integração, o chefe precisa lançar o que chega
+         * a ele). Cada um registra do seu jeito: o líder, já na mesa dele; o
+         * chefe, como Recebida, para encaminhar.
+         */
+        $como = self::comoRegistra($usuario, $canal);
+
+        if ($como === 'lider') {
+            return $this->registrarFalaSalvador($request);
+        }
+
+        if ($como === null) {
+            return back()->with(
+                'flash.erro',
+                ($configuracao['registro'] ?? null) === 'lider'
+                    ? 'Registrar o Fala Salvador é do líder de equipe ou do Chefe de Setor.'
+                    : 'O cadastro deste canal é do Chefe de Setor: é a ele que a demanda chega. '
+                        .'O líder recebe o caso já encaminhado.',
+            );
+        }
+
+        $avulsa = $canal === Demanda::CANAL_AVULSA;
+        $admiteAnonima = (bool) ($configuracao['admite_anonima'] ?? false);
+
+        $dados = $request->validate([
+            // A avulsa pode não ter número nenhum: foi uma ligação.
+            'documento_origem' => [
+                $avulsa ? 'nullable' : 'required', 'string', 'max:40',
+                Rule::unique('demandas', 'numero_origem')->where('canal', $canal),
+            ],
+            // A avulsa diz de onde veio o pedido: de um superior ou de um ofício.
+            'tipo_avulsa' => [$avulsa ? 'required' : 'exclude', Rule::in(array_keys(Demanda::TIPOS_AVULSA))],
+            'recebida_em' => ['required', 'date', 'before_or_equal:today'],
+            // `declined` aceita false/0: o canal que não admite anônima exige quem pediu.
+            'anonima' => array_values(array_filter(['required', 'boolean', $admiteAnonima ? null : 'declined'])),
+            'requerente' => ['exclude_if:anonima,true', 'required', 'string', 'max:150', new NomeDeCadastro],
+            'contato' => ['exclude_if:anonima,true', 'nullable', 'string', 'max:80'],
+            'assunto' => ['required', 'string', 'max:180'],
+            'endereco' => ['required', 'string', 'max:200'],
+            'bairro' => ['required', 'string', 'max:80'],
+            'descricao' => ['nullable', 'string', 'max:2000'],
+            // Os arquivos que vieram com o pedido (o ofício digitalizado, o e-mail,
+            // a foto): até cinco, 10 MB cada, só documento e imagem.
+            ...self::regrasDeAnexo(),
+        ], [
+            'tipo_avulsa.required' => 'Diga se é pedido de superior ou ofício.',
+            'tipo_avulsa.in' => 'Tipo de avulsa desconhecido.',
+            'documento_origem.required' => 'Informe o número do documento no canal de origem.',
+            'documento_origem.unique' => 'Já existe uma demanda deste canal com esse número — ela não entra duas vezes.',
+            'anonima.declined' => 'Este canal não recebe demanda anônima: informe quem pediu.',
+            'requerente.required' => $avulsa ? 'Informe quem pediu a ação.' : 'Informe o requerente — ou marque como anônima.',
+            'assunto.required' => 'Descreva em uma linha o que foi pedido.',
+            'endereco.required' => 'Informe onde é: sem endereço não há a quem mandar.',
+            'bairro.required' => 'Informe o bairro: é ele que sugere a equipe.',
+        ]);
+
+        $recebida = Date::parse((string) $dados['recebida_em']);
+        $protocolo = Protocolo::proximo('DEM', modelClass: Demanda::class);
+        $nome = (string) ($configuracao['nome'] ?? $canal);
+
+        $demanda = Demanda::create([
+            'protocolo' => $protocolo,
+            'canal' => $canal,
+            'tipo_avulsa' => $avulsa ? $dados['tipo_avulsa'] : null,
+            'entrada' => Demanda::ENTRADA_BALCAO,
+            // Sem número (a ligação da avulsa), o próprio protocolo ocupa o lugar:
+            // a unicidade é por canal e número, e dois vazios colidiriam no Oracle.
+            'numero_origem' => $dados['documento_origem'] ?? $protocolo,
+            'recebida_em' => $recebida,
+            'prazo_em' => $recebida->copy()->addDays((int) config('demandas.prazo_padrao_em_dias', 10)),
+            'anonima' => (bool) $dados['anonima'],
+            'requerente' => $dados['requerente'] ?? null,
+            'telefone' => $dados['contato'] ?? null,
+            'assunto' => $dados['assunto'],
+            'relato' => $dados['descricao'] ?? null,
+            'logradouro' => $dados['endereco'],
+            'bairro' => $dados['bairro'],
+            'situacao' => Demanda::RECEBIDA,
+            'area_id' => Area::sugeridaParaBairro((string) $dados['bairro'])?->id,
+            'criada_por_id' => Auth::id(),
+        ]);
+
+        $this->guardarAnexos($demanda, (array) $request->file('anexos', []));
+
+        $demanda->tramites()->create([
+            'ordem' => 1,
+            'ocorrida_em' => $recebida,
+            'user_id' => Auth::id(),
+            'papel' => DemandaTramite::PAPEL_CHEFE_DE_SETOR,
+            'autor' => Auth::user()?->name,
+            'acao' => 'Demanda cadastrada',
+            'detalhe' => "Registrada pelo Chefe de Setor, com origem {$nome}.",
+            'situacao' => Demanda::RECEBIDA,
+            'campos' => array_filter([
+                'Origem do documento' => $nome,
+                'Número na origem' => $dados['documento_origem'] ?? null,
+            ]),
+        ]);
+
+        // A confirmação vem no MEIO da tela, com o protocolo (dono, 25/09/2026).
+        return back()->with('demanda_registrada', [
+            'protocolo' => $demanda->protocolo,
+            'canal' => $nome,
+            'proximo' => 'A demanda entrou como recebida. Encaminhe à equipe quando for a hora.',
+        ]);
+    }
+
+    /**
+     * REGISTRO do Fala Salvador — o líder digita o que recebeu por telefone.
+     *
+     * O canal não tem API e só os líderes o acessam (decisão do dono,
+     * 22/09/2026); o SEFAL é intermediário de registro. Por isso a demanda não
+     * passa pela Caixa nem pelo chefe: nasce **na mesa do próprio líder**
+     * (`Encaminhada ao líder`), com a equipe dele, e segue o fluxo normal —
+     * direcionar aos fiscais, receber o retorno. Responder ao cidadão continua
+     * sendo no Fala Salvador.
+     *
+     * Quem lidera mais de uma equipe escolhe; quem lidera uma não precisa dizer.
+     */
+    private function registrarFalaSalvador(Request $request): RedirectResponse
+    {
+        $usuario = $request->user();
+
+        if (! Papel::ehLider($usuario) && ! ($usuario?->ehAdmin() ?? false)) {
+            return back()->with(
+                'flash.erro',
+                'Registrar o Fala Salvador é do líder de equipe: é ele que atende o canal. '
+                .'O Chefe de Setor registra o que chega a ele na Caixa de Entrada.',
+            );
+        }
+
+        $minhas = Papel::equipes($usuario);
+        $canal = (array) config('demandas.canais.'.Demanda::CANAL_FALA_SALVADOR, []);
+
+        $dados = $request->validate([
+            'documento_origem' => ['required', 'string', 'max:40'],
+            'recebida_em' => ['required', 'date'],
+            'anonima' => ['required', 'boolean'],
+            'requerente' => ['exclude_if:anonima,true', 'required', 'string', 'max:150', new NomeDeCadastro],
+            'contato' => ['exclude_if:anonima,true', 'nullable', 'string', 'max:80'],
+            'assunto' => ['required', 'string', 'max:180'],
+            'endereco' => ['required', 'string', 'max:200'],
+            'bairro' => ['required', 'string', 'max:80'],
+            'descricao' => ['nullable', 'string', 'max:2000'],
+            // Os arquivos que vieram com o pedido (o ofício digitalizado, o e-mail,
+            // a foto): até cinco, 10 MB cada, só documento e imagem.
+            ...self::regrasDeAnexo(),
+            // Uma equipe só: fica implícita. Mais de uma (ou administrador): escolhe.
+            'equipe' => [
+                count($minhas) === 1 ? 'nullable' : 'required',
+                Rule::in(count($minhas) > 0 ? $minhas : Estrutura::codigosDeEquipe()),
+            ],
+        ], [
+            'documento_origem.required' => 'Informe o número do atendimento no Fala Salvador.',
+            'requerente.required' => 'Informe quem ligou — ou marque a denúncia como anônima.',
+            'assunto.required' => 'Descreva em uma linha o que foi relatado.',
+            'endereco.required' => 'Informe onde é: sem endereço não há a quem mandar.',
+            'bairro.required' => 'Informe o bairro.',
+            'equipe.required' => 'Escolha para qual das suas equipes é este caso.',
+            'equipe.in' => 'Essa equipe não é sua. O líder registra para a equipe que lidera.',
+        ]);
+
+        $equipe = Estrutura::equipeModel((string) ($dados['equipe'] ?? $minhas[0] ?? ''));
+
+        if ($equipe === null) {
+            return back()->with('flash.erro', 'Sua conta não está ligada a nenhuma equipe — procure quem administra o sistema.');
+        }
+
+        $recebida = Date::parse((string) $dados['recebida_em']);
+
+        $demanda = Demanda::create([
+            'protocolo' => Protocolo::proximo('DEM', modelClass: Demanda::class),
+            'canal' => Demanda::CANAL_FALA_SALVADOR,
+            'entrada' => Demanda::ENTRADA_BALCAO,
+            'numero_origem' => $dados['documento_origem'],
+            'recebida_em' => $recebida,
+            'prazo_em' => $recebida->copy()->addDays((int) config('demandas.prazo_padrao_em_dias', 10)),
+            'anonima' => (bool) $dados['anonima'],
+            'requerente' => $dados['requerente'] ?? null,
+            'telefone' => $dados['contato'] ?? null,
+            'assunto' => $dados['assunto'],
+            'relato' => $dados['descricao'] ?? null,
+            'logradouro' => $dados['endereco'],
+            'bairro' => $dados['bairro'],
+            // Já na mesa do líder: é ele quem registrou, e é dele o próximo passo.
+            'situacao' => Demanda::ENCAMINHADA_AO_LIDER,
+            'equipe_id' => $equipe->id,
+            'area_id' => $equipe->area_id,
+            'criada_por_id' => Auth::id(),
+        ]);
+
+        $this->guardarAnexos($demanda, (array) $request->file('anexos', []));
+
+        $demanda->tramites()->create([
+            'ordem' => 1,
+            'ocorrida_em' => $recebida,
+            'user_id' => Auth::id(),
+            'papel' => DemandaTramite::PAPEL_LIDER,
+            'autor' => Auth::user()?->name,
+            'acao' => 'Registrada pelo líder da equipe',
+            'detalhe' => 'Recebida no '.((string) ($canal['nome'] ?? 'Fala Salvador'))
+                .' e registrada aqui pelo líder da Equipe '.$equipe->codigo.', para direcionar aos fiscais.',
+            'situacao' => Demanda::ENCAMINHADA_AO_LIDER,
+            'campos' => [
+                'Origem do documento' => (string) ($canal['nome'] ?? 'Fala Salvador'),
+                'Número na origem' => (string) $dados['documento_origem'],
+                'Equipe' => $equipe->codigo,
+            ],
+        ]);
+
+        // Já na mesa do líder: a FISCALIZAÇÃO nasce junto, para ele enviar à equipe.
+        CiclosDeFiscalizacao::abrirParaDemanda($demanda, $usuario);
+
+        // A confirmação vem no MEIO da tela, com o protocolo (dono, 25/09/2026).
+        return back()->with('demanda_registrada', [
+            'protocolo' => $demanda->protocolo,
+            'canal' => 'Fala Salvador',
+            'proximo' => "A demanda entrou na sua mesa (Equipe {$equipe->codigo}). Direcione aos fiscais quando "
+                .'for a hora — a resposta ao cidadão continua no Fala Salvador.',
+        ]);
+    }
+
+    /**
+     * ENCAMINHAMENTO — o Chefe de Setor manda cada denúncia à equipe que
+     * confirmou, e quem recebe é o líder dela.
+     *
+     * O corpo traz `destinos`: uma lista de pares identificador → equipe. Não é
+     * um identificador por requisição nem uma equipe para o lote inteiro, porque
+     * o encaminhamento real é os dois casos ao mesmo tempo — chegam dez denúncias
+     * de bairros diferentes, cada uma com a sua equipe sugerida, e o chefe
+     * confirma todas de uma vez.
      */
     public function encaminhar(Request $request): RedirectResponse
     {
-        if (($recusa = $this->exigirEtapa($request, 'triagem')) !== null) {
+        if (($recusa = $this->exigirEtapa($request, 'encaminhamento')) !== null) {
             return $recusa;
         }
 
         $dados = $request->validate([
             'destinos' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'destinos.*.id' => ['required', 'integer'],
-            'destinos.*.area' => ['required', Rule::in(EstruturaFicticia::nomesDeArea())],
+            'destinos.*.equipe' => ['required', Rule::in(Estrutura::codigosDeEquipe())],
             'observacao' => ['nullable', 'string', 'max:500'],
         ], [
             'destinos.required' => 'Escolha ao menos uma denúncia para encaminhar.',
-            'destinos.*.area.required' => 'Confirme a área de cada denúncia antes de encaminhar.',
-            'destinos.*.area.in' => 'A área escolhida não existe na estrutura de fiscalização.',
+            'destinos.*.equipe.required' => 'Confirme a equipe de cada denúncia antes de encaminhar.',
+            'destinos.*.equipe.in' => 'A equipe escolhida não existe na estrutura de fiscalização.',
         ]);
 
-        $areasPorId = [];
+        $equipesPorId = [];
 
         foreach ($dados['destinos'] as $destino) {
-            $areasPorId[(int) $destino['id']] = (string) $destino['area'];
+            $equipesPorId[(int) $destino['id']] = (string) $destino['equipe'];
         }
 
-        $efeito = DenunciasFicticias::encaminharAArea($areasPorId, $dados['observacao'] ?? null);
+        $efeito = $this->triagem($request)->encaminharAoLider($equipesPorId, $dados['observacao'] ?? null);
 
         return back()->with(...$this->recado(
             $efeito,
-            'encaminhada à área, para o Chefe de Setor direcionar',
-            'encaminhadas às áreas, para os Chefes de Setor direcionarem',
+            'encaminhada ao líder da equipe, que direciona aos fiscais',
+            'encaminhadas aos líderes das equipes, que direcionam aos fiscais',
         ));
     }
 
     /**
-     * TRIAGEM — devolve ao canal de origem ou arquiva, com motivo e justificativa.
+     * ENCAMINHAMENTO — o Chefe de Setor devolve ao canal de origem ou arquiva,
+     * com motivo e justificativa.
      *
      * A justificativa é exigida no SERVIDOR, e com tamanho mínimo: devolver é ato
      * administrativo, e "não procede" não conta o caso a quem ler depois.
@@ -140,16 +424,16 @@ class DenunciasController extends Controller
      */
     public function devolver(Request $request): RedirectResponse
     {
-        if (($recusa = $this->exigirEtapa($request, 'triagem')) !== null) {
+        if (($recusa = $this->exigirEtapa($request, 'encaminhamento')) !== null) {
             return $recusa;
         }
 
         $dados = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'ids.*' => ['required', 'integer'],
-            'motivo' => ['required', Rule::in((array) config('prototipo_denuncias.motivos_de_devolucao', []))],
+            'motivo' => ['required', Rule::in((array) config('demandas.motivos_de_devolucao', []))],
             'justificativa' => ['required', 'string', 'min:15', 'max:1000'],
-            'destino' => ['required', Rule::in((array) config('prototipo_denuncias.destinos_de_retorno', []))],
+            'destino' => ['required', Rule::in((array) config('demandas.destinos_de_retorno', []))],
         ], [
             'ids.required' => 'Escolha ao menos uma denúncia.',
             'motivo.required' => 'Escolha o motivo da devolução.',
@@ -158,7 +442,7 @@ class DenunciasController extends Controller
             'destino.required' => 'Diga se a denúncia volta ao canal de origem ou é arquivada.',
         ]);
 
-        $efeito = DenunciasFicticias::devolver(
+        $efeito = $this->triagem($request)->devolver(
             array_map('intval', $dados['ids']),
             $dados['motivo'],
             $dados['justificativa'],
@@ -173,13 +457,11 @@ class DenunciasController extends Controller
     }
 
     /**
-     * DIRECIONAMENTO — o Chefe de Setor manda as denúncias a uma equipe.
+     * DIRECIONAMENTO — o líder manda a própria equipe vistoriar.
      *
-     * A justificativa passa a ser OBRIGATÓRIA quando a equipe escolhida não é a
-     * da área da denúncia: tirar o trabalho da equipe responsável é decisão que
-     * precisa estar escrita. A conferência é feita contra a área GRAVADA na
-     * denúncia, não contra o que a tela mandou — senão bastaria omitir a área no
-     * corpo para a exigência desaparecer.
+     * A equipe já está na denúncia (o chefe a escolheu ao encaminhar); o líder
+     * não troca de equipe aqui — se ela veio para a equipe errada, o caminho é
+     * devolver ao chefe. O que ele acrescenta é a ORIENTAÇÃO aos fiscais.
      */
     public function direcionar(Request $request): RedirectResponse
     {
@@ -190,41 +472,30 @@ class DenunciasController extends Controller
         $dados = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_LOTE],
             'ids.*' => ['required', 'integer'],
-            'equipe' => ['required', Rule::in(EstruturaFicticia::codigosDeEquipe())],
-            'justificativa' => ['nullable', 'string', 'max:1000'],
+            'orientacao' => ['nullable', 'string', 'max:1000'],
         ], [
             'ids.required' => 'Escolha ao menos uma denúncia.',
-            'equipe.required' => 'Escolha a equipe que vai vistoriar.',
-            'equipe.in' => 'A equipe escolhida não existe na estrutura de fiscalização.',
         ]);
 
         $ids = array_map('intval', $dados['ids']);
 
-        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
             return $recusa;
         }
 
-        $equipe = (string) $dados['equipe'];
-        $justificativa = trim((string) ($dados['justificativa'] ?? ''));
+        $orientacao = trim((string) ($dados['orientacao'] ?? ''));
 
-        if ($justificativa === '' && $this->trocaDeEquipe($ids, $equipe)) {
-            return back()->withErrors([
-                'justificativa' => 'A equipe escolhida não é a da área da denúncia. Escreva por que o '
-                    .'trabalho sai da equipe responsável.',
-            ]);
-        }
-
-        $efeito = DenunciasFicticias::direcionarAEquipe($ids, $equipe, $justificativa === '' ? null : $justificativa);
+        $efeito = $this->triagem($request)->direcionarAosFiscais($ids, $orientacao === '' ? null : $orientacao);
 
         return back()->with(...$this->recado(
             $efeito,
-            "direcionada à Equipe {$equipe} — aparecerá no aplicativo dos fiscais dela",
-            "direcionadas à Equipe {$equipe} — aparecerão no aplicativo dos fiscais dela",
+            'direcionada aos fiscais — aparecerá no aplicativo deles',
+            'direcionadas aos fiscais — aparecerão no aplicativo deles',
         ));
     }
 
     /**
-     * DIRECIONAMENTO — o Chefe de Setor anexa as denúncias a uma operação.
+     * DIRECIONAMENTO — o líder (ou o chefe) anexa as denúncias a uma operação.
      *
      * A operação pode ser uma das que já existem ou uma NOVA, aberta dali mesmo:
      * é o caso de não haver trabalho planejado para aquela região ainda. Um
@@ -250,9 +521,9 @@ class DenunciasController extends Controller
          * campo. É a pior falha possível aqui, porque não parece falha nenhuma.
          */
         if (! $nova) {
-            $escolhida = OperacoesFicticias::porNome((string) $request->input('operacao'));
+            $escolhida = Operacao::where('nome', (string) $request->input('operacao'))->first();
 
-            if ($escolhida !== null && $escolhida['encerrada'] === true) {
+            if ($escolhida !== null && ! in_array($escolhida->situacao, Operacao::ABERTAS, true)) {
                 /*
                  * Recado por `flash.erro`, e não por erro de campo: esta tela não
                  * renderiza o saco de erros de validação, e uma recusa que não
@@ -261,7 +532,7 @@ class DenunciasController extends Controller
                  */
                 return back()->with(
                     'flash.erro',
-                    "A {$escolhida['nome']} está encerrada e não recebe denúncia nova. Escolha uma "
+                    "A {$escolhida->nome} está encerrada e não recebe denúncia nova. Escolha uma "
                     .'operação em andamento, abra uma nova aqui mesmo, ou direcione a denúncia à '
                     .'equipe.',
                 );
@@ -280,12 +551,12 @@ class DenunciasController extends Controller
              * inválida": quem escolheu uma operação que existe na tela de cadastro
              * merece ouvir que ela foi encerrada, não que ela não existe.
              */
-            'operacao' => ['exclude_if:nova,true', 'required', Rule::in(DenunciasFicticias::nomesDeOperacao())],
+            'operacao' => ['exclude_if:nova,true', 'required', Rule::in(Operacao::abertas()->pluck('nome')->all())],
 
             // Operação nova: o mínimo para ela ser reconhecível depois.
             'nome' => ['exclude_unless:nova,true', 'required', 'string', 'min:5', 'max:120'],
-            'area' => ['exclude_unless:nova,true', 'required', Rule::in(EstruturaFicticia::nomesDeArea())],
-            'equipe' => ['exclude_unless:nova,true', 'required', Rule::in(EstruturaFicticia::codigosDeEquipe())],
+            'area' => ['exclude_unless:nova,true', 'required', Rule::in(Estrutura::nomesDeArea())],
+            'equipe' => ['exclude_unless:nova,true', 'required', Rule::in(Estrutura::codigosDeEquipe())],
             'periodo' => ['exclude_unless:nova,true', 'nullable', 'string', 'max:80'],
             'foco' => ['exclude_unless:nova,true', 'nullable', 'string', 'max:300'],
         ], [
@@ -298,7 +569,7 @@ class DenunciasController extends Controller
 
         $ids = array_map('intval', $dados['ids']);
 
-        if (($recusa = $this->exigirArea($request, $ids)) !== null) {
+        if (($recusa = $this->exigirEquipe($request, $ids)) !== null) {
             return $recusa;
         }
 
@@ -307,7 +578,7 @@ class DenunciasController extends Controller
          * operação em rua, e é ele que a denúncia grava na linha. Com duas do mesmo
          * nome, a anexação aponta para qualquer uma das duas e ninguém sabe qual.
          */
-        if ($nova && OperacoesFicticias::nomeEmUso((string) $dados['nome'])) {
+        if ($nova && Operacao::where('nome', (string) $dados['nome'])->exists()) {
             return back()->with(
                 'flash.erro',
                 'Já existe uma operação com esse nome. Escolha outro nome, ou anexe a denúncia à '
@@ -316,30 +587,21 @@ class DenunciasController extends Controller
         }
 
         $operacao = $nova
-            ? DenunciasFicticias::criarOperacao($dados)['nome']
-            : (string) $dados['operacao'];
+            ? $this->abrirOperacao($dados)
+            : Operacao::where('nome', (string) $dados['operacao'])->firstOrFail();
 
-        $efeito = DenunciasFicticias::anexarAOperacao($ids, $operacao);
+        $efeito = $this->triagem($request)->anexarAOperacao(
+            $ids,
+            $operacao,
+            null,
+            Papel::papelDoTramite($request->user(), Papel::recorta($request->user()) ? 'lider' : 'chefe'),
+        );
 
         return back()->with(...$this->recado(
             $efeito,
-            "incluída na {$operacao}",
-            "incluídas na {$operacao}",
+            "incluída na {$operacao->nome}",
+            "incluídas na {$operacao->nome}",
         ));
-    }
-
-    /**
-     * Devolve o módulo ao estado de partida.
-     *
-     * Existe porque é PROTÓTIPO: quem está demonstrando precisa poder recomeçar a
-     * cena com os dois papéis. No sistema real esta rota não existe — denúncia
-     * recebida não se desfaz.
-     */
-    public function reiniciar(): RedirectResponse
-    {
-        DenunciasFicticias::reiniciar();
-
-        return back()->with('flash.sucesso', 'Denúncias devolvidas ao estado de demonstração.');
     }
 
     /**
@@ -354,74 +616,191 @@ class DenunciasController extends Controller
     private function tela(Request $request, string $canal, string $pagina): Response
     {
         /** @var array<string, mixed> $configuracao */
-        $configuracao = (array) config("prototipo_denuncias.canais.{$canal}", []);
+        $configuracao = ['slug' => $canal, ...(array) config("demandas.canais.{$canal}", [])];
 
         $usuario = $request->user();
-        $areasDoChefe = self::areasDoChefe($usuario);
-        $comRecorte = self::temRecorteDeArea($usuario);
+        $equipesDoLider = Papel::equipes($usuario);
+        $comRecorte = Papel::recorta($usuario);
 
         return Inertia::render("Retaguarda/Denuncias/{$pagina}", [
             'canal' => $configuracao,
-            // O Chefe de Setor recebe SÓ o que é da área dele — o recorte é feito aqui, e
+            /*
+             * Esta pessoa REGISTRA este canal aqui? O chefe registra em todas as
+             * caixas; o líder, no Fala Salvador; o administrador, onde o canal pede.
+             * Ver `comoRegistra`.
+             */
+            'registra' => self::registra($usuario, $canal),
+            /*
+             * Em que canais o formulário de cadastro desta tela grava. A caixa do
+             * e-Salvador cadastra denúncia E licença — a licença chega pelo
+             * e-Salvador e mora na aba própria dela.
+             */
+            'registroEm' => array_values(array_map(
+                static fn (string $c): array => [
+                    'slug' => $c,
+                    'nome' => (string) config("demandas.canais.{$c}.nome"),
+                    'admite_anonima' => (bool) config("demandas.canais.{$c}.admite_anonima"),
+                    'tem_anexo' => (bool) config("demandas.canais.{$c}.tem_anexo"),
+                    // Como ESTA pessoa registra aqui — o chefe no Fala Salvador registra como chefe.
+                    'registro' => self::comoRegistra($usuario, $c),
+                ],
+                array_filter(
+                    $canal === Demanda::CANAL_E_SALVADOR
+                        ? [Demanda::CANAL_E_SALVADOR, Demanda::CANAL_NOVA_LICENCA]
+                        : [$canal],
+                    static fn (string $c): bool => self::registra($usuario, $c),
+                ),
+            )),
+            // As abas desta caixa, e a fonte da aba Licenças (só no e-Salvador).
+            'abas' => self::ABAS[$canal] ?? ['denuncias', 'respondidas'],
+            'licencas' => $canal === Demanda::CANAL_E_SALVADOR
+                ? $this->doCanal(Demanda::CANAL_NOVA_LICENCA, $comRecorte ? $equipesDoLider : null)
+                : [],
+            // Quem RESPONDE ao canal, concluído o trabalho: o chefe (e o administrador).
+            'decide' => Papel::ehChefe($usuario) || ($usuario?->ehAdmin() ?? false),
+            'bairros' => Estrutura::bairros(),
+            'sugestoes' => Estrutura::mapaDeSugestoes(),
+            // O líder recebe SÓ o que é da equipe dele — o recorte é feito aqui, e
             // não na tela: filtro de front esconde, não protege, e a lista inteira
             // teria viajado até o navegador de quem não deve vê-la.
-            'denuncias' => $comRecorte
-                ? array_values(array_filter(
-                    DenunciasFicticias::doCanal($canal),
-                    static fn (array $d): bool => is_string($d['area'] ?? null)
-                        && in_array($d['area'], $areasDoChefe, true),
-                ))
-                : DenunciasFicticias::doCanal($canal),
+            'denuncias' => $this->doCanal($canal, $comRecorte ? $equipesDoLider : null),
             // Os catálogos vêm do SERVIDOR: são os MESMOS que a validação exige.
             // Escritos também na tela, um dia discordariam — e a tela ofereceria
             // uma opção que o servidor recusa.
-            'situacoes' => array_values((array) config('prototipo_denuncias.situacoes', [])),
+            'situacoes' => Demanda::SITUACOES,
             // Os desfechos de vistoria — a tela usa para a busca reconhecer
             // "regularizado no local" e "nada encontrado" como faceta. Vem do
             // servidor pela mesma razão dos outros catálogos: escrito na tela,
             // um dia reconheceria um desfecho que já não existe.
-            'desfechos' => array_values((array) config('prototipo_denuncias.desfechos', [])),
+            'desfechos' => Fiscalizacao::DESFECHOS,
             // O catálogo de recomendações na redação EXPLÍCITA. O passo do
             // trâmite traz a CHAVE (é ela que o aplicativo do fiscal grava), e
             // quem decide lê a frase inteira: a pílula curta é do celular, onde
             // não cabe frase; aqui "Sugerir retorno da equipe" não diz QUANDO
             // voltar, e "Voltar ao ponto no vencimento do prazo" diz.
             'recomendacoesDoFiscal' => RecomendacoesDoFiscal::explicitos(),
-            'motivos' => array_values((array) config('prototipo_denuncias.motivos_de_devolucao', [])),
-            'destinos' => array_values((array) config('prototipo_denuncias.destinos_de_retorno', [])),
-            'equipes' => EstruturaFicticia::equipes(),
-            'areas' => EstruturaFicticia::nomesDeArea(),
-            // Quem responde por cada área. É o que o triador precisa ver ANTES de
-            // encaminhar: "vai para a Área 5" só diz metade; a outra metade é para
+            'motivos' => array_values((array) config('demandas.motivos_de_devolucao', [])),
+            'destinos' => array_values((array) config('demandas.destinos_de_retorno', [])),
+            'equipes' => Estrutura::equipes(),
+            'areas' => Estrutura::nomesDeArea(),
+            // Quem lidera cada equipe. É o que o chefe precisa ver ANTES de
+            // encaminhar: "vai para a C2" só diz metade; a outra metade é para
             // quem.
-            'chefias' => EstruturaFicticia::chefiasPorArea(),
-            'operacoes' => DenunciasFicticias::operacoes(),
+            'lideres' => Estrutura::lideresPorEquipe(),
+            /*
+             * A PRÉ-TRIAGEM não é servida aqui.
+             *
+             * Ela é a etapa ANTERIOR a esta tela e mora na aba própria da Caixa
+             * de Entrada: quando a denúncia chega a esta lista, "isto é o mesmo
+             * fato que aquilo?" já foi respondido. Servir as propostas nos dois
+             * lugares criaria duas mesas para a mesma decisão.
+             */
+            'operacoes' => Operacao::abertas()->with(['area', 'equipes', 'bairros'])
+                ->orderBy('nome')->get()->map(OperacaoParaTela::completa(...))->all(),
             // A etapa de quem entrou — é ela que decide o que a tela oferece, e a
             // mesma resposta governa a recusa no servidor.
             'etapas' => self::etapas($usuario),
-            // As áreas que esta pessoa responde, e se a listagem está recortada
-            // por elas. A tela usa isso para dizer QUAL é a sua área no selo, e
+            // As equipes que esta pessoa lidera, e se a listagem está recortada
+            // por elas. A tela usa isso para dizer QUAL é a sua equipe no selo, e
             // para explicar que a lista não é o universo.
-            'areasDoChefe' => $areasDoChefe,
-            'recorteDeArea' => $comRecorte,
+            'equipesDoLider' => $equipesDoLider,
+            'recorteDeEquipe' => $comRecorte,
             // As COLUNAS de cada aba — da grade e do arquivo. Uma listagem por
             // aba porque a aba é uma ETAPA do fluxo, e cada etapa se decide
             // olhando um dado diferente. Ver docs/padroes/listagem-clean.md.
-            'listagens' => ListagensDaRetaguarda::para([
-                'denuncias.triagem',
-                'denuncias.direcionamento',
-                'denuncias.todas',
+            // UMA grade para todas as abas (dono, 24/09/2026): protocolo, recebida,
+            // bairro, situação e prazo — com a situação em três palavras.
+            // A coluna de ÁREA (sugerida) só para quem encaminha: é nela que o chefe
+            // escolhe o destino de cada demanda para encaminhar em lote.
+            'listagens' => ListagensDaRetaguarda::para(['denuncias.todas'], [
+                'encaminha' => in_array('encaminhamento', self::etapas($usuario), true),
             ]),
-            'alterada' => DenunciasFicticias::alterada(),
         ]);
+    }
+
+    /**
+     * Esta pessoa CADASTRA neste canal? O líder, no canal que é dele (o Fala
+     * Salvador); o chefe, nos demais; o administrador, em todos.
+     */
+    /**
+     * As regras dos anexos do cadastro manual — uma vez só, para os dois
+     * caminhos de registro (o do chefe e o do líder).
+     */
+    /** @return array<string, list<mixed>> */
+    private static function regrasDeAnexo(): array
+    {
+        return [
+            'anexos' => ['nullable', 'array', 'max:5'],
+            'anexos.*' => ['file', 'max:10240', new ArquivoSeguro([...ArquivoSeguro::DOCUMENTOS, ...ArquivoSeguro::IMAGENS])],
+        ];
+    }
+
+    /**
+     * Guarda os arquivos que vieram com a demanda, no disco PRIVADO — eles só
+     * saem pela rota de anexos, que confere quem pede. O nome no disco é gerado
+     * (o enviado vira só o rótulo): servir pelo nome enviado é o caminho
+     * conhecido para atravessar diretório.
+     *
+     * @param  array<int, UploadedFile>  $arquivos
+     */
+    private function guardarAnexos(Demanda $demanda, array $arquivos): void
+    {
+        foreach ($arquivos as $arquivo) {
+            if (! $arquivo instanceof UploadedFile || ! $arquivo->isValid()) {
+                continue;
+            }
+
+            $extensao = strtolower($arquivo->getClientOriginalExtension() ?: 'bin');
+            $caminho = $arquivo->storeAs('demandas/'.$demanda->id, Str::uuid()->toString().'.'.$extensao, ArquivoParaTela::DISCO);
+
+            DemandaAnexo::create([
+                'demanda_id' => $demanda->id,
+                'nome' => mb_substr(basename($arquivo->getClientOriginalName()), 0, 200),
+                'caminho' => $caminho,
+                'tipo' => $arquivo->getMimeType(),
+                'bytes' => $arquivo->getSize(),
+            ]);
+        }
+    }
+
+    private static function registra(?User $usuario, string $canal): bool
+    {
+        return self::comoRegistra($usuario, $canal) !== null;
+    }
+
+    /**
+     * COMO esta pessoa registra neste canal: `lider` (a demanda nasce na mesa
+     * dela, já com a equipe), `chefe` (nasce Recebida, para encaminhar) ou nulo
+     * (não registra).
+     *
+     * O canal do líder (Fala Salvador) aceita também o chefe (dono, 25/09/2026):
+     * enquanto não há integração, o que chega ao chefe por lá precisa entrar. Quem
+     * é líder E chefe registra como líder — é o caminho que o canal pede. O
+     * administrador registra como o canal pede.
+     *
+     * @return 'lider'|'chefe'|null
+     */
+    private static function comoRegistra(?User $usuario, string $canal): ?string
+    {
+        $doLider = config("demandas.canais.{$canal}.registro") === 'lider';
+
+        if ($usuario?->ehAdmin() ?? false) {
+            return $doLider ? 'lider' : 'chefe';
+        }
+
+        if ($doLider && Papel::ehLider($usuario)) {
+            return 'lider';
+        }
+
+        return Papel::ehChefe($usuario) ? 'chefe' : null;
     }
 
     /**
      * As etapas do fluxo que esta pessoa exerce.
      *
-     * O papel vem do SETOR, não de uma coluna nova: `coordenador` tria,
-     * `chefe-de-setor` direciona, e quem administra o sistema exerce as duas — é ele quem
-     * demonstra o fluxo inteiro e quem cobre a ausência do outro. O setor
+     * O papel vem do SETOR, não de uma coluna nova: `chefe-de-setor` encaminha,
+     * `lider-de-equipe` direciona, e quem administra o sistema exerce as duas — é
+     * ele quem demonstra o fluxo inteiro e quem cobre a ausência do outro. O setor
      * `administrador` não precisa de linha própria aqui: `ehAdmin()` já o
      * reconhece, e uma segunda conta do mesmo papel um dia discordaria da
      * primeira.
@@ -439,46 +818,22 @@ class DenunciasController extends Controller
         }
 
         if ($usuario->ehAdmin()) {
-            return ['triagem', 'direcionamento'];
+            return ['encaminhamento', 'direcionamento'];
         }
 
         $setores = $usuario->setores->pluck('slug')->all();
 
         $etapas = [];
 
-        if (in_array('coordenador', $setores, true)) {
-            $etapas[] = 'triagem';
+        if (in_array(Papel::CHEFE, $setores, true)) {
+            $etapas[] = 'encaminhamento';
         }
 
-        if (in_array('chefe-de-setor', $setores, true)) {
+        if (in_array(Papel::LIDER, $setores, true)) {
             $etapas[] = 'direcionamento';
         }
 
         return $etapas;
-    }
-
-    /**
-     * As áreas que esta pessoa responde como Chefe de Setor, e se a listagem dela
-     * vem recortada por elas.
-     *
-     * As duas respostas DELEGAM para {@see PapelNaArea}, que é a fonte única da
-     * regra: as mesmas perguntas governam esta tela, a de Fiscalizações e o
-     * Cadastro de Operação. Elas viviam copiadas aqui e na fila do retorno de
-     * campo, e cópia da mesma regra é a mesma regra com dois donos — no dia em que
-     * "Chefe de Setor que também é Coordenador" mudasse de resposta, uma tela
-     * passaria a recortar e a outra não, e a que não recortasse continuaria
-     * abrindo sem nada acusar.
-     *
-     * @return list<string>
-     */
-    private static function areasDoChefe(?User $usuario): array
-    {
-        return PapelNaArea::areas($usuario);
-    }
-
-    private static function temRecorteDeArea(?User $usuario): bool
-    {
-        return PapelNaArea::recorta($usuario);
     }
 
     /**
@@ -495,60 +850,59 @@ class DenunciasController extends Controller
             return null;
         }
 
-        $recado = $etapa === 'triagem'
-            ? 'A triagem das denúncias é do Coordenador. Você acompanha o que foi encaminhado à sua área.'
-            : 'O direcionamento é do Chefe de Setor da área. A triagem encaminha; quem escolhe equipe ou operação é ele.';
+        $recado = $etapa === 'encaminhamento'
+            ? 'Encaminhar é do Chefe de Setor. Você acompanha o que foi encaminhado à sua equipe e direciona aos fiscais.'
+            : 'O direcionamento é do líder da equipe. O chefe encaminha; quem manda os fiscais ao ponto é ele.';
 
         return back()->with('flash.erro', $recado);
     }
 
     /**
-     * Recusa a ação do Chefe de Setor sobre denúncia que NÃO é da área dele.
+     * Recusa a ação do líder sobre denúncia que NÃO é da equipe dele.
      *
-     * Existe porque esconder da listagem não é fronteira: a lista do Chefe de Setor já vem
+     * Existe porque esconder da listagem não é fronteira: a lista do líder já vem
      * recortada, mas quem souber montar a requisição alcançaria a denúncia de
-     * outra área — e o lote é justamente o caminho fácil para isso, porque manda
-     * uma lista de identificadores.
+     * outra equipe — e o lote é justamente o caminho fácil para isso, porque
+     * manda uma lista de identificadores.
      *
-     * A conferência é contra a área GRAVADA em cada denúncia e o vínculo do
+     * A conferência é contra a EQUIPE GRAVADA em cada denúncia e o vínculo do
      * usuário, as duas coisas que o corpo da requisição não controla. O
-     * administrador passa: é o dono do sistema. Quem não responde por área nenhuma
-     * também passa aqui — quem o barra é a guarda de ETAPA, que roda antes.
+     * administrador e o Chefe de Setor passam: respondem por tudo.
      *
      * @param  list<int>  $ids
      */
-    private function exigirArea(Request $request, array $ids): ?RedirectResponse
+    private function exigirEquipe(Request $request, array $ids): ?RedirectResponse
     {
         $usuario = $request->user();
 
-        if ($usuario === null || $usuario->ehAdmin()) {
+        if (! Papel::recorta($usuario)) {
             return null;
         }
 
-        $minhas = self::areasDoChefe($usuario);
+        $minhas = Papel::equipes($usuario);
 
         /*
-         * Chefe de Setor SEM área vinculada não é caso de passar batido: ele exerce a etapa
-         * de direcionamento (senão não chegaria aqui) e não tem área para
-         * direcionar. Recusar dizendo isso é o que faz alguém corrigir o cadastro —
-         * deixar passar daria a ele o sistema inteiro.
+         * Líder SEM equipe vinculada não é caso de passar batido: ele exerce a
+         * etapa de direcionamento (senão não chegaria aqui) e não tem equipe para
+         * direcionar. Recusar dizendo isso é o que faz alguém corrigir o cadastro
+         * — deixar passar daria a ele o sistema inteiro.
          */
         if ($minhas === []) {
             return back()->with(
                 'flash.erro',
-                'Sua conta não está vinculada a nenhuma área de fiscalização, então não há o que '
-                .'direcionar. Procure quem administra o sistema para registrar a sua área.',
+                'Sua conta não está vinculada a nenhuma equipe, então não há o que direcionar. '
+                .'Procure quem administra o sistema para registrar a sua equipe.',
             );
         }
 
         $deFora = [];
 
         foreach ($ids as $id) {
-            $denuncia = DenunciasFicticias::denuncia($id);
-            $area = $denuncia === null ? null : ($denuncia['area'] ?? null);
+            $denuncia = Demanda::with('equipe')->find($id);
+            $equipe = $denuncia?->equipe?->codigo;
 
-            if (! is_string($area) || ! in_array($area, $minhas, true)) {
-                $deFora[] = $denuncia['protocolo'] ?? "#{$id}";
+            if (! is_string($equipe) || ! in_array($equipe, $minhas, true)) {
+                $deFora[] = $denuncia->protocolo ?? "#{$id}";
             }
         }
 
@@ -558,44 +912,102 @@ class DenunciasController extends Controller
 
         return back()->with(
             'flash.erro',
-            'Você responde por '.implode(', ', $minhas).', e '
+            'Você lidera '.(count($minhas) === 1 ? 'a Equipe ' : 'as Equipes ').implode(', ', $minhas).', e '
             .(count($deFora) === 1 ? 'a denúncia ' : 'as denúncias ')
             .implode(', ', $deFora)
-            .(count($deFora) === 1 ? ' não é dessa área' : ' não são dessa área')
+            .(count($deFora) === 1 ? ' não é dessa equipe' : ' não são dessa equipe')
             .'. Nada foi alterado — recarregue a listagem.',
         );
     }
 
-    /**
-     * Alguma das denúncias escolhidas sairia da equipe da própria área?
-     *
-     * A pergunta é feita contra a área GRAVADA em cada denúncia e a estrutura
-     * vigente — as duas coisas que o corpo da requisição não controla.
-     *
-     * @param  list<int>  $ids
-     */
-    private function trocaDeEquipe(array $ids, string $equipe): bool
+    // ── O acesso ao banco ───────────────────────────────────────────────────
+
+    /** O serviço que aplica as decisões em lote, assinando com quem está logado. */
+    private function triagem(Request $request): TriagemDeDemandas
     {
-        $equipeDaArea = [];
+        return new TriagemDeDemandas($request->user());
+    }
 
-        foreach (EstruturaFicticia::equipes() as $registro) {
-            $equipeDaArea[(string) $registro['area']] = (string) $registro['equipe'];
+    /**
+     * As denúncias de um canal, já na forma que a tela lê.
+     *
+     * O recorte por equipe é feito AQUI, e não na tela: filtro de front esconde,
+     * não protege, e a lista inteira teria viajado até o navegador de quem não
+     * deve vê-la. `$equipes` nulo significa "sem recorte" — é o caso do
+     * administrador e do Chefe de Setor, que precisam do universo.
+     *
+     * As AGREGADAS ficam de fora: quem leva o caso a campo é o registro de
+     * trabalho, e mostrar as dez faria a fila cobrar dez vezes o mesmo fato. Elas
+     * aparecem dentro do registro que as agrupou.
+     *
+     * @param  list<string>|null  $equipes  códigos
+     * @return list<array<string, mixed>>
+     */
+    private function doCanal(string $canal, ?array $equipes): array
+    {
+        $consulta = Demanda::where('canal', $canal)
+            ->deTrabalho()
+            ->with([
+                'tramites.fiscalizacao.recomendacoes',
+                'tramites.fiscalizacao.fotos',
+                'tramites.fiscalizacao.documento',
+                'anexos', 'area', 'equipe', 'operacao', 'agregadas',
+                'ciclos.equipe', 'ciclos.vistorias.fotos', 'ciclos.vistorias.documento',
+            ])
+            ->orderByDesc('recebida_em')
+            ->orderByDesc('id');
+
+        if ($equipes !== null) {
+            /*
+             * Sem equipe ainda (recém-recebida) não é da equipe de ninguém — e
+             * some da lista do líder por isso, não por engano: ela está na mesa
+             * do Chefe de Setor, esperando encaminhamento.
+             */
+            $consulta->whereHas('equipe', static fn ($q) => $q->whereIn('codigo', $equipes));
         }
 
-        foreach ($ids as $id) {
-            $denuncia = DenunciasFicticias::denuncia($id);
-            $area = $denuncia === null ? null : ($denuncia['area'] ?? null);
+        return $consulta->get()->map(DemandaParaTela::completa(...))->all();
+    }
 
-            if (! is_string($area) || ! isset($equipeDaArea[$area])) {
-                continue;
-            }
+    /**
+     * Abre a operação que o Chefe de Setor criou no próprio direcionamento.
+     *
+     * É o caso de não haver trabalho planejado para aquela região ainda. Nasce
+     * `Em andamento` porque começa hoje — e a situação é recalculada pela regra
+     * do período como qualquer outra, nunca digitada.
+     *
+     * @param  array<string, mixed>  $dados
+     */
+    private function abrirOperacao(array $dados): Operacao
+    {
+        $area = Area::where('nome', (string) $dados['area'])->firstOrFail();
+        $equipe = Estrutura::equipeModel((string) $dados['equipe']);
 
-            if ($equipeDaArea[$area] !== $equipe) {
-                return true;
-            }
+        $operacao = Operacao::create([
+            'codigo' => Protocolo::proximo('OP', modelClass: Operacao::class, coluna: 'codigo'),
+            'nome' => (string) $dados['nome'],
+            'area_id' => $area->id,
+            // Quem abriu a operação é quem responde por ela — o vínculo por área
+            // deixou de existir com o chefe único.
+            'coordenador_id' => Auth::id(),
+            'regiao' => $area->regiao,
+            'foco' => $dados['foco'] ?? null,
+            'inicio' => Date::now()->startOfDay(),
+            // Sem data de encerramento: quem a abriu no direcionamento não sabe
+            // quando ela acaba, e inventar um fim faria a tela mostrar prazo onde
+            // não há.
+            'fim' => null,
+            'criada_por_id' => Auth::id(),
+        ]);
+
+        $operacao->situacao = $operacao->situacaoPeloPeriodo();
+        $operacao->save();
+
+        if ($equipe !== null) {
+            $operacao->equipes()->attach($equipe->id);
         }
 
-        return false;
+        return $operacao->load(['area', 'equipes', 'bairros']);
     }
 
     /**

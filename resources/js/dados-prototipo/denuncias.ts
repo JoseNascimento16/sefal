@@ -1,3 +1,5 @@
+import type { Arquivo } from '@/components/retaguarda/lista-de-arquivos';
+
 /*
 |------------------------------------------------------------------------------
 | PROTÓTIPO — o vocabulário do módulo de Denúncias
@@ -43,9 +45,14 @@ export interface RegistroDeCampo {
     /** O que a equipe encontrou, em uma linha ("Ponto irregular", "Nada encontrado…"). */
     encontrado: string | null;
     relato: string;
-    fotos: string[];
+    /** Quantas fotos (o servidor manda o número). */
+    fotos: number | string[];
+    /** As fotos como arquivos, para ver e baixar. */
+    arquivos?: Arquivo[];
     gps: string | null;
     precisao_m: number | null;
+    /** A marca do registro feito SEM GPS, com o motivo — `null` quando houve GPS. */
+    sem_gps?: string | null;
     /** Quem estava no ponto, quando havia alguém. */
     ambulante: string | null;
     equipamento: string | null;
@@ -132,17 +139,24 @@ export interface TramiteDenuncia {
     documento: DocumentoDeCampo | null;
 }
 
-/** A área que o bairro sugere — com as outras que também o cobrem. */
+/**
+ * A equipe (e a área) que o bairro sugere — com as outras que também o cobrem.
+ *
+ * O nome ficou "área sugerida" porque nasceu quando o destino era a área; o que
+ * o chefe confirma hoje é a EQUIPE, e é o `lider` dela que recebe.
+ */
 export interface AreaSugerida {
     equipe: string;
     area: string;
     regiao: string;
     encarregado: string;
+    lider: string;
     alternativas: {
         equipe: string;
         area: string;
         regiao: string;
         encarregado: string;
+        lider: string;
     }[];
 }
 
@@ -155,6 +169,8 @@ export interface AreaSugerida {
 export interface Canal {
     slug: string;
     nome: string;
+    /** O nome da CAIXA quando difere do da demanda ("Avulsas" × "Avulsa"). */
+    titulo?: string;
     sistema: string;
     /** O artigo que combina com `sistema` — "o portal", "a central". */
     artigo: string;
@@ -162,9 +178,17 @@ export interface Canal {
     /** O canal admite denúncia anônima? O e-Salvador exige conta; o 156 não. */
     admite_anonima: boolean;
     tem_anexo: boolean;
-    endereco_estruturado: boolean;
-    prazo_em_dias: number;
-    como_chega: string;
+    endereco_estruturado?: boolean;
+    prazo_em_dias?: number;
+    como_chega?: string;
+    /**
+     * Como o canal chega HOJE: `integracao` (o sistema recebe sozinho) ou
+     * `balcao` (alguém digita). Muda a frase do cabeçalho — "entrega por
+     * integração" seria mentira no Fala Salvador, que não tem API.
+     */
+    entrada_padrao?: 'integracao' | 'balcao';
+    /** Quem digita o canal quando ele não vem por integração. */
+    registro?: 'chefe' | 'lider';
 }
 
 export interface Denuncia {
@@ -174,6 +198,10 @@ export interface Denuncia {
     canal: string;
     /** O número que o canal de origem deu à denúncia — a prova de que veio de fora. */
     protocolo_origem: string;
+    /** Qual avulsa é — `pedido-de-superior` ou `oficio`; nulo nos outros canais. */
+    tipo_avulsa?: string | null;
+    /** O tipo da avulsa por extenso ("Ofício"), para a tela. */
+    tipo_avulsa_nome?: string | null;
     recebida_em: string;
     /** Quando a integração ENTREGOU a denúncia, com hora. */
     recebida_em_hora: string;
@@ -187,9 +215,9 @@ export interface Denuncia {
 
     assunto: string;
     relato: string;
-    /** A categoria que o atendente do Salvador Digital escolheu (só no Salvador Digital). */
+    /** A categoria que o atendente do Fala Salvador escolheu (só no Fala Salvador). */
     categoria: string | null;
-    /** Quem atendeu a ligação (só no Salvador Digital). */
+    /** Quem atendeu a ligação (só no Fala Salvador). */
     atendente: string | null;
 
     logradouro: string;
@@ -201,6 +229,8 @@ export interface Denuncia {
 
     /** Nomes dos arquivos que o cidadão anexou (só no e-Salvador). */
     anexos: string[];
+    /** Os anexos como arquivos, para ver e baixar. */
+    anexos_arquivos?: Arquivo[];
 
     situacao: string;
     area: string | null;
@@ -220,6 +250,39 @@ export interface Denuncia {
     /** A área que o BAIRRO sugere — calculada na leitura, nunca gravada. */
     area_sugerida: AreaSugerida | null;
     tramites: TramiteDenuncia[];
+    /**
+     * O RETORNO ao canal de origem — o tipo que o canal pede e o que já foi
+     * registrado (ver `components/retaguarda/retorno-ao-canal.tsx`).
+     */
+    /** As Fiscalizações (ciclos) desta demanda — uma por encaminhamento ao líder. */
+    fiscalizacoes: {
+        id: number;
+        protocolo: string;
+        aberto_em: string;
+        equipe: string;
+        posse: string;
+        aba: 'andamento' | 'encaminhadas' | 'arquivo';
+        desfecho: string;
+        total_vistorias: number;
+        total_fotos: number;
+        documentos: string[];
+        url: string;
+    }[];
+    /** A situação em três palavras (Recebida, Encaminhada ao líder, Em fiscalização…). */
+    situacao_resumida: string;
+    /** O ciclo já fechou para o canal? Decide a aba "Respondidas". */
+    respondida: boolean;
+    passou_por_fiscalizacao: boolean;
+    /** Onde o retorno é feito — "e-Salvador", "e-Protocolo" —, ou nulo. */
+    retorno_em: string | null;
+    retorno_ao_canal: 'tramite' | 'processo' | null;
+    resposta_ao_canal: {
+        texto: string;
+        em: string;
+        por: string | null;
+        processo: string | null;
+        enviado: boolean;
+    } | null;
 }
 
 /** Uma operação a que o Chefe de Setor pode anexar denúncia. */
@@ -249,19 +312,23 @@ export interface Operacao {
     foco: string;
 }
 
-/** As duas etapas do fluxo, cada uma com o seu dono. */
-export type Etapa = 'triagem' | 'direcionamento';
+/**
+ * As duas etapas do fluxo, cada uma com o seu dono: o Chefe de Setor ENCAMINHA
+ * a uma equipe; o líder dela DIRECIONA aos fiscais (decisão do dono, 22/09/2026 —
+ * até então a primeira etapa era "triagem", do coordenador, que não usa o sistema).
+ */
+export type Etapa = 'encaminhamento' | 'direcionamento';
 
-/** As situações em que a denúncia espera a TRIAGEM do coordenador. */
-export const AGUARDANDO_TRIAGEM = ['Recebida'];
+/** As situações em que a denúncia espera o ENCAMINHAMENTO do Chefe de Setor. */
+export const AGUARDANDO_ENCAMINHAMENTO = ['Recebida'];
 
-/** As situações em que ela espera o DIRECIONAMENTO do Chefe de Setor da área. */
-export const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada à área'];
+/** As situações em que ela espera o DIRECIONAMENTO do líder da equipe. */
+export const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada ao líder'];
 
 /**
  * O tom do selo de cada situação.
  *
- * Recebida e Encaminhada à área EXIGEM ação de alguém, então são aviso e info —
+ * Recebida e Encaminhada ao líder EXIGEM ação de alguém, então são aviso e info —
  * cada uma chamando o seu dono. Direcionada, Em operação e Em campo são o
  * caminho normal andando. Concluída é fim bom; Devolvida e Arquivada são fim de
  * linha sem erro nenhum: são decisão tomada, com justificativa registrada.
@@ -270,12 +337,12 @@ export const AGUARDANDO_DIRECIONAMENTO = ['Encaminhada à área'];
  * regularização" é AVISO porque há prazo correndo (a bola está com o notificado,
  * e alguém precisa voltar ao ponto quando ele vencer), e "Retorno vencido" é
  * PERIGO porque o prazo venceu, a situação continua e a denúncia está parada
- * esperando a próxima medida do Chefe de Setor.
+ * esperando a próxima medida do líder da equipe ou do chefe.
  */
 export const TOM_DA_SITUACAO: Record<string, string> = {
     Recebida: 'selo-aviso',
-    'Encaminhada à área': 'selo-info',
-    'Direcionada à equipe': 'selo-ok',
+    'Encaminhada ao líder': 'selo-info',
+    'Direcionada aos fiscais': 'selo-ok',
     'Em operação': 'selo-ok',
     'Em campo': 'selo-ok',
     'Aguardando regularização': 'selo-aviso',

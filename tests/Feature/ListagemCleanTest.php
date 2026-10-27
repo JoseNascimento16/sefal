@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Area;
+use App\Models\Equipe;
 use App\Models\Setor;
 use App\Models\User;
+use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
@@ -83,11 +86,21 @@ it('declara ao menos uma listagem — o catálogo vazio faria toda lei abaixo pa
     $this->assertNotEmpty(ListagensDaRetaguarda::ids());
 });
 
-it('não põe mais de cinco colunas na grade, em nenhuma resolução', function () {
+it('não põe mais de cinco colunas na grade, em nenhuma resolução — salvo exceção DECLARADA com motivo', function () {
     foreach (ListagensDaRetaguarda::ids() as $id) {
+        $listagem = ListagensDaRetaguarda::listagem($id);
+        $teto = (int) ($listagem['teto'] ?? 5);
+
+        // A exceção existe (a Caixa de Entrada, 25/09/2026), mas é declarada no
+        // catálogo com o motivo — e ninguém passa de seis.
+        if ($teto !== 5) {
+            $this->assertNotEmpty($listagem['teto_motivo'] ?? '', "A listagem \"{$id}\" subiu o teto sem declarar o motivo.");
+            $this->assertLessThanOrEqual(6, $teto, "A listagem \"{$id}\" declarou teto acima de seis.");
+        }
+
         foreach (resolucoesDaGrade($id) as $rotulo => $grade) {
             $this->assertLessThanOrEqual(
-                5,
+                $teto,
                 count($grade),
                 "A grade de \"{$id}\" ({$rotulo}) passou de cinco colunas: "
                 .implode(', ', chavesDaListagem($grade))
@@ -247,18 +260,30 @@ function administradorDaListagem(): User
 }
 
 /** Um Chefe de Setor de UMA área — para conferir a coluna condicional. */
-function chefeDeUmaAreaSo(string $matricula): User
+/**
+ * Um líder com UMA equipe — o papel recortado. A conta é ligada à equipe por
+ * `equipes.lider_id` (é assim que a estrutura sabe de quem é a fila), e a
+ * árvore em memória é esquecida para enxergar o vínculo recém-nascido.
+ */
+function liderDeUmaEquipeSo(): User
 {
-    $u = User::factory()->create(['login' => $matricula, 'admin' => false, 'ativo' => true]);
-    $u->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+    $u = User::factory()->create(['login' => 'lider-z1', 'admin' => false, 'ativo' => true]);
+    $u->setores()->attach(Setor::where('slug', 'lider-de-equipe')->firstOrFail());
+
+    $area = Area::create(['nome' => 'Área Z', 'regiao' => 'Teste']);
+    Equipe::create(['codigo' => 'Z1', 'nome' => 'Equipe Z1', 'area_id' => $area->id, 'lider_id' => $u->id]);
+    Estrutura::esquecer();
 
     return $u->fresh();
 }
 
 dataset('telas com listagem', [
-    'Fiscalizações' => ['/retaguarda/fiscalizacoes', ['fiscalizacoes.a-decidir', 'fiscalizacoes.acervo']],
-    'Denúncias do e-Salvador' => ['/retaguarda/denuncias/e-salvador', ['denuncias.triagem', 'denuncias.direcionamento', 'denuncias.todas']],
-    'Denúncias do Salvador Digital' => ['/retaguarda/denuncias/salvador-digital', ['denuncias.triagem', 'denuncias.direcionamento', 'denuncias.todas']],
+    'Fiscalizações' => ['/retaguarda/fiscalizacoes', ['fiscalizacoes.ciclos']],
+    // As quatro caixas de canal têm UMA grade (dono, 24/09/2026).
+    'Caixa do e-Salvador' => ['/retaguarda/caixa-de-entrada/e-salvador', ['denuncias.todas']],
+    'Caixa do Fala Salvador' => ['/retaguarda/caixa-de-entrada/fala-salvador', ['denuncias.todas']],
+    'Caixa do e-Protocolo' => ['/retaguarda/caixa-de-entrada/e-protocolo', ['denuncias.todas']],
+    'Caixa das Avulsas' => ['/retaguarda/caixa-de-entrada/avulsas', ['denuncias.todas']],
     'Cadastro de Operação' => ['/retaguarda/operacoes', ['operacoes']],
     'Ambulantes' => ['/retaguarda/ambulantes', ['ambulantes']],
     'Caixa de Entrada' => ['/retaguarda/caixa-de-entrada', ['caixa-de-entrada']],
@@ -266,6 +291,11 @@ dataset('telas com listagem', [
     // quebrou" e "o que está fora do requisito" —, mas listagem é listagem: fora
     // da varredura, é a que apodrece.
     'Logs' => ['/retaguarda/logs', ['sistema.logs']],
+    'Usuários' => ['/retaguarda/usuarios', ['usuarios.ativos', 'usuarios.excluidos']],
+    'Equipes' => ['/retaguarda/equipes', ['equipes']],
+    'Áreas' => ['/retaguarda/areas', ['areas']],
+    'Bairros' => ['/retaguarda/bairros', ['bairros']],
+    'Levantamentos' => ['/retaguarda/levantamentos', ['levantamentos', 'levantamento-linhas']],
     'Acompanhamento de Requisitos' => ['/retaguarda/acompanhamento-de-requisitos', ['sistema.requisitos']],
 ]);
 
@@ -304,15 +334,24 @@ it('não gasta coluna do acompanhamento com o que é igual em TODA linha — e a
     /*
      * A mesma lei da coluna condicional, com a condição resolvida pelo outro
      * lado: nas Fiscalizações quem decide é QUEM olha; aqui é o que os dados
-     * TÊM. Hoje o mapa é todo "Retaguarda" e nenhuma linha aponta HU — as duas
+     * TÊM. Num mapa todo "Retaguarda" e sem nenhuma linha apontando HU, as duas
      * colunas seriam a mesma palavra, ou o mesmo travessão, repetidos em toda
      * linha; e o selo "Sem requisito" já diz isso uma vez, no lugar certo.
+     *
+     * O mapa REAL já tem a linha do aplicativo do fiscal (origem "PWA"), então a
+     * primeira metade fixa um mapa uniforme — senão ela testaria o dado do dia,
+     * e não a regra.
      *
      * O FLIP é a metade que importa: sem ele, uma condição travada em `false`
      * passaria neste teste para sempre, e a coluna nunca voltaria no dia em que
      * fizesse falta.
      */
     $admin = administradorDaListagem();
+
+    config(['acompanhamento_requisitos.telas' => collect(config('acompanhamento_requisitos.telas'))
+        ->where('origem', 'Retaguarda')
+        ->map(fn (array $linha) => [...$linha, 'hus' => []])
+        ->values()->all()]);
 
     $this->actingAs($admin)->get('/retaguarda/acompanhamento-de-requisitos')
         ->assertOk()
@@ -366,38 +405,23 @@ it('não gasta coluna do acompanhamento com o que é igual em TODA linha — e a
         });
 });
 
-it('não gasta coluna de ÁREA com quem responde por uma área só', function () {
-    // Quem varre cinco áreas precisa da coluna para navegar a fila; para quem
-    // tem uma, ela repetiria a mesma palavra em toda linha. É o exemplo que o
-    // dono deu, e a única coluna condicional do catálogo hoje.
-    $this->actingAs(chefeDeUmaAreaSo('gestor1'))
-        ->get('/retaguarda/fiscalizacoes')
-        ->assertOk()
-        ->assertInertia(function ($p) {
-            $dados = $p->toArray()['props'];
+it('a grade das Fiscalizações diz com quem está: a coluna POSSE ATUAL existe para todos', function () {
+    /*
+     * Desde 24/09/2026 a linha é a Fiscalização (o ciclo), e a pergunta da grade é
+     * "com quem está" — Equipe ou Chefe de Setor (pedido do dono). A área saiu da
+     * grade (vai no detalhe e no arquivo); a posse não sai para ninguém.
+     */
+    foreach ([liderDeUmaEquipeSo(), administradorDaListagem()] as $quem) {
+        $this->actingAs($quem)
+            ->get('/retaguarda/fiscalizacoes')
+            ->assertOk()
+            ->assertInertia(function ($p) {
+                $grade = chavesDaListagem($p->toArray()['props']['listagens']['fiscalizacoes.ciclos']['grade']);
 
-            $this->assertTrue($dados['recorteDeArea']);
-            $this->assertNotContains(
-                'area',
-                chavesDaListagem($dados['listagens']['fiscalizacoes.a-decidir']['grade']),
-                'O Chefe de Setor de uma área só recebeu a coluna de área — ela '
-                .'repetiria a mesma palavra em toda linha.'
-            );
+                $this->assertContains('posse', $grade);
+                $this->assertContains('desfecho', $grade);
 
-            return $p;
-        });
-
-    $this->actingAs(administradorDaListagem())
-        ->get('/retaguarda/fiscalizacoes')
-        ->assertOk()
-        ->assertInertia(function ($p) {
-            $this->assertContains(
-                'area',
-                chavesDaListagem($p->toArray()['props']['listagens']['fiscalizacoes.a-decidir']['grade']),
-                'Quem varre várias áreas ficou sem a coluna de área — sem ela a '
-                .'fila do Coordenador não é navegável.'
-            );
-
-            return $p;
-        });
+                return $p;
+            });
+    }
 });

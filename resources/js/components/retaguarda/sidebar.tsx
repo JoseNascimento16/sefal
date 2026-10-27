@@ -1,19 +1,19 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     ChevronDown,
-    LogOut,
+    KeyRound,
     PanelLeftClose,
     PanelLeftOpen,
+    ShieldCheck,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { iconeDoMenu } from '@/lib/icones-menu';
 import { cn } from '@/lib/utils';
-import { logout } from '@/routes';
 import { inicio } from '@/routes/retaguarda';
+import { alternar as alternarModoGerente } from '@/routes/retaguarda/modo-gerente';
 import type { MenuContador, MenuItem } from '@/types/navigation';
 
 /**
@@ -85,6 +85,7 @@ export function Sidebar({
     emDoca,
     onAlternarRetracao,
     onAbrirPainel,
+    onAbrirPermissoes,
 }: {
     /**
      * Forma retraída: a doca flutuante. Vem decidida pela casca — é ela que junta
@@ -97,11 +98,12 @@ export function Sidebar({
      * Quem monta o painel é a casca da Retaguarda, não a barra: ela só diz qual.
      */
     onAbrirPainel: (painel: string) => void;
+    /** A chave do Modo Gerente clicada: abre as permissões daquela tela (ou pasta). */
+    onAbrirPermissoes: (foco: { slugs: string[]; rotulo: string }) => void;
 }) {
-    const { menu, auth } = usePage().props;
+    const { menu, modoGerente } = usePage().props;
+    const chaves = modoGerente?.ativo ?? false;
     const { isCurrentUrl } = useCurrentUrl();
-    const [confirmandoSaida, setConfirmandoSaida] = useState(false);
-    const [saindo, setSaindo] = useState(false);
 
     /**
      * As pastas que a PESSOA abriu ou fechou à mão.
@@ -174,20 +176,6 @@ export function Sidebar({
         };
     }, [flutuante]);
 
-    /** Iniciais para o avatar — duas letras, ou "?" quando não há nome. */
-    const iniciais =
-        (auth.user?.name ?? '')
-            .trim()
-            .split(/\s+/)
-            .slice(0, 2)
-            .map((p) => p[0] ?? '')
-            .join('')
-            .toUpperCase() || '?';
-
-    /** O papel de quem entrou: o primeiro setor, ou o desvio do administrador. */
-    const papel = auth.user?.admin
-        ? 'Administrador'
-        : (auth.user?.setores[0] ?? 'Sem setor definido');
 
     /**
      * O clique de um item — navegar ou abrir painel. Está aqui, e não duplicado
@@ -219,6 +207,36 @@ export function Sidebar({
      * "abrir em nova aba" do navegador contam a mesma história que a tela: aqui
      * não se vai a lugar nenhum.
      */
+    /**
+     * A CHAVE do Modo Gerente ao lado do item (como no Codecon): abre as
+     * permissões daquela tela — ou, na pasta, das telas de dentro dela.
+     */
+    function ChaveDoGerente({ item }: { item: MenuItem }) {
+        const slugs = item.filhos.length > 0
+            ? item.filhos.map((f) => f.slug).filter((x): x is string => x !== null)
+            : item.slug !== null ? [item.slug] : [];
+
+        if (!chaves || slugs.length === 0) {
+            return null;
+        }
+
+        return (
+            <button
+                type="button"
+                className="rt-menu-chave"
+                title={`Permissões de ${item.rotulo}`}
+                aria-label={`Permissões de ${item.rotulo}`}
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAbrirPermissoes({ slugs, rotulo: item.rotulo });
+                }}
+            >
+                <KeyRound size={14} aria-hidden />
+            </button>
+        );
+    }
+
     function ItemEstendido({ item, filho = false }: { item: MenuItem; filho?: boolean }) {
         const Icone = iconeDoMenu(item.icone);
         const ativo = estaAtivo(item);
@@ -232,8 +250,8 @@ export function Sidebar({
             </>
         );
 
-        if (item.modal !== null || item.url === null) {
-            return (
+        const alvo =
+            item.modal !== null || item.url === null ? (
                 <button
                     type="button"
                     className={classe}
@@ -241,18 +259,24 @@ export function Sidebar({
                 >
                     {dentro}
                 </button>
+            ) : (
+                <Link
+                    href={item.url}
+                    onClick={() => acionar(item)}
+                    className={classe}
+                    aria-current={ativo ? 'page' : undefined}
+                >
+                    {dentro}
+                </Link>
             );
-        }
 
-        return (
-            <Link
-                href={item.url}
-                onClick={() => acionar(item)}
-                className={classe}
-                aria-current={ativo ? 'page' : undefined}
-            >
-                {dentro}
-            </Link>
+        return chaves ? (
+            <div className="rt-menu-linha">
+                {alvo}
+                <ChaveDoGerente item={item} />
+            </div>
+        ) : (
+            alvo
         );
     }
 
@@ -282,6 +306,8 @@ export function Sidebar({
                         aria-hidden
                         className={cn('rt-menu-seta', aberta && 'aberta')}
                     />
+                    {/* A chave da pasta abre as permissões das telas dentro dela. */}
+                    <ChaveDoGerente item={item} />
                 </button>
 
                 {aberta && (
@@ -422,27 +448,6 @@ export function Sidebar({
         );
     }
 
-    /** Sair PERGUNTA antes: a sessão leva embora formulário aberto. */
-    const perguntaDeSaida = confirmandoSaida && (
-        <ModalConfirm
-            titulo="Sair do sistema?"
-            mensagem="A sessão é encerrada e o que estiver preenchido em formulário aberto se perde. Para entrar de novo você precisa da matrícula e da senha."
-            rotuloConfirmar="Sair do sistema"
-            rotuloCancelar="Continuar no sistema"
-            iconeConfirmar={<LogOut size={16} aria-hidden />}
-            destrutiva
-            processando={saindo}
-            onCancelar={() => setConfirmandoSaida(false)}
-            onConfirmar={() => {
-                setSaindo(true);
-                // A limpeza dos dados em memória vem ANTES do pedido: o aparelho
-                // pode ser compartilhado, e o histórico de navegação do Inertia
-                // guarda as telas já visitadas.
-                router.flushAll();
-                router.post(logout().url);
-            }}
-        />
-    );
 
     /*
      * O painel flutuante mora no `<body>`, e não dentro da doca: a fila de itens da
@@ -521,20 +526,10 @@ export function Sidebar({
                         >
                             <PanelLeftOpen size={19} aria-hidden />
                         </button>
-                        <button
-                            type="button"
-                            className="rt-doca-avatar"
-                            title={`${auth.user?.name ?? ''} — sair do sistema`}
-                            aria-label="Sair do sistema"
-                            onClick={() => setConfirmandoSaida(true)}
-                        >
-                            {iniciais}
-                        </button>
                     </div>
                 </aside>
 
                 {painelDaPasta}
-                {perguntaDeSaida}
             </>
         );
     }
@@ -616,31 +611,29 @@ export function Sidebar({
                     ))}
                 </nav>
 
-                {/* O cartão de quem entrou, no pé: identidade e saída no mesmo
-                    lugar, longe das ações de trabalho. */}
-                <div className="rt-usuario-cartao">
-                    <span className="rt-avatar" aria-hidden>
-                        {iniciais}
-                    </span>
-                    <span className="rt-usuario-texto">
-                        <span className="rt-usuario-nome">
-                            {auth.user?.name ?? ''}
-                        </span>
-                        <span className="rt-usuario-papel">{papel}</span>
-                    </span>
-                    <button
-                        type="button"
-                        className="rt-usuario-sair"
-                        title="Sair do sistema"
-                        aria-label="Sair do sistema"
-                        onClick={() => setConfirmandoSaida(true)}
-                    >
-                        <LogOut size={16} aria-hidden />
-                    </button>
-                </div>
+                {/* O botão de LIGAR o Modo Gerente, no pé do menu, como no Codecon —
+                    só para quem pode (administrador ou a marca da conta). */}
+                {modoGerente?.pode && (
+                    <div className="rt-menu-gerente">
+                        <button
+                            type="button"
+                            className={cn('rt-menu-gerente-botao', chaves && 'ativo')}
+                            aria-pressed={chaves}
+                            onClick={() => router.post(alternarModoGerente().url, {}, { preserveScroll: true })}
+                            title="Ligar ou desligar o Modo Gerente (a chave ao lado de cada item do menu)"
+                        >
+                            <ShieldCheck size={16} aria-hidden />
+                            {chaves ? 'Modo Gerente ligado' : 'Modo Gerente'}
+                        </button>
+                        {chaves && (
+                            <button type="button" className="rt-menu-gerente-todas" onClick={() => onAbrirPainel('modo-gerente')}>
+                                Ver todas as telas
+                            </button>
+                        )}
+                    </div>
+                )}
             </aside>
 
-            {perguntaDeSaida}
         </>
     );
 }

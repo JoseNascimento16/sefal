@@ -33,6 +33,8 @@ export type MenuItem = {
      * continua vindo: é dela que o painel busca os dados.
      */
     modal: string | null;
+    /** A tela no controle de acesso — é o que a chave do Modo Gerente abre. */
+    slug: string | null;
     /** Rótulo de uma palavra, para o menu retraído (a doca). */
     curto: string;
     /** `null` quando o item não declara número, ou quando a contagem falhou. */

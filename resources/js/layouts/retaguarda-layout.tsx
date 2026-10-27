@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import type { FocoDoModoGerente } from '@/components/retaguarda/modo-gerente-permissoes';
 import { ModoGerentePermissoes } from '@/components/retaguarda/modo-gerente-permissoes';
 import OverlayBoasVindas from '@/components/retaguarda/overlay-boas-vindas';
 import { Sidebar } from '@/components/retaguarda/sidebar';
@@ -121,6 +122,8 @@ export default function RetaguardaLayout({
      * uma delas.
      */
     const [painelAberto, setPainelAberto] = useState<string | null>(null);
+    // A tela (ou pasta) cuja chave foi clicada no Modo Gerente; nulo = matriz inteira.
+    const [focoDoGerente, setFocoDoGerente] = useState<FocoDoModoGerente | null>(null);
 
     // Os recados do servidor (`flash.sucesso` / `flash.erro`) aparecem aqui, uma
     // vez só, para toda a Retaguarda — nenhuma tela precisa se lembrar disso.
@@ -171,7 +174,14 @@ export default function RetaguardaLayout({
                    botão de expandir sai de cena (é o CSS que o esconde, no mesmo
                    degrau de 1100px). */
                 onAlternarRetracao={alternarRetracao}
-                onAbrirPainel={setPainelAberto}
+                onAbrirPainel={(p) => {
+                    setFocoDoGerente(null);
+                    setPainelAberto(p);
+                }}
+                onAbrirPermissoes={(foco) => {
+                    setFocoDoGerente(foco);
+                    setPainelAberto('modo-gerente');
+                }}
             />
 
             <div className="rt-principal">
@@ -184,7 +194,11 @@ export default function RetaguardaLayout({
 
             {painelAberto === 'modo-gerente' && (
                 <ModoGerentePermissoes
-                    onFechar={() => setPainelAberto(null)}
+                    foco={focoDoGerente}
+                    onFechar={() => {
+                        setPainelAberto(null);
+                        setFocoDoGerente(null);
+                    }}
                 />
             )}
 

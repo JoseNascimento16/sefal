@@ -7,7 +7,6 @@ import {
     MapPinned,
     Pencil,
     Plus,
-    RotateCcw,
     Target,
     Trash2,
 } from 'lucide-react';
@@ -30,7 +29,6 @@ import { cn } from '@/lib/utils';
 import {
     destroy,
     index,
-    reiniciar as rotaReiniciar,
     store,
     update,
 } from '@/routes/retaguarda/operacoes';
@@ -81,6 +79,26 @@ interface Operacao {
     total_equipes: number;
     /** Atalho do servidor para `situacao === 'Encerrada'`. */
     encerrada: boolean;
+    /** Fiscais de qualquer área postos na operação. */
+    fiscais: { id: number; nome: string }[];
+    /** As denúncias anexadas — a fiscalização delas vai para a rua junto. */
+    demandas: { id: number; protocolo: string; assunto: string; bairro: string; situacao: string }[];
+}
+
+interface FiscalDisponivel {
+    id: number;
+    nome: string;
+    equipes: string[];
+}
+
+interface DemandaDisponivel {
+    id: number;
+    protocolo: string;
+    assunto: string;
+    bairro: string;
+    area: string;
+    situacao: string;
+    operacao_id: number | null;
 }
 
 interface Equipe {
@@ -97,17 +115,24 @@ interface Props {
     areas: string[];
     equipes: Equipe[];
     bairros: string[];
-    chefias: Record<string, { nome: string; matricula: string | null }>;
+    /** Quem lidera cada equipe — a operação é executada por uma equipe, e o líder dela responde. */
+    lideres: Record<string, { nome: string; matricula: string | null }>;
     /** Esta pessoa CADASTRA, ou apenas consulta? Quem responde é o servidor. */
     cadastra: boolean;
-    areasDoChefe: string[];
+    /** As áreas das equipes que esta pessoa lidera (vazio para quem vê tudo). */
+    areasDoLider: string[];
     recorteDeArea: boolean;
+    /** Os bairros de cada área — marcados sozinhos ao escolher a área ou a equipe. */
+    bairrosPorArea: Record<string, string[]>;
+    /** Fiscais de QUALQUER área que podem ser postos na operação. */
+    fiscaisDisponiveis: FiscalDisponivel[];
+    /** As denúncias que podem ser anexadas (abertas, não agregadas). */
+    demandasDisponiveis: DemandaDisponivel[];
     /**
      * As colunas da grade e as do arquivo, declaradas no servidor. Ver
      * `docs/padroes/listagem-clean.md`.
      */
     listagens: Listagens;
-    alterada: boolean;
 }
 
 type Aba = 'operacoes' | 'operacao';
@@ -142,12 +167,14 @@ export default function CadastroDeOperacao({
     areas,
     equipes,
     bairros,
-    chefias,
+    lideres,
     cadastra,
-    areasDoChefe,
+    areasDoLider,
     recorteDeArea,
+    bairrosPorArea,
+    fiscaisDisponiveis,
+    demandasDisponiveis,
     listagens,
-    alterada,
 }: Props) {
     const acoes = useAcoes();
     const { enviando, ocupado, enviar, guardar } = useEnvio();
@@ -225,9 +252,47 @@ export default function CadastroDeOperacao({
         situacao: situacoes[0] ?? '',
         foco: '',
         observacao: '',
+        fiscais: [] as number[],
+        demandas: [] as number[],
     };
 
     const [form, setForm] = useState({ ...vazio });
+    const [buscaDemanda, setBuscaDemanda] = useState('');
+    const [buscaFiscal, setBuscaFiscal] = useState('');
+
+    /**
+     * Escolher a ÁREA (ou uma equipe) marca sozinho os bairros daquela área — sem
+     * restringir: dá para desmarcar um a um depois (dono, 25/09/2026).
+     */
+    function marcarBairrosDa(area: string) {
+        const daArea = bairrosPorArea[area] ?? [];
+
+        setForm((atual) => ({ ...atual, bairros: [...new Set([...atual.bairros, ...daArea])] }));
+    }
+
+    /**
+     * Desmarcar a área (ou a equipe) tira os bairros dela — menos os que ainda
+     * são cobertos pela área escolhida ou por outra equipe marcada (bairro de
+     * divisa fica, se a outra área também o tem).
+     */
+    function desmarcarBairrosDa(area: string, areasQueFicam: string[]) {
+        const cobertos = new Set(areasQueFicam.flatMap((a) => bairrosPorArea[a] ?? []));
+        const daArea = new Set((bairrosPorArea[area] ?? []).filter((b) => !cobertos.has(b)));
+
+        setForm((atual) => ({ ...atual, bairros: atual.bairros.filter((b) => !daArea.has(b)) }));
+    }
+
+    /** As áreas das equipes marcadas, sem esta (a que está saindo). */
+    function areasDasEquipes(equipesMarcadas: string[]): string[] {
+        return equipesMarcadas.map((codigo) => equipes.find((e) => e.equipe === codigo)?.area).filter((a): a is string => !!a);
+    }
+
+    function alternarId(campo: 'fiscais' | 'demandas', id: number) {
+        setForm((atual) => ({
+            ...atual,
+            [campo]: atual[campo].includes(id) ? atual[campo].filter((v) => v !== id) : [...atual[campo], id],
+        }));
+    }
 
     function mudar<C extends keyof typeof vazio>(campo: C, valor: (typeof vazio)[C]) {
         setForm((atual) => ({ ...atual, [campo]: valor }));
@@ -261,6 +326,8 @@ export default function CadastroDeOperacao({
             situacao: operacao.situacao,
             foco: operacao.foco,
             observacao: operacao.observacao,
+            fiscais: operacao.fiscais.map((f) => f.id),
+            demandas: operacao.demandas.map((d) => d.id),
         });
         setAbertaId(operacao.id);
         setModo('navegacao');
@@ -310,9 +377,10 @@ export default function CadastroDeOperacao({
         });
     }
 
-    /** O Chefe de Setor de uma área, ou null quando a estrutura não registra nenhum. */
-    const chefeDa = (area: string): string | null => {
-        const nome = chefias[area]?.nome ?? '';
+    /** O líder da equipe que executa a operação, ou null quando não há equipe ou líder. */
+    const liderDe = (equipes: string[]): string | null => {
+        const primeira = equipes[0];
+        const nome = primeira === undefined ? '' : (lideres[primeira]?.nome ?? '');
 
         return nome.trim() === '' ? null : nome;
     };
@@ -347,7 +415,7 @@ export default function CadastroDeOperacao({
         if (chave === 'area') {
             return {
                 conteudo: o.area,
-                dica: `${o.area} · ${chefeDa(o.area) ?? 'sem Chefe de Setor registrado'}`,
+                dica: `${o.area} · ${liderDe(o.equipes) ?? 'equipe sem líder registrado'}`,
             };
         }
 
@@ -431,16 +499,16 @@ export default function CadastroDeOperacao({
                             <li className="rt-chip" style={{ color: 'var(--sm-primaria)' }}>
                                 <span className="rt-chip-dot" />
                                 Você monta operação
-                                {areasDoChefe.length > 0
-                                    ? ` · ${areasDoChefe.join(' e ')}`
+                                {areasDoLider.length > 0
+                                    ? ` · ${areasDoLider.join(' e ')}`
                                     : ''}
                             </li>
                         )}
 
-                        {cadastra && recorteDeArea && areasDoChefe.length === 0 && (
+                        {cadastra && recorteDeArea && areasDoLider.length === 0 && (
                             <li className="rt-chip" style={{ color: 'var(--sm-perigo)' }}>
                                 <span className="rt-chip-dot" />
-                                Sua conta não está vinculada a nenhuma área — procure
+                                Sua conta não está vinculada a nenhuma equipe — procure
                                 quem administra o sistema
                             </li>
                         )}
@@ -448,8 +516,8 @@ export default function CadastroDeOperacao({
                         {!cadastra && (
                             <li className="rt-chip">
                                 <span className="rt-chip-dot" />
-                                Você consulta as operações para saber a que encaminhar
-                                a demanda; montar operação é do Chefe de Setor da área
+                                Você consulta as operações para saber a que anexar a
+                                demanda; montar operação é do Chefe de Setor ou do líder
                             </li>
                         )}
                     </ul>
@@ -501,11 +569,17 @@ export default function CadastroDeOperacao({
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando o módulo saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco, e
+              * com trâmite. O que continua de mentira são os DADOS, e é disso que
+              * quem avalia precisa ser avisado antes de tirar conclusão deles.
+              */}
             <SeloPrototipo>
-                Esta tela é a proposta do cadastro, para conferência da forma antes
-                de virar sistema. As operações são de exemplo e{' '}
-                <strong>nada é gravado</strong>: o que você criar, alterar ou
-                excluir vale só nesta sessão do navegador.
+                Ambiente de demonstração: as operações já cadastradas são{' '}
+                <strong>exemplos</strong>, não operações reais de rua. O que você
+                criar, alterar ou excluir{' '}
+                <strong>é gravado de verdade</strong>.
             </SeloPrototipo>
 
             {/* A informação que faz a tela ser entendida: é o MESMO catálogo que o
@@ -533,7 +607,7 @@ export default function CadastroDeOperacao({
                     <div>
                         <strong>
                             Você está vendo as operações de{' '}
-                            {areasDoChefe.join(' e ')}.
+                            {areasDoLider.join(' e ')}.
                         </strong>
                         <div>
                             As operações das outras áreas não aparecem aqui — e
@@ -609,18 +683,6 @@ export default function CadastroDeOperacao({
                                 </BotaoAcao>
                             )}
 
-                            {alterada && cadastra && acoes.habilitado && (
-                                <BotaoAcao
-                                    className="btn btn-secondary btn-sm"
-                                    icone={<RotateCcw size={16} aria-hidden />}
-                                    carregando={enviando === 'reiniciar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Reiniciando…"
-                                    onClick={() => enviar('reiniciar', rotaReiniciar().url)}
-                                >
-                                    Reiniciar demonstração
-                                </BotaoAcao>
-                            )}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar
@@ -628,7 +690,7 @@ export default function CadastroDeOperacao({
                                     subtitulo="Sistema › Cadastro de Operação"
                                     contexto={[
                                         recorteDeArea
-                                            ? `Áreas: ${areasDoChefe.join(' e ')}`
+                                            ? `Áreas: ${areasDoLider.join(' e ')}`
                                             : 'Todas as áreas',
                                         busca.trim() ? `busca: "${busca.trim()}"` : null,
                                     ]
@@ -716,8 +778,14 @@ export default function CadastroDeOperacao({
                                 </p>
                             </div>
 
-                            {aberta !== null && modo === 'navegacao' && cadastra && (
-                                <div style={{ display: 'flex', gap: 8 }}>
+                            {aberta !== null && modo === 'navegacao' && (
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {/* Os botões do registro vêm em cima (dono, 25/09/2026). */}
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={voltarParaLista}>
+                                        Voltar à lista
+                                    </button>
+                                    {cadastra && (
+                                    <>
                                     {acoes.habilitado && (
                                         <BotaoAcao
                                             className="btn btn-secondary btn-sm"
@@ -739,6 +807,8 @@ export default function CadastroDeOperacao({
                                             Excluir
                                         </BotaoAcao>
                                     )}
+                                    </>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -751,8 +821,9 @@ export default function CadastroDeOperacao({
                                         <dd>
                                             {aberta.area}
                                             <div style={{ color: 'var(--sm-texto-fraco)' }}>
-                                                {chefeDa(aberta.area) ??
-                                                    'sem Chefe de Setor registrado'}
+                                                {liderDe(aberta.equipes) === null
+                                                    ? 'equipe sem líder registrado'
+                                                    : `líder ${liderDe(aberta.equipes)}`}
                                             </div>
                                         </dd>
                                     </div>
@@ -812,6 +883,22 @@ export default function CadastroDeOperacao({
                                         </dd>
                                     </div>
                                     <div style={{ gridColumn: '1 / -1' }}>
+                                        <dt>Fiscais de outras áreas</dt>
+                                        <dd>
+                                            {aberta.fiscais.length === 0
+                                                ? 'só os das equipes que executam'
+                                                : aberta.fiscais.map((f) => f.nome).join(', ')}
+                                        </dd>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <dt>Denúncias da operação</dt>
+                                        <dd>
+                                            {aberta.demandas.length === 0
+                                                ? 'nenhuma anexada'
+                                                : aberta.demandas.map((d) => `${d.protocolo} (${d.bairro || 'sem bairro'})`).join(', ')}
+                                        </dd>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
                                         <dt>Foco</dt>
                                         <dd>{aberta.foco === '' ? VAZIO : aberta.foco}</dd>
                                     </div>
@@ -840,6 +927,33 @@ export default function CadastroDeOperacao({
                                     salvar();
                                 }}
                             >
+                                {/* Os botões vêm também EM CIMA (dono, 25/09/2026). */}
+                                <div className="rt-barra-registro">
+                                    <BotaoAcao
+                                        type="submit"
+                                        icone={<CalendarDays size={16} aria-hidden />}
+                                        carregando={enviando === 'salvar'}
+                                        ocupado={ocupado}
+                                        disabled={!prontoParaSalvar}
+                                        rotuloCarregando="Salvando…"
+                                    >
+                                        {aberta === null ? 'Criar operação' : 'Salvar alterações'}
+                                    </BotaoAcao>
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        disabled={ocupado}
+                                        onClick={
+                                            aberta === null
+                                                ? voltarParaLista
+                                                : () => setModo('navegacao')
+                                        }
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+
                                 <div className="rt-form-linha">
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="nome">
@@ -874,7 +988,15 @@ export default function CadastroDeOperacao({
                                             className="form-control"
                                             data-erro={errors.area ? '1' : undefined}
                                             value={form.area}
-                                            onChange={(e) => mudar('area', e.target.value)}
+                                            onChange={(e) => {
+                                                const anterior = form.area;
+
+                                                mudar('area', e.target.value);
+                                                // Trocar de área tira os bairros da anterior (menos os que as
+                                                // equipes marcadas ainda cobrem) e marca os da nova.
+                                                desmarcarBairrosDa(anterior, [e.target.value, ...areasDasEquipes(form.equipes)]);
+                                                marcarBairrosDa(e.target.value);
+                                            }}
                                         >
                                             {areas.map((a) => (
                                                 <option key={a} value={a}>
@@ -994,9 +1116,18 @@ export default function CadastroDeOperacao({
                                                 <input
                                                     type="checkbox"
                                                     checked={form.equipes.includes(e.equipe)}
-                                                    onChange={() =>
-                                                        alternarNaLista('equipes', e.equipe)
-                                                    }
+                                                    onChange={() => {
+                                                        if (!form.equipes.includes(e.equipe)) {
+                                                            marcarBairrosDa(e.area);
+                                                        } else {
+                                                            desmarcarBairrosDa(e.area, [
+                                                                form.area,
+                                                                ...areasDasEquipes(form.equipes.filter((x) => x !== e.equipe)),
+                                                            ]);
+                                                        }
+
+                                                        alternarNaLista('equipes', e.equipe);
+                                                    }}
                                                 />
                                                 <span>
                                                     <strong>{e.equipe}</strong> · {e.area} —{' '}
@@ -1028,8 +1159,91 @@ export default function CadastroDeOperacao({
                                         ))}
                                     </div>
                                     <p className="form-ajuda">
-                                        Nenhum marcado significa que a operação varre a área
-                                        inteira.
+                                        Escolher a área ou uma equipe marca os bairros dela; desmarcá-la
+                                        tira esses bairros. Dá para desmarcar um a um. Nenhum marcado
+                                        significa a área inteira.
+                                    </p>
+                                </div>
+
+                                {/* FISCAIS de qualquer área (dono, 25/09/2026): a fiscalização da
+                                    operação chega a eles além dos fiscais das equipes acima. */}
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        Fiscais de outras áreas (opcional) — {form.fiscais.length}
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        style={{ marginBottom: 8 }}
+                                        value={buscaFiscal}
+                                        placeholder="Procure o fiscal pelo nome ou pela equipe"
+                                        aria-label="Procurar fiscal"
+                                        onChange={(e) => setBuscaFiscal(e.target.value)}
+                                    />
+                                    <div className="rt-marcadores" style={{ maxHeight: 220, overflow: 'auto' }}>
+                                        {fiscaisDisponiveis
+                                            .filter((f) => form.fiscais.includes(f.id) || casaTermos(parseConsulta<never>(buscaFiscal, []).termos, [f.nome, ...f.equipes]))
+                                            .map((f) => (
+                                                <label key={f.id} className="rt-marcador">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.fiscais.includes(f.id)}
+                                                        onChange={() => alternarId('fiscais', f.id)}
+                                                    />
+                                                    <span>
+                                                        {f.nome}
+                                                        {f.equipes.length > 0 && <span style={{ color: 'var(--sm-texto-fraco)' }}> · {f.equipes.join(', ')}</span>}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                    </div>
+                                    <p className="form-ajuda">
+                                        A fiscalização desta operação aparece para os fiscais das equipes que
+                                        executam e também para os marcados aqui.
+                                    </p>
+                                </div>
+
+                                {/* DENÚNCIAS da operação (dono, 25/09/2026): anexadas aqui mesmo, no
+                                    cadastro ou na edição — a fiscalização delas vai para a rua junto. */}
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        Denúncias da operação (opcional) — {form.demandas.length}
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        style={{ marginBottom: 8 }}
+                                        value={buscaDemanda}
+                                        placeholder="Procure por protocolo, bairro, área ou assunto"
+                                        aria-label="Procurar denúncia"
+                                        onChange={(e) => setBuscaDemanda(e.target.value)}
+                                    />
+                                    <div className="rt-marcadores" style={{ maxHeight: 260, overflow: 'auto' }}>
+                                        {demandasDisponiveis
+                                            .filter((d) => d.operacao_id === null || d.operacao_id === aberta?.id || form.demandas.includes(d.id))
+                                            .filter(
+                                                (d) =>
+                                                    form.demandas.includes(d.id) ||
+                                                    (buscaDemanda.trim() === ''
+                                                        ? d.area === form.area
+                                                        : casaTermos(parseConsulta<never>(buscaDemanda, []).termos, [d.protocolo, d.bairro, d.area, d.assunto])),
+                                            )
+                                            .map((d) => (
+                                                <label key={d.id} className="rt-marcador" title={d.assunto}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.demandas.includes(d.id)}
+                                                        onChange={() => alternarId('demandas', d.id)}
+                                                    />
+                                                    <span>
+                                                        <strong>{d.protocolo}</strong> · {d.bairro || 'sem bairro'}
+                                                        <span style={{ color: 'var(--sm-texto-fraco)' }}> — {d.situacao}</span>
+                                                    </span>
+                                                </label>
+                                            ))}
+                                    </div>
+                                    <p className="form-ajuda">
+                                        Sem busca, aparecem as denúncias abertas da área escolhida. Anexada, a
+                                        denúncia passa a "Em operação" e vai para a rua com as equipes da
+                                        operação; desmarcada, volta para a mesa de onde veio.
                                     </p>
                                 </div>
 
@@ -1063,7 +1277,7 @@ export default function CadastroDeOperacao({
                                     />
                                 </div>
 
-                                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                <div className="rt-barra-registro rt-barra-registro-pe">
                                     <BotaoAcao
                                         type="submit"
                                         icone={<CalendarDays size={16} aria-hidden />}
@@ -1118,7 +1332,7 @@ export default function CadastroDeOperacao({
             {operacoes.length === 0 && recorteDeArea && (
                 <p className="form-ajuda" style={{ marginTop: 14 }}>
                     <MapPinned size={14} aria-hidden /> Não há operação registrada em{' '}
-                    {areasDoChefe.join(' e ')}. As operações das outras áreas existem
+                    {areasDoLider.join(' e ')}. As operações das outras áreas existem
                     e não aparecem aqui.
                 </p>
             )}

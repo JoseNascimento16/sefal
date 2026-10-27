@@ -12,6 +12,8 @@ export type User = {
     admin: boolean;
     /** Setores (perfis de acesso) a que a pessoa pertence, por apelido. */
     setores: string[];
+    /** Abre a tela de Usuários — o atalho fica no menu da conta, no canto superior direito. */
+    administra_usuarios: boolean;
 };
 
 export type Auth = {

@@ -27,6 +27,8 @@ class AutenticarPorMatricula
 
     public const USUARIO_INATIVO = 'Usuário inativo — procure o administrador.';
 
+    public const SENHA_NAO_DEFINIDA = 'Sua senha ainda não foi definida. Use o link do convite que chegou no seu e-mail ou clique em "Esqueci minha senha".';
+
     /**
      * @throws ValidationException
      */
@@ -37,6 +39,15 @@ class AutenticarPorMatricula
         // Quem entra não tropeça em caixa alta/baixa: a matrícula é gravada
         // normalizada (ver `User::normalizarMatricula`) e procurada do mesmo jeito.
         $user = User::porMatricula($matricula);
+
+        // Conta criada pela tela de Usuários e que ainda não passou pelo convite:
+        // a senha dela é aleatória, e dizer "senha inválida" faria a pessoa
+        // tentar de novo sem nunca saber que falta um passo.
+        if ($user !== null && ! $user->senhaDefinida()) {
+            $this->falhou($matricula, $user);
+
+            $this->recusar(self::SENHA_NAO_DEFINIDA);
+        }
 
         if (! $user || ! Hash::check((string) $request->input('password'), $user->password)) {
             // A senha tentada NÃO vai no evento: qualquer ouvinte que registre em

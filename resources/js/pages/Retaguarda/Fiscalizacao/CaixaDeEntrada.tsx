@@ -5,9 +5,9 @@ import {
     FileText,
     Inbox,
     Info,
+    Layers,
     Paperclip,
     Plus,
-    RotateCcw,
     Send,
     TriangleAlert,
     UserRound,
@@ -16,7 +16,13 @@ import {
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BotaoAcao } from '@/components/retaguarda/acao';
+import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
+import {
+    FilaDePreTriagem,
+    PreTriagem,
+    type SugestaoDeAgrupamento,
+} from '@/components/retaguarda/pre-triagem';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
@@ -45,9 +51,9 @@ import {
     devolver as rotaDevolver,
     encaminhar as rotaEncaminhar,
     index,
-    reiniciar as rotaReiniciar,
     store,
 } from '@/routes/retaguarda/caixa-de-entrada';
+import { responderAoCanal as rotaResponderAoCanal } from '@/routes/retaguarda/denuncias';
 
 /**
  * Caixa de Entrada do Coordenador — PROTÓTIPO.
@@ -75,11 +81,19 @@ import {
 
 interface Props {
     demandas: Demanda[];
+    /**
+     * A leva crua do e-Salvador — o que chegou por integração e ainda não foi
+     * entendido. Fila separada, e não uma faceta da busca: enquanto está aqui a
+     * pergunta é "quantos fatos isto é?", e não "o que se faz com este fato?".
+     */
+    preTriagem: Demanda[];
     origens: string[];
     situacoes: string[];
     motivos: string[];
     destinos: string[];
     prazoPadraoEmDias: number;
+    /** Esta pessoa responde ao canal (a avulsa vira processo no e-Salvador)? Vem do servidor. */
+    decide: boolean;
     equipes: EquipeResumo[];
     bairros: string[];
     /** `bairro → equipe sugerida`, para a sugestão aparecer sem ida ao servidor. */
@@ -89,16 +103,31 @@ interface Props {
      * `docs/padroes/listagem-clean.md`.
      */
     listagens: Listagens;
-    /** A sessão já mexeu na caixa de demonstração? */
-    alterada: boolean;
+    /**
+     * As propostas de agrupamento que esperam decisão — a PRÉ-TRIAGEM.
+     *
+     * O mesmo fato chega em vários papéis, e juntá-los ANTES de encaminhar é o
+     * que evita mandar a equipe duas vezes ao mesmo ponto. A máquina propõe;
+     * quem agrupa é o coordenador.
+     */
+    sugestoesDeAgrupamento: SugestaoDeAgrupamento[];
 }
 
-type Aba = 'caixa' | 'registro' | 'detalhe';
+type Aba = 'pre-triagem' | 'caixa' | 'registro' | 'detalhe';
+
+/**
+ * A aba Pré-Triagem está ESCONDIDA (decisão do dono, 24/09/2026 — incerto sobre
+ * a necessidade). Nada foi removido: o servidor segue entregando `preTriagem`, a
+ * varredura e o agrupamento continuam de pé, e voltar a mostrar é trocar isto.
+ * ⚠️ Enquanto escondida, o que estiver `Em pré-triagem` não aparece em aba
+ * nenhuma da Caixa.
+ */
+const MOSTRAR_PRE_TRIAGEM = false;
 type Destino = 'encaminhar' | 'devolver';
 
 /** O que a busca reconhece além das palavras soltas. */
 type Faceta =
-    | { tipo: 'situacao'; valor: string }
+    | { tipo: 'situacao'; valores: string[] }
     | { tipo: 'origem'; valor: string }
     | { tipo: 'anonima' }
     | { tipo: 'prazo-vencido' }
@@ -112,17 +141,25 @@ type Faceta =
 const FACETAS: { expressao: RegExp; valor: Faceta }[] = [
     {
         expressao: /\baguardando triagem\b|\btriagem\b|\bsem triagem\b|\bnao triad\w*\b/,
-        valor: { tipo: 'situacao', valor: 'Aguardando triagem' },
+        valor: { tipo: 'situacao', valores: ['Recebida'] },
     },
-    { expressao: /\bencaminhad\w*\b/, valor: { tipo: 'situacao', valor: 'Encaminhada' } },
-    { expressao: /\bdevolvid\w*\b/, valor: { tipo: 'situacao', valor: 'Devolvida' } },
-    { expressao: /\barquivad\w*\b/, valor: { tipo: 'situacao', valor: 'Arquivada' } },
+    {
+        // "Encaminhada" é UMA palavra para DOIS estados do mundo: o coordenador
+        // que escolheu só a área e o que escolheu a equipe. Quem digita a palavra
+        // quer os dois; quem precisa distinguir lê a coluna.
+        expressao: /\bencaminhad\w*\b|\bdirecionad\w*\b/,
+        valor: { tipo: 'situacao', valores: ['Encaminhada ao líder', 'Direcionada aos fiscais'] },
+    },
+    { expressao: /\bdevolvid\w*\b/, valor: { tipo: 'situacao', valores: ['Devolvida'] } },
+    { expressao: /\barquivad\w*\b/, valor: { tipo: 'situacao', valores: ['Arquivada'] } },
     { expressao: /\banonim\w*\b|\bsem requerente\b/, valor: { tipo: 'anonima' } },
     {
         expressao: /\bprazo vencido\b|\bvencid\w*\b|\batrasad\w*\b/,
         valor: { tipo: 'prazo-vencido' },
     },
-    { expressao: /\bfala salvador\b|\b156\b/, valor: { tipo: 'origem', valor: 'Salvador Digital' } },
+    // O Fala Salvador não entra pela Caixa (é do líder); a avulsa — ligação ou
+    // e-mail de superior — é o que o chefe registra fora de canal.
+    { expressao: /\bavulsas?\b|\bligacao\b|\be-?mail\b/, valor: { tipo: 'origem', valor: 'Avulsa' } },
     { expressao: /\be-?salvador\b/, valor: { tipo: 'origem', valor: 'e-Salvador' } },
     { expressao: /\bnova licenca\b|\blicenca\b/, valor: { tipo: 'origem', valor: 'Nova licença' } },
     { expressao: /\boficio\b/, valor: { tipo: 'origem', valor: 'Ofício' } },
@@ -136,21 +173,30 @@ function quemPediu(demanda: Demanda): string {
 
 export default function CaixaDeEntrada({
     demandas,
+    preTriagem,
     origens,
     situacoes,
     motivos,
     destinos,
     prazoPadraoEmDias,
+    decide,
     equipes,
     bairros,
     sugestoes,
     listagens,
-    alterada,
+    sugestoesDeAgrupamento,
 }: Props) {
     const acoes = useAcoes();
     const { enviando, ocupado, enviar } = useEnvio();
 
-    const [aba, setAba] = useState<Aba>('caixa');
+    /*
+     * Abre na PRÉ-TRIAGEM quando há leva esperando. É a ordem do trabalho: o que
+     * chegou cru vem antes do que já foi entendido, e abrir na Caixa faria o
+     * coordenador encaminhar casos que ainda podem ser um só.
+     */
+    const [aba, setAba] = useState<Aba>(
+        MOSTRAR_PRE_TRIAGEM && preTriagem.length > 0 ? 'pre-triagem' : 'caixa',
+    );
     const [busca, setBusca] = useState('');
     const [abertaId, setAbertaId] = useState<number | null>(null);
 
@@ -165,7 +211,7 @@ export default function CaixaDeEntrada({
 
         return demandas.filter((d) => {
             for (const faceta of facetas) {
-                if (faceta.tipo === 'situacao' && d.situacao !== faceta.valor) {
+                if (faceta.tipo === 'situacao' && !faceta.valores.includes(d.situacao)) {
                     return false;
                 }
 
@@ -215,13 +261,19 @@ export default function CaixaDeEntrada({
     const numeros = useMemo(
         () => ({
             total: demandas.length,
-            triagem: demandas.filter((d) => d.situacao === 'Aguardando triagem').length,
-            encaminhadas: demandas.filter((d) => d.situacao === 'Encaminhada').length,
+            // Os nomes são os do MODEL (`Demanda::SITUACOES`). A tela já chamou
+            // `Recebida` de "Aguardando triagem" e `Encaminhada ao líder` de
+            // "Encaminhada" — e os contadores, presos aos nomes antigos, ficavam
+            // zerados sem que nada parecesse quebrado.
+            triagem: demandas.filter((d) => d.situacao === 'Recebida').length,
+            encaminhadas: demandas.filter((d) =>
+                ['Encaminhada ao líder', 'Direcionada aos fiscais'].includes(d.situacao),
+            ).length,
             retornadas: demandas.filter((d) =>
                 ['Devolvida', 'Arquivada'].includes(d.situacao),
             ).length,
             vencidas: demandas.filter(
-                (d) => d.prazo < hoje && d.situacao === 'Aguardando triagem',
+                (d) => d.prazo < hoje && d.situacao === 'Recebida',
             ).length,
         }),
         [demandas, hoje],
@@ -396,9 +448,28 @@ export default function CaixaDeEntrada({
         vencida: boolean,
     ): { conteudo: ReactNode; dica?: string } {
         if (chave === 'protocolo') {
+            const agregadas = d.agregadas?.length ?? 0;
+
             return {
-                conteudo: d.protocolo,
-                dica: `${d.protocolo} · ${d.origem} ${d.documento_origem}`,
+                /*
+                 * O "+N" ao lado do protocolo é o resultado da pré-triagem
+                 * viajando junto com a demanda. Sem ele, quem pega a linha na
+                 * Caixa vê um caso como qualquer outro — e este responde por
+                 * vários cidadãos, o que muda a urgência e o tamanho do estrago
+                 * se ficar parado.
+                 */
+                conteudo: agregadas === 0 ? d.protocolo : (
+                    <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                        {d.protocolo}
+                        <span className="selo selo-info" style={{ fontSize: 11 }}>
+                            +{agregadas} {agregadas === 1 ? 'denúncia' : 'denúncias'}
+                        </span>
+                    </span>
+                ),
+                dica: agregadas === 0
+                    ? `${d.protocolo} · ${d.origem} ${d.documento_origem}`
+                    : `${d.protocolo} · ${d.origem} ${d.documento_origem} — responde também por `
+                        + d.agregadas!.map((a) => a.protocolo).join(', '),
             };
         }
 
@@ -449,7 +520,9 @@ export default function CaixaDeEntrada({
     }
 
     const linhasExportacao = ord.itens.map((d) => ({
-        protocolo: d.protocolo,
+        protocolo: (d.agregadas?.length ?? 0) === 0
+            ? d.protocolo
+            : `${d.protocolo} (+${d.agregadas!.length})`,
         origem: d.origem,
         documento_origem: d.documento_origem,
         recebida_em: dataBR(d.recebida_em),
@@ -470,10 +543,11 @@ export default function CaixaDeEntrada({
                     <p className="sobrancelha">Fiscalização</p>
                     <h1>Caixa de Entrada</h1>
                     <p>
-                        O que chega de <strong>fora</strong> e em papel —
-                        e-Salvador, Salvador Digital, pedido de nova licença e
-                        ofício. Aqui o coordenador registra, decide e{' '}
-                        <strong>encaminha à equipe da área do bairro</strong> ou
+                        O que chega ao <strong>Chefe de Setor</strong> fora da
+                        integração — papel do e-Salvador, pedido de nova licença,
+                        ofício e a <strong>avulsa</strong> (ligação ou e-mail de
+                        superior). Aqui ele registra, decide e{' '}
+                        <strong>encaminha à equipe sugerida pelo bairro</strong> ou
                         devolve com justificativa.
                     </p>
                 </div>
@@ -523,15 +597,43 @@ export default function CaixaDeEntrada({
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando a tela saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco.
+              * O que continua sendo de mentira são as DEMANDAS, e é disso que o
+              * cliente precisa ser avisado antes de tirar conclusão dos números.
+              */}
             <SeloPrototipo>
-                Esta tela é a proposta do módulo, para conferência da forma antes
-                de virar sistema. As demandas são de exemplo e{' '}
-                <strong>nada é gravado</strong>: o que você registrar, encaminhar
-                ou devolver vale só nesta sessão do navegador.
+                Ambiente de demonstração: as demandas, os ambulantes e as
+                fiscalizações são <strong>exemplos</strong>, não casos reais. O
+                que você registrar, encaminhar ou devolver{' '}
+                <strong>é gravado de verdade</strong> e fica no histórico da
+                demanda.
             </SeloPrototipo>
 
             <div className="card-premium">
                 <div className="abas" role="tablist" aria-label="Caixa de Entrada">
+                    {/*
+                      * A PRÉ-TRIAGEM vem PRIMEIRO porque é a etapa anterior: o
+                      * que chega por integração cai aqui, cru, e só passa à
+                      * Caixa depois que alguém disse quantos fatos aquilo é.
+                      */}
+                    {MOSTRAR_PRE_TRIAGEM && (
+                        <button
+                            type="button"
+                            role="tab"
+                            className="aba"
+                            aria-selected={aba === 'pre-triagem'}
+                            onClick={() => setAba('pre-triagem')}
+                        >
+                            <Layers size={16} aria-hidden />
+                            <span className="aba-rotulo">
+                                Pré-Triagem
+                                {preTriagem.length > 0 && ` (${preTriagem.length})`}
+                            </span>
+                        </button>
+                    )}
+
                     <button
                         type="button"
                         role="tab"
@@ -569,6 +671,32 @@ export default function CaixaDeEntrada({
                         </button>
                     )}
                 </div>
+
+                {MOSTRAR_PRE_TRIAGEM && aba === 'pre-triagem' && (
+                    <>
+                        {/*
+                          * As PROPOSTAS antes da FILA: a primeira pergunta do dia
+                          * é "algum destes relatos é o mesmo caso?", e respondê-la
+                          * depois de já ter liberado tudo seria encaminhar duas
+                          * vezes o mesmo ponto.
+                          *
+                          * O painel aparece mesmo sem proposta nenhuma porque o
+                          * botão que roda a varredura mora dentro dele — sem isso,
+                          * num banco limpo a funcionalidade fica inalcançável.
+                          */}
+                        <PreTriagem
+                            sugestoes={sugestoesDeAgrupamento}
+                            base="/retaguarda/caixa-de-entrada"
+                            podeDecidir={acoes.habilitado}
+                        />
+
+                        <FilaDePreTriagem
+                            demandas={preTriagem}
+                            base="/retaguarda/caixa-de-entrada"
+                            podeDecidir={acoes.habilitado}
+                        />
+                    </>
+                )}
 
                 {aba === 'caixa' && (
                     <>
@@ -612,20 +740,6 @@ export default function CaixaDeEntrada({
                                 </BotaoAcao>
                             )}
 
-                            {/* Só aparece depois de a sessão mexer em algo: num
-                                protótipo intocado não há o que reiniciar. */}
-                            {alterada && acoes.habilitado && (
-                                <BotaoAcao
-                                    className="btn btn-secondary btn-sm"
-                                    icone={<RotateCcw size={16} aria-hidden />}
-                                    carregando={enviando === 'reiniciar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Reiniciando…"
-                                    onClick={() => enviar('reiniciar', rotaReiniciar().url)}
-                                >
-                                    Reiniciar demonstração
-                                </BotaoAcao>
-                            )}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar
@@ -909,9 +1023,9 @@ export default function CaixaDeEntrada({
                                             {sugestao.regiao})
                                         </strong>
                                         <div>
-                                            Encarregado: {sugestao.encarregado}. A
-                                            sugestão vem do bloco de bairros da
-                                            área — você pode trocar abaixo.
+                                            Líder: {sugestao.lider || sugestao.encarregado} — é
+                                            quem recebe e direciona aos fiscais. A sugestão vem
+                                            do bloco de bairros da área — você pode trocar abaixo.
                                         </div>
 
                                         {sugestao.alternativas.length > 0 && (
@@ -1066,7 +1180,7 @@ export default function CaixaDeEntrada({
                                         {equipes.map((e) => (
                                             <option key={e.equipe} value={e.equipe}>
                                                 Equipe {e.equipe} · {e.area} ({e.regiao}) —{' '}
-                                                {e.encarregado}
+                                                {e.lider || e.encarregado}
                                             </option>
                                         ))}
                                     </select>
@@ -1290,6 +1404,14 @@ export default function CaixaDeEntrada({
                                 </div>
                             )}
                         </dl>
+
+                        {/* A avulsa concluída vira PROCESSO no e-Salvador: o chefe abre
+                            lá e registra aqui o número, enquanto a integração não escreve. */}
+                        <RetornoAoCanal
+                            demanda={aberta}
+                            decide={decide}
+                            rota={rotaResponderAoCanal({ demanda: aberta.id }).url}
+                        />
 
                         <h3 className="card-titulo" style={{ marginTop: 26 }}>
                             Trâmite

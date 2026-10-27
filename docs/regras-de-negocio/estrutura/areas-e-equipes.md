@@ -3,6 +3,17 @@
 **Onde fica:** Menu → **Sistema** → Áreas e Equipes (`/retaguarda/areas-e-equipes`).
 **Quem usa:** administrador e Chefe de Setor. **O fiscal não entra** (ver RN-07).
 
+> ## 🔁 22/09/2026 — os papéis mudaram; leia [Papéis e setores](../papeis-e-setores.md) antes deste doc
+>
+> Depois de ouvir coordenadores, Chefe de Setor e líderes, o dono redesenhou quem faz o quê:
+> os **coordenadores não usam o SEFAL** (trabalham no e-Salvador e mandam para a caixa do setor);
+> o **Chefe de Setor é UM SÓ**, recebe tudo na Caixa de Entrada e **encaminha à EQUIPE** — quem
+> recebe é o **líder da equipe** (o encarregado do documento de 17/04/2026, agora com conta); o
+> líder **direciona aos fiscais** e recebe o retorno; o chefe responde ao canal. O setor
+> `coordenador` foi removido. Onde este doc diz "Coordenador", leia **Chefe de Setor**; onde diz
+> "Chefe de Setor da área", leia **líder da equipe**; `Encaminhada à área` virou
+> **`Encaminhada ao líder`** e `Direcionada à equipe` virou **`Direcionada aos fiscais`**.
+
 > ## ⚠️ ESTA TELA É UM PROTÓTIPO
 >
 > Ela existe para o dono **olhar a forma e aprovar a hierarquia** antes de a estrutura virar tabela,
@@ -94,7 +105,7 @@ ela é: a Noturna não tem bloco a manter, e a tela diz isso em vez de mostrar u
 
 O vínculo bairro↔equipe **não é 1:1**. A tela mostra isso como aviso informativo — a contagem no
 cabeçalho, a marca no cartão da área e a ficha do bairro em laranja dentro do bloco —, e diz o que
-acontece nesse caso: a Caixa de Entrada **sugere** uma equipe e o coordenador **confirma**.
+acontece nesse caso: a Caixa de Entrada **sugere** uma equipe e o Chefe de Setor **confirma**.
 
 Marcar como pendência mandaria o Chefe de Setor "corrigir" um dado que está certo.
 
@@ -176,3 +187,4 @@ algo. **No sistema real esta rota não existe:** cadastro não se reinicia.
 | 02/09/2026 | José Nascimento | Áreas e Equipes | Nasce a tela, como **protótipo**, com a estrutura real do documento de 17/04/2026: 8 áreas em cartões, a ficha de cada equipe, os fiscais, o bloco de bairros em fichas com inclusão e remoção, os três recortes (bairros / corredores / cidade por turno) e o aviso de bairro em mais de uma área. | Decisão da reunião com o cliente de 02/09/2026: Área › Equipe › bloco de bairros é estrutura permanente (a operação é evento; a equipe é organização), e é dela que sai a equipe sugerida para cada demanda da Caixa de Entrada. |
 | 04/09/2026 | José Nascimento | Áreas e Equipes | Os papéis passam a se chamar **Coordenador** (era `administrativo`) e **Chefe de Setor** (era `gestor`) — slug inclusive, com migration renomeando catálogo e matriz. Ver [Papéis e setores](../papeis-e-setores.md). | O vínculo pessoa↔área é o do Chefe de Setor: a chave do dado de protótipo virou `chefe_de_setor` e o rótulo da tela acompanhou. |
 | 10/09/2026 | José Nascimento | Áreas e Equipes | A tela **mudou de lugar no menu**: saiu da seção "Estrutura" (que existia só para ela e foi REMOVIDA) e passou a ser item do menu de **Sistema**. Rota, `slug` (`areas-e-equipes`), concessão e regras ficaram **intactos** — mudou o caminho até a tela, nada do que ela faz. | Ordem do dono (10/09/2026): _"crie no menu 'Sistemas' e coloque como filhos: Áreas e Equipes; Cadastro de Operação"_. A seção antiga não foi deixada vazia porque ela trazia recado de "aparece aqui quando você tiver acesso", e a casca DESENHA a seção que tem esse recado — sobraria um título órfão anunciando uma tela que mudou de lugar. |
+| 22/09/2026 | José Nascimento | Áreas e Equipes | A ficha da equipe mostra o **líder** (`equipes.lider_id` → `lider`, com matrícula) no lugar do "Chefe de Setor da área": o encarregado do documento É o líder, agora com conta (`lider-<código>`, criada pelo `EstruturaSeeder`). RN-01b (duas pessoas, encarregado × chefe da área) **deixa de valer** — ver [Papéis e setores](../papeis-e-setores.md) RN-03. `areas.chefe_de_setor_id` fica sem uso. | Reforma dos papéis de 22/09/2026. |

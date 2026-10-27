@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -169,6 +171,33 @@ class Ambulante extends Model
     public function documentoFormatado(): string
     {
         return $this->documento === null ? '' : Documento::formatar($this->documento);
+    }
+
+    /**
+     * A TRILHA — todos os pontos em que este ambulante foi encontrado, do mais
+     * recente para o mais antigo.
+     *
+     * @return HasMany<LocalizacaoAmbulante, $this>
+     */
+    public function localizacoes(): HasMany
+    {
+        return $this->hasMany(LocalizacaoAmbulante::class)->orderByDesc('registrada_em');
+    }
+
+    /**
+     * O ÚLTIMO ponto conhecido — é ele que responde "de que área ele é hoje".
+     *
+     * @return HasOne<LocalizacaoAmbulante, $this>
+     */
+    public function ultimaLocalizacao(): HasOne
+    {
+        return $this->hasOne(LocalizacaoAmbulante::class)->latestOfMany('registrada_em');
+    }
+
+    /** @return HasMany<Fiscalizacao, $this> */
+    public function fiscalizacoes(): HasMany
+    {
+        return $this->hasMany(Fiscalizacao::class);
     }
 
     /**

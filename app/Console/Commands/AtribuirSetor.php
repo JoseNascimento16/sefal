@@ -10,7 +10,7 @@ class AtribuirSetor extends Command
 {
     protected $signature = 'fp:atribuir-setor
                             {login : Matrícula do usuário}
-                            {setor : Código do setor (administrador, coordenador, fiscal, chefe-de-setor)}
+                            {setor : Código do setor (administrador, chefe-de-setor, lider-de-equipe, fiscal)}
                             {--remover : Remove o setor em vez de adicionar}';
 
     protected $description = 'Atribui (ou remove) um setor a um usuário da Retaguarda.';

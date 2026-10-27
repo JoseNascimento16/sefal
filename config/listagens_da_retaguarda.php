@@ -28,7 +28,7 @@
 |                  nenhuma pode ser campo de texto livre (lista `texto_livre`).
 |                  `quando` marca a coluna CONDICIONAL: ela só entra quando o
 |                  contexto daquele acesso a pede — hoje só `varias-areas`, o
-|                  caso do Coordenador que varre cinco áreas e do Chefe de Setor
+|                  caso do Chefe de Setor que varre todas as equipes e do líder
 |                  que só tem a sua (para ele a coluna seria uma constante).
 |  · `detalhe`   — o que DESCEU da grade para o detalhe do registro. Não é
 |                  documentação: é a lista que o teste exige encontrar na
@@ -77,200 +77,54 @@ return [
 
         /*
         |----------------------------------------------------------------------
-        | Fiscalização › Fiscalizações — aba "A decidir"
+        | Fiscalização › Fiscalizações — as três abas
         |----------------------------------------------------------------------
         |
-        | Quem varre: o Chefe de Setor, procurando o que voltou da rua e o que
-        | a equipe está PEDINDO. Por isso a recomendação do fiscal é coluna, e
-        | não linha do detalhe: quem lê trinta retornos não abre trinta fichas.
-        |
-        | `estado` NÃO é coluna aqui: a aba já filtra por "aguardando leitura",
-        | então a coluna seria a mesma palavra repetida em toda linha — e a
-        | marca laranja na ponta da linha já diz que aquilo espera alguém.
-        | Equipe, fiscal e documento descem: a decisão é sobre o PONTO.
+        | Uma linha por FISCALIZAÇÃO (o ciclo — do encaminhamento do chefe ao
+        | líder até o resultado voltar ao chefe), e não por vistoria (dono,
+        | 24/09/2026). A mesma grade nas três abas: Em andamento, Encaminhadas e
+        | Arquivo. O DESFECHO muda conforme ela avança (aguardando envio à
+        | equipe, em campo, e o desfecho da última vistoria); a POSSE ATUAL diz
+        | com quem está — Equipe ou Chefe de Setor. As vistorias, com relato,
+        | fotos e documento, abrem no detalhe.
         */
-        'fiscalizacoes.a-decidir' => [
+        'fiscalizacoes.ciclos' => [
             'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Fiscalizacoes.tsx',
             'grade' => [
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída', 'largura' => 104, 'alinhar' => 'center'],
-                /*
-                 * O ORÇAMENTO da linha é fixo (medido: ~798px úteis numa janela
-                 * de 1280 com a barra estendida), então largura aqui é decisão
-                 * sobre o que pode truncar. O endereço trunca sem perder o
-                 * sentido — "Avenida Otávio Mangabei…" ainda diz onde é, e a
-                 * ficha tem o resto. O DESFECHO não: cortado em "Regularizado
-                 * no l…" ele deixa de distinguir "Regularizado no local" de
-                 * "Regularizado após notificação", que são desfechos
-                 * diferentes. Por isso quem cede é o ponto.
-                 */
-                ['chave' => 'ponto', 'titulo' => 'Ponto', 'largura' => 150],
-                // A ÁREA só para quem vê mais de uma. Para o Chefe de Setor a
-                // coluna repetiria a área dele em toda linha; para o
-                // Coordenador, que responde por cinco, ela é o que faz a fila
-                // ser varrível.
-                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 80, 'quando' => 'varias-areas'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 196],
-                /*
-                 * `linhas: 2` é exceção declarada à régua (ver
-                 * docs/padroes/listagem-clean.md): a frase da recomendação É a
-                 * informação que o Chefe de Setor foi ler, e cortada em
-                 * "Voltar ao ponto no venci…" ela não diz nada. Quebra em duas
-                 * linhas com a fonte um ponto menor, e a altura da linha não
-                 * muda.
-                 *
-                 * `minima` existe por causa de uma medição: numa janela de
-                 * 1280px o navegador espremia esta coluna para 153px (dos 296
-                 * declarados como teto) e dava 226px a "Ponto" — a frase caía
-                 * para três linhas e o teto da célula cortava a terceira.
-                 * `largura` é TETO, e teto não impede o esmagamento; o piso é
-                 * que impede. As vizinhas cederam o que sobrava: "Ponto" e
-                 * "Desfecho" truncam com reticências, que é o desenho delas,
-                 * enquanto a frase não pode ser truncada sem perder o sentido.
-                 */
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal', 'largura' => 260, 'minima' => 240, 'linhas' => 2],
+                ['chave' => 'protocolo', 'titulo' => 'Fiscalização', 'largura' => 150],
+                ['chave' => 'demanda', 'titulo' => 'Demanda', 'largura' => 200],
+                ['chave' => 'equipe', 'titulo' => 'Equipe', 'largura' => 90],
+                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 230],
+                ['chave' => 'posse', 'titulo' => 'Posse atual', 'largura' => 140],
             ],
-            'detalhe' => ['protocolo', 'equipe', 'fiscal', 'documento', 'consideracoes', 'origem', 'estado'],
+            // A data de abertura desce para o detalhe: a grade tem cinco colunas, e a
+            // POSSE ATUAL (pedido do dono) é a que não podia faltar.
+            'detalhe' => ['aberto_em', 'vistorias', 'irmas', 'motivo'],
             'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Registro'],
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída em', 'alinhar' => 'center'],
-                ['chave' => 'area', 'titulo' => 'Área'],
+                ['chave' => 'protocolo', 'titulo' => 'Fiscalização'],
+                ['chave' => 'aberto_em', 'titulo' => 'Aberta em', 'alinhar' => 'center'],
+                ['chave' => 'demanda', 'titulo' => 'Demanda'],
+                ['chave' => 'canal', 'titulo' => 'Canal'],
                 ['chave' => 'equipe', 'titulo' => 'Equipe'],
-                ['chave' => 'fiscal', 'titulo' => 'Fiscal'],
-                ['chave' => 'ponto', 'titulo' => 'Ponto'],
                 ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'documento', 'titulo' => 'Documento'],
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal'],
-                ['chave' => 'consideracoes', 'titulo' => 'Considerações do fiscal'],
-                ['chave' => 'origem', 'titulo' => 'Origem'],
-                ['chave' => 'estado', 'titulo' => 'Estado'],
+                ['chave' => 'posse', 'titulo' => 'Posse atual'],
+                ['chave' => 'vistorias', 'titulo' => 'Vistorias'],
+                ['chave' => 'documentos', 'titulo' => 'Documentos lavrados'],
+                ['chave' => 'irmas', 'titulo' => 'Outras Fiscalizações do processo'],
+                ['chave' => 'motivo', 'titulo' => 'Motivo do encaminhamento'],
             ],
         ],
 
         /*
         |----------------------------------------------------------------------
-        | Fiscalização › Fiscalizações — aba "Acervo"
+        | Caixas de Entrada por canal — a grade de TODAS as abas
         |----------------------------------------------------------------------
         |
-        | Quem varre: quem consulta o histórico de um ponto ou de uma pessoa.
-        | A pergunta é "o que foi feito ali?", então o ALVO encontrado sobe para
-        | a grade e o PRAZO fica — é o único sinal desta aba que ainda cobra
-        | ação de alguém.
-        |
-        | A área desce: no acervo procura-se por endereço e por nome, e a barra
-        | de busca entende "Área 5" quando a pergunta for essa.
-        */
-        'fiscalizacoes.acervo' => [
-            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Fiscalizacoes.tsx',
-            'grade' => [
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída', 'largura' => 104, 'alinhar' => 'center'],
-                ['chave' => 'ponto', 'titulo' => 'Ponto', 'largura' => 250],
-                ['chave' => 'alvo', 'titulo' => 'Quem foi encontrado', 'largura' => 200],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho', 'largura' => 224],
-                ['chave' => 'prazo', 'titulo' => 'Prazo de retorno', 'largura' => 196],
-            ],
-            'detalhe' => [
-                'protocolo', 'area', 'equipe', 'fiscal', 'documento', 'provas',
-                'recomendacoes', 'consideracoes', 'origem', 'estado',
-            ],
-            'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Registro'],
-                ['chave' => 'concluida_em', 'titulo' => 'Concluída em', 'alinhar' => 'center'],
-                ['chave' => 'area', 'titulo' => 'Área'],
-                ['chave' => 'equipe', 'titulo' => 'Equipe'],
-                ['chave' => 'fiscal', 'titulo' => 'Fiscal'],
-                ['chave' => 'ponto', 'titulo' => 'Ponto'],
-                ['chave' => 'alvo', 'titulo' => 'Quem foi encontrado'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'documento', 'titulo' => 'Documento'],
-                ['chave' => 'prazo', 'titulo' => 'Prazo de retorno'],
-                ['chave' => 'provas', 'titulo' => 'Provas'],
-                ['chave' => 'recomendacoes', 'titulo' => 'Recomendação do fiscal'],
-                ['chave' => 'consideracoes', 'titulo' => 'Considerações do fiscal'],
-                ['chave' => 'origem', 'titulo' => 'Origem'],
-                ['chave' => 'estado', 'titulo' => 'Estado'],
-            ],
-        ],
-
-        /*
-        |----------------------------------------------------------------------
-        | Denúncias › e-Salvador / Salvador Digital — aba "A triar"
-        |----------------------------------------------------------------------
-        |
-        | Quem varre: o Coordenador, decidindo a ÁREA a partir do BAIRRO. Só
-        | isso: bairro é o dado que decide, área é onde ele confirma (a célula é
-        | um seletor, não texto), e o prazo é o que ordena a urgência.
-        |
-        | Requerente e assunto descem — o assunto é texto livre e era ele que
-        | esticava a linha. Situação não entra: nesta aba é sempre "Recebida".
-        */
-        'denuncias.triagem' => [
-            'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',
-            'grade' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo', 'largura' => 132],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'largura' => 132, 'alinhar' => 'center'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 190],
-                ['chave' => 'area', 'titulo' => 'Área (sugerida)', 'largura' => 250],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'largura' => 118, 'alinhar' => 'center'],
-            ],
-            'detalhe' => ['protocolo_origem', 'requerente', 'assunto', 'destino', 'situacao', 'desfecho'],
-            'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
-                ['chave' => 'protocolo_origem', 'titulo' => 'Nº na origem'],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'alinhar' => 'center'],
-                ['chave' => 'requerente', 'titulo' => 'Requerente'],
-                ['chave' => 'assunto', 'titulo' => 'Assunto'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro'],
-                ['chave' => 'area', 'titulo' => 'Área'],
-                ['chave' => 'destino', 'titulo' => 'Destino'],
-                ['chave' => 'situacao', 'titulo' => 'Situação'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'alinhar' => 'center'],
-            ],
-        ],
-
-        /*
-        |----------------------------------------------------------------------
-        | Denúncias — aba "A direcionar"
-        |----------------------------------------------------------------------
-        |
-        | Quem varre: o Chefe de Setor, escolhendo equipe ou operação. A área já
-        | está definida e ele pode responder por mais de uma, então ela fica —
-        | curta, como texto. Situação, de novo, é constante na aba.
-        */
-        'denuncias.direcionamento' => [
-            'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',
-            'grade' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo', 'largura' => 132],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'largura' => 132, 'alinhar' => 'center'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 190],
-                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 150],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'largura' => 118, 'alinhar' => 'center'],
-            ],
-            'detalhe' => ['protocolo_origem', 'requerente', 'assunto', 'destino', 'situacao', 'desfecho'],
-            'exportacao' => [
-                ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
-                ['chave' => 'protocolo_origem', 'titulo' => 'Nº na origem'],
-                ['chave' => 'recebida', 'titulo' => 'Recebida', 'alinhar' => 'center'],
-                ['chave' => 'requerente', 'titulo' => 'Requerente'],
-                ['chave' => 'assunto', 'titulo' => 'Assunto'],
-                ['chave' => 'bairro', 'titulo' => 'Bairro'],
-                ['chave' => 'area', 'titulo' => 'Área'],
-                ['chave' => 'destino', 'titulo' => 'Destino'],
-                ['chave' => 'situacao', 'titulo' => 'Situação'],
-                ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
-                ['chave' => 'prazo', 'titulo' => 'Prazo', 'alinhar' => 'center'],
-            ],
-        ],
-
-        /*
-        |----------------------------------------------------------------------
-        | Denúncias — aba "Todas"
-        |----------------------------------------------------------------------
-        |
-        | Quem varre: quem acompanha o canal e quer saber em que ESTADO cada
-        | denúncia está. Aqui a situação varia, então ela é a coluna do selo; o
-        | destino (equipe ou operação) desce, porque a pergunta desta aba é "em
-        | que pé está", não "com quem está".
+        | Uma grade só para as quatro caixas e todas as abas (dono, 24/09/2026):
+        | protocolo, recebida, bairro, situação e prazo, com seleção múltipla. A
+        | situação é a RESUMIDA — Recebida, Encaminhada ao líder, Em fiscalização
+        | (e, fechada, Respondida/Encerrada) —; a completa vai na dica e no
+        | arquivo. A equipe é escolhida na folha de encaminhamento, não na linha.
         */
         'denuncias.todas' => [
             'tela' => 'resources/js/components/retaguarda/painel-de-denuncias.tsx',
@@ -279,12 +133,24 @@ return [
                 ['chave' => 'recebida', 'titulo' => 'Recebida', 'largura' => 132, 'alinhar' => 'center'],
                 ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 190],
                 ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 200],
+                /*
+                 * A equipe (com a área e o líder) para onde a demanda vai — um
+                 * seletor na linha, para o chefe encaminhar EM LOTE já escolhendo
+                 * cada destino (dono, 25/09/2026). Só para quem encaminha.
+                 */
+                ['chave' => 'area', 'titulo' => 'Área (sugerida)', 'largura' => 260, 'quando' => 'encaminha'],
                 ['chave' => 'prazo', 'titulo' => 'Prazo', 'largura' => 118, 'alinhar' => 'center'],
             ],
+            // Exceção declarada à régua das cinco colunas: a sexta é a do
+            // encaminhamento em lote, e só aparece para quem encaminha.
+            'teto' => 6,
+            'teto_motivo' => 'Dono, 25/09/2026: o chefe encaminha em lote escolhendo a área de cada demanda na própria grade.',
             'detalhe' => ['protocolo_origem', 'requerente', 'assunto', 'area', 'destino', 'desfecho'],
             'exportacao' => [
                 ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
                 ['chave' => 'protocolo_origem', 'titulo' => 'Nº na origem'],
+                // Qual avulsa (pedido de superior ou ofício); travessão nos outros canais.
+                ['chave' => 'tipo', 'titulo' => 'Tipo'],
                 ['chave' => 'recebida', 'titulo' => 'Recebida', 'alinhar' => 'center'],
                 ['chave' => 'requerente', 'titulo' => 'Requerente'],
                 ['chave' => 'assunto', 'titulo' => 'Assunto'],
@@ -294,6 +160,61 @@ return [
                 ['chave' => 'situacao', 'titulo' => 'Situação'],
                 ['chave' => 'desfecho', 'titulo' => 'Desfecho'],
                 ['chave' => 'prazo', 'titulo' => 'Prazo', 'alinhar' => 'center'],
+            ],
+        ],
+
+        /*
+        | Levantamentos — o censo de ambulantes por rua (aplicativo do fiscal).
+        |
+        | Quem varre quer achar A RUA: rua, bairro, equipes, data e quantos
+        | ambulantes. Protocolo, encarregados e quem levantou descem para a ficha.
+        */
+        'levantamentos' => [
+            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Levantamentos.tsx',
+            'grade' => [
+                ['chave' => 'rua', 'titulo' => 'Rua', 'largura' => 260],
+                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 180],
+                ['chave' => 'equipes', 'titulo' => 'Equipes', 'largura' => 120],
+                ['chave' => 'data', 'titulo' => 'Data', 'largura' => 110, 'alinhar' => 'center'],
+                ['chave' => 'ambulantes', 'titulo' => 'Ambulantes', 'largura' => 120, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['protocolo', 'encarregados', 'fiscal'],
+            'exportacao' => [
+                ['chave' => 'protocolo', 'titulo' => 'Protocolo'],
+                ['chave' => 'rua', 'titulo' => 'Rua'],
+                ['chave' => 'bairro', 'titulo' => 'Bairro'],
+                ['chave' => 'equipes', 'titulo' => 'Equipes'],
+                ['chave' => 'encarregados', 'titulo' => 'Encarregados'],
+                ['chave' => 'fiscal', 'titulo' => 'Levantado por'],
+                ['chave' => 'data', 'titulo' => 'Data', 'alinhar' => 'center'],
+                ['chave' => 'ambulantes', 'titulo' => 'Ambulantes', 'alinhar' => 'center'],
+            ],
+        ],
+
+        /*
+        | As LINHAS de um levantamento — a planilha que o setor fazia à mão,
+        | dentro da ficha. O que identifica o ambulante e o ponto fica na grade;
+        | contato e coordenada descem.
+        */
+        'levantamento-linhas' => [
+            'tela' => 'resources/js/pages/Retaguarda/Fiscalizacao/Levantamentos.tsx',
+            'grade' => [
+                ['chave' => 'item', 'titulo' => 'Item', 'largura' => 70, 'alinhar' => 'center'],
+                ['chave' => 'nome', 'titulo' => 'Nome', 'largura' => 240],
+                ['chave' => 'atividade', 'titulo' => 'Atividade', 'largura' => 170],
+                ['chave' => 'referencia', 'titulo' => 'Referência', 'largura' => 150],
+                ['chave' => 'foto', 'titulo' => 'Foto', 'largura' => 90, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['documento', 'contato', 'coordenada'],
+            'exportacao' => [
+                ['chave' => 'item', 'titulo' => 'Item', 'alinhar' => 'center'],
+                ['chave' => 'nome', 'titulo' => 'Nome'],
+                ['chave' => 'documento', 'titulo' => 'CPF / RG'],
+                ['chave' => 'contato', 'titulo' => 'Contato'],
+                ['chave' => 'referencia', 'titulo' => 'Referência'],
+                ['chave' => 'atividade', 'titulo' => 'Atividade'],
+                ['chave' => 'coordenada', 'titulo' => 'Coordenada'],
+                ['chave' => 'foto', 'titulo' => 'Foto', 'alinhar' => 'center'],
             ],
         ],
 
@@ -382,7 +303,7 @@ return [
         | Fiscalização › Caixa de Entrada
         |----------------------------------------------------------------------
         |
-        | Quem varre: o Coordenador vendo o que chegou em papel e o que está
+        | Quem varre: o Chefe de Setor vendo o que chegou em papel e o que está
         | estourando prazo. Protocolo, data de recebimento, bairro (o dado que
         | define a equipe), situação e prazo.
         |
@@ -445,6 +366,147 @@ return [
         | linha só e sem sub-linha — a geometria continua de pé, e a lei da data
         | em BR também.
         */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Usuários — as duas abas
+        |----------------------------------------------------------------------
+        |
+        | Quem varre é quem administra: "quem tem conta, em que setor, e quem
+        | ainda não entrou?". A matrícula vai sob o nome, na mesma célula (é como
+        | se identifica a pessoa), e as equipes descem para a ficha — no arquivo
+        | as duas vêm em coluna própria.
+        |
+        | A lixeira responde outra pergunta: "o que some, e quando?". Por isso a
+        | remoção definitiva é coluna — e diz quando a conta NÃO será removida
+        | (tem histórico no sistema).
+        */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Equipes
+        |----------------------------------------------------------------------
+        |
+        | Quem varre é a gestão: "que equipe é de que área, quem responde por ela
+        | e quantos fiscais tem?". Os NOMES dos fiscais e o turno descem para a
+        | ficha; no arquivo, vêm inteiros.
+        */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Áreas
+        |----------------------------------------------------------------------
+        |
+        | "Que área cobre o quê, e com que equipe?". Os NOMES dos bairros e o
+        | turno descem para a ficha; no arquivo, vêm inteiros.
+        */
+        /*
+        |----------------------------------------------------------------------
+        | Sistema › Bairros
+        |----------------------------------------------------------------------
+        |
+        | "Que bairro existe, em que área está e tem coordenada?". A latitude e a
+        | longitude descem para a ficha; no arquivo, vêm inteiras.
+        */
+        'bairros' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Bairros.tsx',
+            'grade' => [
+                ['chave' => 'bairro', 'titulo' => 'Bairro', 'largura' => 240],
+                ['chave' => 'areas', 'titulo' => 'Áreas', 'largura' => 260],
+                ['chave' => 'coordenada', 'titulo' => 'No mapa', 'largura' => 120, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['latitude', 'longitude'],
+            'exportacao' => [
+                ['chave' => 'bairro', 'titulo' => 'Bairro'],
+                ['chave' => 'areas', 'titulo' => 'Áreas'],
+                ['chave' => 'coordenada', 'titulo' => 'No mapa', 'alinhar' => 'center'],
+                ['chave' => 'latitude', 'titulo' => 'Latitude'],
+                ['chave' => 'longitude', 'titulo' => 'Longitude'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
+        'areas' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Areas.tsx',
+            'grade' => [
+                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 240],
+                ['chave' => 'regiao', 'titulo' => 'Região', 'largura' => 200],
+                ['chave' => 'recorte', 'titulo' => 'Cobre', 'largura' => 150],
+                ['chave' => 'total_bairros', 'titulo' => 'Bairros', 'largura' => 100, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['turno', 'bairros', 'equipes'],
+            'exportacao' => [
+                ['chave' => 'area', 'titulo' => 'Área'],
+                ['chave' => 'regiao', 'titulo' => 'Região'],
+                ['chave' => 'recorte', 'titulo' => 'Cobre'],
+                ['chave' => 'turno', 'titulo' => 'Turno'],
+                ['chave' => 'total_bairros', 'titulo' => 'Nº de bairros', 'alinhar' => 'center'],
+                ['chave' => 'bairros', 'titulo' => 'Bairros'],
+                ['chave' => 'equipes', 'titulo' => 'Equipes'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
+        'equipes' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Equipes.tsx',
+            'grade' => [
+                ['chave' => 'equipe', 'titulo' => 'Equipe', 'largura' => 200],
+                ['chave' => 'area', 'titulo' => 'Área', 'largura' => 220],
+                ['chave' => 'lider', 'titulo' => 'Líder', 'largura' => 220],
+                ['chave' => 'total_fiscais', 'titulo' => 'Fiscais', 'largura' => 100, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['turno', 'fiscais'],
+            'exportacao' => [
+                ['chave' => 'equipe', 'titulo' => 'Equipe'],
+                ['chave' => 'area', 'titulo' => 'Área'],
+                ['chave' => 'turno', 'titulo' => 'Turno'],
+                ['chave' => 'lider', 'titulo' => 'Líder'],
+                ['chave' => 'total_fiscais', 'titulo' => 'Nº de fiscais', 'alinhar' => 'center'],
+                ['chave' => 'fiscais', 'titulo' => 'Fiscais'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
+        'usuarios.ativos' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Usuarios.tsx',
+            'grade' => [
+                ['chave' => 'usuario', 'titulo' => 'Usuário', 'largura' => 260],
+                ['chave' => 'email', 'titulo' => 'E-mail', 'largura' => 240],
+                ['chave' => 'setores', 'titulo' => 'Cargo', 'largura' => 230],
+                ['chave' => 'primeiroAcesso', 'titulo' => '1º acesso', 'largura' => 120, 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'largura' => 110, 'alinhar' => 'center'],
+            ],
+            'detalhe' => ['equipes'],
+            'exportacao' => [
+                ['chave' => 'usuario', 'titulo' => 'Nome'],
+                ['chave' => 'login', 'titulo' => 'Matrícula'],
+                ['chave' => 'email', 'titulo' => 'E-mail'],
+                ['chave' => 'setores', 'titulo' => 'Cargo'],
+                ['chave' => 'equipes', 'titulo' => 'Equipes'],
+                ['chave' => 'primeiroAcesso', 'titulo' => '1º acesso', 'alinhar' => 'center'],
+                ['chave' => 'situacao', 'titulo' => 'Situação', 'alinhar' => 'center'],
+            ],
+        ],
+
+        'usuarios.excluidos' => [
+            'tela' => 'resources/js/pages/Retaguarda/Sistema/Usuarios.tsx',
+            'grade' => [
+                ['chave' => 'usuario', 'titulo' => 'Usuário', 'largura' => 260],
+                ['chave' => 'email', 'titulo' => 'E-mail', 'largura' => 240],
+                ['chave' => 'excluidoEm', 'titulo' => 'Excluído em', 'largura' => 150, 'alinhar' => 'center'],
+                ['chave' => 'remocao', 'titulo' => 'Remoção definitiva', 'largura' => 230],
+            ],
+            'detalhe' => ['setores'],
+            'exportacao' => [
+                ['chave' => 'usuario', 'titulo' => 'Nome'],
+                ['chave' => 'login', 'titulo' => 'Matrícula'],
+                ['chave' => 'email', 'titulo' => 'E-mail'],
+                ['chave' => 'setores', 'titulo' => 'Cargo'],
+                ['chave' => 'excluidoEm', 'titulo' => 'Excluído em', 'alinhar' => 'center'],
+                ['chave' => 'remocao', 'titulo' => 'Remoção definitiva'],
+            ],
+        ],
+
         'sistema.logs' => [
             'tela' => 'resources/js/pages/Retaguarda/Sistema/Logs.tsx',
             'grade' => [

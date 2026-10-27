@@ -22,8 +22,10 @@ test('seeder cria o catalogo de setores declarado na config', function () {
 
     expect(Setor::pluck('slug')->sort()->values()->all())->toBe($daConfig)
         // E o catálogo tem de conter os quatro papéis do fluxo: perder um deles em
-        // silêncio é perder o acesso de quem o exerce.
-        ->and($daConfig)->toContain('administrador', 'coordenador', 'fiscal', 'chefe-de-setor');
+        // silêncio é perder o acesso de quem o exerce. Não há `coordenador`: os
+        // coordenadores trabalham no e-Salvador e não entram aqui (22/09/2026).
+        ->and($daConfig)->toContain('administrador', 'chefe-de-setor', 'lider-de-equipe', 'fiscal')
+        ->and($daConfig)->not->toContain('coordenador');
 });
 
 test('usuario pertence a N setores e ehAdmin reconhece o setor administrador', function () {

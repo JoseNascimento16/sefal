@@ -84,7 +84,13 @@ const AVISO_ENFORCE: Record<string, string | null> = {
     block: null,
 };
 
-export function ModoGerentePermissoes({ onFechar }: { onFechar: () => void }) {
+/** A tela (ou as telas de uma pasta) que a chave do menu mandou abrir. */
+export interface FocoDoModoGerente {
+    slugs: string[];
+    rotulo: string;
+}
+
+export function ModoGerentePermissoes({ onFechar, foco = null }: { onFechar: () => void; foco?: FocoDoModoGerente | null }) {
     const [dados, setDados] = useState<Dados | null>(null);
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState<string | null>(null);
@@ -154,7 +160,11 @@ export function ModoGerentePermissoes({ onFechar }: { onFechar: () => void }) {
      * num canto não regrava a casa toda), e sem este aviso quem mexesse em três
      * seções e salvasse uma perdia as outras duas sem nunca saber.
      */
-    const pendentes = (dados?.funcionalidades ?? [])
+    // Aberto pela CHAVE de um item do menu, o painel mostra só aquela tela (ou as
+    // telas daquela pasta) — como no Codecon. Sem foco, a matriz inteira.
+    const telas = (dados?.funcionalidades ?? []).filter((t) => foco === null || foco.slugs.includes(t.slug));
+
+    const pendentes = telas
         .filter(
             (tela) =>
                 JSON.stringify(rascunho[tela.slug]) !==
@@ -342,7 +352,7 @@ export function ModoGerentePermissoes({ onFechar }: { onFechar: () => void }) {
                             <p className="sobrancelha">Sistema</p>
                             <p className="card-titulo" style={{ fontSize: 19 }}>
                                 <KeyRound size={19} aria-hidden />
-                                Modo Gerente
+                                {foco === null ? 'Modo Gerente' : `Permissões de ${foco.rotulo}`}
                             </p>
                             <p className="card-sub">
                                 Quem entra em cada tela, por setor. O
@@ -393,7 +403,7 @@ export function ModoGerentePermissoes({ onFechar }: { onFechar: () => void }) {
                                     </p>
                                 )}
 
-                                {dados.funcionalidades.length === 0 ? (
+                                {telas.length === 0 ? (
                                     <>
                                         <p className="card-titulo">
                                             Nenhuma tela sob controle ainda
@@ -405,7 +415,7 @@ export function ModoGerentePermissoes({ onFechar }: { onFechar: () => void }) {
                                         </p>
                                     </>
                                 ) : (
-                                    dados.funcionalidades.map((tela) => (
+                                    telas.map((tela) => (
                                         <section
                                             key={tela.slug}
                                             className="mg-tela"

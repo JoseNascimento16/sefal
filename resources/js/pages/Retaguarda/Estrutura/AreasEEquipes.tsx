@@ -7,7 +7,6 @@ import {
     Moon,
     Pencil,
     Plus,
-    RotateCcw,
     Route as RouteIcon,
     Trash2,
     Undo2,
@@ -31,7 +30,6 @@ import {
     bairros as rotaBairros,
     destroy,
     index,
-    reiniciar as rotaReiniciar,
     store,
     update,
 } from '@/routes/retaguarda/areas-e-equipes';
@@ -54,7 +52,7 @@ import {
  * ── Bairro em duas áreas é aviso, nunca erro ────────────────────────────────
  *
  * O vínculo bairro↔equipe não é 1:1: a Caixa de Entrada SUGERE e o
- * coordenador CONFIRMA. Marcar isso como pendência mandaria a chefia
+ * Chefe de Setor CONFIRMA. Marcar isso como pendência mandaria a chefia
  * "corrigir" um dado que está certo.
  */
 
@@ -62,8 +60,6 @@ interface Props {
     areas: Area[];
     turnos: string[];
     bairros: string[];
-    /** A sessão já mexeu na estrutura de demonstração? */
-    alterada: boolean;
 }
 
 type Aba = 'areas' | 'area';
@@ -92,7 +88,7 @@ function IconeDoRecorte({ recorte }: { recorte: Recorte }) {
     return <MapPinned size={16} aria-hidden />;
 }
 
-export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Props) {
+export default function AreasEEquipes({ areas, turnos, bairros }: Props) {
     const acoes = useAcoes();
     const { enviando, ocupado, enviar, guardar } = useEnvio();
 
@@ -126,9 +122,9 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                 a.regiao,
                 a.equipe,
                 a.encarregado,
-                // O Chefe de Setor entra na busca: quem procura pelo nome dele quer achar
-                // a área dele, e ele agora é dado da estrutura como o encarregado.
-                a.chefe_de_setor?.nome,
+                // O líder entra na busca: quem procura pelo nome dele quer achar a
+                // equipe dele.
+                a.lider?.nome,
                 a.bairros.join(' '),
                 a.fiscais.map((f) => `${f.nome} ${f.matricula}`).join(' '),
             ]);
@@ -312,13 +308,19 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                 </div>
             </div>
 
+            {/*
+              * O aviso mudou de assunto quando o módulo saiu do protótipo: o que
+              * era falso era dizer que nada é gravado — agora tudo é, em banco, e
+              * com trâmite. O que continua de mentira são os DADOS, e é disso que
+              * quem avalia precisa ser avisado antes de tirar conclusão deles.
+              */}
             <SeloPrototipo>
                 A estrutura vem transcrita do documento{' '}
                 <strong>"Áreas das equipes — 17/04/2026"</strong>: as áreas, as
-                equipes, os encarregados e os blocos de bairros são os REAIS. A
-                lista de fiscais de cada equipe é de exemplo, e{' '}
-                <strong>nada é gravado</strong>: o que você alterar vale só nesta
-                sessão do navegador.
+                equipes, os encarregados e os blocos de bairros são os{' '}
+                <strong>REAIS</strong>. Só a lista de fiscais de cada equipe é de
+                exemplo. O que você alterar{' '}
+                <strong>é gravado de verdade</strong>.
             </SeloPrototipo>
 
             <div className="card-premium">
@@ -387,7 +389,7 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                                     Não é erro a corrigir: o vínculo bairro↔equipe
                                     não é exclusivo. Nesses casos a Caixa de
                                     Entrada <strong>sugere</strong> uma equipe e o
-                                    coordenador <strong>confirma</strong>.
+                                    Chefe de Setor <strong>confirma</strong>.
                                 </div>
                             </div>
                         )}
@@ -410,18 +412,6 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                                 </BotaoAcao>
                             )}
 
-                            {alterada && acoes.habilitado && (
-                                <BotaoAcao
-                                    className="btn btn-secondary btn-sm"
-                                    icone={<RotateCcw size={16} aria-hidden />}
-                                    carregando={enviando === 'reiniciar'}
-                                    ocupado={ocupado}
-                                    rotuloCarregando="Reiniciando…"
-                                    onClick={() => enviar('reiniciar', rotaReiniciar().url)}
-                                >
-                                    Reiniciar demonstração
-                                </BotaoAcao>
-                            )}
 
                             <div style={{ marginLeft: 'auto' }}>
                                 <BotaoExportar
@@ -628,26 +618,25 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                                     <dt>Encarregado (campo)</dt>
                                     <dd>{aberta.encarregado}</dd>
                                 </div>
-                                {/* Duas pessoas diferentes, e é fácil confundi-las:
-                                    o encarregado chefia a equipe EM RUA; o Chefe de
-                                    Setor responde pela área DENTRO do sistema — é ele
-                                    que recebe a denúncia encaminhada, decide equipe ou
-                                    operação e recebe de volta o que a equipe concluiu
-                                    em campo. Por isso os rótulos dizem qual é qual. */}
+                                {/* O encarregado do documento É o líder da equipe
+                                    dentro do sistema — a mesma pessoa, com conta:
+                                    é ele que recebe a denúncia encaminhada, direciona
+                                    aos fiscais e recebe de volta o que a equipe
+                                    concluiu em campo. O rótulo diz se a conta existe. */}
                                 <div>
-                                    <dt>Chefe de Setor da área (sistema)</dt>
+                                    <dt>Líder da equipe (sistema)</dt>
                                     <dd>
-                                        {aberta.chefe_de_setor === null ||
-                                        aberta.chefe_de_setor.nome.trim() === '' ? (
+                                        {aberta.lider === null ||
+                                        aberta.lider.nome.trim() === '' ? (
                                             <span style={{ color: 'var(--sm-aviso)' }}>
-                                                sem Chefe de Setor registrado —
-                                                denúncia encaminhada a esta área fica
-                                                sem quem a receba
+                                                sem líder registrado — denúncia
+                                                encaminhada a esta equipe fica sem quem
+                                                a receba
                                             </span>
                                         ) : (
                                             <>
-                                                {aberta.chefe_de_setor.nome}
-                                                {aberta.chefe_de_setor.matricula === null ? (
+                                                {aberta.lider.nome}
+                                                {aberta.lider.matricula === null ? (
                                                     <div
                                                         style={{
                                                             color: 'var(--sm-texto-fraco)',
@@ -662,7 +651,7 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                                                         }}
                                                     >
                                                         matrícula{' '}
-                                                        {aberta.chefe_de_setor.matricula.toUpperCase()}
+                                                        {aberta.lider.matricula.toUpperCase()}
                                                     </div>
                                                 )}
                                             </>
@@ -938,7 +927,7 @@ export default function AreasEEquipes({ areas, turnos, bairros, alterada }: Prop
                                                     ). É caso previsto, não
                                                     duplicidade a corrigir: a Caixa
                                                     de Entrada sugere a equipe e o
-                                                    coordenador confirma.
+                                                    Chefe de Setor confirma.
                                                 </div>
                                             </div>
                                         )}

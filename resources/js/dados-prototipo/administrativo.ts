@@ -46,6 +46,14 @@ export interface Demanda {
     /** O bairro é o que SUGERE a equipe responsável. */
     bairro: string;
     descricao: string;
+    /**
+     * QUEM foi denunciado — nome de fachada e, quando se sabe, a pessoa ou razão
+     * social por trás. É o que separa "o mesmo bar" de "dois estabelecimentos na
+     * mesma rua", e por isso decide a pré-triagem.
+     */
+    estabelecimento: string;
+    denunciado: string;
+    documento_denunciado?: string | null;
     /** Nome do arquivo digitalizado — no protótipo, só o nome. */
     anexo: string | null;
     situacao: string;
@@ -55,6 +63,32 @@ export interface Demanda {
     justificativa: string | null;
     destino: string | null;
     tramites: Tramite[];
+    /**
+     * O RETORNO ao canal de origem — o tipo que o canal pede e o que já foi
+     * registrado (ver `components/retaguarda/retorno-ao-canal.tsx`).
+     */
+    /** A situação em três palavras (Recebida, Encaminhada ao líder, Em fiscalização…). */
+    situacao_resumida: string;
+    /** O ciclo já fechou para o canal? Decide a aba "Respondidas". */
+    respondida: boolean;
+    passou_por_fiscalizacao: boolean;
+    /** Onde o retorno é feito — "e-Salvador", "e-Protocolo" —, ou nulo. */
+    retorno_em: string | null;
+    retorno_ao_canal: 'tramite' | 'processo' | null;
+    resposta_ao_canal: {
+        texto: string;
+        em: string;
+        por: string | null;
+        processo: string | null;
+        enviado: boolean;
+    } | null;
+    /**
+     * As denúncias que este registro passou a responder.
+     *
+     * Só vem preenchida depois da pré-triagem: é o resultado dela. Quando tem
+     * conteúdo, a resposta da fiscalização vale para todas elas.
+     */
+    agregadas?: { id: number; protocolo: string; assunto: string; requerente: string | null }[];
 }
 
 /** Uma equipe como a Caixa de Entrada precisa dela para escolher o destino. */
@@ -62,7 +96,11 @@ export interface EquipeResumo {
     equipe: string;
     area: string;
     regiao: string;
+    /** O nome do documento do cliente — o que se mostra quando não há líder com conta. */
     encarregado: string;
+    /** Quem RECEBE o encaminhamento: o líder da equipe (nome do usuário, ou o do documento). */
+    lider: string;
+    lider_matricula?: string | null;
     recorte: Recorte;
     turno: string;
 }
@@ -73,24 +111,36 @@ export interface Sugestao {
     area: string;
     regiao: string;
     encarregado: string;
+    lider: string;
     alternativas: {
         equipe: string;
         area: string;
         regiao: string;
         encarregado: string;
+        lider: string;
     }[];
 }
 
 /**
- * O tom do selo de cada situação.
+ * O tom do selo de cada situação — as chaves são as do MODEL
+ * (`Demanda::SITUACOES`), e não apelidos de tela.
  *
- * Aguardando triagem é o que EXIGE ação de quem abre a tela, então é aviso;
- * encaminhada é o caminho normal (ok); devolvida e arquivada são fim de linha —
- * neutro, porque não são erro: são decisão tomada.
+ * O que EXIGE ação de quem abre a tela é aviso (a leva crua, o que espera o
+ * chefe, o prazo estourado); o caminho normal em andamento é ok; o que espera
+ * outra mesa é info; e o fim de linha é neutro — devolvida e arquivada não são
+ * erro, são decisão tomada.
  */
 export const TOM_DA_SITUACAO: Record<string, string> = {
-    'Aguardando triagem': 'selo-aviso',
-    Encaminhada: 'selo-ok',
+    'Em pré-triagem': 'selo-aviso',
+    Recebida: 'selo-aviso',
+    'Encaminhada ao líder': 'selo-info',
+    'Direcionada aos fiscais': 'selo-ok',
+    'Em operação': 'selo-ok',
+    'Em campo': 'selo-ok',
+    'Aguardando regularização': 'selo-info',
+    'Retorno vencido': 'selo-aviso',
+    Agrupada: 'selo-neutro',
+    Concluída: 'selo-ok',
     Devolvida: 'selo-info',
     Arquivada: 'selo-neutro',
 };
@@ -118,8 +168,9 @@ export interface Fiscal {
  * `matricula` nula = a estrutura sabe o nome, mas essa pessoa ainda não tem acesso
  * ao sistema.
  */
-export interface ChefeDeSetor {
+export interface LiderDeEquipe {
     nome: string;
+    /** `null` quando o encarregado do documento ainda não virou usuário do sistema. */
     matricula: string | null;
 }
 
@@ -129,8 +180,13 @@ export interface Area {
     regiao: string;
     equipe: string;
     encarregado: string;
-    /** `null` na área em que a estrutura ainda não registrou chefia nenhuma. */
-    chefe_de_setor: ChefeDeSetor | null;
+    /**
+     * O LÍDER DA EQUIPE — quem recebe o que o Chefe de Setor encaminha a esta
+     * equipe. `null` quando o encarregado do documento ainda não tem conta.
+     * (Até 22/09/2026 aqui ficava o "chefe de setor da área"; o chefe passou a
+     * ser um só, e o vínculo por área deixou de existir.)
+     */
+    lider: LiderDeEquipe | null;
     recorte: Recorte;
     turno: string;
     fiscais: Fiscal[];

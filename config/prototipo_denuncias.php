@@ -25,7 +25,7 @@
 |                    o requerente vem SEMPRE identificado (nome, CPF, e-mail e
 |                    telefone), o endereço vem estruturado (logradouro, número,
 |                    referência) e o cidadão pode anexar foto e documento.
-|   Salvador Digital  — atendimento por telefone (Salvador Digital). Pode ser ANÔNIMA, o
+|   Fala Salvador  — atendimento por telefone (Fala Salvador). Pode ser ANÔNIMA, o
 |                    relato é a transcrição do que o atendente ouviu (texto mais
 |                    solto, às vezes sem número nem ponto de referência), a
 |                    categoria é a que o atendente escolheu, e não há anexo:
@@ -125,10 +125,10 @@ return [
                 .'O cidadão abre a denúncia autenticado, então nome, CPF e contato vêm do canal.',
         ],
 
-        'salvador-digital' => [
-            'slug' => 'salvador-digital',
-            'nome' => 'Salvador Digital',
-            'sistema' => 'Central de atendimento Salvador Digital',
+        'fala-salvador' => [
+            'slug' => 'fala-salvador',
+            'nome' => 'Fala Salvador',
+            'sistema' => 'Central de Atendimento Fala Salvador (156)',
             'artigo' => 'a',
             'prefixo_origem' => '156',
             'admite_anonima' => true,
@@ -146,8 +146,8 @@ return [
      * a vida da denúncia EM CAMPO:
      *
      *   Recebida            → chegou por integração e espera a TRIAGEM (coordenador);
-     *   Encaminhada à área  → triada; espera o DIRECIONAMENTO do Chefe de Setor da área;
-     *   Direcionada à equipe| Em operação → a chefia decidiu como o trabalho acontece;
+     *   Encaminhada ao líder  → triada; espera o DIRECIONAMENTO do Chefe de Setor da área;
+     *   Direcionada aos fiscais| Em operação → a chefia decidiu como o trabalho acontece;
      *   Em campo            → a equipe recebeu no aplicativo e foi ao local;
      *   Aguardando regularização → foi lavrada Notificação Preliminar e o PRAZO dela
      *                         está correndo: a bola está com o notificado, não com o
@@ -162,8 +162,8 @@ return [
      */
     'situacoes' => [
         'Recebida',
-        'Encaminhada à área',
-        'Direcionada à equipe',
+        'Encaminhada ao líder',
+        'Direcionada aos fiscais',
         'Em operação',
         'Em campo',
         'Aguardando regularização',
@@ -229,13 +229,10 @@ return [
      * arquivos separados, uma renomeação ajustaria só uma delas.
      *
      * ⚠️ O `curto` não é lido por nenhuma tela da Retaguarda hoje — ele está aqui
-     * porque este catálogo é o LADO QUE FICA: quando o aplicativo falar com o
-     * servidor, é daqui que a lista de atalhos dele vai sair. Enquanto isso, o
-     * espelho do aplicativo vive em `resources/js/pwa/dados-demandas.ts`
-     * (`RECOMENDACOES`), na branch `feature/pwa-prototipo` — e as duas branches
-     * não se veem, então NENHUM teste consegue comparar as duas listas. Atalho
-     * novo, chave renomeada ou redação mexida entra nos dois lados no mesmo
-     * passo, à mão. É a dívida registrada como PEND-016.
+     * porque este catálogo é o LADO QUE FICA. O aplicativo tem um espelho em
+     * `resources/js/pwa/dados-demandas.ts` (`RECOMENDACOES`), e desde 13/10/2026
+     * os dois lados vivem na mesma branch: `PwaFilaDeDenunciasTest` reprova as
+     * chaves que divergirem, e o servidor recusa chave fora deste catálogo.
      */
     'recomendacoes_do_fiscal' => [
         'retorno' => [
@@ -288,6 +285,39 @@ return [
             'curto' => 'Sem providência adicional',
             'explicito' => 'Nada mais a fazer no ponto',
         ],
+    ],
+
+    /*
+     * As OCORRÊNCIAS que o fiscal marca no registro rápido — chips de um toque
+     * (aplicativo, 13/10/2026). Viajam como CHAVE, como as recomendações, e a
+     * Retaguarda as escreve por extenso com este catálogo. O espelho do
+     * aplicativo é `OCORRENCIAS`, em `resources/js/pwa/dados-prototipo.ts`;
+     * `PwaFilaDeDenunciasTest` reprova as chaves que divergirem.
+     */
+    'ocorrencias_do_fiscal' => [
+        'desarmou' => 'Desarmou e saiu',
+        'orientado' => 'Orientado no local',
+        'recusou' => 'Recusou sair',
+        'vazio' => 'Local vazio na chegada',
+        'reincidente' => 'Reincidente',
+        'calcada' => 'Obstrução de calçada',
+        'sem-permissao' => 'Sem permissão',
+        'bebida' => 'Venda de bebida',
+        'alimento' => 'Manipulação de alimento',
+        'apoio' => 'Apoio da guarda municipal',
+    ],
+
+    /*
+     * Por que um registro do aplicativo chegou SEM coordenada. O GPS é o dado
+     * central da fiscalização; registro sem ele só existe por falha real do
+     * aparelho, e leva a marca visível — nunca uma coordenada inventada no lugar.
+     * O aplicativo tem a mesma lista (`gps.ts`), conferida por teste.
+     */
+    'motivos_sem_gps' => [
+        'negado' => 'a localização do aparelho não foi liberada',
+        'indisponivel' => 'o aparelho não encontrou sinal de GPS',
+        'tempo' => 'o GPS não respondeu a tempo',
+        'sem-suporte' => 'o navegador do aparelho não tem GPS',
     ],
 
     /*
@@ -478,7 +508,7 @@ return [
             // direcionamento abre vazia e não há o que demonstrar. Mussurunga é
             // bairro compartilhado (Área 5 e Área 6), então esta linha também
             // mostra a escolha que a triagem tomou.
-            'situacao' => 'Encaminhada à área',
+            'situacao' => 'Encaminhada ao líder',
             'area' => 'Área 5',
         ],
 
@@ -525,7 +555,7 @@ return [
             'bairro' => 'Centro Histórico',
             'endereco_impreciso' => false,
             'anexos' => [],
-            'situacao' => 'Encaminhada à área',
+            'situacao' => 'Encaminhada ao líder',
             'area' => 'Área 1',
         ],
 
@@ -549,7 +579,7 @@ return [
             'bairro' => 'Cabula',
             'endereco_impreciso' => false,
             'anexos' => ['foto-churrasqueira.jpg'],
-            'situacao' => 'Encaminhada à área',
+            'situacao' => 'Encaminhada ao líder',
             'area' => 'Área 3',
         ],
 
@@ -575,7 +605,7 @@ return [
             /*
              * ── O DIRECIONAMENTO DO CHEFE DE SETOR, PASSO A PASSO ────────────
              *
-             * A situação `Direcionada à equipe` deriva um trâmite de três linhas
+             * A situação `Direcionada aos fiscais` deriva um trâmite de três linhas
              * sem conteúdo próprio, e é justamente no passo da chefia que está a
              * decisão que interessa: por que ESTA equipe, e por que NÃO uma
              * operação. Escrito, o passo mostra a escolha; derivado, ele mostrava
@@ -584,17 +614,17 @@ return [
              * É também o caso em que a tela desenha o bloco de PRÓXIMO PASSO
              * (a vistoria que ainda não aconteceu), fora da lista de abas.
              */
-            'situacao' => 'Direcionada à equipe',
+            'situacao' => 'Direcionada aos fiscais',
             'area' => 'Área 1',
             'equipe' => 'C2',
             'tramites' => [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Vasco da Gama'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
@@ -604,9 +634,9 @@ return [
                 [
                     'ha_horas' => 9,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Equipe escolhida', 'valor' => 'Equipe C2 — a da Área 1, sem troca de equipe'],
@@ -680,10 +710,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Nazaré'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
@@ -693,9 +723,9 @@ return [
                 [
                     'ha_horas' => 9,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Orientação à equipe', 'valor' => 'Incluir na ronda da Ladeira da Praça e ir depois das 17h, quando a banca monta.'],
@@ -761,10 +791,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Rio Vermelho'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
@@ -774,9 +804,9 @@ return [
                 [
                     'ha_horas' => 9,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Por que não entrou em operação', 'valor' => 'Ponto isolado, sem trabalho planejado na praça no período.'],
@@ -904,7 +934,7 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Devolvida ao canal de origem',
                     'detalhe' => 'A triagem recusou a denúncia: o fato não é de fiscalização de ambulante. '
                         .'O percurso termina aqui, sem ida a campo.',
@@ -924,11 +954,11 @@ return [
             ],
         ],
 
-        // ── Salvador Digital ─────────────────────────────────────────────
+        // ── Fala Salvador ─────────────────────────────────────────────
 
         [
             'id' => 15,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-889034',
             'recebida_ha_horas' => 2,
             'prazo_em_dias' => 10,
@@ -954,7 +984,7 @@ return [
 
         [
             'id' => 16,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-889011',
             'recebida_ha_horas' => 5,
             'prazo_em_dias' => 10,
@@ -976,13 +1006,13 @@ return [
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
             // Fila do `gestor1` (Área 5) neste canal — ver a nota da denúncia 6.
-            'situacao' => 'Encaminhada à área',
+            'situacao' => 'Encaminhada ao líder',
             'area' => 'Área 5',
         ],
 
         [
             'id' => 17,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888970',
             'recebida_ha_horas' => 11,
             'prazo_em_dias' => 9,
@@ -1008,7 +1038,7 @@ return [
 
         [
             'id' => 18,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888944',
             'recebida_ha_horas' => 20,
             'prazo_em_dias' => 9,
@@ -1033,7 +1063,7 @@ return [
 
         [
             'id' => 19,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888901',
             'recebida_ha_horas' => 29,
             'prazo_em_dias' => 8,
@@ -1058,7 +1088,7 @@ return [
 
         [
             'id' => 20,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888860',
             'recebida_ha_horas' => 44,
             'prazo_em_dias' => 7,
@@ -1083,7 +1113,7 @@ return [
 
         [
             'id' => 21,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888812',
             'recebida_ha_horas' => 62,
             'prazo_em_dias' => -1,
@@ -1105,13 +1135,13 @@ return [
             'anexos' => [],
             // Fila do `gestor3` (Área 3) neste canal, e com o PRAZO JÁ VENCIDO: o
             // Chefe de Setor precisa ver na própria lista dele que há coisa atrasada.
-            'situacao' => 'Encaminhada à área',
+            'situacao' => 'Encaminhada ao líder',
             'area' => 'Área 3',
         ],
 
         [
             'id' => 22,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888744',
             'recebida_ha_horas' => 90,
             'prazo_em_dias' => 5,
@@ -1131,13 +1161,13 @@ return [
             'atendente' => 'Central 156 — atendente 4412',
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
-            'situacao' => 'Encaminhada à área',
+            'situacao' => 'Encaminhada ao líder',
             'area' => 'Área 6',
         ],
 
         [
             'id' => 23,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888702',
             'recebida_ha_horas' => 118,
             'prazo_em_dias' => 4,
@@ -1156,13 +1186,13 @@ return [
             'atendente' => 'Central 156 — atendente 4426',
             'categoria' => 'Irregularidade de permissão',
             'anexos' => [],
-            'situacao' => 'Encaminhada à área',
+            'situacao' => 'Encaminhada ao líder',
             'area' => 'Área 1',
         ],
 
         [
             'id' => 24,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888655',
             'recebida_ha_horas' => 142,
             'prazo_em_dias' => 3,
@@ -1200,10 +1230,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Comércio — bairro compartilhado com a Itinerante'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
@@ -1230,7 +1260,7 @@ return [
 
         [
             'id' => 25,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888590',
             'recebida_ha_horas' => 190,
             'prazo_em_dias' => 2,
@@ -1250,7 +1280,7 @@ return [
             'atendente' => 'Central 156 — atendente 4398',
             'categoria' => 'Ocupação irregular de logradouro',
             'anexos' => [],
-            'situacao' => 'Direcionada à equipe',
+            'situacao' => 'Direcionada aos fiscais',
             'area' => 'Área 1',
             'equipe' => 'N1',
             'justificativa_equipe' => 'O corredor só esvazia depois do fechamento, então a vistoria foi '
@@ -1259,7 +1289,7 @@ return [
 
         [
             'id' => 26,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888511',
             'recebida_ha_horas' => 238,
             'prazo_em_dias' => -3,
@@ -1296,7 +1326,7 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Arquivada na triagem',
                     'detalhe' => 'A triagem arquivou a denúncia por falta de endereço. O percurso termina '
                         .'aqui, sem ida a campo.',
@@ -1318,7 +1348,7 @@ return [
 
         [
             'id' => 27,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888470',
             'recebida_ha_horas' => 286,
             'prazo_em_dias' => -5,
@@ -1358,10 +1388,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 4 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'São Caetano'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 4 — Liberdade'],
@@ -1371,9 +1401,9 @@ return [
                 [
                     'ha_horas' => 10,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe B2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                     ],
@@ -1422,7 +1452,7 @@ return [
 
         [
             'id' => 28,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888402',
             'recebida_ha_horas' => 334,
             'prazo_em_dias' => -6,
@@ -1455,10 +1485,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Itinerante para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Avenida Sete de Setembro — corredor, e não bloco de bairros'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Itinerante — Avenida Sete'],
@@ -1468,9 +1498,9 @@ return [
                 [
                     'ha_horas' => 10,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe I1 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Orientação à equipe', 'valor' => 'A denúncia é de fim de semana: incluir na passagem de sábado e medir a faixa da ciclovia.'],
@@ -1560,10 +1590,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 7,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 5 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Costa Azul'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
@@ -1644,7 +1674,7 @@ return [
 
         [
             'id' => 30,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-889120',
             'recebida_ha_horas' => 340,
             'prazo_em_dias' => -4,
@@ -1681,10 +1711,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 5 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Itapuã'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
@@ -1694,9 +1724,9 @@ return [
                 [
                     'ha_horas' => 10,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe C1 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Orientação à equipe', 'valor' => 'Ir no fim da tarde: o horário reclamado começa às 18h.'],
@@ -1826,10 +1856,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 3 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Amaralina'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 3 — Brotas'],
@@ -1839,9 +1869,9 @@ return [
                 [
                     'ha_horas' => 8,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe A2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                     ],
@@ -1886,7 +1916,7 @@ return [
 
         [
             'id' => 32,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888820',
             'recebida_ha_horas' => 400,
             'prazo_em_dias' => -9,
@@ -1922,10 +1952,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 7,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 3 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Cabula'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 3 — Brotas'],
@@ -1935,9 +1965,9 @@ return [
                 [
                     'ha_horas' => 12,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe A2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                     ],
@@ -2034,7 +2064,7 @@ return [
 
         [
             'id' => 33,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-889090',
             'recebida_ha_horas' => 150,
             'prazo_em_dias' => 3,
@@ -2071,10 +2101,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 4,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 1 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Barris'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 1 — Centro'],
@@ -2084,9 +2114,9 @@ return [
                 [
                     'ha_horas' => 8,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe C2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Orientação à equipe', 'valor' => 'Ir depois das 17h, quando o carrinho monta.'],
@@ -2194,10 +2224,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 5,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 2 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Ribeira'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 2 — Itapagipe'],
@@ -2207,9 +2237,9 @@ return [
                 [
                     'ha_horas' => 10,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe A1 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Por que não entrou em operação', 'valor' => 'A Operação Feira de São Joaquim cobre o entorno da feira e o acesso da Calçada; o Largo da Ribeira está fora do trecho dela.'],
@@ -2276,7 +2306,7 @@ return [
                 ],
                 [
                     'ha_horas' => 40,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Contato do notificado registrado',
                     'detalhe' => 'O notificado procurou a SEMOP dentro do prazo e informou o que já havia '
                         .'providenciado. A denúncia continua com o prazo correndo.',
@@ -2340,7 +2370,7 @@ return [
 
         [
             'id' => 35,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-889210',
             'recebida_ha_horas' => 40,
             'prazo_em_dias' => 8,
@@ -2383,10 +2413,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 4,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 6 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Sussuarana'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 6 — Pau da Lima'],
@@ -2478,7 +2508,7 @@ return [
 
         [
             'id' => 36,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-889055',
             'recebida_ha_horas' => 200,
             'prazo_em_dias' => 2,
@@ -2515,10 +2545,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 6,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Itinerante para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Avenida Joana Angélica — corredor, e não bloco de bairros'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Itinerante — Avenida Sete'],
@@ -2528,9 +2558,9 @@ return [
                 [
                     'ha_horas' => 11,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe I1 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Por que não entrou em operação', 'valor' => 'A Operação Noturna cobre o Corredor da Vitória depois das 22h; esta ocupação é diurna, no horário dos consultórios.'],
@@ -2616,10 +2646,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 4,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 4 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Pirajá'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 4 — Liberdade'],
@@ -2629,9 +2659,9 @@ return [
                 [
                     'ha_horas' => 9,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe B2 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida à equipe da própria área'],
                         ['rotulo' => 'Por que não entrou em operação', 'valor' => 'Não há trabalho planejado no Largo de Pirajá no período; o ponto é isolado.'],
@@ -2682,7 +2712,7 @@ return [
 
         [
             'id' => 38,
-            'canal' => 'salvador-digital',
+            'canal' => 'fala-salvador',
             'protocolo_origem' => '156-2026-888975',
             'recebida_ha_horas' => 310,
             'prazo_em_dias' => -3,
@@ -2725,10 +2755,10 @@ return [
                 ['ha_horas' => 0, 'quem' => 'integracao'],
                 [
                     'ha_horas' => 7,
-                    'quem' => 'coordenador',
+                    'quem' => 'chefe-de-setor',
                     'o_que' => 'Triada e encaminhada à área',
                     'detalhe' => 'Encaminhada à Área 5 para direcionamento do Chefe de Setor.',
-                    'situacao' => 'Encaminhada à área',
+                    'situacao' => 'Encaminhada ao líder',
                     'campos' => [
                         ['rotulo' => 'Bairro que sugeriu a área', 'valor' => 'Stella Maris'],
                         ['rotulo' => 'Área de destino', 'valor' => 'Área 5 — Boca do Rio'],
@@ -2738,9 +2768,9 @@ return [
                 [
                     'ha_horas' => 12,
                     'quem' => 'chefe-de-setor',
-                    'o_que' => 'Direcionada à equipe',
+                    'o_que' => 'Direcionada aos fiscais',
                     'detalhe' => 'Direcionada à Equipe N1 para vistoria.',
-                    'situacao' => 'Direcionada à equipe',
+                    'situacao' => 'Direcionada aos fiscais',
                     'campos' => [
                         ['rotulo' => 'Saída escolhida', 'valor' => 'Vistoria dirigida a equipe de FORA da área, com justificativa'],
                         ['rotulo' => 'Por que saiu da equipe da área', 'valor' => 'O flagrante só é possível de madrugada, e a Equipe C1 trabalha no turno diurno.'],

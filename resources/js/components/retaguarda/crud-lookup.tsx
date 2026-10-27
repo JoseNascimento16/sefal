@@ -469,6 +469,55 @@ export default function CrudLookup({
                     </>
                 ) : (
                     <>
+                        {/* Os botões do registro vêm EM CIMA, antes do formulário (dono, 25/09/2026). */}
+                        <div className="rt-barra-registro">
+                            <BotaoAcao
+                                className="btn btn-secondary btn-sm"
+                                icone={<Undo2 size={16} aria-hidden />}
+                                ocupado={ocupado}
+                                onClick={voltarParaLista}
+                            >
+                                Voltar
+                            </BotaoAcao>
+
+                            {aberto !== null && modo === 'navegacao' && (
+                                <>
+                                    {acoes.excluir && (
+                                        <BotaoAcao
+                                            className="btn btn-perigo btn-sm"
+                                            icone={<Trash2 size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setConfirmandoExclusao(true)}
+                                        >
+                                            Excluir
+                                        </BotaoAcao>
+                                    )}
+
+                                    {acoes.habilitado && (
+                                        <BotaoAcao
+                                            icone={<Pencil size={16} aria-hidden />}
+                                            ocupado={ocupado}
+                                            onClick={() => setModo('edicao')}
+                                        >
+                                            Editar
+                                        </BotaoAcao>
+                                    )}
+                                </>
+                            )}
+
+                            {modo === 'edicao' && podeGravar && (
+                                <BotaoAcao
+                                    icone={<Check size={16} aria-hidden />}
+                                    carregando={enviando === 'salvar'}
+                                    ocupado={ocupado}
+                                    rotuloCarregando="Salvando…"
+                                    onClick={salvar}
+                                >
+                                    Salvar
+                                </BotaoAcao>
+                            )}
+                        </div>
+
                         {listaDeErros.length > 0 && (
                             <div className="form-erro" style={{ marginBottom: 16 }}>
                                 <TriangleAlert size={15} aria-hidden /> Não foi
@@ -569,60 +618,30 @@ export default function CrudLookup({
                             </p>
                         </div>
 
-                        <div
-                            style={{
-                                display: 'flex',
-                                gap: 10,
-                                flexWrap: 'wrap',
-                                marginTop: 20,
-                            }}
-                        >
-                            <BotaoAcao
-                                className="btn btn-secondary btn-sm"
-                                icone={<Undo2 size={16} aria-hidden />}
-                                ocupado={ocupado}
-                                onClick={voltarParaLista}
-                            >
-                                Voltar
-                            </BotaoAcao>
-
-                            {aberto !== null && modo === 'navegacao' && (
-                                <>
-                                    {acoes.excluir && (
-                                        <BotaoAcao
-                                            className="btn btn-perigo btn-sm"
-                                            icone={<Trash2 size={16} aria-hidden />}
-                                            ocupado={ocupado}
-                                            onClick={() => setConfirmandoExclusao(true)}
-                                        >
-                                            Excluir
-                                        </BotaoAcao>
-                                    )}
-
-                                    {acoes.habilitado && (
-                                        <BotaoAcao
-                                            icone={<Pencil size={16} aria-hidden />}
-                                            ocupado={ocupado}
-                                            onClick={() => setModo('edicao')}
-                                        >
-                                            Editar
-                                        </BotaoAcao>
-                                    )}
-                                </>
-                            )}
-
-                            {modo === 'edicao' && podeGravar && (
+                        {/* Em edição, Voltar e Salvar também no pé (dono, 25/09/2026). */}
+                        {modo === 'edicao' && (
+                            <div className="rt-barra-registro rt-barra-registro-pe">
                                 <BotaoAcao
-                                    icone={<Check size={16} aria-hidden />}
-                                    carregando={enviando === 'salvar'}
+                                    className="btn btn-secondary btn-sm"
+                                    icone={<Undo2 size={16} aria-hidden />}
                                     ocupado={ocupado}
-                                    rotuloCarregando="Salvando…"
-                                    onClick={salvar}
+                                    onClick={voltarParaLista}
                                 >
-                                    Salvar
+                                    Voltar
                                 </BotaoAcao>
-                            )}
-                        </div>
+                                {modo === 'edicao' && podeGravar && (
+                                    <BotaoAcao
+                                        icone={<Check size={16} aria-hidden />}
+                                        carregando={enviando === 'salvar'}
+                                        ocupado={ocupado}
+                                        rotuloCarregando="Salvando…"
+                                        onClick={salvar}
+                                    >
+                                        Salvar
+                                    </BotaoAcao>
+                                )}
+                            </div>
+                        )}
                     </>
                 )}
             </div>
