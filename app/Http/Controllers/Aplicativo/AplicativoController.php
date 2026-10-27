@@ -175,6 +175,8 @@ class AplicativoController extends Controller
             'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
             'precisao_m' => ['nullable', 'numeric', 'min:0', 'max:65000'],
             'sem_gps_motivo' => ['nullable', 'required_without:latitude', Rule::in(array_keys((array) config('prototipo_denuncias.motivos_sem_gps', [])))],
+            // A operação em que a avulsa foi feita (tela da operação no aplicativo).
+            'operacao_id' => ['nullable', 'integer'],
             'endereco' => ['nullable', 'string', 'max:200'],
             'bairro' => ['nullable', 'string', 'max:120'],
             'aberta_em' => ['nullable', 'date'],

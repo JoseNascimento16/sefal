@@ -9,6 +9,7 @@ use App\Models\Fiscalizacao;
 use App\Models\FiscalizacaoFoto;
 use App\Models\FiscalizacaoRecomendacao;
 use App\Models\LocalizacaoAmbulante;
+use App\Models\Operacao;
 use App\Support\CiclosDeFiscalizacao;
 use App\Support\Protocolo;
 use Carbon\CarbonInterface;
@@ -59,6 +60,24 @@ final class RegistroDeCampo
             $this->recusar('demanda_id', "A demanda {$demanda->protocolo} não está mais com a sua equipe (situação: {$demanda->situacao}). Fale com o líder da equipe.");
         }
 
+        if (! in_array($dados['desfecho'], Fiscalizacao::desfechosDoAto($demanda), true)) {
+            $this->recusar('desfecho', $demanda?->situacao === Demanda::AGUARDANDO_REGULARIZACAO
+                ? "A demanda {$demanda->protocolo} está aguardando regularização: o registro é o retorno. Escolha “Regularizado após notificação” ou “Retorno com a situação mantida”."
+                : "“{$dados['desfecho']}” é desfecho de retorno: só cabe numa demanda aguardando regularização. Escolha o desfecho da vistoria.");
+        }
+
+        // A avulsa feita na tela de uma operação fica ligada a ela — desde que a
+        // operação esteja aberta para a equipe (ou para o próprio fiscal).
+        $operacao = null;
+
+        if ($demanda === null && isset($dados['operacao_id'])) {
+            if (! in_array((int) $dados['operacao_id'], $this->campo->operacoes(), true)) {
+                $this->recusar('operacao_id', 'A operação deste registro não está aberta para a sua equipe. Registre de novo como avulso.');
+            }
+
+            $operacao = Operacao::find($dados['operacao_id']);
+        }
+
         $documento = $dados['documento'] ?? null;
         $exige = Fiscalizacao::DOCUMENTO_DO_DESFECHO[$dados['desfecho']] ?? null;
 
@@ -74,15 +93,15 @@ final class RegistroDeCampo
             ? Date::parse($dados['aberta_em'])->setTimezone(config('app.timezone'))
             : $agora;
 
-        return DB::transaction(function () use ($dados, $fotos, $user, $demanda, $documento, $equipe, $agora, $aberta) {
+        return DB::transaction(function () use ($dados, $fotos, $user, $demanda, $operacao, $documento, $equipe, $agora, $aberta) {
             $vistoria = Fiscalizacao::create([
                 'protocolo' => Protocolo::proximo('FIS', $agora, Fiscalizacao::class),
                 'client_id' => $dados['client_id'],
                 'origem' => $demanda === null
-                    ? Fiscalizacao::ORIGEM_AVULSA
+                    ? ($operacao !== null ? Fiscalizacao::ORIGEM_OPERACAO : Fiscalizacao::ORIGEM_AVULSA)
                     : ($demanda->operacao_id !== null ? Fiscalizacao::ORIGEM_OPERACAO : Fiscalizacao::ORIGEM_DEMANDA),
                 'demanda_id' => $demanda?->id,
-                'operacao_id' => $demanda?->operacao_id,
+                'operacao_id' => $demanda?->operacao_id ?? $operacao?->id,
                 'equipe_id' => $equipe?->id,
                 'fiscal_id' => $user->id,
                 'alvo' => $dados['ambulante'] ?? null,

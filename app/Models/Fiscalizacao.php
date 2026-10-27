@@ -116,6 +116,33 @@ class Fiscalizacao extends Model
     ];
 
     /**
+     * Os desfechos de RETORNO — a segunda ida ao ponto, para conferir se o
+     * notificado cumpriu o prazo. Só cabem quando a demanda está aguardando
+     * regularização; ali, os demais não cabem.
+     *
+     * @var list<string>
+     */
+    public const DESFECHOS_DE_RETORNO = [self::REGULARIZADO_APOS_NOTIFICACAO, self::SITUACAO_MANTIDA];
+
+    /**
+     * Os desfechos que o ATO em curso pode produzir: o retorno, na demanda que
+     * espera regularização; a vistoria, em todo o resto (inclusive a avulsa).
+     *
+     * O aplicativo oferece a mesma lista (`desfechosOferecidos`), mas quem
+     * decide é o servidor — o aparelho pode estar com uma versão antiga, e um
+     * desfecho de retorno numa vistoria comum fecharia o caso pelo motivo
+     * errado.
+     *
+     * @return list<string>
+     */
+    public static function desfechosDoAto(?Demanda $demanda): array
+    {
+        return $demanda?->situacao === Demanda::AGUARDANDO_REGULARIZACAO
+            ? self::DESFECHOS_DE_RETORNO
+            : array_values(array_diff(self::DESFECHOS, self::DESFECHOS_DE_RETORNO));
+    }
+
+    /**
      * Os desfechos que EXIGEM documento lavrado.
      *
      * Concluir "Notificação Preliminar emitida" sem a notificação seria afirmar

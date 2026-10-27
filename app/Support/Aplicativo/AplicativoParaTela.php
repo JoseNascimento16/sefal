@@ -381,6 +381,8 @@ final class AplicativoParaTela
             'via' => is_array($via) ? $via : null,
             'origem' => $vistoria->demanda_id !== null ? 'dirigida' : 'avulsa',
             'demandaId' => $vistoria->demanda_id !== null ? 'den-'.$vistoria->demanda_id : null,
+            'operacaoId' => $vistoria->operacao_id,
+            'operacaoNome' => $vistoria->operacao?->nome,
             'referencia' => $vistoria->demanda?->protocolo,
             'consideracoes' => (string) $vistoria->consideracoes,
             'recomendacoes' => $vistoria->recomendacoes->pluck('chave')->values()->all(),
