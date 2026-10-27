@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
     Activity,
+    Workflow,
     CircleDot,
     ClipboardCheck,
     ClipboardList,
@@ -59,6 +60,8 @@ const ICONES: Record<string, LucideIcon> = {
     parametrizacao: SlidersHorizontal,
     relatorios: FileBarChart,
     monitoramento: Activity,
+    // O fluxograma do trabalho de ponta a ponta (Saúde dos Fluxos).
+    fluxos: Workflow,
     requisitos: ListChecks,
     logs: TriangleAlert,
     permissoes: KeyRound,

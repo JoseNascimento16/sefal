@@ -29,6 +29,7 @@ use App\Http\Controllers\Retaguarda\Parametrizacao\TiposDeOperacaoController;
 use App\Http\Controllers\Retaguarda\Parametrizacao\UnidadesDeMedidaController;
 use App\Http\Controllers\Retaguarda\RelatoriosController;
 use App\Http\Controllers\Retaguarda\RetornoAoCanalController;
+use App\Http\Controllers\Retaguarda\SaudeDosFluxosController;
 use App\Http\Controllers\Retaguarda\UsuariosController;
 use App\Http\Middleware\AplicativoDoFiscal;
 use App\Http\Middleware\SoChefeDeSetor;
@@ -208,6 +209,17 @@ Route::middleware(['auth'])->group(function () {
      */
     Route::get('retaguarda/acompanhamento-de-requisitos', [AcompanhamentoRequisitosController::class, 'index'])
         ->name('retaguarda.acompanhamento-de-requisitos.index');
+
+    /*
+     * Saúde dos Fluxos — o fluxograma do trabalho de ponta a ponta, só o administrador.
+     *
+     * Só GET: o fluxo vive no catálogo (`App\Support\SaudeFluxos`), versionado junto com o código
+     * que ele descreve. O `fluxo` vai na query string como chave do catálogo (slug fechado).
+     */
+    Route::prefix('retaguarda/saude-dos-fluxos')->name('retaguarda.saude-dos-fluxos.')->group(function () {
+        Route::get('/', [SaudeDosFluxosController::class, 'index'])->name('index');
+        Route::get('{fluxo}/exportar', [SaudeDosFluxosController::class, 'exportar'])->name('exportar')->where('fluxo', '[a-z-]+');
+    });
 
     /*
      * Ambulantes — CONSULTA da base que o SGCI entrega.
