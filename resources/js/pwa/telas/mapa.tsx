@@ -14,6 +14,7 @@ import {
     nomeRegiao,
     type Ambulante,
 } from '../dados-prototipo';
+import { useGps } from '../gps';
 import { Icone } from '../icones';
 import { camadaDaArea, criarMapa, dentroDoAnel, pinoAmbulante, pinoDoFiscal } from '../mapa';
 
@@ -44,8 +45,12 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
     const mapaRef = useRef<L.Map | null>(null);
     const [selecionado, setSelecionado] = useState<Ambulante | null>(null);
     const [modo, setModo] = useState<'mapa' | 'lista'>('mapa');
-    const [posicao, setPosicao] = useState<{ lat: number; lng: number; precisao: number } | null>(null);
-    const [posicaoReal, setPosicaoReal] = useState(false);
+    /* O "eu estou aqui" é o GPS de verdade (`gps.ts`). Sem GPS, o mapa não
+       desenha o fiscal em lugar nenhum: um pino no meio da área, como o
+       protótipo fazia, dizia ao fiscal que ele estava onde não estava. */
+    const gps = useGps();
+    const posicao = gps.leitura;
+    const jaCentrou = useRef(false);
     /* A delimitação nasce ACESA: a primeira pergunta de quem abre o mapa da
        equipe é "até onde é meu", e responder isso só depois de um toque
        esconderia a resposta. O interruptor existe para quem quer ver a rua
@@ -62,30 +67,6 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
 
         return foco ? [foco.lat, foco.lng] : [centroPadrao.lat, centroPadrao.lng];
     }, [regiaoFoco, centroPadrao.lat, centroPadrao.lng]);
-
-    /* Posição do aparelho — de verdade quando o navegador deixa, e a coordenada
-       do meio da área da equipe quando não deixa. O protótipo precisa desenhar o
-       "eu estou aqui" mesmo num computador de mesa sem GPS. */
-    useEffect(() => {
-        if (!navigator.geolocation) {
-            setPosicao({ ...centroPadrao, precisao: 45 });
-
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (p) => {
-                setPosicao({
-                    lat: p.coords.latitude,
-                    lng: p.coords.longitude,
-                    precisao: Math.round(p.coords.accuracy),
-                });
-                setPosicaoReal(true);
-            },
-            () => setPosicao({ ...centroPadrao, precisao: 45 }),
-            { enableHighAccuracy: true, timeout: 6000 },
-        );
-    }, []);
 
     useEffect(() => {
         if (modo !== 'mapa' || !caixa.current || mapaRef.current) {
@@ -166,17 +147,27 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
 
         const eu = L.marker([posicao.lat, posicao.lng], { icon: pinoDoFiscal(), zIndexOffset: 900 }).addTo(mapa);
 
-        if (posicaoReal && !regiaoFoco) {
+        /* Centra só na PRIMEIRA leitura: o GPS segue refinando por alguns
+           segundos, e recentrar a cada leitura puxaria o mapa da mão de quem já
+           está arrastando. */
+        if (!regiaoFoco && !jaCentrou.current) {
+            jaCentrou.current = true;
             mapa.setView([posicao.lat, posicao.lng], 16);
         }
 
         return () => {
             eu.remove();
         };
-    }, [posicao, posicaoReal, regiaoFoco]);
+    }, [posicao, regiaoFoco]);
 
     const centralizar = () => {
-        if (mapaRef.current && posicao) {
+        if (!posicao) {
+            gps.medirDeNovo();
+
+            return;
+        }
+
+        if (mapaRef.current) {
             mapaRef.current.setView([posicao.lat, posicao.lng], 17, { animate: true });
         }
     };
@@ -206,7 +197,7 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
                     <div className="pw-mapa-flutua">
                         <button type="button" className="pw-pilula" onClick={centralizar}>
                             <Icone nome="alvo" tamanho={16} />
-                            {posicao ? `±${posicao.precisao} m` : 'Localizando…'}
+                            {posicao ? `±${posicao.precisao} m` : gps.estado === 'falhou' ? 'Sem GPS · tentar de novo' : 'Localizando…'}
                         </button>
                         <button
                             type="button"
@@ -217,11 +208,6 @@ export function TelaMapa({ regiaoFoco }: { regiaoFoco: string | null }) {
                             <Icone nome="equipe" tamanho={16} />
                             {EQUIPE.area}
                         </button>
-                        {!posicaoReal && (
-                            <span className="pw-pilula" style={{ cursor: 'default' }}>
-                                Posição simulada
-                            </span>
-                        )}
                     </div>
 
                     {/* A legenda diz o que o contorno É — e, principalmente, o que

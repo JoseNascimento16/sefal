@@ -52,6 +52,8 @@ export interface Registro {
     ponto_de_referencia: string | null;
     gps: string | null;
     precisao_m: number | null;
+    /** A marca do registro feito SEM GPS, com o motivo — `null` quando houve GPS. */
+    sem_gps?: string | null;
     /**
      * Quem a equipe encontrou no ponto. NULO é caso previsto, e não dado
      * faltando: "nada encontrado no local" é desfecho legítimo — a foto do ponto
@@ -286,6 +288,11 @@ export function DetalheDaVistoria({
                                 {r.precisao_m !== null
                                     ? ` · precisão de ±${r.precisao_m} m`
                                     : ''}
+                            </p>
+                        )}
+                        {r.gps === null && r.sem_gps && (
+                            <p className="form-ajuda" style={{ marginTop: 8, color: 'var(--sm-aviso)' }}>
+                                <MapPin size={14} aria-hidden /> {r.sem_gps} O lugar não foi medido.
                             </p>
                         )}
 

@@ -169,9 +169,12 @@ class AplicativoController extends Controller
             'ambulante' => ['nullable', 'string', 'max:255'],
             'ambulante_id' => ['nullable', 'integer', 'exists:ambulantes,id'],
             'retorno_em' => ['nullable', 'date_format:Y-m-d'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            // A coordenada é a MEDIDA pelo aparelho. Sem ela, o registro diz por
+            // quê — nunca chega um ponto inventado no lugar (dono, 14/10/2026).
+            'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
             'precisao_m' => ['nullable', 'numeric', 'min:0', 'max:65000'],
+            'sem_gps_motivo' => ['nullable', 'required_without:latitude', Rule::in(array_keys((array) config('prototipo_denuncias.motivos_sem_gps', [])))],
             'endereco' => ['nullable', 'string', 'max:200'],
             'bairro' => ['nullable', 'string', 'max:120'],
             'aberta_em' => ['nullable', 'date'],
@@ -183,6 +186,7 @@ class AplicativoController extends Controller
             'documento' => ['nullable', 'string', 'max:60000'],
         ], [
             'desfecho.required' => 'Escolha o desfecho da vistoria.',
+            'sem_gps_motivo.required_without' => 'O registro chegou sem a localização e sem o motivo. Abra o registro de novo para o aparelho tentar o GPS.',
             'fotos.max' => 'No máximo 10 fotos por registro.',
             'fotos.*.max' => 'Cada foto pode ter no máximo 10 MB.',
         ]);

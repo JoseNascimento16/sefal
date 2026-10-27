@@ -13,6 +13,7 @@ use App\Models\Operacao;
 use App\Models\Setor;
 use App\Models\User;
 use App\Support\Aplicativo\ReservaDeNumeros;
+use App\Support\Apresentacao\FiscalizacaoParaTela;
 use App\Support\CiclosDeFiscalizacao;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
@@ -336,6 +337,31 @@ it('o kit traz os ambulantes na última posição, o calor das vistorias e as op
     expect($outra->exists)->toBeTrue();
 });
 
+it('a operação chega ao aplicativo com os bairros, quem abriu e as denúncias anexadas a ela', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo();
+    $chefe = User::factory()->create(['name' => 'Chefe da Área Z1']);
+    $operacao = Operacao::create([
+        'codigo' => 'OP-APP-3', 'nome' => 'Verão na Orla', 'area_id' => $equipe->area_id, 'coordenador_id' => $chefe->id,
+        'inicio' => Date::today(), 'situacao' => Operacao::EM_ANDAMENTO,
+    ]);
+    $operacao->equipes()->attach($equipe->id);
+    foreach (['Pituba', 'Amaralina', 'Rio Vermelho', 'Ondina'] as $bairro) {
+        $operacao->bairros()->create(['bairro' => $bairro]);
+    }
+    $anexada = demandaDoAplicativo($equipe, Demanda::EM_OPERACAO);
+    $anexada->update(['operacao_id' => $operacao->id]);
+    $solta = demandaDoAplicativo($equipe);
+
+    $kit = $this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->assertOk()->json();
+    $daOperacao = collect($kit['operacoes'])->firstWhere('nome', 'Verão na Orla');
+
+    // O cartão mostra só três bairros; a tela da operação precisa de todos.
+    expect($daOperacao['bairros'])->toBe(['Amaralina', 'Ondina', 'Pituba', 'Rio Vermelho'])
+        ->and($daOperacao['abertaPor'])->toBe('Chefe da Área Z1')
+        ->and(collect($kit['demandas'])->firstWhere('servidorId', $anexada->id)['operacaoId'])->toBe($daOperacao['id'])
+        ->and(collect($kit['demandas'])->firstWhere('servidorId', $solta->id)['operacaoId'])->toBeNull();
+});
+
 it('registrar a partir do pino liga a vistoria ao ambulante e move o pino para onde o fiscal esteve', function () {
     ['fiscal' => $fiscal] = campoDoAplicativo();
     $ambulante = Ambulante::factory()->create();
@@ -417,4 +443,65 @@ it('ocorrência com chave fora do catálogo é recusada', function () {
     $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo(['ocorrencias' => ['inventada']]))
         ->assertStatus(422)
         ->assertJsonValidationErrors('ocorrencias.0');
+});
+
+// ── GPS: a coordenada é medida, ou o registro diz por que não há (14/10/2026) ──
+
+it('registro sem GPS vai sem coordenada, guarda o motivo e a Retaguarda mostra a marca', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+    $ambulante = Ambulante::factory()->create();
+    LocalizacaoAmbulante::create([
+        'ambulante_id' => $ambulante->id, 'latitude' => -12.90, 'longitude' => -38.40,
+        'fonte' => LocalizacaoAmbulante::FONTE_CADASTRO, 'bairro' => 'Itapuã', 'registrada_em' => Date::now()->subWeek(),
+    ]);
+
+    $resposta = $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'latitude' => null, 'longitude' => null, 'precisao_m' => null,
+        'sem_gps_motivo' => 'negado', 'ambulante_id' => $ambulante->id,
+    ]))->assertCreated();
+
+    $vistoria = Fiscalizacao::firstOrFail();
+
+    expect($vistoria->latitude)->toBeNull()
+        ->and($vistoria->gps_em)->toBeNull()
+        ->and($vistoria->sem_gps_motivo)->toBe('negado')
+        ->and($vistoria->semGpsPorExtenso())->toBe('Registrado sem GPS: a localização do aparelho não foi liberada.')
+        // Sem coordenada medida, o pino do ambulante fica onde estava.
+        ->and((float) $ambulante->fresh()->ultimaLocalizacao->latitude)->toBe(-12.90);
+
+    $resposta->assertJsonPath('registro.lat', null)->assertJsonPath('registro.semGps', 'negado');
+    expect(FiscalizacaoParaTela::completa($vistoria->fresh())['sem_gps'])
+        ->toBe('Registrado sem GPS: a localização do aparelho não foi liberada.');
+});
+
+it('registro sem coordenada e sem o motivo é recusado dizendo o que fazer', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'latitude' => null, 'longitude' => null,
+    ]))->assertStatus(422)->assertJsonValidationErrors([
+        'sem_gps_motivo' => 'O registro chegou sem a localização e sem o motivo. Abra o registro de novo para o aparelho tentar o GPS.',
+    ]);
+
+    expect(Fiscalizacao::count())->toBe(0);
+});
+
+it('coordenada pela metade é recusada, e com coordenada o motivo de "sem GPS" é ignorado', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo(['longitude' => null]))
+        ->assertStatus(422)->assertJsonValidationErrors('longitude');
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo(['sem_gps_motivo' => 'tempo']))
+        ->assertCreated();
+
+    expect(Fiscalizacao::firstOrFail()->sem_gps_motivo)->toBeNull();
+});
+
+it('motivo de "sem GPS" fora do catálogo é recusado', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'latitude' => null, 'longitude' => null, 'sem_gps_motivo' => 'inventado',
+    ]))->assertStatus(422)->assertJsonValidationErrors('sem_gps_motivo');
 });

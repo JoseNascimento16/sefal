@@ -55,6 +55,7 @@ class FiscalizacaoParaTela
             'latitude' => $f->latitude,
             'longitude' => $f->longitude,
             'precisao_m' => $f->precisao_m,
+            'sem_gps' => $f->semGpsPorExtenso(),
 
             'alvo' => $f->alvo,
             'equipamento' => $f->equipamento,

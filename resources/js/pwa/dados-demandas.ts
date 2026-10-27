@@ -452,6 +452,8 @@ export type Demanda = {
     equipe: string | null;
     /** A operação a que a denúncia foi anexada, quando foi por esse caminho. */
     operacao: string | null;
+    /** A chave da operação (`op-N`) — é por ela que a tela da operação acha as denúncias. */
+    operacaoId?: string | null;
     /** O desfecho herdado do último passo do trâmite que declarou um. */
     desfecho: Desfecho | null;
     campo: RegistroDeCampo | null;

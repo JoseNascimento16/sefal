@@ -211,9 +211,13 @@ export function TelaInicio() {
 
                 <p className="pw-titulo-secao">Operações agendadas</p>
 
-                {OPERACOES.map((operacao) => (
-                    <CartaoOperacao key={operacao.id} operacao={operacao} />
-                ))}
+                {OPERACOES.length === 0 ? (
+                    <p className="pw-fraco" style={{ margin: '0 0 4px' }}>
+                        Nenhuma operação aberta para a sua equipe.
+                    </p>
+                ) : (
+                    OPERACOES.map((operacao) => <CartaoOperacao key={operacao.id} operacao={operacao} />)
+                )}
 
                 <button
                     type="button"
@@ -325,7 +329,7 @@ function CartaoOperacao({ operacao }: { operacao: Operacao }) {
         operacao.tom === 'agora' ? 'Hoje' : operacao.tom === 'proxima' ? 'Amanhã' : 'Programada';
 
     return (
-        <button type="button" className="pw-card pw-card-toque" onClick={() => irPara(`mapa/${operacao.regiao}`)}>
+        <button type="button" className="pw-card pw-card-toque" onClick={() => irPara(`operacao/${operacao.id}`)}>
             <div className="pw-linha-espalha" style={{ marginBottom: 6 }}>
                 <span className="pw-forte" style={{ fontSize: 16.5 }}>
                     {operacao.nome}

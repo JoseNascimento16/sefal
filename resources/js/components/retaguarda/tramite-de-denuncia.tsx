@@ -222,6 +222,11 @@ function RegistroEmCampo({ campo }: { campo: RegistroDeCampo }) {
                     {campo.precisao_m !== null ? ` · precisão de ±${campo.precisao_m} m` : ''}
                 </p>
             )}
+            {campo.gps === null && campo.sem_gps && (
+                <p className="form-ajuda" style={{ marginTop: 8, color: 'var(--sm-aviso)' }}>
+                    <MapPin size={14} aria-hidden /> {campo.sem_gps} O lugar não foi medido.
+                </p>
+            )}
 
             {(campo.arquivos?.length ?? 0) > 0 && (
                 <div style={{ marginTop: 10 }}>

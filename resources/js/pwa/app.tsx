@@ -39,12 +39,14 @@ import { TelaInicio } from './telas/inicio';
 import { TelaLevantamento } from './telas/levantamento';
 import { TelaMapa } from './telas/mapa';
 import { TelaNotificacao } from './telas/notificacao';
+import { TelaOperacao } from './telas/operacao';
 import { TelaPerfil } from './telas/perfil';
 import { TelaRecibo } from './telas/recibo';
 import { TelaRegistroRapido } from './telas/registro-rapido';
 import { TelaRegistros } from './telas/registros';
 import { TelaSincronizacao } from './telas/sincronizacao';
 import { TelaVia } from './telas/via';
+import type { MotivoSemGps } from './gps';
 
 /* ============================================================================
    Aplicativo do fiscal (SEFAL)
@@ -82,8 +84,10 @@ export type NovoRegistro = {
     /** O ambulante do cadastro, quando o registro saiu de um pino do mapa. */
     ambulanteId: number | null;
     retornoBr: string | null;
-    lat: number;
-    lng: number;
+    /** A coordenada medida — `null` sem GPS, e então `semGps` diz por quê. */
+    lat: number | null;
+    lng: number | null;
+    semGps: MotivoSemGps | null;
     endereco: string;
     regiao: string;
     origem: OrigemRegistro;
@@ -237,6 +241,7 @@ function corpoDoEnvio(r: Registro, fotos: Blob[]): FormData {
     por('latitude', r.lat);
     por('longitude', r.lng);
     por('precisao_m', r.precisaoM);
+    por('sem_gps_motivo', r.lat === null ? (r.semGps ?? 'indisponivel') : null);
     por('endereco', r.endereco);
     por('bairro', r.regiao);
     por('aberta_em', r.abertaEm);
@@ -553,6 +558,7 @@ export function App() {
             endereco: novo.endereco,
             lat: novo.lat,
             lng: novo.lng,
+            semGps: novo.semGps,
             desfecho: novo.desfecho,
             status: LOCAL_APOS_O_DESFECHO[novo.desfecho],
             ocorrencias: novo.ocorrencias,
@@ -771,6 +777,7 @@ export function App() {
                 {tela === 'calor' && <TelaCalor />}
                 {tela === 'sincronizacao' && <TelaSincronizacao />}
                 {tela === 'perfil' && <TelaPerfil />}
+                {tela === 'operacao' && <TelaOperacao id={parametro} />}
             </div>
             {comBarra && (
                 <BarraInferior

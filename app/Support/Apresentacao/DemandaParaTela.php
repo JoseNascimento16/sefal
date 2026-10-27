@@ -206,6 +206,7 @@ class DemandaParaTela
                     ? null
                     : $ultima->latitude.', '.$ultima->longitude,
                 'precisao_m' => $ultima->precisao_m,
+                'sem_gps' => $ultima->semGpsPorExtenso(),
             ],
             'documento' => $ultima->documento === null
                 ? null
@@ -274,6 +275,7 @@ class DemandaParaTela
                 'arquivos' => [],
                 'gps' => null,
                 'precisao_m' => null,
+                'sem_gps' => null,
                 'documento' => null,
                 'campo' => null,
             ];
@@ -295,6 +297,7 @@ class DemandaParaTela
                 ? null
                 : $f->latitude.', '.$f->longitude,
             'precisao_m' => $f->precisao_m,
+            'sem_gps' => $f->semGpsPorExtenso(),
             /*
              * O documento vai na forma do IMPRESSO — com os campos e as caixas
              * do papel —, e não como um resumo: quem lê a denúncia precisa ver a
@@ -319,6 +322,7 @@ class DemandaParaTela
                     ? null
                     : $f->latitude.', '.$f->longitude,
                 'precisao_m' => $f->precisao_m,
+                'sem_gps' => $f->semGpsPorExtenso(),
             ],
         ];
     }

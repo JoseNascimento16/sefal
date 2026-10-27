@@ -55,7 +55,7 @@ use Illuminate\Support\Carbon;
     'ciclo_id', 'protocolo', 'client_id', 'origem', 'demanda_id', 'operacao_id', 'equipe_id', 'fiscal_id',
     'ambulante_id', 'alvo', 'equipamento',
     'logradouro', 'numero', 'bairro', 'ponto_de_referencia',
-    'latitude', 'longitude', 'precisao_m', 'gps_em',
+    'latitude', 'longitude', 'precisao_m', 'gps_em', 'sem_gps_motivo',
     'aberta_em', 'concluida_em', 'despachada_em', 'sincronizada_em',
     'desfecho', 'consideracoes', 'relato', 'ocorrencias', 'retorno_em', 'situacao', 'assinatura', 'motivo_recusa_id',
     'decidida_por_id', 'decidida_em', 'decisao_detalhe',
@@ -214,6 +214,22 @@ class Fiscalizacao extends Model
      *
      * @return BelongsTo<CicloDeFiscalizacao, $this>
      */
+    /**
+     * A marca do registro que chegou SEM coordenada, por extenso — `null`
+     * quando há GPS. Quem lê a vistoria precisa saber que o lugar não foi
+     * medido, e por quê, em vez de ver um ponto vazio sem explicação.
+     */
+    public function semGpsPorExtenso(): ?string
+    {
+        if ($this->latitude !== null || $this->sem_gps_motivo === null) {
+            return null;
+        }
+
+        $motivo = (string) (config('prototipo_denuncias.motivos_sem_gps')[$this->sem_gps_motivo] ?? $this->sem_gps_motivo);
+
+        return "Registrado sem GPS: {$motivo}.";
+    }
+
     public function ciclo(): BelongsTo
     {
         return $this->belongsTo(CicloDeFiscalizacao::class, 'ciclo_id');

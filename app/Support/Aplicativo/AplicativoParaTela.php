@@ -166,7 +166,7 @@ final class AplicativoParaTela
         $hoje = Date::today();
 
         return Operacao::query()
-            ->with('bairros')
+            ->with(['bairros', 'tipo', 'coordenador'])
             ->whereIn('id', $campo->operacoes())
             ->orderBy('inicio')
             ->get()
@@ -189,6 +189,11 @@ final class AplicativoParaTela
                     'fiscais' => count($o->fiscaisQueRecebem()),
                     'tom' => $emCurso ? 'agora' : ($inicio->equalTo($hoje->copy()->addDay()) ? 'proxima' : 'planejada'),
                     'observacao' => (string) ($o->observacao ?? ''),
+                    // Para a tela da operação no aplicativo: o que é, quem abriu
+                    // e todos os bairros que ela cobre (o cartão mostra só três).
+                    'tipo' => $o->tipo?->nome,
+                    'abertaPor' => $o->coordenador?->name,
+                    'bairros' => $bairros,
                 ];
             })
             ->values()
@@ -295,6 +300,9 @@ final class AplicativoParaTela
             'area' => $demanda->area?->nome,
             'equipe' => $demanda->equipe?->codigo,
             'operacao' => $demanda->operacao?->nome,
+            // A ligação pela CHAVE, e não pelo nome: duas operações podem ter o
+            // mesmo nome, e é por aqui que a tela da operação acha as denúncias dela.
+            'operacaoId' => $demanda->operacao_id !== null ? 'op-'.$demanda->operacao_id : null,
             'desfecho' => $ultima?->desfecho,
             // Já foi despachada e espera o líder: não é mais ato do fiscal.
             'aguardaLider' => $demanda->fiscalizacoes->contains(fn (Fiscalizacao $f) => $f->situacao === Fiscalizacao::AGUARDANDO_LEITURA),
@@ -357,8 +365,9 @@ final class AplicativoParaTela
             'hora' => $vistoria->aberta_em->format('H:i'),
             'regiao' => (string) $vistoria->bairro,
             'endereco' => (string) ($vistoria->logradouro ?? ''),
-            'lat' => (float) ($vistoria->latitude ?? 0),
-            'lng' => (float) ($vistoria->longitude ?? 0),
+            'lat' => $vistoria->latitude !== null ? (float) $vistoria->latitude : null,
+            'lng' => $vistoria->longitude !== null ? (float) $vistoria->longitude : null,
+            'semGps' => $vistoria->sem_gps_motivo,
             'desfecho' => $vistoria->desfecho,
             'status' => self::LOCAL_APOS_O_DESFECHO[$vistoria->desfecho] ?? 'regular',
             'ocorrencias' => array_values((array) ($vistoria->ocorrencias ?? [])),

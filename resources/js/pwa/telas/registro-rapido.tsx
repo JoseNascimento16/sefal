@@ -21,7 +21,6 @@ import {
 } from '../dados-demandas';
 import {
     AMBULANTES,
-    CENTRO_SALVADOR,
     OCORRENCIAS,
     PRAZOS_RETORNO,
     REGIOES,
@@ -31,6 +30,7 @@ import {
     bairroMaisProximo,
 } from '../dados-prototipo';
 import { useDitado } from '../ditado';
+import { MOTIVOS_SEM_GPS, useGps } from '../gps';
 import { Icone } from '../icones';
 
 /* ============================================================================
@@ -70,20 +70,6 @@ const regiaoMaisProxima = (lat: number, lng: number): string =>
         distancia(lat, lng, r.lat, r.lng) < distancia(lat, lng, perto.lat, perto.lng) ? r : perto,
     ).id;
 
-const ENDERECOS_APROXIMADOS: Record<string, string> = {
-    'costa-azul': 'Av. Otávio Mangabeira, orla do Jardim de Alah',
-    'jardim-armacao': 'Av. Otávio Mangabeira, altura do Centro de Convenções',
-    stiep: 'Rua Ewerton Visco, altura do canteiro central',
-    'boca-do-rio': 'Av. Otávio Mangabeira, acesso à Praia da Boca do Rio',
-    imbui: 'Rua Ilhéus, entorno da feira',
-    pituacu: 'Av. Prof. Pinto de Aguiar, entrada do Parque de Pituaçu',
-    patamares: 'Alameda Praia de Patamares, acesso à areia',
-    piata: 'Av. Otávio Mangabeira, passarela de Piatã',
-    itapua: 'Rua da Música, próximo ao Farol de Itapuã',
-    'stella-maris': 'Praia de Stella Maris, frente ao estacionamento',
-    mussurunga: 'Av. Luís Viana Filho, ponto de ônibus',
-};
-
 export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const { registrar } = useApp();
 
@@ -96,16 +82,14 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const [demanda, setDemanda] = useState<Demanda | null>(daFila);
     const [escolhendoDemanda, setEscolhendoDemanda] = useState(false);
 
-    const centroDaDemanda = demanda
-        ? demanda.lat !== null && demanda.lng !== null
-            ? { lat: demanda.lat, lng: demanda.lng }
-            : (BAIRROS.find((b) => b.id === demanda.bairro) ?? null)
-        : null;
-
-    const [posicao, setPosicao] = useState<{ lat: number; lng: number; precisao: number } | null>(
-        doMapa ? { lat: doMapa.lat, lng: doMapa.lng, precisao: 12 } : null,
-    );
-    const [posicaoReal, setPosicaoReal] = useState(false);
+    /* A coordenada é SEMPRE a medida pelo aparelho — também na dirigida e no
+       registro aberto por um pino do mapa: o processo diz o endereço e o pino
+       diz onde o ambulante costuma estar, mas onde o fiscal ESTAVA quem diz é o
+       GPS. Sem GPS, o registro vai sem coordenada e com o motivo (`gps.ts`). */
+    const gps = useGps();
+    const posicao = gps.leitura;
+    const [bairroEscolhido, setBairroEscolhido] = useState('');
+    const [enderecoDigitado, setEnderecoDigitado] = useState('');
     const [fotos, setFotos] = useState<Foto[]>([]);
     const [marcadas, setMarcadas] = useState<string[]>([]);
     const [relato, setRelato] = useState('');
@@ -135,61 +119,32 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const opcoesDeDesfecho = desfechosOferecidos(demanda);
     const documentoAcombinar = desfecho ? DOCUMENTO_DO_DESFECHO[desfecho] : null;
 
-    /**
-     * A coordenada é do APARELHO, mesmo na dirigida.
-     *
-     * O processo diz o endereço; quem diz onde o fiscal estava é o GPS — o
-     * próprio manual do cliente pede isso ("seria ideal que pegasse pelo GPS")
-     * justamente porque endereço de processo erra e coordenada não. Só quem
-     * chegou por um pino do mapa dispensa a captura: ali a coordenada já é a do
-     * ponto que o fiscal tocou.
-     */
-    useEffect(() => {
-        if (doMapa) {
-            return;
-        }
-
-        /* Sem GPS liberado, o palpite é o centro da região da demanda — e não o
-           Farol da Barra, que jogaria o registro num bairro alheio. */
-        const reserva = { ...(centroDaDemanda ?? CENTRO_SALVADOR), precisao: 45 };
-
-        if (!navigator.geolocation) {
-            setPosicao(reserva);
-
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (p) => {
-                setPosicao({
-                    lat: p.coords.latitude,
-                    lng: p.coords.longitude,
-                    precisao: Math.round(p.coords.accuracy),
-                });
-                setPosicaoReal(true);
-            },
-            () => setPosicao(reserva),
-            { enableHighAccuracy: true, timeout: 6000 },
-        );
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [doMapa, demanda?.id]);
-
     /* O ditado é de verdade (`ditado.ts`): cada frase reconhecida entra no fim
        do relato, sem apagar o que o fiscal já escreveu. */
     const ditado = useDitado((frase) =>
         setRelato((atual) => (atual.trim() ? `${atual.trimEnd()} ${frase}` : frase)),
     );
 
+    /* O bairro: o da demanda, o do pino, o que o fiscal escolheu ou — no
+       registro avulso — o do catálogo mais perto do GPS. Sem nenhum deles, fica
+       vazio e o fiscal escolhe: nada de bairro chutado. */
     const regiao = useMemo(
         () =>
             demanda?.regiao ??
             doMapa?.regiao ??
-            (posicao ? regiaoMaisProxima(posicao.lat, posicao.lng) : 'boca-do-rio'),
-        [demanda, doMapa, posicao],
+            (bairroEscolhido || (posicao ? regiaoMaisProxima(posicao.lat, posicao.lng) : '')),
+        [demanda, doMapa, bairroEscolhido, posicao],
     );
 
+    /* O endereço do avulso é o que o fiscal escreve; sem texto, vai a
+       referência ao bairro — nunca uma rua inventada. */
     const endereco =
-        demanda?.endereco ?? doMapa?.endereco ?? ENDERECOS_APROXIMADOS[regiao] ?? `Proximidades de ${nomeRegiao(regiao)}`;
+        demanda?.endereco ??
+        doMapa?.endereco ??
+        (enderecoDigitado.trim() || (regiao ? `Proximidades de ${nomeRegiao(regiao)}` : ''));
+
+    const aguardandoGps = gps.estado === 'medindo';
+    const faltaBairro = !dirigida && !doMapa && regiao === '';
 
     const sugestoes = useMemo(() => {
         const termo = busca.trim().toLowerCase();
@@ -228,7 +183,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
      * receberia como se fossem duas idas ao local.
      */
     const despacharRegistro = () => {
-        if (!desfecho || despachando) {
+        if (!desfecho || despachando || aguardandoGps || faltaBairro) {
             return;
         }
 
@@ -240,14 +195,15 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
             relato: relato.trim(),
             fotos: fotos.filter((f) => f.arquivo !== null).length,
             arquivos: fotos.flatMap((f) => (f.arquivo ? [f.arquivo] : [])),
-            precisaoM: posicaoReal ? (posicao?.precisao ?? null) : null,
+            precisaoM: posicao?.precisao ?? null,
+            semGps: gps.estado === 'falhou' ? gps.motivo : null,
             ambulante: vinculo,
             /* O id do cadastro só vale enquanto o vínculo é o do pino de onde o
                registro saiu; trocar o nome desfaz a identificação. */
             ambulanteId: doMapa && vinculo === doMapa.apelido ? (doMapa.servidorId ?? null) : null,
             retornoBr: retorno ? dataBrDaqui(prazo.dias) : null,
-            lat: posicao?.lat ?? CENTRO_SALVADOR.lat,
-            lng: posicao?.lng ?? CENTRO_SALVADOR.lng,
+            lat: posicao?.lat ?? null,
+            lng: posicao?.lng ?? null,
             endereco,
             regiao,
             origem: dirigida ? 'dirigida' : 'avulsa',
@@ -371,42 +327,118 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                             {dirigida ? 'Endereço da demanda' : 'Onde você está'}
                         </span>
                         <span className="pw-passo-opcional">
-                            {dirigida ? 'Do processo' : 'Automático'}
+                            {dirigida ? 'Do processo' : 'Pelo GPS'}
                         </span>
                     </div>
 
                     <div className="pw-card">
                         <div className="pw-linha-espalha">
                             <div style={{ minWidth: 0 }}>
-                                <p className="pw-forte" style={{ margin: 0 }}>
-                                    {endereco}
-                                </p>
+                                {(dirigida || doMapa) && (
+                                    <p className="pw-forte" style={{ margin: 0 }}>
+                                        {endereco}
+                                    </p>
+                                )}
                                 <p className="pw-fraco" style={{ margin: '2px 0 0' }}>
-                                    {demanda?.bairro ?? nomeRegiao(regiao)} ·{' '}
+                                    {regiao ? `${demanda?.bairro ?? nomeRegiao(regiao)} · ` : ''}
                                     {posicao
                                         ? `${posicao.lat.toFixed(5)}, ${posicao.lng.toFixed(5)}`
-                                        : 'capturando coordenada…'}
+                                        : gps.estado === 'falhou'
+                                          ? 'sem coordenada'
+                                          : 'medindo a posição…'}
                                 </p>
                             </div>
-                            <Selo tom={posicaoReal ? 'ok' : 'neutro'}>
-                                <Icone nome="alvo" tamanho={13} />
-                                {posicao ? `±${posicao.precisao} m` : '…'}
-                            </Selo>
+                            {/* Tocar no selo mede de novo: a primeira leitura
+                                costuma vir com margem grande, e quem acabou de
+                                liberar a localização precisa de uma segunda tentativa. */}
+                            <button
+                                type="button"
+                                style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
+                                onClick={gps.medirDeNovo}
+                                aria-label="Medir a posição de novo"
+                                disabled={aguardandoGps}
+                            >
+                                <Selo tom={posicao ? (posicao.precisao <= 30 ? 'ok' : 'alerta') : 'neutro'}>
+                                    <Icone
+                                        nome={aguardandoGps ? 'atualizar' : 'alvo'}
+                                        tamanho={13}
+                                        className={aguardandoGps ? 'pw-girando' : undefined}
+                                    />
+                                    {posicao ? `±${posicao.precisao} m` : aguardandoGps ? 'GPS' : 'Sem GPS'}
+                                </Selo>
+                            </button>
                         </div>
+
+                        {gps.estado === 'falhou' && (
+                            <div className="pw-aviso pw-aviso-alerta" role="status" style={{ flexDirection: 'column', marginTop: 12 }}>
+                                <p style={{ margin: 0 }}>
+                                    <strong>Sem GPS:</strong> {MOTIVOS_SEM_GPS[gps.motivo]}.
+                                    {gps.motivo === 'negado'
+                                        ? ' Libere a localização para este site nas permissões do Chrome e toque em Medir de novo.'
+                                        : ' Vá para céu aberto e toque em Medir de novo.'}
+                                </p>
+                                <p style={{ margin: '6px 0 0' }}>
+                                    Se não der, o registro segue sem coordenada e com essa marca — o líder vê o
+                                    motivo. Nenhum ponto é inventado.
+                                </p>
+                                <button type="button" className="pw-btn pw-btn-contorno pw-btn-pequeno" style={{ marginTop: 8, alignSelf: 'flex-start' }} onClick={gps.medirDeNovo}>
+                                    <Icone nome="alvo" tamanho={16} /> Medir de novo
+                                </button>
+                            </div>
+                        )}
+
+                        {posicao && posicao.precisao > 30 && (
+                            <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
+                                Margem grande para um ponto de rua. Se puder, espere alguns segundos ou toque no selo
+                                para medir de novo.
+                            </p>
+                        )}
+
+                        {/* No avulso não há processo nem pino que diga o lugar: o
+                            fiscal escreve o endereço, e o bairro vem do GPS (ou ele
+                            escolhe, quando o GPS falhou). */}
+                        {!dirigida && !doMapa && (
+                            <div style={{ marginTop: 12 }}>
+                                <label className="pw-campo">
+                                    <span>Endereço ou ponto de referência</span>
+                                    <input
+                                        className="pw-entrada"
+                                        value={enderecoDigitado}
+                                        onChange={(e) => setEnderecoDigitado(e.target.value)}
+                                        maxLength={200}
+                                        placeholder="Ex.: Av. Sete de Setembro, em frente ao nº 120"
+                                    />
+                                </label>
+                                <label className="pw-campo" style={{ marginBottom: 0 }}>
+                                    <span>Bairro{faltaBairro ? ' — escolha para despachar' : ''}</span>
+                                    <input
+                                        className="pw-entrada"
+                                        list="pw-bairros-do-catalogo"
+                                        value={bairroEscolhido}
+                                        onChange={(e) => setBairroEscolhido(e.target.value)}
+                                        maxLength={120}
+                                        placeholder={
+                                            posicao && regiao ? `Pelo GPS: ${nomeRegiao(regiao)}` : 'Digite ou escolha o bairro'
+                                        }
+                                    />
+                                    <datalist id="pw-bairros-do-catalogo">
+                                        {BAIRROS.map((b) => (
+                                            <option key={b.id} value={b.nome} />
+                                        ))}
+                                    </datalist>
+                                </label>
+                            </div>
+                        )}
+
                         {doMapa && (
                             <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
-                                Local do ponto de {doMapa.apelido}, aberto pelo mapa.
+                                Ponto de {doMapa.apelido}, aberto pelo mapa. A coordenada gravada é a do seu GPS.
                             </p>
                         )}
                         {dirigida && (
                             <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
                                 Endereço informado no processo — confirme no local antes de lavrar
                                 documento.
-                            </p>
-                        )}
-                        {!doMapa && !dirigida && !posicaoReal && posicao && (
-                            <p className="pw-fraco" style={{ margin: '10px 0 0' }}>
-                                Coordenada aproximada — o aparelho não liberou a localização. Libere o GPS para o ponto sair exato.
                             </p>
                         )}
                     </div>
@@ -695,17 +727,25 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                 <button
                     type="button"
                     className="pw-btn pw-btn-acao"
-                    style={{ minHeight: 60, fontSize: 18, opacity: desfecho ? 1 : 0.5 }}
+                    style={{
+                        minHeight: 60,
+                        fontSize: 18,
+                        opacity: desfecho && !aguardandoGps && !faltaBairro ? 1 : 0.5,
+                    }}
                     onClick={despacharRegistro}
-                    disabled={!desfecho || despachando}
+                    disabled={!desfecho || despachando || aguardandoGps || faltaBairro}
                 >
-                    {desfecho
-                        ? despachando
-                            ? 'Despachando…'
-                            : emRetorno
-                              ? 'Despachar retorno'
-                              : 'Despachar registro'
-                        : 'Escolha o desfecho'}
+                    {!desfecho
+                        ? 'Escolha o desfecho'
+                        : aguardandoGps
+                          ? 'Medindo a posição…'
+                          : faltaBairro
+                            ? 'Informe o bairro'
+                            : despachando
+                              ? 'Despachando…'
+                              : emRetorno
+                                ? 'Despachar retorno'
+                                : 'Despachar registro'}
                     <Icone
                         nome={despachando ? 'atualizar' : 'seta'}
                         tamanho={20}

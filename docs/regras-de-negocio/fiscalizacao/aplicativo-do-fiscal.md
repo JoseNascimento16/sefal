@@ -323,6 +323,37 @@ deles, o botão diz o motivo.
 O contorno do bloco (ou os corredores) que o mapa do aplicativo desenha é o que a Retaguarda guarda
 na tela de Áreas; o aplicativo não traz mais desenho próprio.
 
+### RN-24 — A coordenada do registro é a MEDIDA pelo aparelho, ou o registro diz por que não há
+
+- O registro grava a posição medida pelo GPS do aparelho — também na vistoria dirigida e na aberta por
+  um pino do mapa. O aparelho segue medindo enquanto a tela está aberta e guarda a leitura de menor
+  margem; tocar no selo da precisão mede de novo. Margem acima de 30 m aparece como alerta.
+- Enquanto a primeira medição não chega, o botão de despacho espera ("Medindo a posição…").
+- Sem GPS (permissão negada, sem sinal, sem resposta em 25 s ou navegador sem GPS), o registro vai
+  **sem coordenada** e com o **motivo**; a Retaguarda mostra "Registrado sem GPS: <motivo>" na vistoria
+  e no trâmite da denúncia. **Nenhum ponto é inventado**: antes, o aplicativo mandava o centro do
+  bairro, que entrava no mapa, no calor e no pino do ambulante como posição medida.
+- O servidor recusa registro sem coordenada e sem motivo, e coordenada pela metade. Registro sem
+  coordenada não move o pino do ambulante. Os motivos são os de `prototipo_denuncias.motivos_sem_gps`,
+  e a lista do aplicativo é conferida contra ela por teste.
+- O mapa do aplicativo só desenha o fiscal onde o GPS o mediu; sem GPS, não desenha.
+
+### RN-25 — No registro avulso, o endereço é o que o fiscal escreve
+
+Sem processo e sem pino, o fiscal escreve o endereço ou ponto de referência; sem texto, vai
+"Proximidades de <bairro>". O bairro vem do GPS (o do catálogo mais perto) ou o fiscal escolhe —
+sem GPS e sem bairro escolhido, o despacho espera. Antes, o aplicativo completava com uma de onze ruas
+fixas do protótipo.
+
+### RN-26 — A operação abre tela própria, com as denúncias anexadas
+
+Tocar numa operação da tela inicial abre a operação: tipo, período, foco, todos os bairros, número de
+fiscais, quem a abriu, a observação e as **denúncias que o Chefe de Setor anexou a ela** (cada uma com o
+mesmo cartão da fila, e o botão de fiscalizar). A ligação é pela chave da operação, não pelo nome. Sem
+denúncia anexada, a tela diz que a ronda segue pelos bairros com registro avulso. "Ver no mapa" leva ao
+primeiro bairro, que era o que o cartão fazia antes. Sem operação aberta, a tela inicial diz isso em vez
+de deixar a seção vazia.
+
 ## Como demonstrar (protótipo)
 
 Entrada em `/app`. Não há senha a conferir: a **matrícula** decide a identidade e a equipe.
@@ -410,6 +441,7 @@ aparece — o rodapé da lista diz quantas denúncias estão com equipes diferen
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 14/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, mapa) e Retaguarda (vistoria, trâmite) | Coordenada sempre medida, com recaptura e alerta de margem; sem GPS, o registro vai sem coordenada e com o motivo, mostrado na Retaguarda (RN-24). Endereço do avulso escrito pelo fiscal (RN-25). Operação com tela própria e as denúncias anexadas (RN-26). | O aplicativo mandava o centro do bairro e uma rua fixa do protótipo como se fossem dados medidos. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (via, registro, mapa) | Impressão real da via na térmica 80 mm pelo mesmo caminho do CODECON (RN-21); ditado do relato pelo reconhecimento de voz (RN-22); contorno da área vindo do servidor (RN-23). A porta do aplicativo passa a dizer o motivo da recusa da conta. | Pedido do dono. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (perfil, envio) | Encerrar plantão avisa o que ficou só no aparelho (RN-20); ocorrências validadas pelo catálogo do servidor e mostradas ao líder na Retaguarda. | Aparelho compartilhado: sair em silêncio deixava registro parado sem o fiscal saber. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (mapa, calor, início, levantamento) | **Etapa 3: os dados de campo deixam de ser fictícios.** Pinos de ambulante do cadastro na última posição, com histórico e retorno vencido; registro a partir do pino liga a vistoria ao ambulante e move o pino (RN-17). Calor das vistorias com irregularidade e operações da equipe (RN-18). Levantamento gravado no servidor com foto e GPS por linha, encarregados do cadastro, fila no aparelho (RN-19). Saem as sementes de ambulantes, calor, operações e registros, e os atalhos de exemplo. Migration `2026_10_13_100000_levantamento_de_ambulantes`. | Pedido do dono (13/10/2026): seguir para as próximas etapas, sem versão instalável. |

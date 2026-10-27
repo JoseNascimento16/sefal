@@ -93,6 +93,7 @@ final class RegistroDeCampo
                 'longitude' => $dados['longitude'] ?? null,
                 'precisao_m' => isset($dados['precisao_m']) ? (int) round((float) $dados['precisao_m']) : null,
                 'gps_em' => isset($dados['latitude']) ? $aberta : null,
+                'sem_gps_motivo' => isset($dados['latitude']) ? null : ($dados['sem_gps_motivo'] ?? null),
                 'aberta_em' => $aberta,
                 'concluida_em' => $agora,
                 'despachada_em' => $agora,
