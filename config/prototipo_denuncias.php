@@ -308,6 +308,19 @@ return [
     ],
 
     /*
+     * Por que um registro do aplicativo chegou SEM coordenada. O GPS é o dado
+     * central da fiscalização; registro sem ele só existe por falha real do
+     * aparelho, e leva a marca visível — nunca uma coordenada inventada no lugar.
+     * O aplicativo tem a mesma lista (`gps.ts`), conferida por teste.
+     */
+    'motivos_sem_gps' => [
+        'negado' => 'a localização do aparelho não foi liberada',
+        'indisponivel' => 'o aparelho não encontrou sinal de GPS',
+        'tempo' => 'o GPS não respondeu a tempo',
+        'sem-suporte' => 'o navegador do aparelho não tem GPS',
+    ],
+
+    /*
      * Por que uma denúncia é devolvida ao canal ou arquivada na triagem. A
      * escolha é de lista para o relatório poder somar por motivo; o texto livre
      * continua obrigatório ao lado, porque o motivo genérico não conta o caso.

@@ -219,6 +219,15 @@ class PwaFilaDeDenunciasTest extends TestCase
         $this->assertSame(array_keys((array) config('prototipo_denuncias.ocorrencias_do_fiscal')), $ids[1]);
     }
 
+    public function test_os_motivos_de_sem_gps_do_aplicativo_sao_os_do_servidor()
+    {
+        $fonte = $this->fonteDoAplicativo('gps.ts');
+        preg_match('/export const MOTIVOS_SEM_GPS = \{(?<itens>.*?)\R\} as const;/s', $fonte, $bloco);
+        preg_match_all("/^\s*'?([a-z-]+)'?: '([^']+)',/m", $bloco['itens'] ?? '', $itens);
+
+        $this->assertSame((array) config('prototipo_denuncias.motivos_sem_gps'), array_combine($itens[1], $itens[2]));
+    }
+
     public function test_as_chaves_de_recomendacao_sao_as_do_servidor()
     {
         $this->assertSame(RecomendacoesDoFiscal::chaves(), self::RECOMENDACOES_DA_RETAGUARDA);

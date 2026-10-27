@@ -12,6 +12,7 @@ import {
 } from '../dados-demandas';
 import { nomeDoDocumento } from '../dados-documentos';
 import { OCORRENCIAS, nomeRegiao, type Registro } from '../dados-prototipo';
+import { coordenadaEmTexto } from '../gps';
 import { Icone } from '../icones';
 
 /**
@@ -189,8 +190,7 @@ function Conclusao({ registro }: { registro: Registro }) {
                             {registro.endereco}
                             <br />
                             <span className="pw-fraco">
-                                {nomeRegiao(registro.regiao)} · {registro.lat.toFixed(5)},{' '}
-                                {registro.lng.toFixed(5)}
+                                {nomeRegiao(registro.regiao)} · {coordenadaEmTexto(registro)}
                             </span>
                         </dd>
                         <dt>Ambulante</dt>

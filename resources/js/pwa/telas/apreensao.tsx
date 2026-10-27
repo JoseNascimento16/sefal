@@ -17,6 +17,7 @@ import {
     type ItemApreendido,
 } from '../dados-documentos';
 import { FISCAL, nomeRegiao, type ViaImpressa } from '../dados-prototipo';
+import { coordenadaEmTexto } from '../gps';
 import { Icone } from '../icones';
 
 /* ============================================================================
@@ -293,7 +294,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
                             />
                             <p className="pw-fraco" style={{ margin: '6px 0 0', fontSize: 12.5 }}>
                                 <Icone nome="alvo" tamanho={12} /> {nomeRegiao(registro.regiao)} ·{' '}
-                                {registro.lat.toFixed(5)}, {registro.lng.toFixed(5)}
+                                {coordenadaEmTexto(registro)}
                             </p>
                         </label>
                     </div>

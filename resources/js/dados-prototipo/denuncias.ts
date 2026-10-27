@@ -51,6 +51,8 @@ export interface RegistroDeCampo {
     arquivos?: Arquivo[];
     gps: string | null;
     precisao_m: number | null;
+    /** A marca do registro feito SEM GPS, com o motivo — `null` quando houve GPS. */
+    sem_gps?: string | null;
     /** Quem estava no ponto, quando havia alguém. */
     ambulante: string | null;
     equipamento: string | null;

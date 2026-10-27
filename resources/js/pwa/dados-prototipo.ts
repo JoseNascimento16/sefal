@@ -92,8 +92,11 @@ export type Registro = {
     hora: string;
     regiao: string;
     endereco: string;
-    lat: number;
-    lng: number;
+    /** A coordenada MEDIDA pelo aparelho — `null` quando não houve GPS. */
+    lat: number | null;
+    lng: number | null;
+    /** Por que não houve GPS (chave de `MOTIVOS_SEM_GPS`), quando não houve. */
+    semGps?: string | null;
     /**
      * COMO a vistoria terminou — da lista fechada que a Retaguarda soma.
      *
@@ -437,6 +440,12 @@ export type Operacao = {
     fiscais: number;
     tom: 'agora' | 'proxima' | 'planejada';
     observacao: string;
+    /** O tipo da operação, como a Retaguarda o cadastrou. */
+    tipo?: string | null;
+    /** Quem abriu a operação na Retaguarda. */
+    abertaPor?: string | null;
+    /** Todos os bairros que a operação cobre (o cartão mostra só três). */
+    bairros?: string[];
 };
 
 
