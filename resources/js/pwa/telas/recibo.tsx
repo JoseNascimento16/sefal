@@ -172,7 +172,7 @@ function Conclusao({ registro }: { registro: Registro }) {
                                     </span>
                                 </>
                             ) : (
-                                'Avulsa — encontrada em ronda'
+                                registro.operacaoNome ? `Avulsa — na operação ${registro.operacaoNome}` : 'Avulsa — encontrada em ronda'
                             )}
                         </dd>
                         <dt>Como o local ficou</dt>

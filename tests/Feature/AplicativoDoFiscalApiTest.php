@@ -505,3 +505,66 @@ it('motivo de "sem GPS" fora do catálogo é recusado', function () {
         'latitude' => null, 'longitude' => null, 'sem_gps_motivo' => 'inventado',
     ]))->assertStatus(422)->assertJsonValidationErrors('sem_gps_motivo');
 });
+
+// ── O ato decide os desfechos, e a avulsa da operação leva a operação (27/10/2026) ──
+
+it('desfecho de retorno só cabe em demanda aguardando regularização, e o servidor diz por quê', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo();
+    $demanda = demandaDoAplicativo($equipe);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'demanda_id' => $demanda->id, 'desfecho' => Fiscalizacao::REGULARIZADO_APOS_NOTIFICACAO,
+    ]))->assertStatus(422)->assertJsonValidationErrors('desfecho');
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'desfecho' => Fiscalizacao::SITUACAO_MANTIDA,
+    ]))->assertStatus(422)->assertJsonValidationErrors('desfecho');
+
+    expect(Fiscalizacao::count())->toBe(0);
+});
+
+it('na demanda aguardando regularização, o registro é o retorno: desfecho de vistoria é recusado', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo();
+    $demanda = demandaDoAplicativo($equipe, Demanda::AGUARDANDO_REGULARIZACAO);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'demanda_id' => $demanda->id, 'desfecho' => Fiscalizacao::REGULARIZADO_NO_LOCAL,
+    ]))->assertStatus(422)->assertJsonValidationErrors('desfecho');
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'demanda_id' => $demanda->id, 'desfecho' => Fiscalizacao::REGULARIZADO_APOS_NOTIFICACAO,
+    ]))->assertCreated();
+});
+
+it('a avulsa registrada na tela da operação fica ligada à operação da equipe', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo();
+    $operacao = Operacao::create([
+        'codigo' => 'OP-APP-AV', 'nome' => 'Rotina da Orla', 'area_id' => $equipe->area_id,
+        'inicio' => Date::today(), 'situacao' => Operacao::EM_ANDAMENTO,
+    ]);
+    $operacao->equipes()->attach($equipe->id);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'operacao_id' => $operacao->id,
+    ]))->assertCreated()->assertJsonPath('registro.operacaoNome', 'Rotina da Orla');
+
+    expect(Fiscalizacao::firstOrFail())
+        ->operacao_id->toBe($operacao->id)
+        ->origem->toBe(Fiscalizacao::ORIGEM_OPERACAO);
+});
+
+it('operação que não é da equipe do fiscal é recusada dizendo o que fazer', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+    ['equipe' => $outra] = campoDoAplicativo('Z9');
+    $operacao = Operacao::create([
+        'codigo' => 'OP-APP-OUT', 'nome' => 'De outra equipe', 'area_id' => $outra->area_id,
+        'inicio' => Date::today(), 'situacao' => Operacao::EM_ANDAMENTO,
+    ]);
+    $operacao->equipes()->attach($outra->id);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo([
+        'operacao_id' => $operacao->id,
+    ]))->assertStatus(422)->assertJsonValidationErrors([
+        'operacao_id' => 'A operação deste registro não está aberta para a sua equipe. Registre de novo como avulso.',
+    ]);
+});

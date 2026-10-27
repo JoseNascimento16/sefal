@@ -36,20 +36,18 @@ SEFAL, que o **Coordenador** triou e que o **Chefe de Setor** da área direciono
 ### RN-01 — A fila é da EQUIPE, e a equipe vem de quem entrou
 
 A denúncia não chega para o fiscal: chega para a **equipe** da área onde fica o endereço, e qualquer
-um dela pode atender. Por isso a matrícula digitada na porta decide a identidade e, com ela, a
-equipe, a fila e o contorno da área no mapa
-([`sessao.ts`](../../../resources/js/pwa/sessao.ts) + [`dados-equipes.ts`](../../../resources/js/pwa/dados-equipes.ts)).
-Trocar de fiscal troca a fila; matrícula desconhecida cai no fiscal genérico da **Equipe C1 · Área 5**,
-que é o aparelho da demonstração.
+um dela pode atender. Por isso quem entra decide a identidade e, com ela, a equipe, a fila e o
+contorno da área no mapa, tudo vindo do servidor na sessão ([`sessao.ts`](../../../resources/js/pwa/sessao.ts)).
+Trocar de fiscal troca a fila; quem não está em nenhuma equipe não entra, e a porta diz o motivo (RN-15).
 
 O cabeçalho das telas diz **de quem é a fila** ("Equipe C1 · Área 5 — Boca do Rio"). Sem esse rótulo,
 o fiscal não entende por que aparece na lista um endereço que não é o dele.
 
 ### RN-02 — O fiscal NUNCA vê denúncia em triagem
 
-O que chega ao aplicativo é o que já está **na mão da equipe**: `Direcionada à equipe`, `Em operação`,
-`Em campo`, `Aguardando regularização`, `Retorno vencido` e `Concluída`. Denúncia `Recebida`,
-`Encaminhada à área`, `Devolvida` ou `Arquivada` **não aparece** — dar ao fiscal o que ainda está em
+O que chega ao aplicativo é o que já está **na mão da equipe**: `Direcionada aos fiscais`, `Em operação`,
+`Em campo`, `Aguardando regularização`, `Retorno vencido` e `Concluída`. Demanda `Recebida`,
+`Encaminhada ao líder`, `Devolvida` ou `Arquivada` **não aparece** — dar ao fiscal o que ainda está em
 triagem seria deixá-lo escolher o próprio trabalho, e é exatamente por isso que a Retaguarda não lhe
 concede as telas de Denúncias.
 
@@ -166,8 +164,8 @@ entra na Fiscalização da demanda (ou abre uma, quando é avulsa) em *Aguardand
 decide se a equipe volta ao ponto ou se o caso sobe ao Chefe de Setor. _(Revisão de 13/10/2026: antes
 o destino declarado era a caixa do Chefe de Setor; o fluxo real, desde 22/09, passa pelo líder.)_ O botão que fecha a vistoria chama-se, por isso, **Despachar registro**
 (ou **Despachar retorno**) — chamá-lo de "concluir" prometia um fim que não é o dele —, e a tela
-seguinte é a **Conclusão do registro**, que declara o destino com área ("Caixa de entrada do Chefe de
-Setor · Área 5 — Boca do Rio") e fecha com o botão **Concluir registro**.
+seguinte é a **Conclusão do registro**, que declara o destino ("Líder da Equipe C2 · Área 1 — Centro")
+e fecha com o botão **Concluir registro**.
 
 Nessa tela o fiscal acrescenta as **considerações finais**, de duas formas que **convivem**:
 
@@ -353,6 +351,23 @@ denúncia anexada, a tela diz que a ronda segue pelos bairros com registro avuls
 primeiro bairro, que era o que o cartão fazia antes. Sem operação aberta, a tela inicial diz isso em vez
 de deixar a seção vazia.
 
+### RN-27 — Quem decide o desfecho do ato é o servidor
+
+A vistoria aceita **Regularizado no local**, **Nada encontrado no local**, **Notificação Preliminar
+emitida** e **Auto de Apreensão lavrado**; o retorno, só **Regularizado após notificação** e **Retorno
+com a situação mantida**. Retorno é o registro feito numa demanda **aguardando regularização** — ali,
+os desfechos de vistoria não cabem; fora dela (inclusive na avulsa), os de retorno não cabem. O
+aplicativo oferece essas listas, mas o servidor confere e recusa, com o motivo, o que vier fora delas
+(um aparelho com versão antiga não fecha o caso pelo motivo errado). Um teste compara as listas dos
+dois lados.
+
+### RN-28 — A avulsa feita na tela da operação fica ligada à operação
+
+"Registrar fiscalização avulsa" na tela de uma operação abre o registro já ligado a ela: o cartão de
+origem diz "Na operação <nome>", a vistoria nasce com a operação e a origem *operação*, e o recibo diz
+"Avulsa — na operação <nome>". O servidor só aceita operação aberta para a equipe do fiscal (ou para
+ele); fora disso, recusa e pede que o registro seja refeito como avulso.
+
 ## Como demonstrar
 
 O aplicativo abre em `/app` e entra com a conta da Retaguarda de um fiscal que esteja numa equipe
@@ -397,6 +412,7 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 27/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, operação, recibo) | O servidor confere o desfecho do ato — vistoria ou retorno — e recusa com o motivo (RN-27); a avulsa feita na tela da operação fica ligada a ela (RN-28). Trechos desatualizados de RN-01, RN-02 e RN-12 corrigidos. | A regra estava só no aparelho; a avulsa da operação chegava sem a operação. |
 | 27/10/2026 | José Nascimento | Aplicativo do Fiscal e Retaguarda (Caixa, Denúncias, Fiscalizações, Operações, Áreas e Equipes, Ambulantes, mapas) | Sobras do protótipo removidas: a estrutura e os fiscais inventados saem do aplicativo; o selo "PROTÓTIPO · DADOS FICTÍCIOS" vira "DEMONSTRAÇÃO · DADOS DE EXEMPLO" e só aparece no ambiente de demonstração; Ambulantes diz que a carga do SGCI ainda não existe; textos que citavam o protótipo reescritos; seções "Como demonstrar" e "Pendências" deste doc atualizadas. | Pedido do dono: o aviso de dados fictícios era falso em homologação, onde os registros são os do banco. |
 | 14/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, mapa) e Retaguarda (vistoria, trâmite) | Coordenada sempre medida, com recaptura e alerta de margem; sem GPS, o registro vai sem coordenada e com o motivo, mostrado na Retaguarda (RN-24). Endereço do avulso escrito pelo fiscal (RN-25). Operação com tela própria e as denúncias anexadas (RN-26). | O aplicativo mandava o centro do bairro e uma rua fixa do protótipo como se fossem dados medidos. |
 | 13/10/2026 | José Nascimento | Aplicativo do Fiscal (via, registro, mapa) | Impressão real da via na térmica 80 mm pelo mesmo caminho do CODECON (RN-21); ditado do relato pelo reconhecimento de voz (RN-22); contorno da área vindo do servidor (RN-23). A porta do aplicativo passa a dizer o motivo da recusa da conta. | Pedido do dono. |

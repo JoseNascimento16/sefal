@@ -22,6 +22,7 @@ import {
 import {
     AMBULANTES,
     OCORRENCIAS,
+    OPERACOES,
     PRAZOS_RETORNO,
     REGIOES,
     dataBrDaqui,
@@ -78,6 +79,8 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
        é derivado do protocolo `DEN-NNNN`, e é por isso que o prefixo é `den-`). */
     const doMapa = alvo?.startsWith('amb-') ? (AMBULANTES.find((a) => a.id === alvo) ?? null) : null;
     const daFila = alvo?.startsWith('den-') ? acharDemanda(alvo) : null;
+    /* `op-7` vem da tela da operação: a avulsa feita ali fica ligada a ela. */
+    const daOperacao = alvo?.startsWith('op-') ? (OPERACOES.find((o) => o.id === alvo) ?? null) : null;
 
     const [demanda, setDemanda] = useState<Demanda | null>(daFila);
     const [escolhendoDemanda, setEscolhendoDemanda] = useState(false);
@@ -209,6 +212,8 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
             origem: dirigida ? 'dirigida' : 'avulsa',
             demandaId: demanda?.id ?? null,
             referencia: demanda?.protocolo ?? null,
+            operacaoId: !dirigida && daOperacao ? Number(daOperacao.id.slice(3)) : null,
+            operacaoNome: !dirigida && daOperacao ? daOperacao.nome : null,
         });
 
         irPara(`recibo/${id}`);
@@ -248,7 +253,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                                         <Icone nome="mapa" tamanho={16} /> Avulsa
                                     </p>
                                     <p className="pw-fraco" style={{ margin: '4px 0 0' }}>
-                                        O fiscal encontrou andando a rua.
+                                        {daOperacao ? `Na operação ${daOperacao.nome}.` : 'O fiscal encontrou andando a rua.'}
                                     </p>
                                 </div>
                                 <button
@@ -721,7 +726,7 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
                 </section>
 
                 {/* DESPACHAR, e não "concluir": o registro não morre aqui — ele
-                    segue para a caixa de entrada do Chefe de Setor da área, e a
+                    segue para o líder da equipe, que o lê, e a
                     tela seguinte é onde o fiscal escreve o que recomenda. Chamar
                     este botão de "concluir" prometia um fim que não é o dele. */}
                 <button
