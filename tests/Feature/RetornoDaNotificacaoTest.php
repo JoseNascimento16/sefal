@@ -1,6 +1,8 @@
 <?php
 
+use App\Console\Commands\PrepararDemonstracao;
 use App\Models\Area;
+use App\Models\AreaBairro;
 use App\Models\CicloDeFiscalizacao;
 use App\Models\Demanda;
 use App\Models\Equipe;
@@ -12,6 +14,7 @@ use App\Support\CiclosDeFiscalizacao;
 use App\Support\DecisaoDaChefia;
 use App\Support\PrazosDaNotificacao;
 use Database\Seeders\PermissoesSetorSeeder;
+use Database\Seeders\RetornoDaNotificacaoSeeder;
 use Database\Seeders\SetoresSeeder;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Storage;
@@ -247,4 +250,35 @@ it('a Fiscalização de outra equipe é recusada nominalmente, sem gravar nada',
 
     expect(Fiscalizacao::count())->toBe(1)
         ->and(itemDaFilaDoRetorno($outro, 'fsc-'.$ciclo->id))->toBeNull();
+});
+
+it('a demonstração ganha os exemplos do retorno pelos caminhos reais, e só uma vez', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoRetornoDaNotificacao(PrepararDemonstracao::EQUIPE_DO_LIDER);
+    $lider = User::factory()->create(['login' => 'lider-demo', 'admin' => false, 'ativo' => true]);
+    $lider->setores()->attach(Setor::where('slug', 'lider-de-equipe')->firstOrFail());
+    $equipe->forceFill(['lider_id' => $lider->id])->save();
+    $chefe = User::factory()->create(['login' => 'chefe-demo', 'admin' => false, 'ativo' => true]);
+    $chefe->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+    AreaBairro::create(['area_id' => $equipe->area_id, 'bairro' => 'Pituba', 'latitude' => -12.99, 'longitude' => -38.45]);
+
+    foreach ([1, 2] as $n) {
+        Demanda::create([
+            'protocolo' => 'DEM-DEMO-'.$n, 'canal' => Demanda::CANAL_E_SALVADOR, 'entrada' => Demanda::ENTRADA_BALCAO,
+            'recebida_em' => Date::now()->subDays(2), 'prazo_em' => Date::now()->addDays(8), 'assunto' => 'Ocupação de calçada',
+            'relato' => 'Barraca na calçada.', 'logradouro' => 'Rua B', 'bairro' => 'Pituba', 'situacao' => Demanda::RECEBIDA,
+        ]);
+    }
+
+    $this->seed(RetornoDaNotificacaoSeeder::class);
+    $this->seed(RetornoDaNotificacaoSeeder::class);
+
+    $fila = collect($this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json('demandas'));
+
+    expect(Demanda::where('situacao', Demanda::AGUARDANDO_REGULARIZACAO)->count())->toBe(1)
+        ->and(Demanda::where('situacao', Demanda::RETORNO_VENCIDO)->count())->toBe(1)
+        ->and($fila->where('origem', 'ronda')->pluck('situacao')->sort()->values()->all())
+        ->toBe([Demanda::AGUARDANDO_REGULARIZACAO, Demanda::DIRECIONADA_AOS_FISCAIS])
+        ->and(CicloDeFiscalizacao::get()->filter->retornoVencido())->toHaveCount(1)
+        // Idempotente: a segunda rodada não semeou de novo.
+        ->and(Fiscalizacao::count())->toBe(4);
 });
