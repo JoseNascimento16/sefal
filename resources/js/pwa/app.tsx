@@ -17,6 +17,7 @@ import {
     HOJE_BR,
     carregarBairros,
     carregarCampo,
+    carregarOcorrencias,
     horaAgora,
     type Ambulante,
     type DocumentoParaEnvio,
@@ -224,6 +225,8 @@ type Kit = {
     impressos: Impressos;
     /** Os atalhos de recomendação — o servidor decide quais o fiscal vê. */
     recomendacoes: Recomendacao[];
+    /** As ocorrências que o fiscal marca no ponto — catálogo do servidor. */
+    ocorrencias: { id: string; rotulo: string }[];
     ambulantes: (Omit<Ambulante, 'emoji'> & { emoji: string | null })[];
     incidencias: IncidenciaCalor[];
     operacoes: Operacao[];
@@ -352,6 +355,7 @@ export function App() {
             carregarNumeros(kit.numeros);
             carregarImpressos(kit.impressos);
             carregarRecomendacoes(kit.recomendacoes);
+            carregarOcorrencias(kit.ocorrencias);
             carregarCampo(kit);
 
             const levantamentosPendentes = (await levantamentosDe(FISCAL.matricula)).filter(

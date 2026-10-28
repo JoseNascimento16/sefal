@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\PrepararDemonstracao;
 use App\Models\Ambulante;
 use App\Models\Area;
 use App\Models\Demanda;
@@ -15,6 +16,7 @@ use App\Models\User;
 use App\Support\Aplicativo\ReservaDeNumeros;
 use App\Support\Apresentacao\FiscalizacaoParaTela;
 use App\Support\CiclosDeFiscalizacao;
+use Database\Seeders\DenunciasJuntasSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
 use Illuminate\Http\UploadedFile;
@@ -164,6 +166,25 @@ it('a fila diz por quantas denúncias o caso responde, sem levar quem as abriu',
         ->and(collect($agregadas)->pluck('documentoOrigem')->sort()->values()->all())->toBe(['156-222', 'ESL-111'])
         ->and(array_keys($agregadas[0]))->toBe(['protocolo', 'origem', 'documentoOrigem', 'assunto', 'recebidaBr'])
         ->and($agregadas[0]['recebidaBr'])->toMatch('/^\d{2}\/\d{2}\/\d{4}$/');
+});
+
+it('a demonstração ganha um caso com denúncias juntadas na fila do líder, e só uma vez', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo(PrepararDemonstracao::EQUIPE_DO_LIDER);
+    $chefe = User::factory()->create(['login' => 'chefe-demo', 'admin' => false, 'ativo' => true]);
+    $chefe->setores()->attach(Setor::where('slug', 'chefe-de-setor')->firstOrFail());
+    $principal = demandaDoAplicativo($equipe);
+    demandaDoAplicativo($equipe, Demanda::RECEBIDA);
+    demandaDoAplicativo($equipe, Demanda::RECEBIDA);
+
+    $this->seed(DenunciasJuntasSeeder::class);
+    $this->seed(DenunciasJuntasSeeder::class);
+
+    $fila = collect($this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json('demandas'));
+
+    expect($fila->pluck('protocolo')->all())->toBe([$principal->protocolo])
+        ->and($fila->first()['agregadas'])->toHaveCount(2)
+        // Idempotente: a segunda rodada não juntou de novo.
+        ->and(Demanda::whereNotNull('agrupada_em_id')->count())->toBe(2);
 });
 
 it('o kit leva a redação dos impressos, que é do servidor', function () {

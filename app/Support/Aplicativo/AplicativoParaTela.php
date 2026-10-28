@@ -469,6 +469,21 @@ final class AplicativoParaTela
     }
 
     /**
+     * O catálogo de ocorrências que o fiscal marca no ponto (um toque cada),
+     * do único dono dele: `prototipo_denuncias.ocorrencias_do_fiscal`. É o que
+     * o servidor aceita no registro e o que a Retaguarda lê.
+     *
+     * @return list<array{id: string, rotulo: string}>
+     */
+    public static function ocorrencias(): array
+    {
+        return collect((array) config('prototipo_denuncias.ocorrencias_do_fiscal', []))
+            ->map(fn (string $rotulo, string $id) => ['id' => $id, 'rotulo' => $rotulo])
+            ->values()
+            ->all();
+    }
+
+    /**
      * O catálogo de recomendações do fiscal na redação CURTA (a pílula do
      * aparelho), com a marca de quais o aplicativo oferece hoje. Vai inteiro
      * porque o aparelho também lê registros antigos, gravados com atalhos que

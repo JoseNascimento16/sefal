@@ -100,6 +100,7 @@ class AplicativoController extends Controller
             'impressos' => AplicativoParaTela::impressos(),
             // Os atalhos de recomendação: o servidor decide quais o fiscal vê.
             'recomendacoes' => AplicativoParaTela::recomendacoes(),
+            'ocorrencias' => AplicativoParaTela::ocorrencias(),
             'servidorEm' => Date::now()->toIso8601String(),
         ]);
     }

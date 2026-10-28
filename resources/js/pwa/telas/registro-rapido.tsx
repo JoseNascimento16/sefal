@@ -24,7 +24,6 @@ import {
     OCORRENCIAS,
     OPERACOES,
     PRAZOS_RETORNO,
-    REGIOES,
     dataBrDaqui,
     nomeRegiao,
     BAIRROS,
@@ -58,18 +57,12 @@ import { Icone } from '../icones';
 
 type Foto = { id: string; url: string | null; arquivo: Blob | null };
 
-const distancia = (aLat: number, aLng: number, bLat: number, bLng: number): number =>
-    Math.hypot(aLat - bLat, aLng - bLng);
-
 /**
  * Sem serviço de endereços: o bairro do catálogo mais perto do GPS é o palpite.
- * Sem catálogo carregado (primeiro uso sem sinal), cai nas regiões do mapa.
+ * Sem catálogo carregado não há palpite — o fiscal escreve o bairro. Chutar a
+ * partir de uma lista fixa daria um bairro errado longe dela.
  */
-const regiaoMaisProxima = (lat: number, lng: number): string =>
-    bairroMaisProximo(lat, lng)?.id ??
-    REGIOES.reduce((perto, r) =>
-        distancia(lat, lng, r.lat, r.lng) < distancia(lat, lng, perto.lat, perto.lng) ? r : perto,
-    ).id;
+const regiaoMaisProxima = (lat: number, lng: number): string => bairroMaisProximo(lat, lng)?.id ?? '';
 
 export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
     const { registrar } = useApp();
