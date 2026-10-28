@@ -335,18 +335,12 @@ return [
                 .'Exportação do recorte visível em PDF/XLSX/DOCX, com colunas próprias de cada aba. '
                 .'Não há inclusão: registro de fiscalização nasce em rua, no aplicativo do fiscal. O '
                 .'endereço aposentado /retaguarda/retorno-de-campo REDIRECIONA para cá, e a concessão '
-                .'do slug antigo foi migrada por migration (só UPDATE/DELETE de texto, sem DDL). É '
-                .'PROTÓTIPO: não há tabela nem gravação. Os registros que vieram de DENÚNCIA são '
-                .'DERIVADOS do trâmite dela (a mesma vistoria descrita duas vezes divergiria), e as '
-                .'fiscalizações AVULSAS — operação, ronda, pedido de outro órgão — vêm de '
-                .'config/prototipo_registros_de_campo.php; as decisões vivem na sessão de quem '
-                .'navega. Pendências que isto abre: a fiscalização como TABELA (hoje ela só existe '
-                .'dentro do trâmite da denúncia e do arquivo de avulsas), a MODELAGEM DEFINITIVA do '
-                .'vínculo chefia-área, as FOTOS de verdade (o acervo mostra o nome do arquivo e a '
-                .'contagem, porque o protótipo não guarda imagem), o efeito real de "nova vistoria" '
-                .'no aplicativo do fiscal (hoje só muda o estado da fila) e o prazo de leitura que '
-                .'torna um retorno atrasado — a tela já conta os dias parados, mas ninguém definiu a '
-                .'partir de quantos ele cobra.',
+                .'do slug antigo foi migrada por migration (só UPDATE/DELETE de texto, sem DDL). Os registros vêm do banco: cada vistoria '
+                .'gravada pelo aplicativo (com fotos, servidas pelo caminho da tela) entra na '
+                .'Fiscalização a que pertence. A "nova vistoria" devolve o caso à fila do '
+                .'aplicativo com a justificativa à vista da equipe (28/10/2026). Pendência que '
+                .'segue: o prazo de leitura que torna um retorno atrasado — a tela já conta os dias '
+                .'parados, mas ninguém definiu a partir de quantos ele cobra.',
         ],
 
         /*
@@ -869,15 +863,16 @@ return [
                 .'Denúncias — mesmas situações, mesmo protocolo DEN-NNNN e a mesma lista fechada de '
                 .'seis desfechos, que é o que fecha o passo do trâmite na Retaguarda. Denúncia em '
                 .'triagem não chega ao fiscal; denúncia com Notificação em prazo oferece o registro '
-                .'do RETORNO. O registro é DESPACHADO à caixa de entrada do Chefe de Setor da área '
-                .'da equipe, com as CONSIDERAÇÕES FINAIS do fiscal (texto livre e atalhos de '
-                .'recomendação, os MESMOS 11 do catálogo da Retaguarda, aqui na redação CURTA — a '
-                .'chave é o que viaja, e a redação explícita mora do lado de quem decide), e não '
+                .'do RETORNO. O registro é DESPACHADO ao líder da equipe, com as CONSIDERAÇÕES FINAIS '
+                .'do fiscal (texto livre e atalhos de recomendação — o catálogo vem do servidor, na '
+                .'redação CURTA, e hoje só "Encaminhar ao SEAB" é oferecido), e não '
                 .'conclui sem o documento quando o desfecho lavra documento — o '
                 .'impedimento diz o motivo e abre o formulário que falta. Vocabulário novo do '
                 .'domínio: Chefe de Setor (antes "gestor") e Coordenador (antes "administrativo"). '
-                .'Falta a sincronização de verdade (endpoint, banco offline, fila de '
-                .'envio): enquanto isso, os dados são segunda cópia dos do servidor.',
+                .'Desde 28/10/2026 o cartão e o detalhe dizem por quantas denúncias o caso responde '
+                .'(as juntadas pela triagem), a "nova vistoria" do líder chega com a justificativa, e '
+                .'a redação da Notificação Preliminar e do Auto de Apreensão vem do servidor — o '
+                .'aparelho não guarda cópia.',
         ],
 
     ],

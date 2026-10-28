@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { contar } from '../../lib/plural';
 import { irPara, useApp } from '../app';
-import { Assinatura, Marcavel, Selo, Topo, Vazio, classes } from '../componentes';
+import { Assinatura, Marcavel, SemImpressos, Selo, Topo, Vazio, classes } from '../componentes';
 import { acharDemanda } from '../dados-demandas';
 import {
     ATIVIDADES_NP,
@@ -12,6 +12,7 @@ import {
     PRAZOS_SEGUB,
     SEGUB,
     TIPOS_EQUIPAMENTO,
+    impressosCarregados,
     consumirNumero,
     numeroReservado,
     type ItemApreendido,
@@ -26,7 +27,7 @@ import { Icone } from '../icones';
    O protótipo anterior chamava esta etapa de "termo de destruição". O bloco de
    papel entregue pelo cliente (exemplar nº 160051) mostra que não é destruição
    nenhuma: é APREENSÃO com GUARDA. Os bens vão para o Setor de Guarda de Bens
-   — SEGUB, na Av. San Martins, ficam lá por um prazo, e só depois desse prazo
+   — SEGUB, ficam lá por um prazo, e só depois desse prazo
    se decide o destino (devolução mediante regularização, doação, leilão ou, no
    caso de perecível, destruição). Chamar isso de destruição inverte o
    significado do ato e assusta quem assina.
@@ -42,6 +43,14 @@ import { Icone } from '../icones';
 type EstadoAssinatura = 'pendente' | 'assinada' | 'recusada';
 
 export function TelaApreensao({ id }: { id: string | null }) {
+    if (!impressosCarregados()) {
+        return <SemImpressos titulo="Auto de Apreensão" aoVoltar={() => irPara('registros')} />;
+    }
+
+    return <FormularioDaApreensao id={id} />;
+}
+
+function FormularioDaApreensao({ id }: { id: string | null }) {
     const { registros, anexarDocumento } = useApp();
     const registro = registros.find((r) => r.id === id);
     const demanda = acharDemanda(registro?.demandaId ?? null);
@@ -54,7 +63,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
 
     const [artigos, setArtigos] = useState(FUNDAMENTACAO.artigosPadrao);
     const [portaria, setPortaria] = useState(FUNDAMENTACAO.portariaPadrao);
-    const [decretos, setDecretos] = useState<string[]>([FUNDAMENTACAO.decretos[4]]);
+    const [decretos, setDecretos] = useState<string[]>(FUNDAMENTACAO.decretos.slice(-1));
 
     const [itens, setItens] = useState<ItemApreendido[]>([]);
     const [descricao, setDescricao] = useState('');
@@ -124,7 +133,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
             { rotulo: 'Portaria nº', valor: portaria.trim() || '—' },
             { rotulo: 'Guarda', valor: `${SEGUB.nome} — ${SEGUB.endereco}` },
             { rotulo: 'Prazo máximo', valor: `${prazo.rotulo} (${prazo.extenso})` },
-            { rotulo: 'Após o prazo', valor: destinacao },
+            { rotulo: 'Após o prazo', valor: destinacao.texto },
             { rotulo: 'Agente fiscal', valor: `${FISCAL.nome} — matrícula ${FISCAL.matricula}` },
         ],
         listas: [
@@ -134,7 +143,7 @@ export function TelaApreensao({ id }: { id: string | null }) {
             },
         ],
         assinaturas: [{ rotulo: 'Notificado', estado: notificado }],
-        rodape: `${contar(totalDeItens, 'volume recolhido e encaminhado', 'volumes recolhidos e encaminhados')} ao SEGUB — Av. San Martins, s/n`,
+        rodape: `${contar(totalDeItens, 'volume recolhido e encaminhado', 'volumes recolhidos e encaminhados')} ao SEGUB — ${SEGUB.endereco}`,
     });
 
     const lavrar = () => {
@@ -160,8 +169,8 @@ export function TelaApreensao({ id }: { id: string | null }) {
             sancoes: [],
             itens: itens.map((i) => ({ quantidade: i.quantidade, unidade: i.unidade, descricao: i.descricao })),
             guarda_prazo: prazo.id,
-            /* A chave do catálogo do servidor, na ordem da lista da tela. */
-            guarda_destinacao: ['devolucao', 'doacao', 'leilao', 'destruicao'][DESTINACOES_SEGUB.indexOf(destinacao)] ?? null,
+            /* A chave do catálogo do servidor — a lista veio dele. */
+            guarda_destinacao: destinacao.id,
             dados: {
                 equipamento: equipamento.trim(),
                 atividade: atividade.trim(),
@@ -489,15 +498,15 @@ export function TelaApreensao({ id }: { id: string | null }) {
                         </p>
                         <div className="pw-marcaveis">
                             {DESTINACOES_SEGUB.map((d) => (
-                                <Marcavel key={d} marcado={destinacao === d} aoAlternar={() => setDestinacao(d)}>
-                                    {d}
+                                <Marcavel key={d.id} marcado={destinacao.id === d.id} aoAlternar={() => setDestinacao(d)}>
+                                    {d.texto}
                                 </Marcavel>
                             ))}
                         </div>
 
                         <p className="pw-fraco" style={{ margin: '12px 0 0', fontSize: 13 }}>
                             Os bens apreendidos serão encaminhados ao {SEGUB.nome}, permanecendo pelo prazo
-                            máximo de {prazo.extenso}, quando serão {destinacao}, de acordo com a
+                            máximo de {prazo.extenso}, quando serão {destinacao.texto}, de acordo com a
                             Legislação Municipal.
                         </p>
                     </div>

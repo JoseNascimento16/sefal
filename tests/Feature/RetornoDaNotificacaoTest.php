@@ -236,6 +236,32 @@ it('"mandar a equipe voltar" numa ronda põe a Fiscalização na fila do aplicat
         ->and(itemDaFilaDoRetorno($fiscal, 'fsc-'.$ciclo->id))->toBeNull();
 });
 
+it('"mandar a equipe voltar" numa denúncia leva ao aparelho o que o líder escreveu', function () {
+    // PEND-014: a denúncia volta à fila COM a justificativa — é o que a equipe
+    // vai procurar no ponto. Feita a nova vistoria, o pedido sai do cartão.
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoRetornoDaNotificacao();
+    $demanda = demandaDoRetornoDaNotificacao($equipe);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), envioDoRetornoDaNotificacao(['demanda_id' => $demanda->id]))->assertCreated();
+
+    expect(itemDaFilaDoRetorno($fiscal, 'den-'.$demanda->id))->toHaveKey('voltaDoLider', null);
+
+    (new DecisaoDaChefia(User::factory()->create()))
+        ->pedirNovaVistoria([Fiscalizacao::firstOrFail()->id], 'Voltar depois das 16h: o ambulante monta à tarde.');
+
+    $item = itemDaFilaDoRetorno($fiscal, 'den-'.$demanda->id);
+
+    expect($item['situacao'])->toBe(Demanda::DIRECIONADA_AOS_FISCAIS)
+        ->and($item['voltaDoLider']['justificativa'])->toBe('Voltar depois das 16h: o ambulante monta à tarde.')
+        ->and($item['voltaDoLider']['quandoBr'])->toMatch('/^\d{2}\/\d{2}\/\d{4}$/');
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), envioDoRetornoDaNotificacao([
+        'demanda_id' => $demanda->id, 'desfecho' => Fiscalizacao::NADA_ENCONTRADO,
+    ]))->assertCreated();
+
+    expect(itemDaFilaDoRetorno($fiscal, 'den-'.$demanda->id)['voltaDoLider'] ?? null)->toBeNull();
+});
+
 it('a Fiscalização de outra equipe é recusada nominalmente, sem gravar nada', function () {
     ['fiscal' => $dono] = campoDoRetornoDaNotificacao('R1');
     ['fiscal' => $outro] = campoDoRetornoDaNotificacao('R2');

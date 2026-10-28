@@ -19,13 +19,12 @@
 | denúncias faria a próxima tela que precisasse delas copiá-las — e um dia só uma
 | das cópias ganharia a caixa nova do bloco novo.
 |
-| ⚠️ ATENÇÃO — DUAS CÓPIAS DESTE VOCABULÁRIO EXISTEM HOJE, e isso é dívida
-| conhecida: o protótipo do aplicativo do fiscal (branch `feature/pwa-prototipo`,
-| `resources/js/pwa/dados-documentos.ts`) tem as MESMAS listas, porque lá o
-| fiscal preenche o documento sem servidor no meio. Quando os dois protótipos se
-| encontrarem, **uma** delas tem de morrer, e a que fica é esta: o servidor serve
-| os dois lados, e a redação de um formulário legal não pode divergir entre a
-| Retaguarda e o aplicativo. Registrado como pendência no doc de regra.
+| ── Um dono só, para os dois lados ──────────────────────────────────────────
+|
+| O aplicativo do fiscal NÃO tem cópia destas listas: recebe-as no kit
+| (`AplicativoParaTela::impressos()`) desde 28/10/2026. A redação de um
+| formulário legal não pode divergir entre a Retaguarda e o papel que o
+| ambulante recebe — corrigir aqui corrige nos dois.
 |
 | ── Fidelidade ao papel ──────────────────────────────────────────────────────
 |

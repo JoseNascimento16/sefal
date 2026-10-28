@@ -291,8 +291,8 @@ return [
      * Os atalhos que o aplicativo OFERECE e o servidor ACEITA em registro novo
      * (dono, 28/10/2026: "só SEAB por enquanto"). O catálogo acima continua
      * inteiro porque registros antigos guardam as outras chaves, e a Retaguarda
-     * precisa escrevê-las por extenso. O espelho do aplicativo é
-     * `RECOMENDACOES_OFERECIDAS`, em `resources/js/pwa/dados-demandas.ts`.
+     * precisa escrevê-las por extenso. O aplicativo recebe o catálogo e esta
+     * lista no kit (`AplicativoParaTela::recomendacoes()`); não há cópia nele.
      */
     'recomendacoes_oferecidas' => ['seab'],
 

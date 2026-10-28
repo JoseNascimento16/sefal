@@ -395,6 +395,29 @@ voltar), se a equipe não registrou o retorno, o caso vira **Retorno vencido**: 
 no trâmite, a Fiscalização conta como "a decidir" para o líder e mostra o aviso do atraso, e o retorno
 sobe ao topo da fila do aplicativo. O retorno continua possível. A conferência roda de hora em hora.
 
+### RN-31 — O caso mostra por quantas denúncias responde
+
+Quando a triagem junta denúncias que relatam o mesmo fato, só o registro principal vai à fila; as
+juntadas vão com ele. O cartão da fila e o cabeçalho do detalhe mostram o selo **"+N denúncias"**, e o
+detalhe lista cada uma (protocolo, canal, número de origem, assunto e data de recebimento), dizendo
+que o que a equipe registrar vale para todas. Quem abriu as juntadas não vai ao aparelho: não muda o
+trabalho em campo.
+
+### RN-32 — "Nova vistoria" do líder chega ao aparelho com a justificativa
+
+Quando o líder lê o registro e manda a equipe voltar, a denúncia volta à fila e o cartão mostra
+**"O líder pediu nova vistoria"** com o que ele escreveu; o detalhe abre com **"Por que a equipe volta
+ao ponto"**. Feita a nova vistoria, o pedido sai do cartão. Na ronda, a justificativa já é o texto
+do item (RN-29).
+
+### RN-33 — A redação dos impressos e os atalhos de recomendação vêm do servidor
+
+O texto da Notificação Preliminar e do Auto de Apreensão (motivos, penalidades, prazos,
+fundamentação legal, SEGUB, prazos de guarda e destinações) e o catálogo de atalhos de recomendação
+chegam ao aparelho junto com a fila. O aplicativo não guarda cópia: o que o fiscal assinala, o que
+sai no papel e o que a Retaguarda lê são o mesmo texto. Se esse conteúdo não chegou, a tela do
+impresso diz o porquê em vez de abrir o formulário em branco.
+
 ## Como demonstrar
 
 O aplicativo abre em `/app` e entra com a conta da Retaguarda de um fiscal que esteja numa equipe
@@ -430,9 +453,6 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 - **Impressão e ditado no aparelho.** A via sai pelo diálogo de impressão do Android e chega à
   térmica pelo serviço de impressão pareado; o ditado precisa de sinal e da permissão do microfone.
   Os dois foram verificados só no navegador, sem aparelho real.
-- **Redação dos impressos duplicada** (`dados-documentos.ts` ↔ `config/prototipo_documentos_campo.php`).
-  Conferidas em 03/09/2026: motivos, penalidades, prazos, fundamentação, SEGUB e destinações estão
-  iguais. A que fica é a do servidor.
 
 ---
 
@@ -440,6 +460,7 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 28/10/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, impressos, conclusão) | O cartão e o detalhe mostram por quantas denúncias o caso responde e listam as juntadas (RN-31); a "nova vistoria" do líder chega ao aparelho com a justificativa (RN-32); a redação dos impressos e o catálogo de atalhos de recomendação passam a vir do servidor, sem cópia no aparelho (RN-33). | PEND-014, PEND-016 e PEND-022; fim da redação duplicada dos impressos. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (conclusão do registro, demonstração) | Os atalhos de recomendação oferecidos ficam só "Encaminhar ao SEAB"; o servidor recusa os demais em registro novo, e o catálogo inteiro segue para ler os registros antigos. A demonstração ganha exemplos do retorno da notificação (em prazo, vencido e ronda na fila). | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (mapa, início) | O pino de "retorno vencido" e o contador do Início contam só a Notificação que ainda espera o retorno: feito o retorno, o ambulante deixa de aparecer como vencido. | Coerência com o retorno da notificação (RN-30). |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (fila, registro, retorno) e Retaguarda (Fiscalizações) | A Notificação Preliminar deixa o caso **aguardando regularização** sem passar pelo líder; o retorno vai ao líder (RN-06, RN-27); prazo vencido sem retorno vira **Retorno vencido**, na mesa do líder (RN-30); a ronda volta à fila pela notificação ou pela volta determinada pelo líder, e o registro entra na mesma Fiscalização (RN-03, RN-29); "Regularizado no local" diz que o ambulante desfez a montagem e saiu. | Decisões do dono, 28/10/2026. |

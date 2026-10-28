@@ -142,6 +142,48 @@ it('a fila traz só as demandas na mão da equipe do fiscal', function () {
         ->and($kit['numeros']['aa'])->toHaveCount(ReservaDeNumeros::ESTOQUE);
 });
 
+it('a fila diz por quantas denúncias o caso responde, sem levar quem as abriu', function () {
+    // PEND-022: um ponto que responde por três cidadãos não é o mesmo trabalho
+    // que um que responde por um. As agregadas não entram na fila — vão junto.
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo();
+    $principal = demandaDoAplicativo($equipe);
+    $chefe = User::factory()->create();
+
+    foreach (['ESL-111', '156-222'] as $numero) {
+        $junta = demandaDoAplicativo($equipe, Demanda::RECEBIDA);
+        $junta->update(['numero_origem' => $numero, 'requerente' => 'Maria da Silva', 'anonima' => false]);
+        $junta->agruparEm($principal, $chefe, 'Mesmo ponto, mesmo fato.');
+    }
+
+    $fila = collect($this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->assertOk()->json('demandas'));
+
+    expect($fila->pluck('protocolo')->all())->toBe([$principal->protocolo]);
+
+    $agregadas = $fila->first()['agregadas'];
+    expect($agregadas)->toHaveCount(2)
+        ->and(collect($agregadas)->pluck('documentoOrigem')->sort()->values()->all())->toBe(['156-222', 'ESL-111'])
+        ->and(array_keys($agregadas[0]))->toBe(['protocolo', 'origem', 'documentoOrigem', 'assunto', 'recebidaBr'])
+        ->and($agregadas[0]['recebidaBr'])->toMatch('/^\d{2}\/\d{2}\/\d{4}$/');
+});
+
+it('o kit leva a redação dos impressos, que é do servidor', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+    config()->set('prototipo_documentos_campo.motivos_np.dam.texto', 'Texto corrigido no servidor');
+
+    $impressos = $this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->assertOk()->json('impressos');
+
+    expect(collect($impressos['motivosNp'])->firstWhere('id', 'dam')['texto'])->toBe('Texto corrigido no servidor')
+        ->and(collect($impressos['motivosNp'])->firstWhere('id', 'comparecer')['complemento'])->toBe('Qual setor')
+        ->and(collect($impressos['motivosNp'])->pluck('id')->all())->toBe(array_keys(config('prototipo_documentos_campo.motivos_np')))
+        ->and(collect($impressos['sancoesNp'])->pluck('id')->all())->toBe(array_keys(config('prototipo_documentos_campo.sancoes_np')))
+        ->and(collect($impressos['prazosNp'])->firstWhere('id', '72h'))->toBe(['id' => '72h', 'rotulo' => '72 horas', 'dias' => 3])
+        ->and($impressos['fundamentacao']['decretos'])->toHaveCount(5)
+        ->and($impressos['fundamentacao']['portariaPadrao'])->toBe(config('prototipo_documentos_campo.fundamentacao.portaria_padrao'))
+        ->and($impressos['segub'])->toBe(config('prototipo_documentos_campo.segub'))
+        ->and(collect($impressos['prazosGuarda'])->pluck('id')->all())->toBe(['30', '60', '90'])
+        ->and(collect($impressos['destinacoesGuarda'])->pluck('id')->all())->toBe(['devolucao', 'doacao', 'leilao', 'destruicao']);
+});
+
 // ── Registro ─────────────────────────────────────────────────────────────────
 
 it('o registro despachado vira vistoria aguardando o líder, com fotos, e move a demanda', function () {
