@@ -288,6 +288,15 @@ return [
     ],
 
     /*
+     * Os atalhos que o aplicativo OFERECE e o servidor ACEITA em registro novo
+     * (dono, 28/10/2026: "só SEAB por enquanto"). O catálogo acima continua
+     * inteiro porque registros antigos guardam as outras chaves, e a Retaguarda
+     * precisa escrevê-las por extenso. O espelho do aplicativo é
+     * `RECOMENDACOES_OFERECIDAS`, em `resources/js/pwa/dados-demandas.ts`.
+     */
+    'recomendacoes_oferecidas' => ['seab'],
+
+    /*
      * As OCORRÊNCIAS que o fiscal marca no registro rápido — chips de um toque
      * (aplicativo, 13/10/2026). Viajam como CHAVE, como as recomendações, e a
      * Retaguarda as escreve por extenso com este catálogo. O espelho do
