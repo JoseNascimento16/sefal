@@ -297,8 +297,11 @@ export let AMBULANTES: Ambulante[] = [];
 /** Os que têm prazo de retorno vencido — o mais antigo primeiro. */
 export let RETORNOS_PENDENTES: Ambulante[] = [];
 
-/** As vistorias recentes com GPS — a matéria do mapa de calor. */
+/** As vistorias recentes com GPS em que havia irregularidade — uma camada do calor. */
 export let INCIDENCIAS: IncidenciaCalor[] = [];
+
+/** Os ambulantes que o censo achou, com GPS — a outra camada do calor (presença). */
+export let PRESENCAS: IncidenciaCalor[] = [];
 
 /** As operações abertas que chegam ao fiscal. */
 export let OPERACOES: Operacao[] = [];
@@ -306,6 +309,7 @@ export let OPERACOES: Operacao[] = [];
 export function carregarCampo(dados: {
     ambulantes: (Omit<Ambulante, 'emoji'> & { emoji: string | null })[];
     incidencias: IncidenciaCalor[];
+    presencas?: IncidenciaCalor[];
     operacoes: Operacao[];
 }): void {
     AMBULANTES = dados.ambulantes.map((a) => ({ ...a, emoji: a.emoji ?? emojiDaAtividade(a.atividade) }));
@@ -313,6 +317,7 @@ export function carregarCampo(dados: {
         (a, b) => (b.retornoHaDias ?? 0) - (a.retornoHaDias ?? 0),
     );
     INCIDENCIAS = dados.incidencias;
+    PRESENCAS = dados.presencas ?? [];
     OPERACOES = dados.operacoes;
 }
 
@@ -338,9 +343,19 @@ export type ResumoRegiao = {
     fatia: number;
 };
 
+/**
+ * As duas camadas do calor (dono, 28/10/2026): onde houve IRREGULARIDADE nas
+ * vistorias e onde o censo achou ambulantes (PRESENÇA). Ficam separadas porque
+ * medem coisas diferentes — somadas, "muita gente" pareceria "muito problema".
+ */
+export type CamadaDoCalor = 'irregularidade' | 'presenca';
+
+const pontosDaCamada = (camada: CamadaDoCalor): IncidenciaCalor[] =>
+    camada === 'presenca' ? PRESENCAS : INCIDENCIAS;
+
 /** Ranking das regiões dentro da janela escolhida (7, 30 ou 90 dias). */
-export const regioesMaisQuentes = (dias: number): ResumoRegiao[] => {
-    const janela = INCIDENCIAS.filter((p) => p.haDias <= dias);
+export const regioesMaisQuentes = (dias: number, camada: CamadaDoCalor = 'irregularidade'): ResumoRegiao[] => {
+    const janela = pontosDaCamada(camada).filter((p) => p.haDias <= dias);
     const total = janela.length || 1;
     const contagem = new Map<string, number>();
 
@@ -370,8 +385,10 @@ export const regioesMaisQuentes = (dias: number): ResumoRegiao[] => {
         .slice(0, 5);
 };
 
-export const pontosDoCalor = (dias: number): PontoCalor[] =>
-    INCIDENCIAS.filter((p) => p.haDias <= dias).map((p) => [p.lat, p.lng, p.peso]);
+export const pontosDoCalor = (dias: number, camada: CamadaDoCalor = 'irregularidade'): PontoCalor[] =>
+    pontosDaCamada(camada)
+        .filter((p) => p.haDias <= dias)
+        .map((p) => [p.lat, p.lng, p.peso]);
 
 /* --------------------------------- Diversos --------------------------------- */
 

@@ -285,13 +285,17 @@ Os pinos são os ambulantes com posição registrada, cada um no último ponto c
 5 idas da fiscalização no histórico e o retorno vencido calculado pela mesma regra da Retaguarda
 (`MapaDaCidade::retornoVencidoHaDias`). O registro feito **a partir de um pino** leva o ambulante
 identificado (`ambulante_id`) e **move o pino** para onde o fiscal esteve — trocar o nome no
-registro desfaz a identificação. O ícone do pino sai da categoria da atividade.
+registro desfaz a identificação. O ícone do pino sai da categoria da atividade. O **censo** também
+move o pino (RN-19): vale o ponto mais recente, da fiscalização ou do censo.
 
-### RN-18 — O calor é das vistorias com irregularidade; as operações são as da equipe
+### RN-18 — O calor tem duas camadas, irregularidade e presença; as operações são as da equipe
 
-O mapa de calor recebe as vistorias dos últimos 90 dias com GPS em que havia **irregularidade** no
-ponto: só "Nada encontrado no local" fica de fora ("Regularizado no local" teve ambulante irregular,
-resolvido na hora). A tela recorta 7, 30 ou 90 dias. As operações do início são as **abertas** que
+A camada **Irregularidade** recebe as vistorias dos últimos 90 dias com GPS em que havia
+irregularidade no ponto: só "Nada encontrado no local" fica de fora ("Regularizado no local" teve
+ambulante irregular, resolvido na hora). A camada **Presença (censo)** recebe os ambulantes que o
+censo achou nos últimos 90 dias, com GPS (RN-19). As duas ficam separadas, escolhidas por um
+seletor: somadas, "muita gente" pareceria "muito problema"; lado a lado, mostram onde há muitos
+ambulantes e pouca fiscalização. A tela recorta 7, 30 ou 90 dias. As operações do início são as **abertas** que
 chegam ao fiscal — as das equipes dele e as em que ele foi posto à parte.
 
 ### RN-19 — O levantamento de ambulantes é gravado no servidor
@@ -301,8 +305,14 @@ concluído no botão **Concluir levantamento** e vai ao servidor com a foto do e
 GPS de cada linha (`levantamentos` / `levantamento_linhas`, protocolo `LEV`). As **equipes** do
 cabeçalho são as do cadastro, e os **encarregados** que assinam saem delas no servidor — o aparelho
 só mostra. Sem sinal, o levantamento fica na fila do aparelho e sobe com a sincronização; recusado
-pelo servidor, volta à tela com o motivo. O levantamento **não** entra no mapa de calor (é censo, não
-incidência). Os atalhos "Preencher exemplo" e "Simular foto" do protótipo saíram.
+pelo servidor, volta à tela com o motivo. O levantamento não entra na camada de irregularidade do calor (é
+censo, não incidência). Os atalhos "Preencher exemplo" e "Simular foto" do protótipo saíram.
+
+**O censo vira estatística** (decisão do dono, 28/10/2026): a linha que casa, **pelo documento**, com
+um ambulante da base (que é do SGCI) e tem GPS deixa um ponto na trilha dele, e o pino passa a mostrar
+onde o censo o achou, nos dois mapas, até a próxima fiscalização ou o próximo censo. Todas as linhas
+com GPS entram na camada **Presença (censo)** do mapa de calor (RN-18). A linha sem documento, sem GPS
+ou fora da base fica só na estatística.
 
 ### RN-20 — Encerrar o plantão avisa o que ficou no aparelho
 
@@ -454,11 +464,10 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 ## Pendências
 
 - **Ficha do SGCI na demanda.** Não há integração com o SGCI; a ficha do permissionário não aparece.
-- **O censo vira estatística** (decisão do dono, 28/10/2026). O levantamento de rua passa a: mover
-  para o ponto do censo o pino do ambulante não fixo que está na base do SGCI, quando o censo for mais
-  recente que a última fiscalização; alimentar o mapa de calor; e entrar na avaliação por IA que
-  sugere operações na Retaguarda (muitos ambulantes no censo e pouca fiscalização ganham pontos de
-  atenção). Hoje o levantamento só fica para consulta e exportação (RN-19).
+- **Sugestão de operações por IA** (decisão do dono, 28/10/2026). O censo e as fiscalizações entram
+  numa avaliação por IA na Retaguarda que aponta regiões que pedem operação (muitos ambulantes no
+  censo e pouca fiscalização ganham pontos de atenção). A localização e o calor já usam o censo
+  (RN-18, RN-19).
 - **O SEFAL não cadastra ambulante.** A base é do SGCI e chega por integração (hoje, pelos processos
   do e-Salvador); o aplicativo só vincula o registro a quem já está nela.
 - **Abrir sem sinal.** Sem versão instalável (decisão do dono, 13/10/2026), o aplicativo precisa de
@@ -473,6 +482,7 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 28/10/2026 | José Nascimento | Aplicativo do Fiscal (levantamento, mapa, calor) | O censo vira estatística: a linha que casa pelo documento com um ambulante da base move o pino dele (RN-17, RN-19), e as linhas com GPS formam a camada "Presença (censo)" do calor, separada da de irregularidade (RN-18). A demonstração ganha um censo de rua. | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (levantamento) | Registradas as decisões: o censo vira estatística (localização, calor, sugestão de operações por IA) e o SEFAL não cadastra ambulante. | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, mapa de calor, demonstração) | O catálogo de ocorrências passa a vir do servidor (RN-33); saem as "regiões" fixas do protótipo, e sem catálogo de bairros o fiscal escreve o bairro em vez de receber um palpite de uma lista fixa; o mapa de calor abre na área da equipe; a demonstração ganha um caso com denúncias juntadas. | Fim das sobras do protótipo no aplicativo. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, impressos, conclusão) | O cartão e o detalhe mostram por quantas denúncias o caso responde e listam as juntadas (RN-31); a "nova vistoria" do líder chega ao aparelho com a justificativa (RN-32); a redação dos impressos e o catálogo de atalhos de recomendação passam a vir do servidor, sem cópia no aparelho (RN-33). | PEND-014, PEND-016 e PEND-022; fim da redação duplicada dos impressos. |

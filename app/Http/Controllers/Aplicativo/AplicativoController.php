@@ -92,6 +92,8 @@ class AplicativoController extends Controller
             'bairros' => AplicativoParaTela::bairros(),
             'ambulantes' => AplicativoParaTela::ambulantes(),
             'incidencias' => AplicativoParaTela::incidencias(),
+            // O censo no calor, em camada própria de presença (dono, 28/10/2026).
+            'presencas' => AplicativoParaTela::presencas(),
             'operacoes' => AplicativoParaTela::operacoes($campo),
             'equipesDaCidade' => AplicativoParaTela::equipesDaCidade(),
             'levantamentos' => AplicativoParaTela::levantamentos($campo),

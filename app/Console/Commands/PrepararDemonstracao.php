@@ -7,6 +7,7 @@ use App\Models\Equipe;
 use App\Models\Fiscalizacao;
 use App\Models\Setor;
 use App\Models\User;
+use Database\Seeders\CensoDaRuaSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemonstracaoSeeder;
 use Database\Seeders\DenunciasJuntasSeeder;
@@ -259,6 +260,12 @@ class PrepararDemonstracao extends Command
         // Depois do retorno: ele usa as denúncias recebidas sem Fiscalização.
         $this->components->task('Denúncias juntadas num caso', function () {
             Artisan::call('db:seed', ['--class' => DenunciasJuntasSeeder::class, '--force' => true]);
+
+            return true;
+        });
+
+        $this->components->task('Censo de uma rua', function () {
+            Artisan::call('db:seed', ['--class' => CensoDaRuaSeeder::class, '--force' => true]);
 
             return true;
         });
