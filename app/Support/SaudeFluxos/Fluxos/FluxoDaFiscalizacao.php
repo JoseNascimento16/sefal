@@ -12,8 +12,8 @@ use App\Support\SaudeFluxos\Fluxo;
  *
  * Cada quadradinho diz se o trecho é ATENDIDO hoje ou só PREVISTO (cinza pontilhado). Previsto, aqui,
  * é o que tem lugar no fluxo mas o sistema ainda não percorre: a chegada das demandas pelas APIs do
- * e-Salvador, do e-Protocolo, do Fala Salvador e do SGCI (licenças), e o envio da resposta pela API do
- * e-Salvador.
+ * e-Salvador, do e-Protocolo, do Fala Salvador e do SGCI (licenças), e o envio da resposta pelas APIs
+ * desses mesmos quatro.
  *
  * FONTE ÚNICA deste conhecimento: alterou o fluxo? Atualize ESTE arquivo no mesmo commit — a tela, o
  * texto exportado e o passo a passo saem daqui.
@@ -147,6 +147,15 @@ final class FluxoDaFiscalizacao implements Fluxo
                 ['id' => 'envio-api', 'rotulo' => "Resposta pela API\ndo e-Salvador", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 5, 'lin' => 16, 'situacao' => $p,
                     'tela' => 'Integração com a API do e-Salvador',
                     'descricao' => 'Enviar a resposta, ou a abertura do processo, direto pela API do e-Salvador. Desligado: hoje o registro é local e o ato é feito à mão no sistema de origem.'],
+                ['id' => 'envio-api-eprotocolo', 'rotulo' => "Resposta pela API\ndo e-Protocolo", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 6, 'lin' => 16, 'situacao' => $p,
+                    'tela' => 'Integração com o e-Protocolo',
+                    'descricao' => 'Prevista: devolver a resposta ao processo do e-Protocolo direto pela integração. Hoje o Chefe registra a resposta no sistema e faz o ato à mão no e-Protocolo.'],
+                ['id' => 'envio-api-fala', 'rotulo' => "Resposta pela API\ndo Fala Salvador (156)", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 7, 'lin' => 16, 'situacao' => $p,
+                    'tela' => 'Integração com o Fala Salvador',
+                    'descricao' => 'Prevista: devolver a resposta à ocorrência do 156 direto pela integração. Hoje o Chefe registra a resposta no sistema e faz o ato à mão no Fala Salvador.'],
+                ['id' => 'envio-api-sgci', 'rotulo' => "Resposta pela API\ndo SGCI · licenças", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 6, 'lin' => 15, 'situacao' => $p,
+                    'tela' => 'Integração com o SGCI',
+                    'descricao' => 'Prevista: devolver ao SGCI o resultado da vistoria do pedido de licença direto pela integração. Hoje o resultado é registrado no sistema e levado à mão ao SGCI.'],
                 ['id' => 'fim-devolvida', 'rotulo' => "Devolvida\nao remetente", 'tipo' => 'fim', 'setor' => 'Chefe de Setor', 'col' => 0, 'lin' => 17, 'situacao' => $a,
                     'tela' => 'Caixa de Entrada › Devolver ou arquivar',
                     'descricao' => 'Na triagem, antes de ir à rua: retirada do fluxo com motivo, justificativa e destino da devolução. Fica registrada; nada é enviado ao canal.'],
@@ -217,6 +226,12 @@ final class FluxoDaFiscalizacao implements Fluxo
                 ['de' => 'chefe-delibera', 'para' => 'encaminhada-lider', 'rotulo' => 'encaminhar de novo'],
                 ['de' => 'chefe-delibera', 'para' => 'envio-api', 'rotulo' => 'pela API'],
                 ['de' => 'envio-api', 'para' => 'fim-respondida'],
+                ['de' => 'chefe-delibera', 'para' => 'envio-api-eprotocolo'],
+                ['de' => 'envio-api-eprotocolo', 'para' => 'fim-respondida'],
+                ['de' => 'chefe-delibera', 'para' => 'envio-api-fala'],
+                ['de' => 'envio-api-fala', 'para' => 'fim-respondida'],
+                ['de' => 'chefe-delibera', 'para' => 'envio-api-sgci'],
+                ['de' => 'envio-api-sgci', 'para' => 'fim-respondida'],
                 ['de' => 'entrada-levantamento', 'para' => 'fim-levantamentos', 'rotulo' => 'concluir levantamento'],
             ],
             'etapas' => [
@@ -249,9 +264,9 @@ final class FluxoDaFiscalizacao implements Fluxo
                     'O registro entra na Fiscalização **aguardando a leitura do líder** (salvo a Notificação Preliminar, que espera o retorno); no aplicativo, a demanda aparece "Com o líder".',
                     'O líder **manda a equipe voltar** (nova vistoria — no retorno com a situação mantida, para a próxima medida, como o Auto de Apreensão) ou **encaminha ao Chefe de Setor**, com justificativa. Na **ronda**, a volta entra na fila do aplicativo. As demandas agregadas recebem o efeito do desfecho.',
                 ]],
-                ['setor' => 'Chefe de Setor', 'titulo' => 'Deliberação e destino', 'nos' => ['chefe-delibera', 'envio-api', 'fim-respondida', 'fim-processo', 'fim-sem-processo', 'fim-ronda-arquivada'], 'itens' => [
+                ['setor' => 'Chefe de Setor', 'titulo' => 'Deliberação e destino', 'nos' => ['chefe-delibera', 'envio-api', 'envio-api-eprotocolo', 'envio-api-fala', 'envio-api-sgci', 'fim-respondida', 'fim-processo', 'fim-sem-processo', 'fim-ronda-arquivada'], 'itens' => [
                     'No detalhe da demanda, o Chefe **responde à origem**: registra a resposta (e-Salvador, nova licença, Fala Salvador, e-Protocolo) ou, na avulsa, registra a **abertura do processo** ou **encerra sem processo**.',
-                    'A demanda fica **"Concluída"** e as Fiscalizações dela vão para o **Arquivo**. O ato no sistema de origem é feito à mão — o envio **pela API do e-Salvador** está previsto.',
+                    'A demanda fica **"Concluída"** e as Fiscalizações dela vão para o **Arquivo**. O ato no sistema de origem é feito à mão — está previsto o envio da resposta **pelas APIs** do e-Salvador, do e-Protocolo, do Fala Salvador e do SGCI (licenças).',
                     'O Chefe também pode **encaminhar de novo** à equipe (abre outra Fiscalização). **Devolver e arquivar não cabem** depois da fiscalização: são saídas da triagem.',
                     'A Fiscalização da **ronda**, sem demanda, é encerrada com **"Arquivar"**.',
                 ]],
