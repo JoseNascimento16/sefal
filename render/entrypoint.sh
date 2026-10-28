@@ -33,5 +33,9 @@ php artisan migrate --force || echo "AVISO: 'migrate' falhou no boot — ver err
 # vazia e indistinguivel de uma funcionalidade quebrada.
 php artisan sefal:preparar-demonstracao --so-estas-contas || echo "AVISO: preparo da demonstracao falhou — ver erro acima nos Logs."
 
+# A demonstracao nao tem agendador: o prazo da Notificacao Preliminar que passou sem
+# retorno vira "Retorno vencido" aqui, a cada boot (em homolog/producao e de hora em hora).
+php artisan sefal:vencer-prazos-da-notificacao || echo "AVISO: conferencia dos prazos da notificacao falhou — ver erro acima nos Logs."
+
 echo "SEFAL demo iniciando em 0.0.0.0:${PORT:-10000} (APP_ENV=${APP_ENV:-?}, DB_DRIVER=${DB_DRIVER:-?})"
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"
