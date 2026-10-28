@@ -9,9 +9,11 @@ import {
     podeVistoriar,
     prazoDoRetornoEmPalavras,
     prazoEmPalavras,
+    rotuloDasJuntas,
     rotuloDoRequerente,
     tomDoPrazo,
     type Demanda,
+    type DenunciaJunta,
     type DocumentoDeCampo,
     type FichaSgci,
     type RegistroDeCampo,
@@ -55,6 +57,7 @@ export function TelaDemanda({ id }: { id: string | null }) {
     const origem = ORIGENS[demanda.origem];
     const atendimentos = registros.filter((r) => r.demandaId === demanda.id);
     const emRetorno = podeRegistrarRetorno(demanda);
+    const juntas = rotuloDasJuntas(demanda);
 
     return (
         <div className="pw-tela">
@@ -75,6 +78,12 @@ export function TelaDemanda({ id }: { id: string | null }) {
                         <Icone nome="relogio" tamanho={13} />
                         {prazoEmPalavras(demanda.prazoDias)} · {demanda.prazoBr}
                     </Selo>
+                    {juntas && (
+                        <Selo tom="alerta">
+                            <Icone nome="pessoa" tamanho={13} />
+                            {juntas}
+                        </Selo>
+                    )}
                 </div>
 
                 {/* A situação sozinha é uma palavra colorida. O que o fiscal
@@ -83,6 +92,21 @@ export function TelaDemanda({ id }: { id: string | null }) {
                 <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13.5 }}>
                     {SITUACOES_EXPLICADAS[demanda.situacao]}
                 </p>
+
+                {demanda.voltaDoLider && podeVistoriar(demanda) && (
+                    <>
+                        <p className="pw-titulo-secao">Por que a equipe volta ao ponto</p>
+                        <div className="pw-card">
+                            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55 }}>
+                                {demanda.voltaDoLider.justificativa}
+                            </p>
+                            <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13 }}>
+                                <Icone nome="pessoa" tamanho={13} /> O líder leu o registro anterior e pediu nova
+                                vistoria em {demanda.voltaDoLider.quandoBr}.
+                            </p>
+                        </div>
+                    </>
+                )}
 
                 <p className="pw-titulo-secao">O que a ouvidoria recebeu</p>
 
@@ -99,6 +123,10 @@ export function TelaDemanda({ id }: { id: string | null }) {
                         {origem.explica}
                     </p>
                 </div>
+
+                {demanda.agregadas.length > 0 && (
+                    <DenunciasJuntas protocolo={demanda.protocolo} agregadas={demanda.agregadas} />
+                )}
 
                 <p className="pw-titulo-secao">Onde</p>
 
@@ -230,6 +258,45 @@ function ComoChegou({ demanda }: { demanda: Demanda }) {
                         </span>
                     </dd>
                 </dl>
+            </div>
+        </>
+    );
+}
+
+/**
+ * As denúncias que a triagem juntou a esta por relatarem o mesmo fato.
+ *
+ * O fiscal vai UMA vez ao ponto, e o que ele registrar responde por todas — é
+ * isso que a tela precisa dizer, junto do número: um caso que responde por
+ * vários cidadãos pesa mais. Quem as abriu não vem: não muda o trabalho em campo.
+ */
+function DenunciasJuntas({ protocolo, agregadas }: { protocolo: string; agregadas: DenunciaJunta[] }) {
+    const total = agregadas.length + 1;
+
+    return (
+        <>
+            <p className="pw-titulo-secao">Denúncias juntas a esta</p>
+
+            <div className="pw-card">
+                <p style={{ margin: '0 0 10px', fontSize: 14.5 }}>
+                    <span className="pw-forte">Este caso responde por {total} denúncias</span> sobre o mesmo
+                    fato. O que a equipe registrar aqui vale para todas.
+                </p>
+                <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+                    <li className="pw-fraco" style={{ fontSize: 13 }}>
+                        <span className="pw-forte">{protocolo}</span> · esta denúncia
+                    </li>
+                    {agregadas.map((a) => (
+                        <li key={a.protocolo} style={{ fontSize: 13.5 }}>
+                            <span className="pw-forte">{a.protocolo}</span> · {ORIGENS[a.origem]?.curto ?? a.origem}{' '}
+                            {a.documentoOrigem}
+                            <br />
+                            <span className="pw-fraco">
+                                {a.assunto} · recebida em {a.recebidaBr}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
             </div>
         </>
     );

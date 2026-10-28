@@ -253,13 +253,31 @@ class PwaFilaDeDenunciasTest extends TestCase
 
     public function test_o_aplicativo_oferece_so_os_atalhos_que_o_servidor_aceita()
     {
-        // Dono, 28/10/2026: só o SEAB por enquanto. O catálogo inteiro fica para
-        // ler os registros antigos.
-        preg_match('/export const RECOMENDACOES_OFERECIDAS = \\[(?<itens>[^\\]]*)\\];/', $this->fonteDoAplicativo('dados-demandas.ts'), $bloco);
-        preg_match_all("/'([a-z-]+)'/", $bloco['itens'] ?? '', $chaves);
+        // Dono, 28/10/2026: só o SEAB por enquanto. O catálogo inteiro vai no kit
+        // para ler os registros antigos; o aplicativo não guarda cópia dele.
+        $recomendacoes = collect(AplicativoParaTela::recomendacoes());
 
         $this->assertSame(['seab'], RecomendacoesDoFiscal::oferecidas());
-        $this->assertSame(RecomendacoesDoFiscal::oferecidas(), $chaves[1]);
+        $this->assertSame(RecomendacoesDoFiscal::oferecidas(), $recomendacoes->where('oferecida', true)->pluck('id')->values()->all());
+        $this->assertSame(RecomendacoesDoFiscal::chaves(), $recomendacoes->pluck('id')->all());
+        $this->assertSame('Encaminhar ao SEAB', $recomendacoes->firstWhere('id', 'seab')['rotulo']);
+
+        $fonte = $this->fonteDoAplicativo('dados-demandas.ts');
+        $this->assertStringNotContainsString('Encaminhar ao SEAB', $fonte, 'o aplicativo voltou a escrever o catálogo de recomendações');
+        $this->assertStringNotContainsString('RECOMENDACOES_OFERECIDAS', $fonte);
+    }
+
+    public function test_a_redacao_dos_impressos_nao_tem_copia_no_aplicativo()
+    {
+        // A redação de um formulário legal tem UM dono: o servidor. O aplicativo
+        // a recebe no kit; uma lista escrita de novo aqui voltaria a divergir.
+        $fonte = $this->fonteDoAplicativo('dados-documentos.ts');
+
+        foreach (['Lei Nº 5.503/1999', 'Comparecer a SEMOP', 'Embargo administrativo', 'Av. San Martins', 'levados a leilão público'] as $trecho) {
+            $this->assertStringNotContainsString($trecho, $fonte, "o aplicativo voltou a escrever a redação do impresso: {$trecho}");
+        }
+
+        $this->assertStringNotContainsString('Av. San Martins', $this->fonteDoAplicativo('telas/apreensao.tsx'));
     }
 
     public function test_o_protocolo_da_caixa_de_entrada_nao_sobrou_na_fila()
@@ -417,12 +435,13 @@ class PwaFilaDeDenunciasTest extends TestCase
         $this->assertMatchesRegularExpression('/\n\s+consideracoes: string;/u', $tipos);
         $this->assertMatchesRegularExpression('/\n\s+recomendacoes: string\[\];/u', $tipos);
 
-        // A lista de atalhos é FECHADA e mora com o catálogo espelhado, para o
-        // outro lado poder somar recomendação — texto livre não se soma.
+        // A lista de atalhos é FECHADA, para o outro lado poder somar
+        // recomendação — texto livre não se soma. Desde 28/10/2026 ela vem do
+        // servidor no kit (fim da cópia no aparelho, PEND-016).
         $this->assertMatchesRegularExpression(
-            '/export const RECOMENDACOES/u',
+            '/export function carregarRecomendacoes\(/u',
             $this->fonteDoAplicativo('dados-demandas.ts'),
-            'os atalhos de recomendação saíram do catálogo espelhado',
+            'os atalhos de recomendação deixaram de vir do catálogo do servidor',
         );
     }
 

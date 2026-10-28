@@ -2,8 +2,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { api, ErroDoServidor } from './api';
 import { BarraInferior, type Aba } from './componentes';
-import { LOCAL_APOS_O_DESFECHO, carregarDemandas, demandasVencidas, type Demanda, type Desfecho } from './dados-demandas';
-import { carregarNumeros } from './dados-documentos';
+import {
+    LOCAL_APOS_O_DESFECHO,
+    carregarDemandas,
+    carregarRecomendacoes,
+    demandasVencidas,
+    type Demanda,
+    type Desfecho,
+    type Recomendacao,
+} from './dados-demandas';
+import { carregarImpressos, carregarNumeros, type Impressos } from './dados-documentos';
 import { carregarLevantamentos, type Levantamento, type LinhaLevantamento } from './dados-levantamento';
 import {
     HOJE_BR,
@@ -212,6 +220,10 @@ type Kit = {
     registros: Registro[];
     bairros: Regiao[];
     numeros: { np: string[]; aa: string[] };
+    /** A redação dos impressos de campo — o servidor é o único dono dela. */
+    impressos: Impressos;
+    /** Os atalhos de recomendação — o servidor decide quais o fiscal vê. */
+    recomendacoes: Recomendacao[];
     ambulantes: (Omit<Ambulante, 'emoji'> & { emoji: string | null })[];
     incidencias: IncidenciaCalor[];
     operacoes: Operacao[];
@@ -338,6 +350,8 @@ export function App() {
             carregarDemandas(kit.demandas);
             carregarBairros(kit.bairros);
             carregarNumeros(kit.numeros);
+            carregarImpressos(kit.impressos);
+            carregarRecomendacoes(kit.recomendacoes);
             carregarCampo(kit);
 
             const levantamentosPendentes = (await levantamentosDe(FISCAL.matricula)).filter(

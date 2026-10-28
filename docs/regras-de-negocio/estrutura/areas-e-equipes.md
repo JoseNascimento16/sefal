@@ -167,7 +167,7 @@ algo. **No sistema real esta rota não existe:** cadastro não se reinicia.
 - **Polígono da área no mapa.** Hoje a área é definida por uma lista de bairros, não por geometria.
   Quando houver polígono, a mesma regra de ponto-em-polígono dos dois lados (Turf.js e PHP) passa a
   valer aqui.
-- **Regra de desempate do bairro compartilhado** (PEND-022). Hoje a sugestão é a **primeira** área
+- **Regra de desempate do bairro compartilhado** (PEND-033). Hoje a sugestão é a **primeira** área
   que cobre o bairro e as outras aparecem como alternativa; se o cliente definir um critério
   (proximidade, carga da equipe), ele entra aqui.
 - **Histórico de alteração da estrutura.** Quando a estrutura virar tabela, mudar a área de um

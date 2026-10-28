@@ -96,6 +96,10 @@ class AplicativoController extends Controller
             'equipesDaCidade' => AplicativoParaTela::equipesDaCidade(),
             'levantamentos' => AplicativoParaTela::levantamentos($campo),
             'numeros' => (new ReservaDeNumeros)->repor($request->user()),
+            // A redação dos impressos: o aplicativo não guarda cópia dela.
+            'impressos' => AplicativoParaTela::impressos(),
+            // Os atalhos de recomendação: o servidor decide quais o fiscal vê.
+            'recomendacoes' => AplicativoParaTela::recomendacoes(),
             'servidorEm' => Date::now()->toIso8601String(),
         ]);
     }

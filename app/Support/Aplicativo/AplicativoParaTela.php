@@ -13,6 +13,7 @@ use App\Models\Levantamento;
 use App\Models\Operacao;
 use App\Models\User;
 use App\Support\Apresentacao\MapaDaCidade;
+use App\Support\Prototipo\RecomendacoesDoFiscal;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Date;
 
@@ -278,7 +279,8 @@ final class AplicativoParaTela
     public static function demanda(Demanda $demanda): array
     {
         $hoje = Date::today();
-        $ultima = $demanda->fiscalizacoes->sortByDesc('aberta_em')->first();
+        // Duas vistorias no mesmo segundo: a mais nova é a de id maior.
+        $ultima = $demanda->fiscalizacoes->sortBy([['aberta_em', 'desc'], ['id', 'desc']])->first();
         // Esperando o retorno, o prazo que conta é o da Notificação, não o do atendimento.
         $prazo = in_array($demanda->situacao, Demanda::ESPERANDO_RETORNO, true)
             ? ($ultima?->documento?->prazo_ate ?? $demanda->prazo_em)
@@ -324,8 +326,19 @@ final class AplicativoParaTela
                 'precisaoM' => (int) ($ultima->precisao_m ?? 0),
             ],
             'documento' => $ultima?->documento === null ? null : self::documento($ultima->documento),
+            'voltaDoLider' => self::voltaDoLider($ultima),
             'anonima' => (bool) $demanda->anonima,
             'requerente' => $demanda->anonima ? null : $demanda->requerente,
+            // As denúncias que relatam o mesmo fato e vão junto com esta: o que a
+            // equipe registrar aqui responde por todas. Sem quem as abriu — para ir
+            // a campo basta saber que existem e de onde vieram.
+            'agregadas' => $demanda->agregadas->sortBy('recebida_em')->map(fn (Demanda $a) => [
+                'protocolo' => $a->protocolo,
+                'origem' => $a->canal,
+                'documentoOrigem' => $a->numero_origem ?? '—',
+                'assunto' => $a->assunto,
+                'recebidaBr' => self::dataBr($a->recebida_em),
+            ])->values()->all(),
             'sgci' => null,
         ];
     }
@@ -385,10 +398,92 @@ final class AplicativoParaTela
                 'precisaoM' => (int) ($ultima->precisao_m ?? 0),
             ],
             'documento' => $notificacao?->documento === null ? null : self::documento($notificacao->documento),
+            // Na ronda, a justificativa do líder já é o `detalhe` (acima).
+            'voltaDoLider' => null,
             'anonima' => false,
             'requerente' => null,
+            'agregadas' => [],
             'sgci' => null,
         ];
+    }
+
+    /**
+     * O que o líder escreveu ao mandar a equipe voltar ao ponto — enquanto a
+     * nova vistoria não foi feita (feita, ela vira a última e o pedido sai).
+     *
+     * @return array{justificativa: string, quandoBr: string}|null
+     */
+    private static function voltaDoLider(?Fiscalizacao $ultima): ?array
+    {
+        if ($ultima?->situacao !== Fiscalizacao::NOVA_VISTORIA) {
+            return null;
+        }
+
+        return [
+            'justificativa' => (string) $ultima->decisao_detalhe,
+            'quandoBr' => self::dataBr($ultima->decidida_em),
+        ];
+    }
+
+    /**
+     * A redação dos impressos de campo (Notificação Preliminar e Auto de
+     * Apreensão), do único dono dela: `config/prototipo_documentos_campo.php`.
+     * O aplicativo não guarda cópia — o que o fiscal assinala e o que a
+     * Retaguarda lê saem do mesmo texto. Listas na ordem do papel.
+     *
+     * @return array<string, mixed>
+     */
+    public static function impressos(): array
+    {
+        $c = (array) config('prototipo_documentos_campo', []);
+        $fundamentacao = (array) ($c['fundamentacao'] ?? []);
+        $lista = static fn (string $chave): array => (array) ($c[$chave] ?? []);
+
+        return [
+            'motivosNp' => collect($lista('motivos_np'))->map(fn (array $m, string $id) => [
+                'id' => $id,
+                'texto' => (string) $m['texto'],
+                ...(isset($m['complemento']) ? ['complemento' => (string) $m['complemento']] : []),
+            ])->values()->all(),
+            'sancoesNp' => collect($lista('sancoes_np'))->map(fn (string $rotulo, string $id) => ['id' => $id, 'rotulo' => $rotulo])->values()->all(),
+            'prazosNp' => collect($lista('prazos_np'))->map(fn (array $p, string $id) => [
+                'id' => $id,
+                'rotulo' => (string) $p['rotulo'],
+                'dias' => (int) $p['dias'],
+                ...(isset($p['nota']) ? ['nota' => (string) $p['nota']] : []),
+            ])->values()->all(),
+            'fundamentacao' => [
+                'lei' => (string) ($fundamentacao['lei'] ?? ''),
+                'decretos' => array_values((array) ($fundamentacao['decretos'] ?? [])),
+                'artigosPadrao' => (string) ($fundamentacao['artigos_padrao'] ?? ''),
+                'portariaPadrao' => (string) ($fundamentacao['portaria_padrao'] ?? ''),
+            ],
+            'segub' => (array) ($c['segub'] ?? []),
+            'prazosGuarda' => collect($lista('prazos_guarda'))->map(fn (array $p, string|int $id) => [
+                'id' => (string) $id,
+                'rotulo' => (string) $p['rotulo'],
+                'extenso' => (string) $p['extenso'],
+            ])->values()->all(),
+            'destinacoesGuarda' => collect($lista('destinacoes_guarda'))->map(fn (string $texto, string $id) => ['id' => $id, 'texto' => $texto])->values()->all(),
+        ];
+    }
+
+    /**
+     * O catálogo de recomendações do fiscal na redação CURTA (a pílula do
+     * aparelho), com a marca de quais o aplicativo oferece hoje. Vai inteiro
+     * porque o aparelho também lê registros antigos, gravados com atalhos que
+     * deixaram de ser oferecidos.
+     *
+     * @return list<array{id: string, rotulo: string, oferecida: bool}>
+     */
+    public static function recomendacoes(): array
+    {
+        $oferecidas = RecomendacoesDoFiscal::oferecidas();
+
+        return collect(RecomendacoesDoFiscal::catalogo())
+            ->map(fn (array $r, string $id) => ['id' => $id, 'rotulo' => $r['curto'], 'oferecida' => in_array($id, $oferecidas, true)])
+            ->values()
+            ->all();
     }
 
     /** @return array<string, mixed> */

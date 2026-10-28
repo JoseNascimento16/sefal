@@ -57,7 +57,7 @@ pelo canal de origem, e cada uma carrega, visível:
 > decide como o setor trabalha — e é por isso que Denúncias é seção própria do menu, e não um item
 > dentro de Fiscalização.
 
-⚠️ **A integração NÃO EXISTE ainda** — nem o contrato dela (**PEND-021** é a irmã disto, para o
+⚠️ **A integração NÃO EXISTE ainda** — nem o contrato dela (**PEND-031** é a irmã disto, para o
 SGCI). O que o protótipo mostra é o formato do dado recebido e o que o setor faz com ele.
 
 ### RN-02 — Dois canais, e eles não são o mesmo formulário
@@ -516,7 +516,7 @@ que estão na rua agora, e `retorno vencido` traz o que está parado esperando d
 ## Pendências que isto abre
 
 - **Contrato das integrações** do e-Salvador e do Fala Salvador (endpoints, autenticação, campos,
-  como o canal informa complemento de endereço depois). Irmã da **PEND-021** (SGCI).
+  como o canal informa complemento de endereço depois). Irmã da **PEND-031** (SGCI).
 - **Prazo real de atendimento** de cada canal — o protótipo usa 10 dias para os dois.
 - **Canal de devolução**: por onde o e-Salvador e o 156 aceitam o retorno com a justificativa
   (**PEND-025**).
@@ -544,7 +544,7 @@ que estão na rua agora, e `retorno vencido` traz o que está parado esperando d
 - **O que o Chefe de Setor FAZ com um retorno vencido** ainda não é ação de tela: a situação existe e cobra a
   decisão, mas o botão que autoriza a apreensão nasce junto do módulo de fiscalização, não aqui.
 - **Derivação bairro → área com bairro compartilhado** e os casos Itinerante (corredor) e Noturna
-  (turno) — a mesma **PEND-022** da Caixa de Entrada.
+  (turno) — a mesma **PEND-033** da Caixa de Entrada.
 
 ---
 

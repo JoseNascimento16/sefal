@@ -98,7 +98,7 @@ final class CampoDoFiscal
         $desde = Date::now()->subDays(self::DIAS_DE_HISTORICO);
 
         return Demanda::query()
-            ->with(['area', 'equipe', 'operacao', 'fiscalizacoes' => fn ($q) => $q->with(['documento', 'fotos'])->latest('aberta_em')])
+            ->with(['area', 'equipe', 'operacao', 'agregadas', 'fiscalizacoes' => fn ($q) => $q->with(['documento', 'fotos'])->latest('aberta_em')])
             ->where(function (Builder $q) use ($equipes, $operacoes, $desde) {
                 $q->where(function (Builder $abertas) use ($equipes, $operacoes) {
                     $abertas->whereIn('situacao', self::SITUACOES_DE_CAMPO)

@@ -19,8 +19,8 @@ namespace App\Support\Prototipo;
  * `curto` é a pílula do CELULAR; `explicito` é o que a Retaguarda mostra a quem
  * decide. É decisão do dono: "unifique usando a redação curta no app e a
  * explícita no retaguarda". Por isso `explicitos()` é o único mapa que sai
- * daqui para as telas — o `curto` fica no catálogo porque este é o lado que
- * fica quando o aplicativo passar a consumir a lista do servidor.
+ * daqui para as telas da Retaguarda — o `curto` vai ao aplicativo no kit
+ * (`AplicativoParaTela::recomendacoes()`).
  *
  * ⚠️ Chave DESCONHECIDA não desaparece: quem resolve (a tela) mostra a chave
  * crua. Recomendação que evapora em silêncio é pior que recomendação feia — a

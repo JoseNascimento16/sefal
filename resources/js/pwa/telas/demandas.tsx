@@ -14,6 +14,7 @@ import {
     podeRegistrarRetorno,
     prazoDoRetornoEmPalavras,
     prazoEmPalavras,
+    rotuloDasJuntas,
     tomDoPrazo,
     type Demanda,
     type Desfecho,
@@ -268,6 +269,7 @@ export function CartaoDemanda({
     /* Sem ato do fiscal: encerrada, ou já despachada e esperando o líder. */
     const encerrada = demanda.situacao === 'Concluída' || demanda.aguardaLider;
     const documento = demanda.documento;
+    const juntas = rotuloDasJuntas(demanda);
 
     return (
         <div
@@ -317,7 +319,24 @@ export function CartaoDemanda({
                 )}
                 {demanda.operacao && <Selo tom="info">{demanda.operacao}</Selo>}
                 {demanda.desfecho && <Selo tom="neutro">{demanda.desfecho}</Selo>}
+                {/* O peso do caso: um ponto que responde por vários cidadãos
+                    não é o mesmo trabalho que um que responde por um. */}
+                {juntas && (
+                    <Selo tom="alerta">
+                        <Icone nome="pessoa" tamanho={13} />
+                        {juntas}
+                    </Selo>
+                )}
             </div>
+
+            {/* A volta determinada pelo líder: sem a justificativa à vista, a
+                equipe voltaria ao ponto sem saber o que procurar. */}
+            {demanda.voltaDoLider && !encerrada && (
+                <p style={{ margin: '10px 0 0', fontSize: 13.5 }}>
+                    <Icone nome="pessoa" tamanho={13} />{' '}
+                    <span className="pw-forte">O líder pediu nova vistoria:</span> {demanda.voltaDoLider.justificativa}
+                </p>
+            )}
 
             {emRetorno && documento?.venceEmDias !== null && documento?.venceBr && (
                 <p className="pw-fraco" style={{ margin: '10px 0 0', fontSize: 13 }}>

@@ -239,74 +239,41 @@ export const impedimentoParaConcluir = (
 };
 
 /**
- * As RECOMENDAÇÕES do fiscal no despacho — lista fechada, um toque cada.
- *
- * O que o Chefe de Setor e o Coordenador leem para saber o que fazer com o
- * registro é a recomendação de quem esteve no ponto. De pé na calçada ninguém
- * digita parecer, então o caminho curto é o atalho — e ele é FECHADO pelo mesmo
- * motivo do desfecho: recomendação em texto livre não se soma, e "encaminhar ao
- * SEAB" escrito de sete maneiras não vira fila de trabalho nenhuma.
- *
- * Convive com o texto livre: o atalho diz o QUE fazer, o texto diz o porquê.
- *
- * ⚠️ A lista é do dono. "Encaminhar ao SEAB" veio dele; os demais são proposta a
- * confirmar, e nenhum inventa órgão que o protótipo não conheça — o SEGUB é a
- * guarda dos bens apreendidos e o SGCI é o cadastro de comércio informal, os
- * dois já citados nos impressos.
- *
- * ⚠️ ESTA LISTA ESTÁ UNIFICADA COM A DA RETAGUARDA — e a CHAVE é o contrato.
- * A lista nasceu duas vezes, em frentes paralelas: aqui com chave e rótulo
- * curto, e na Retaguarda como frases inteiras, com outra redação e sem o SEAB.
- * O aplicativo mandava `["seab"]` e o outro lado esperava uma frase, então a
- * recomendação chegaria lá como coisa que ele não sabe ler nem SOMAR ("quantos
- * registros pediram operação na área?").
- *
- * Unificado (decisão do dono, 04/09/2026: "unifique usando a redação curta no
- * app e a explícita no retaguarda"), cada chave tem DUAS redações, e cada uma
- * mora do lado que a usa:
- *
- *   `rotulo` (aqui)  a pílula do CELULAR — de pé na calçada não cabe frase;
- *   `explicito` (lá) o que a Retaguarda mostra a quem DECIDE, em
- *                    `config/prototipo_denuncias.php` →
- *                    `recomendacoes_do_fiscal`, chave por chave.
- *
- * O que viaja entre os dois é a CHAVE, nunca o texto: assim a redação de um lado
- * não mexe no dado do outro, e é a chave que o relatório soma. **Renomear uma
- * chave aqui, ou acrescentar atalho só aqui, quebra o de-para em SILÊNCIO** —
- * nada estoura, e o Chefe de Setor lê a chave crua no lugar da recomendação (é
- * de propósito: a Retaguarda mostra a chave em vez de sumir com ela, porque
- * recomendação que evapora é pior que recomendação feia).
- *
- * ⚠️ E NENHUM TESTE ALCANÇA OS DOIS LADOS: este arquivo e o `config` da
- * Retaguarda vivem em BRANCHES diferentes (`feature/pwa-prototipo` e
- * `feature/prototipo-administrativo`), que não se veem. Cada lado só consegue
- * provar o que ele próprio declara — aqui, que nenhum registro semeado usa chave
- * fora desta lista (`tests/Feature/PwaFilaDeDenunciasTest.php`). A conferência
- * entre as duas listas é À MÃO, e o guarda é esta nota. Quando o aplicativo
- * falar com o servidor, o catálogo passa a vir de lá e esta cópia morre.
+ * O catálogo de recomendações vem do SERVIDOR, no kit (`recomendacoes`): a
+ * chave, a redação curta e se o atalho é oferecido hoje
+ * (`config/prototipo_denuncias.php`). O aparelho não guarda cópia — atalho
+ * acrescentado num lado só chegaria à Retaguarda como chave que ela não sabe
+ * ler nem somar. Daqui sai só o emoji, que é desenho da pílula, não vocabulário.
  */
-const TODAS_AS_RECOMENDACOES: { id: string; rotulo: string; emoji: string }[] = [
-    { id: 'retorno', rotulo: 'Sugerir retorno da equipe', emoji: '🔁' },
-    { id: 'reprogramar', rotulo: 'Reprogramar a vistoria', emoji: '📅' },
-    { id: 'operacao', rotulo: 'Sugerir operação na área', emoji: '🚩' },
-    { id: 'passagem', rotulo: 'Manter na passagem semanal', emoji: '🔄' },
-    { id: 'chefia', rotulo: 'Encaminhar ao Chefe de Setor', emoji: '⬆️' },
-    { id: 'sgci', rotulo: 'Conferir cadastro no SGCI', emoji: '🗂️' },
-    { id: 'segub', rotulo: 'Bens recolhidos ao SEGUB', emoji: '📦' },
-    { id: 'seab', rotulo: 'Encaminhar ao SEAB', emoji: '📨' },
-    { id: 'outro-orgao', rotulo: 'Encaminhar a outro órgão', emoji: '🏛️' },
-    { id: 'guarda', rotulo: 'Pedir apoio da guarda municipal', emoji: '🚓' },
-    { id: 'nada', rotulo: 'Sem providência adicional', emoji: '✅' },
-];
+export type Recomendacao = { id: string; rotulo: string; oferecida: boolean };
 
-/**
- * Os atalhos que o fiscal vê hoje (dono, 28/10/2026: "só SEAB por enquanto").
- * Os demais ficam na lista acima só para o aparelho ler registros antigos. O
- * servidor aceita a mesma lista (`recomendacoes_oferecidas`).
- */
-export const RECOMENDACOES_OFERECIDAS = ['seab'];
+const EMOJI_DA_RECOMENDACAO: Record<string, string> = {
+    retorno: '🔁',
+    reprogramar: '📅',
+    operacao: '🚩',
+    passagem: '🔄',
+    chefia: '⬆️',
+    sgci: '🗂️',
+    segub: '📦',
+    seab: '📨',
+    'outro-orgao': '🏛️',
+    guarda: '🚓',
+    nada: '✅',
+};
 
-export const RECOMENDACOES = TODAS_AS_RECOMENDACOES.filter((r) => RECOMENDACOES_OFERECIDAS.includes(r.id));
+/** O catálogo inteiro — inclusive o que não se oferece mais, para ler registros antigos. */
+let CATALOGO_DE_RECOMENDACOES: Recomendacao[] = [];
+
+/** Os atalhos que o fiscal vê ao concluir o registro (dono, 28/10/2026: só o SEAB). */
+export let RECOMENDACOES: (Recomendacao & { emoji: string })[] = [];
+
+export function carregarRecomendacoes(lista: Recomendacao[] | undefined): void {
+    CATALOGO_DE_RECOMENDACOES = lista ?? [];
+    RECOMENDACOES = CATALOGO_DE_RECOMENDACOES.filter((r) => r.oferecida).map((r) => ({
+        ...r,
+        emoji: EMOJI_DA_RECOMENDACAO[r.id] ?? '📝',
+    }));
+}
 
 /**
  * A chave vira texto para quem lê o registro no APARELHO — sempre a redação
@@ -317,7 +284,7 @@ export const RECOMENDACOES = TODAS_AS_RECOMENDACOES.filter((r) => RECOMENDACOES_
  * atalhos e vendo um só.
  */
 export const rotuloDaRecomendacao = (id: string): string =>
-    TODAS_AS_RECOMENDACOES.find((r) => r.id === id)?.rotulo ?? id;
+    CATALOGO_DE_RECOMENDACOES.find((r) => r.id === id)?.rotulo ?? id;
 
 /**
  * O que cada situação cobra, e de quem — a frase que o aplicativo escreve
@@ -436,6 +403,21 @@ export type DocumentoDeCampo = {
     assinaturas: { rotulo: string; estado: 'assinada' | 'recusada' | 'pendente'; nome?: string }[];
 };
 
+/** Uma denúncia juntada a outra — o que o fiscal precisa saber dela, sem quem a abriu. */
+export type DenunciaJunta = {
+    protocolo: string;
+    origem: Origem;
+    documentoOrigem: string;
+    assunto: string;
+    recebidaBr: string;
+};
+
+/** "+2 denúncias": quantas vão JUNTO com esta, além dela. */
+export function rotuloDasJuntas(demanda: Demanda): string | null {
+    const n = demanda.agregadas.length;
+    return n === 0 ? null : n === 1 ? '+1 denúncia' : `+${n} denúncias`;
+}
+
 export type Demanda = {
     /** `den-<id do servidor>` — o prefixo diz às telas que é uma demanda. */
     id: string;
@@ -485,6 +467,17 @@ export type Demanda = {
     /** Quem abriu — `null` quando anônima, e a tela escreve "Anônimo". */
     requerente: string | null;
     /**
+     * As denúncias que relatam o MESMO fato e foram juntadas a esta pela
+     * triagem. Não entram na fila: o que a equipe registrar aqui responde por
+     * todas. Vazia na ronda e no caso de uma denúncia só.
+     */
+    agregadas: DenunciaJunta[];
+    /**
+     * O líder leu o registro e mandou a equipe voltar ao ponto: o que ele
+     * escreveu é o que a equipe vai procurar. Nulo quando não há pedido em aberto.
+     */
+    voltaDoLider: { justificativa: string; quandoBr: string } | null;
+    /**
      * Preenchida quando o ambulante É PERMISSIONÁRIO (tem permissão no SGCI).
      * Nula quando ele não tem permissão — resposta, não lacuna.
      */
@@ -495,7 +488,8 @@ export type Demanda = {
 export let DEMANDAS: Demanda[] = [];
 
 export function carregarDemandas(lista: Demanda[]): void {
-    DEMANDAS = lista;
+    // Servidor anterior a `agregadas` (deploy defasado) não derruba a fila.
+    DEMANDAS = lista.map((d) => ({ ...d, agregadas: d.agregadas ?? [], voltaDoLider: d.voltaDoLider ?? null }));
 }
 
 /**
