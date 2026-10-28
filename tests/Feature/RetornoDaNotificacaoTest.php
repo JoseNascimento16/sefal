@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\PrepararDemonstracao;
+use App\Models\Ambulante;
 use App\Models\Area;
 use App\Models\AreaBairro;
 use App\Models\CicloDeFiscalizacao;
@@ -281,4 +282,29 @@ it('a demonstração ganha os exemplos do retorno pelos caminhos reais, e só um
         ->and(CicloDeFiscalizacao::get()->filter->retornoVencido())->toHaveCount(1)
         // Idempotente: a segunda rodada não semeou de novo.
         ->and(Fiscalizacao::count())->toBe(4);
+});
+
+it('o pino do ambulante só grita "retorno vencido" enquanto ninguém voltou ao ponto', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoRetornoDaNotificacao();
+    $demanda = demandaDoRetornoDaNotificacao($equipe);
+    $ambulante = Ambulante::factory()->create(['apelido' => 'Zé do Coco']);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), notificacaoDoRetorno($fiscal, [
+        'demanda_id' => $demanda->id, 'ambulante_id' => $ambulante->id,
+    ]))->assertCreated();
+
+    $pino = fn (): ?int => collect(test()->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json('ambulantes'))
+        ->firstWhere('servidorId', $ambulante->id)['retornoHaDias'] ?? null;
+
+    $this->travelTo(Date::now()->addDays(3));
+    PrazosDaNotificacao::vencer();
+
+    expect($pino())->toBe(1);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), envioDoRetornoDaNotificacao([
+        'demanda_id' => $demanda->id, 'ambulante_id' => $ambulante->id, 'desfecho' => Fiscalizacao::SITUACAO_MANTIDA,
+    ]))->assertCreated();
+
+    // A equipe voltou: o prazo passou, mas a promessa de voltar foi cumprida.
+    expect($pino())->toBeNull();
 });

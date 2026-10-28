@@ -192,11 +192,11 @@ Recebida ─► Encaminhada ao líder ─► Direcionada aos fiscais ─► Em c
                                                                     │      (Notificação lavrada,
                                                                     │       prazo correndo)
                                                                     │        │
-                                                                    │        ├─► Concluída
-                                                                    │        │    (retorno cumprido)
+                                                                    │        ├─► Em campo
+                                                                    │        │    (retorno registrado → líder lê)
                                                                     │        └─► Retorno vencido
-                                                                    │               (situação mantida →
-                                                                    │                próxima medida do Chefe de Setor)
+                                                                    │               (prazo passou sem retorno →
+                                                                    │                alerta ao líder; retorno segue possível)
                                                                     └─► Concluída
    └────────► Devolvida | Arquivada   (saídas da triagem, com justificativa)
 ```
@@ -207,7 +207,7 @@ pós-vistoria existem porque cada uma cobra coisa diferente de gente diferente:
 | Situação | Quem tem a bola | O que ela cobra |
 |---|---|---|
 | **Aguardando regularização** | o **notificado** | o prazo da Notificação Preliminar corre; a equipe volta ao ponto quando ele vencer |
-| **Retorno vencido** | o **Chefe de Setor da área** | o prazo venceu e a situação continua: alguém tem de decidir a próxima medida |
+| **Retorno vencido** | o **líder da equipe** | o prazo venceu e a equipe não voltou: o retorno está atrasado (dono, 28/10/2026) |
 
 Sem elas, uma notificação em prazo ficaria com a mesma cara de vistoria que ninguém fez, e um retorno
 frustrado ficaria escondido dentro de "Em campo".
@@ -569,3 +569,4 @@ que estão na rua agora, e `retorno vencido` traz o que está parado esperando d
 | 25/09/2026 | José Nascimento | Caixas de Entrada | Volta a coluna **Área (sugerida)** para quem encaminha: seletor de equipe (área · equipe — líder) na própria linha, na demanda que espera encaminhamento; o encaminhamento em lote leva essas escolhas. Sexta coluna declarada como exceção à régua das cinco (`teto` no catálogo, com motivo). | Pedido do dono. |
 | 25/09/2026 | José Nascimento | Caixas de Entrada | "Registrar demanda" abre o formulário numa **janela sobreposta**; ao gravar, a confirmação aparece no meio da tela com o **protocolo** (no lugar do aviso pequeno; `demanda_registrada` na sessão, `demandaRegistrada` na tela). | Pedido do dono. |
 | 28/10/2026 | José Nascimento | Denúncias | **Devolver e arquivar são saídas da triagem.** A demanda que já passou por fiscalização não pode ser devolvida nem arquivada: o servidor recusa dizendo o caminho (responder à origem ou encaminhar de novo à equipe), e o detalhe esconde essas opções. O caso que o líder devolve sem vistoria continua podendo ser devolvido ou arquivado. | Decisão do dono, 28/10/2026. |
+| 28/10/2026 | José Nascimento | Denúncias | O ciclo da denúncia reflete o retorno da Notificação Preliminar: o retorno registrado volta a "Em campo" para o líder ler, e o "Retorno vencido" é o prazo que passou sem a equipe voltar, com alerta ao líder. | Decisão do dono, 28/10/2026. |
