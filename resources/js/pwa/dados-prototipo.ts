@@ -4,9 +4,8 @@
    O nome do arquivo é herança do protótipo; o conteúdo, hoje, é real. Os
    ambulantes do mapa, o calor, as operações e o catálogo de bairros chegam do
    servidor no `kit` do turno (`carregarCampo`, `carregarBairros`). Ficam aqui
-   os TIPOS que as telas leem, os catálogos fechados do aparelho (ocorrências,
-   prazos de retorno, documentos de campo) e as REGIÕES da Área 5, que ainda
-   servem de rede de segurança quando o catálogo de bairros não carregou.
+   os TIPOS que as telas leem e os catálogos fechados do aparelho (prazos de
+   retorno, documentos de campo). As ocorrências também vêm do servidor.
    ============================================================================ */
 
 /* O desfecho e a leitura que dele se deriva moram no módulo das denúncias, que é
@@ -202,51 +201,34 @@ export const dataBrDaqui = (dias: number): string => {
 export const HOJE_BR = dataBrDaqui(0);
 
 /**
- * As regiões do mapa — todas dentro da Área 5, o bloco da Equipe C1.
- *
- * Não são bairros oficiais: são os pontos de referência sobre os quais os pinos
- * do protótipo se distribuem. O nome de cada uma é o do bairro do bloco.
- *
- * ⚠️ As coordenadas da orla estão interpoladas entre Itapuã e Pituaçu (os dois
- * pontos que já vinham conferidos no protótipo) e RECUADAS uns 200 m para
- * dentro da terra. O recuo não é capricho: cada pino tem um desvio próprio de
- * até 0,0026° a partir do centro da região, e com o centro sobre a linha d'água
- * metade dos pinos aparecia no mar — foi o que o mapa mostrou na conferência.
- */
-export const REGIOES: Regiao[] = [
-    { id: 'costa-azul', nome: 'Costa Azul', lat: -12.9796, lng: -38.4485 },
-    { id: 'jardim-armacao', nome: 'Jardim Armação', lat: -12.9722, lng: -38.4302 },
-    { id: 'stiep', nome: 'Stiep', lat: -12.9702, lng: -38.436 },
-    { id: 'boca-do-rio', nome: 'Boca do Rio', lat: -12.9678, lng: -38.4192 },
-    { id: 'imbui', nome: 'Imbuí', lat: -12.9659, lng: -38.4305 },
-    { id: 'pituacu', nome: 'Pituaçu', lat: -12.9613, lng: -38.4032 },
-    { id: 'patamares', nome: 'Patamares', lat: -12.956, lng: -38.3902 },
-    { id: 'piata', nome: 'Piatã', lat: -12.9503, lng: -38.3762 },
-    { id: 'itapua', nome: 'Itapuã', lat: -12.9449, lng: -38.3628 },
-    { id: 'stella-maris', nome: 'Stella Maris', lat: -12.9378, lng: -38.3452 },
-    { id: 'mussurunga', nome: 'Mussurunga', lat: -12.9317, lng: -38.3722 },
-];
-
-/**
- * O centro do mapa quando o aparelho não entrega posição.
- *
- * A Boca do Rio, que dá nome à Área 5 — e não mais o Farol da Barra, que fica
- * na área de outra equipe.
+ * O centro do mapa quando nem o aparelho nem a área da equipe dão posição
+ * (`centroDaArea`, em `sessao.ts`, vem antes dele).
  */
 export const CENTRO_SALVADOR = { lat: -12.9678, lng: -38.4192 };
 
-export const OCORRENCIAS = [
-    { id: 'desarmou', rotulo: 'Desarmou e saiu', emoji: '✅' },
-    { id: 'orientado', rotulo: 'Orientado no local', emoji: '🗣️' },
-    { id: 'recusou', rotulo: 'Recusou sair', emoji: '🚫' },
-    { id: 'vazio', rotulo: 'Local vazio na chegada', emoji: '🌬️' },
-    { id: 'reincidente', rotulo: 'Reincidente', emoji: '🔁' },
-    { id: 'calcada', rotulo: 'Obstrução de calçada', emoji: '🚧' },
-    { id: 'sem-permissao', rotulo: 'Sem permissão', emoji: '📄' },
-    { id: 'bebida', rotulo: 'Venda de bebida', emoji: '🍺' },
-    { id: 'alimento', rotulo: 'Manipulação de alimento', emoji: '🍢' },
-    { id: 'apoio', rotulo: 'Apoio da guarda municipal', emoji: '🚓' },
-];
+/** Uma ocorrência que o fiscal marca no ponto — o catálogo vem do servidor. */
+export type Ocorrencia = { id: string; rotulo: string; emoji: string };
+
+/* O emoji é desenho do chip, não vocabulário: fica no aparelho. */
+const EMOJI_DA_OCORRENCIA: Record<string, string> = {
+    desarmou: '✅',
+    orientado: '🗣️',
+    recusou: '🚫',
+    vazio: '🌬️',
+    reincidente: '🔁',
+    calcada: '🚧',
+    'sem-permissao': '📄',
+    bebida: '🍺',
+    alimento: '🍢',
+    apoio: '🚓',
+};
+
+/** As ocorrências do kit (`prototipo_denuncias.ocorrencias_do_fiscal`). */
+export let OCORRENCIAS: Ocorrencia[] = [];
+
+export function carregarOcorrencias(lista: { id: string; rotulo: string }[] | undefined): void {
+    OCORRENCIAS = (lista ?? []).map((o) => ({ ...o, emoji: EMOJI_DA_OCORRENCIA[o.id] ?? '📝' }));
+}
 
 const ATIVIDADES = [
     { nome: 'Acarajé e abará', emoji: '🍢' },
@@ -263,11 +245,8 @@ const ATIVIDADES = [
     { nome: 'Caldo de cana', emoji: '🍹' },
 ];
 
-/**
- * O nome do lugar. As regiões do mapa de exemplo têm id próprio; nos registros
- * e demandas reais o "id" já é o nome do bairro, e volta como veio.
- */
-export const nomeRegiao = (id: string): string => REGIOES.find((r) => r.id === id)?.nome ?? id;
+/** O nome do lugar: nos registros e demandas o "id" já é o nome do bairro. */
+export const nomeRegiao = (id: string): string => BAIRROS.find((b) => b.id === id)?.nome ?? id;
 
 /** O catálogo de bairros com coordenada, como o servidor entregou no `kit`. */
 export let BAIRROS: Regiao[] = [];

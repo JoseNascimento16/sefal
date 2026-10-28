@@ -6,6 +6,7 @@ import { Topo, atalhoDoPerfil } from '../componentes';
 import { CENTRO_SALVADOR, FISCAL, pontosDoCalor, regioesMaisQuentes } from '../dados-prototipo';
 import { Icone } from '../icones';
 import { camadaDeCalor, criarMapa, type CamadaCalor } from '../mapa';
+import { centroDaArea } from '../sessao';
 
 /* ============================================================================
    MAPA DE CALOR — o registro virando inteligência.
@@ -46,7 +47,9 @@ export function TelaCalor() {
             return;
         }
 
-        const mapa = criarMapa(caixa.current, [CENTRO_SALVADOR.lat + 0.02, CENTRO_SALVADOR.lng + 0.05], 12);
+        /* Abre na área da equipe, como o mapa principal — e não num ponto fixo. */
+        const centro = centroDaArea() ?? CENTRO_SALVADOR;
+        const mapa = criarMapa(caixa.current, [centro.lat, centro.lng], 12);
         mapaRef.current = mapa;
 
         return () => {
