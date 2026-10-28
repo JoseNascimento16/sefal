@@ -147,9 +147,8 @@ class RetornoAoCanal
             default => "Processo aberto no {$onde}",
         };
 
-        // O processo voltou à origem: as Fiscalizações dele vão para o Arquivo.
-        CiclosDeFiscalizacao::arquivarDa($demanda);
-
+        // Concluída, a demanda leva as Fiscalizações dela ao Arquivo
+        // ({@see Demanda::registrar()}).
         return $demanda->registrar(
             acao: $acao,
             // Respondida, a demanda está concluída — inclusive a que voltou ao chefe.

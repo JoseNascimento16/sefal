@@ -591,6 +591,30 @@ test('quando o chefe devolve o processo à origem, as Fiscalizações dele vão 
         ->and($servido['vistorias'])->not->toBe([]);
 });
 
+test('quando o chefe devolve ou arquiva a denúncia depois da fiscalização, a Fiscalização vai para o ARQUIVO — não fica parada em Encaminhadas', function (string $destino) {
+    $lider = liderDaFila('C1');
+    $ciclo = collect(ciclosServidos($lider))
+        ->first(static fn (array $c): bool => $c['aba'] === 'andamento' && $c['vistoria_pendente'] !== null && $c['demanda'] !== null);
+
+    $this->actingAs($lider)->post('/retaguarda/fiscalizacoes/encaminhar-ao-chefe', [
+        'ids' => [$ciclo['id']],
+        'motivo' => 'Resultado da vistoria para o chefe decidir o destino.',
+    ]);
+
+    expect(CicloDeFiscalizacao::findOrFail($ciclo['id'])->aba())->toBe(CicloDeFiscalizacao::ABA_ENCAMINHADAS);
+
+    $this->actingAs(chefeDaFila())
+        ->post(route('retaguarda.denuncias.devolver'), [
+            'ids' => [$ciclo['demanda']['id']],
+            'motivo' => 'Objeto já regularizado',
+            'justificativa' => 'A equipe encontrou o ponto já regularizado; não há o que responder além disso.',
+            'destino' => $destino,
+        ]);
+
+    expect(Demanda::findOrFail($ciclo['demanda']['id'])->situacao)->toBeIn(Demanda::FECHADAS)
+        ->and(collect(ciclosServidos($lider))->firstWhere('id', $ciclo['id'])['aba'])->toBe('arquivo');
+})->with(['Devolvida ao remetente', 'Arquivada']);
+
 test('responder à origem com a Fiscalização ainda com a equipe é recusado: o líder encaminha antes', function () {
     $ciclo = CicloDeFiscalizacao::with('demanda')->daAba(CicloDeFiscalizacao::ABA_ANDAMENTO)
         ->whereNotNull('demanda_id')->get()
