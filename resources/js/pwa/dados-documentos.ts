@@ -1,15 +1,16 @@
 /* ============================================================================
    Os documentos oficiais de campo, como o cliente os imprime hoje
    ----------------------------------------------------------------------------
-   Este módulo NÃO é invenção nossa: cada lista aqui foi transcrita dos blocos
-   de papel que o SEFAL usa em rua — a **Notificação Preliminar** (Cód. 26...)
-   e o **Auto de Apreensão** —, mais o "Manual para o NTI" que o cliente
-   entregou junto. É o formulário legal, não um rascunho de tela.
+   A redação dos blocos de papel que o SEFAL usa em rua — a **Notificação
+   Preliminar** e o **Auto de Apreensão** — tem UM dono: o servidor
+   (`config/prototipo_documentos_campo.php`). Ela chega no `kit`
+   (`impressos`) e mora aqui só enquanto o aplicativo está aberto. Escrevê-la
+   de novo neste arquivo daria dois donos ao texto de um formulário legal, e um
+   dia o papel que o ambulante recebe diria uma coisa e a Retaguarda outra.
 
-   ⚠️ Fidelidade ao papel: o bloco de motivos da Notificação tem 20 caixas, das
-   quais a última é "Outros" (campo livre) e a primeira pede complemento ("no
-   Setor ____"). Não arredondamos para um número redondo nem reescrevemos a
-   redação do impresso — se o texto soa estranho, é porque está assim no papel.
+   Fica aqui o que é só conveniência do aparelho (exemplos de atividade,
+   tipos de equipamento, bens frequentes): não vai para o papel como texto
+   legal, é atalho de digitação.
    ============================================================================ */
 
 export type MotivoNp = {
@@ -19,50 +20,59 @@ export type MotivoNp = {
     complemento?: string;
 };
 
-/** Coluna da esquerda do impresso, na ordem em que está no papel. */
-export const MOTIVOS_NP: MotivoNp[] = [
-    { id: 'comparecer', texto: 'Comparecer a SEMOP no Setor', complemento: 'Qual setor' },
-    { id: 'preco-publico', texto: 'Falta de pagamento do Preço Público' },
-    { id: 'dam', texto: 'Apresentar DAM quitado do ano em exercício' },
-    { id: 'horario', texto: 'Descumprimento do horário de funcionamento' },
-    { id: 'animal', texto: 'Manter animal no equipamento' },
-    { id: 'higiene', texto: 'Não zelar pela conservação, asseio e higiene' },
-    { id: 'padrao', texto: 'Alterar o padrão do equipamento' },
-    { id: 'mesas', texto: 'Retirar mesas e cadeiras do logradouro público' },
-    { id: 'equipamento', texto: 'Retirar equipamentos do logradouro público' },
-    {
-        id: 'alvara-mesas',
-        texto: 'Apresentar Alvará para colocação de mesas e cadeiras no logradouro público',
-    },
-    { id: 'ceder', texto: 'Ceder / locar o equipamento a terceiro' },
-    { id: 'ramo', texto: 'Alterar ou mudar o ramo de atividade' },
-    { id: 'produtos-fora', texto: 'Manter produtos e objetos fora do equipamento' },
-    { id: 'cota', texto: 'Falta de pagamento da cota de despesa (água e luz)' },
-    { id: 'bebida', texto: 'Desativar a venda de bebida alcoólica' },
-    { id: 'puxada', texto: 'Retirar puxada, sanitário e depósito' },
-    { id: 'desativar', texto: 'Desativar suas atividades' },
-    { id: 'realocar', texto: 'Realocar equipamento' },
-    { id: 'carcaca', texto: 'Retirar carcaça de veículo da via pública' },
-];
+export type PrazoNp = { id: string; rotulo: string; dias: number; nota?: string };
+export type PrazoGuarda = { id: string; rotulo: string; extenso: string };
+export type Destinacao = { id: string; texto: string };
 
-/** As penalidades da faixa de baixo do impresso — exatamente as cinco. */
-export const SANCOES_NP = [
-    { id: 'autuacao', rotulo: 'Autuação' },
-    { id: 'apreensao', rotulo: 'Apreensão' },
-    { id: 'perdas', rotulo: 'Perdas de bens e mercadorias' },
-    { id: 'embargo', rotulo: 'Embargo administrativo' },
-    { id: 'multa', rotulo: 'Pagamento de multa' },
-];
+/** O bloco `impressos` do kit — a forma que o servidor entrega. */
+export type Impressos = {
+    motivosNp: MotivoNp[];
+    sancoesNp: { id: string; rotulo: string }[];
+    prazosNp: PrazoNp[];
+    fundamentacao: { lei: string; decretos: string[]; artigosPadrao: string; portariaPadrao: string };
+    segub: { nome: string; endereco: string };
+    prazosGuarda: PrazoGuarda[];
+    destinacoesGuarda: Destinacao[];
+};
+
+/* Ligações vivas, como a fila e os números: o kit as preenche. */
+
+/** Coluna da esquerda do impresso, na ordem em que está no papel. */
+export let MOTIVOS_NP: MotivoNp[] = [];
+
+/** As penalidades da faixa de baixo do impresso. */
+export let SANCOES_NP: Impressos['sancoesNp'] = [];
 
 /** Prazos que o manual do cliente lista, na ordem em que ele os escreve. */
-export const PRAZOS_NP = [
-    { id: 'imediato', rotulo: 'Imediato', dias: 0, nota: 'Para quem não possui cadastro' },
-    { id: '24h', rotulo: '24 horas', dias: 1 },
-    { id: '48h', rotulo: '48 horas', dias: 2 },
-    { id: '72h', rotulo: '72 horas', dias: 3 },
-    { id: '5d', rotulo: '05 dias', dias: 5 },
-    { id: '10d', rotulo: '10 dias', dias: 10 },
-];
+export let PRAZOS_NP: PrazoNp[] = [];
+
+/** A fundamentação legal do Auto de Apreensão — o aplicativo já chega com ela preenchida. */
+export let FUNDAMENTACAO: Impressos['fundamentacao'] = { lei: '', decretos: [], artigosPadrao: '', portariaPadrao: '' };
+
+/** O destino dos bens está impresso no formulário — endereço inclusive. */
+export let SEGUB: Impressos['segub'] = { nome: '', endereco: '' };
+
+export let PRAZOS_SEGUB: PrazoGuarda[] = [];
+
+/** "quando serão ______ de acordo com a Legislação Municipal." */
+export let DESTINACOES_SEGUB: Destinacao[] = [];
+
+export function carregarImpressos(impressos: Impressos | undefined): void {
+    MOTIVOS_NP = impressos?.motivosNp ?? [];
+    SANCOES_NP = impressos?.sancoesNp ?? [];
+    PRAZOS_NP = impressos?.prazosNp ?? [];
+    FUNDAMENTACAO = impressos?.fundamentacao ?? { lei: '', decretos: [], artigosPadrao: '', portariaPadrao: '' };
+    SEGUB = impressos?.segub ?? { nome: '', endereco: '' };
+    PRAZOS_SEGUB = impressos?.prazosGuarda ?? [];
+    DESTINACOES_SEGUB = impressos?.destinacoesGuarda ?? [];
+}
+
+/**
+ * O formulário só se monta com a redação do servidor na mão. Sem ela (o kit
+ * não chegou), a tela diz o porquê em vez de lavrar um impresso em branco.
+ */
+export const impressosCarregados = (): boolean =>
+    MOTIVOS_NP.length > 0 && PRAZOS_NP.length > 0 && PRAZOS_SEGUB.length > 0 && DESTINACOES_SEGUB.length > 0;
 
 /** Exemplos de atividade que o manual do cliente dá para o campo ATIVIDADE. */
 export const ATIVIDADES_NP = [
@@ -72,47 +82,6 @@ export const ATIVIDADES_NP = [
     'Food Truck',
     'Quiosque',
     'Ambulante',
-];
-
-/**
- * A fundamentação legal do Auto de Apreensão.
- *
- * O impresso tem quatro linhas (lei, decreto, artigos, portaria) e o manual
- * lista a lei e os cinco decretos. O aplicativo já chega com eles preenchidos,
- * porque digitar "Decreto Nº 26.849/2015" de pé na calçada é onde o papel de
- * hoje mais erra.
- */
-export const FUNDAMENTACAO = {
-    lei: 'Lei Nº 5.503/1999',
-    decretos: [
-        'Decreto Nº 11.754/1997',
-        'Decreto Nº 12.016/1998',
-        'Decreto Nº 24.422/2013',
-        'Decreto Nº 26.804/2015',
-        'Decreto Nº 26.849/2015',
-    ],
-    artigosPadrao: 'Art. 21, Art. 24 e Art. 31',
-    portariaPadrao: 'Portaria SEMOP Nº 014/2026',
-};
-
-/** O destino dos bens está impresso no formulário — endereço inclusive. */
-export const SEGUB = {
-    nome: 'Setor de Guarda de Bens — SEGUB',
-    endereco: 'Av. San Martins, s/n',
-};
-
-export const PRAZOS_SEGUB = [
-    { id: '30', rotulo: '30 dias', extenso: 'trinta dias' },
-    { id: '60', rotulo: '60 dias', extenso: 'sessenta dias' },
-    { id: '90', rotulo: '90 dias', extenso: 'noventa dias' },
-];
-
-/** "quando serão ______ de acordo com a Legislação Municipal." */
-export const DESTINACOES_SEGUB = [
-    'devolvidos ao proprietário, mediante regularização e quitação',
-    'doados a instituições de assistência social',
-    'levados a leilão público',
-    'destruídos, por se tratar de material perecível',
 ];
 
 export const TIPOS_EQUIPAMENTO = [

@@ -18,7 +18,7 @@
 |
 | INVENTADO: a lista de fiscais de cada equipe (nome e matrícula), o turno da
 | equipe Noturna e o CHEFE DE SETOR de cada área. O documento nomeia só o
-| encarregado; o time de campo o cliente ainda vai informar (PEND-022 trata da
+| encarregado; o time de campo o cliente ainda vai informar (PEND-033 trata da
 | derivação bairro → equipe).
 |
 | ── `chefe_de_setor` é o vínculo CHEFE DE SETOR ↔ ÁREA, e não o encarregado ──

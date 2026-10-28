@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 
 import { irPara, useApp } from '../app';
-import { Assinatura, Marcavel, Selo, Topo, Vazio, classes } from '../componentes';
+import { Assinatura, Marcavel, SemImpressos, Selo, Topo, Vazio, classes } from '../componentes';
 import { acharDemanda } from '../dados-demandas';
 import {
     ATIVIDADES_NP,
     MOTIVOS_NP,
     PRAZOS_NP,
     SANCOES_NP,
+    impressosCarregados,
     consumirNumero,
     numeroReservado,
 } from '../dados-documentos';
@@ -43,6 +44,14 @@ import { Icone } from '../icones';
 type EstadoAssinatura = 'pendente' | 'assinada' | 'recusada';
 
 export function TelaNotificacao({ id }: { id: string | null }) {
+    if (!impressosCarregados()) {
+        return <SemImpressos titulo="Notificação Preliminar" aoVoltar={() => irPara('registros')} />;
+    }
+
+    return <FormularioDaNotificacao id={id} />;
+}
+
+function FormularioDaNotificacao({ id }: { id: string | null }) {
     const { registros, anexarDocumento } = useApp();
     const registro = registros.find((r) => r.id === id);
     const demanda = acharDemanda(registro?.demandaId ?? null);
@@ -57,7 +66,7 @@ export function TelaNotificacao({ id }: { id: string | null }) {
     const [motivos, setMotivos] = useState<string[]>([]);
     const [complementos, setComplementos] = useState<Record<string, string>>({});
     const [outros, setOutros] = useState('');
-    const [prazo, setPrazo] = useState(PRAZOS_NP[3]);
+    const [prazo, setPrazo] = useState(PRAZOS_NP.find((p) => p.id === '72h') ?? PRAZOS_NP[0]);
     const [sancoes, setSancoes] = useState<string[]>(['autuacao', 'apreensao']);
 
     const [notificado, setNotificado] = useState<EstadoAssinatura>('pendente');

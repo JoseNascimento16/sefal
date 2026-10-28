@@ -116,6 +116,25 @@ export function Interruptor({
     );
 }
 
+/**
+ * O impresso sem a redação do servidor: o kit não chegou. Melhor dizer o
+ * porquê do que abrir um formulário legal em branco.
+ */
+export function SemImpressos({ titulo, aoVoltar }: { titulo: string; aoVoltar: () => void }) {
+    return (
+        <div className="pw-tela">
+            <Topo titulo={titulo} aoVoltar={aoVoltar} />
+            <div className="pw-corpo">
+                <Vazio
+                    icone="📶"
+                    titulo="O texto do impresso ainda não chegou"
+                    texto="A redação do documento vem do servidor quando o aplicativo atualiza. Com sinal, volte à tela inicial e tente de novo."
+                />
+            </div>
+        </div>
+    );
+}
+
 export function Vazio({ icone, titulo, texto }: { icone: string; titulo: string; texto: string }) {
     return (
         <div className="pw-vazio">

@@ -159,7 +159,7 @@ sistema real esta rota não existe:** caixa de entrada não se reinicia.
 
 ## Fora de escopo (por ora)
 
-- **Integração com o e-Salvador e o 156** (PEND-021 é a irmã disto, para o SGCI). Enquanto não
+- **Integração com o e-Salvador e o 156** (PEND-031 é a irmã disto, para o SGCI). Enquanto não
   houver contrato, o registro é manual — e continuará existindo depois.
 - **Numeração oficial do protocolo.** O protótipo gera `CXE-NNNN` por conta própria; no sistema real
   a numeração sai de `App\Support\Protocolo::proximo()`, que é a fonte única e vive no banco.
