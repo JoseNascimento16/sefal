@@ -410,13 +410,17 @@ Quando o líder lê o registro e manda a equipe voltar, a denúncia volta à fil
 ao ponto"**. Feita a nova vistoria, o pedido sai do cartão. Na ronda, a justificativa já é o texto
 do item (RN-29).
 
-### RN-33 — A redação dos impressos e os atalhos de recomendação vêm do servidor
+### RN-33 — A redação dos impressos, as ocorrências e os atalhos de recomendação vêm do servidor
 
 O texto da Notificação Preliminar e do Auto de Apreensão (motivos, penalidades, prazos,
-fundamentação legal, SEGUB, prazos de guarda e destinações) e o catálogo de atalhos de recomendação
-chegam ao aparelho junto com a fila. O aplicativo não guarda cópia: o que o fiscal assinala, o que
+fundamentação legal, SEGUB, prazos de guarda e destinações), o catálogo de ocorrências que o fiscal
+marca no ponto e o catálogo de atalhos de recomendação chegam ao aparelho junto com a fila. O aplicativo não guarda cópia: o que o fiscal assinala, o que
 sai no papel e o que a Retaguarda lê são o mesmo texto. Se esse conteúdo não chegou, a tela do
 impresso diz o porquê em vez de abrir o formulário em branco.
+
+No registro avulso, o bairro sugerido é o do catálogo de bairros mais perto do GPS. Sem o catálogo
+não há palpite: o fiscal escreve o bairro. O mapa de calor, como o mapa principal, abre na área da
+equipe.
 
 ## Como demonstrar
 
@@ -442,6 +446,8 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
    a Notificação em prazo, outra com o **retorno vencido** (no topo, em vermelho) e uma **ronda** com a
    Notificação em prazo; em **A vistoriar**, a ronda que o líder mandou refazer (RN-29, RN-30).
    Como `lider1`, a Fiscalização do retorno vencido aparece em "a decidir", com o aviso do atraso.
+7. **Denúncias juntadas:** em **Minhas demandas**, um caso traz o selo **"+2 denúncias"**; o detalhe
+   lista as duas que a triagem juntou a ele (RN-31).
 
 ---
 
@@ -460,6 +466,7 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 28/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, mapa de calor, demonstração) | O catálogo de ocorrências passa a vir do servidor (RN-33); saem as "regiões" fixas do protótipo, e sem catálogo de bairros o fiscal escreve o bairro em vez de receber um palpite de uma lista fixa; o mapa de calor abre na área da equipe; a demonstração ganha um caso com denúncias juntadas. | Fim das sobras do protótipo no aplicativo. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, impressos, conclusão) | O cartão e o detalhe mostram por quantas denúncias o caso responde e listam as juntadas (RN-31); a "nova vistoria" do líder chega ao aparelho com a justificativa (RN-32); a redação dos impressos e o catálogo de atalhos de recomendação passam a vir do servidor, sem cópia no aparelho (RN-33). | PEND-014, PEND-016 e PEND-022; fim da redação duplicada dos impressos. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (conclusão do registro, demonstração) | Os atalhos de recomendação oferecidos ficam só "Encaminhar ao SEAB"; o servidor recusa os demais em registro novo, e o catálogo inteiro segue para ler os registros antigos. A demonstração ganha exemplos do retorno da notificação (em prazo, vencido e ronda na fila). | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (mapa, início) | O pino de "retorno vencido" e o contador do Início contam só a Notificação que ainda espera o retorno: feito o retorno, o ambulante deixa de aparecer como vencido. | Coerência com o retorno da notificação (RN-30). |

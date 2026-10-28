@@ -215,11 +215,24 @@ class PwaFilaDeDenunciasTest extends TestCase
 
     public function test_as_ocorrencias_do_aplicativo_sao_as_do_catalogo_do_servidor()
     {
-        $fonte = $this->fonteDoAplicativo('dados-prototipo.ts');
-        preg_match('/export const OCORRENCIAS = \[(?<itens>.*?)\R\];/s', $fonte, $bloco);
-        preg_match_all("/id: '([a-z-]+)'/", $bloco['itens'] ?? '', $ids);
+        // Desde 28/10/2026 o catálogo chega no kit; o aplicativo não guarda cópia.
+        $ocorrencias = collect(AplicativoParaTela::ocorrencias());
 
-        $this->assertSame(array_keys((array) config('prototipo_denuncias.ocorrencias_do_fiscal')), $ids[1]);
+        $this->assertSame(array_keys((array) config('prototipo_denuncias.ocorrencias_do_fiscal')), $ocorrencias->pluck('id')->all());
+        $this->assertSame('Obstrução de calçada', $ocorrencias->firstWhere('id', 'calcada')['rotulo']);
+
+        $fonte = $this->fonteDoAplicativo('dados-prototipo.ts');
+        $this->assertStringNotContainsString('Obstrução de calçada', $fonte, 'o aplicativo voltou a escrever o catálogo de ocorrências');
+        $this->assertMatchesRegularExpression('/export function carregarOcorrencias\(/u', $fonte);
+    }
+
+    public function test_o_aplicativo_nao_tem_mais_as_regioes_ficticias_do_prototipo()
+    {
+        // As 11 "regiões" da orla eram pontos de referência do protótipo. Usadas
+        // como palpite de bairro, dariam um bairro errado em qualquer outro lugar
+        // da cidade; sem o catálogo do servidor, o fiscal escreve o bairro.
+        $this->assertStringNotContainsString('export const REGIOES', $this->fonteDoAplicativo('dados-prototipo.ts'));
+        $this->assertStringNotContainsString('REGIOES', $this->fonteDoAplicativo('telas/registro-rapido.tsx'));
     }
 
     public function test_os_desfechos_de_vistoria_e_de_retorno_do_aplicativo_sao_os_do_servidor()

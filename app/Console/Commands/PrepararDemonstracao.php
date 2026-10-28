@@ -9,6 +9,7 @@ use App\Models\Setor;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemonstracaoSeeder;
+use Database\Seeders\DenunciasJuntasSeeder;
 use Database\Seeders\EstruturaSeeder;
 use Database\Seeders\ParametrizacaoFiscalizacaoSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
@@ -251,6 +252,13 @@ class PrepararDemonstracao extends Command
     {
         $this->components->task('Retorno da notificação', function () {
             Artisan::call('db:seed', ['--class' => RetornoDaNotificacaoSeeder::class, '--force' => true]);
+
+            return true;
+        });
+
+        // Depois do retorno: ele usa as denúncias recebidas sem Fiscalização.
+        $this->components->task('Denúncias juntadas num caso', function () {
+            Artisan::call('db:seed', ['--class' => DenunciasJuntasSeeder::class, '--force' => true]);
 
             return true;
         });
