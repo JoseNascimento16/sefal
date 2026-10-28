@@ -102,8 +102,8 @@ class ContadoresDoMenu
                      * O trabalho de cada um (dono, 24/09/2026): o CHEFE conta as
                      * Fiscalizações que o líder encaminhou a ele e esperam a
                      * deliberação (aba "Encaminhadas"); o LÍDER, as que estão com
-                     * a equipe e pedem decisão dele — enviar à equipe, ou ler o
-                     * retorno de campo. UMA contagem, sem carregar linha: o menu
+                     * a equipe e pedem decisão dele — enviar à equipe, ler o
+                     * retorno de campo, ou o retorno da notificação que venceu. UMA contagem, sem carregar linha: o menu
                      * é montado em toda requisição da Retaguarda.
                      */
                     if (Papel::ehChefe($usuario) && ! $recorta && ! $usuario->ehAdmin()) {
@@ -114,7 +114,7 @@ class ContadoresDoMenu
                         ->daAba(CicloDeFiscalizacao::ABA_ANDAMENTO)
                         ->where(static fn ($q) => $q
                             ->whereHas('demanda', static fn ($d) => $d->where('situacao', Demanda::ENCAMINHADA_AO_LIDER))
-                            ->orWhereHas('vistorias', static fn ($v) => $v->where('situacao', Fiscalizacao::AGUARDANDO_LEITURA)));
+                            ->orWhereHas('vistorias', static fn ($v) => $v->whereIn('situacao', [Fiscalizacao::AGUARDANDO_LEITURA, Fiscalizacao::PRAZO_VENCIDO])));
 
                     if ($recorta) {
                         $consulta->whereHas('equipe', static fn ($q) => $q->whereIn('codigo', $equipes));

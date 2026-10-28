@@ -2,6 +2,7 @@
 
 namespace App\Support\Aplicativo;
 
+use App\Models\CicloDeFiscalizacao;
 use App\Models\Demanda;
 use App\Models\DemandaTramite;
 use App\Models\DocumentoCampo;
@@ -60,17 +61,34 @@ final class RegistroDeCampo
             $this->recusar('demanda_id', "A demanda {$demanda->protocolo} não está mais com a sua equipe (situação: {$demanda->situacao}). Fale com o líder da equipe.");
         }
 
-        if (! in_array($dados['desfecho'], Fiscalizacao::desfechosDoAto($demanda), true)) {
-            $this->recusar('desfecho', $demanda?->situacao === Demanda::AGUARDANDO_REGULARIZACAO
-                ? "A demanda {$demanda->protocolo} está aguardando regularização: o registro é o retorno. Escolha “Regularizado após notificação” ou “Retorno com a situação mantida”."
-                : "“{$dados['desfecho']}” é desfecho de retorno: só cabe numa demanda aguardando regularização. Escolha o desfecho da vistoria.");
+        // A Fiscalização SEM demanda que voltou à fila do aplicativo: o retorno
+        // da notificação lavrada numa ronda, ou a volta que o líder determinou.
+        $ciclo = null;
+
+        if ($demanda === null && isset($dados['ciclo_id'])) {
+            $ciclo = CicloDeFiscalizacao::with('vistorias')->find($dados['ciclo_id']);
+            $equipes = $this->campo->equipes()->pluck('id')->all();
+
+            if ($ciclo === null || ! $ciclo->naFilaDoAplicativo() || ! in_array($ciclo->equipe_id, $equipes, true)) {
+                $this->recusar('ciclo_id', 'Esta Fiscalização não está mais na fila da sua equipe. Fale com o líder da equipe, ou registre de novo como avulso.');
+            }
+        }
+
+        if (! in_array($dados['desfecho'], Fiscalizacao::desfechosDoAto($demanda, $ciclo), true)) {
+            $retorno = $demanda !== null
+                ? in_array($demanda->situacao, Demanda::ESPERANDO_RETORNO, true)
+                : $ciclo?->notificacaoEmPrazo() !== null;
+
+            $this->recusar('desfecho', $retorno
+                ? 'Há Notificação Preliminar esperando o retorno: o registro é o retorno. Escolha “Regularizado após notificação” ou “Retorno com a situação mantida”.'
+                : "“{$dados['desfecho']}” é desfecho de retorno: só cabe onde há Notificação Preliminar esperando o retorno. Escolha o desfecho da vistoria.");
         }
 
         // A avulsa feita na tela de uma operação fica ligada a ela — desde que a
         // operação esteja aberta para a equipe (ou para o próprio fiscal).
         $operacao = null;
 
-        if ($demanda === null && isset($dados['operacao_id'])) {
+        if ($demanda === null && $ciclo === null && isset($dados['operacao_id'])) {
             if (! in_array((int) $dados['operacao_id'], $this->campo->operacoes(), true)) {
                 $this->recusar('operacao_id', 'A operação deste registro não está aberta para a sua equipe. Registre de novo como avulso.');
             }
@@ -85,7 +103,7 @@ final class RegistroDeCampo
             $this->recusar('documento', "O desfecho “{$dados['desfecho']}” exige ".($exige === DocumentoCampo::NOTIFICACAO ? 'a Notificação Preliminar' : 'o Auto de Apreensão').' lavrado no registro.');
         }
 
-        $equipe = $demanda?->equipe ?? $this->campo->equipePrincipal();
+        $equipe = $demanda?->equipe ?? $ciclo?->equipe ?? $this->campo->equipePrincipal();
         $agora = Date::now();
         // O aparelho manda a hora em UTC (ISO com "Z"); o banco guarda no fuso do
         // sistema (Salvador). Sem converter, o registro das 12h aparecia às 15h.
@@ -93,14 +111,15 @@ final class RegistroDeCampo
             ? Date::parse($dados['aberta_em'])->setTimezone(config('app.timezone'))
             : $agora;
 
-        return DB::transaction(function () use ($dados, $fotos, $user, $demanda, $operacao, $documento, $equipe, $agora, $aberta) {
+        return DB::transaction(function () use ($dados, $fotos, $user, $demanda, $ciclo, $operacao, $documento, $equipe, $agora, $aberta) {
             $vistoria = Fiscalizacao::create([
                 'protocolo' => Protocolo::proximo('FIS', $agora, Fiscalizacao::class),
                 'client_id' => $dados['client_id'],
                 'origem' => $demanda === null
-                    ? ($operacao !== null ? Fiscalizacao::ORIGEM_OPERACAO : Fiscalizacao::ORIGEM_AVULSA)
+                    ? ($ciclo?->origem ?? ($operacao !== null ? Fiscalizacao::ORIGEM_OPERACAO : Fiscalizacao::ORIGEM_AVULSA))
                     : ($demanda->operacao_id !== null ? Fiscalizacao::ORIGEM_OPERACAO : Fiscalizacao::ORIGEM_DEMANDA),
                 'demanda_id' => $demanda?->id,
+                'ciclo_id' => $ciclo?->id,
                 'operacao_id' => $demanda?->operacao_id ?? $operacao?->id,
                 'equipe_id' => $equipe?->id,
                 'fiscal_id' => $user->id,
@@ -123,7 +142,11 @@ final class RegistroDeCampo
                 'retorno_em' => $dados['retorno_em'] ?? null,
                 'consideracoes' => $dados['consideracoes'] ?? null,
                 // Voltou da rua e espera o LÍDER: mandar voltar ou encaminhar ao chefe.
-                'situacao' => Fiscalizacao::AGUARDANDO_LEITURA,
+                // A Notificação Preliminar não: o caso fica com o notificado, e é o
+                // RETORNO que volta ao líder (dono, 28/10/2026).
+                'situacao' => $dados['desfecho'] === Fiscalizacao::NOTIFICACAO_EMITIDA
+                    ? Fiscalizacao::PRAZO_CORRENDO
+                    : Fiscalizacao::AGUARDANDO_LEITURA,
             ]);
 
             foreach (array_unique($dados['recomendacoes'] ?? []) as $chave) {
@@ -151,7 +174,15 @@ final class RegistroDeCampo
                 ]);
             }
 
-            CiclosDeFiscalizacao::vincular($vistoria);
+            $ciclo = CiclosDeFiscalizacao::vincular($vistoria);
+
+            // Feito o retorno, a notificação deixa de esperar por ele.
+            if (in_array($vistoria->desfecho, Fiscalizacao::DESFECHOS_DE_RETORNO, true)) {
+                Fiscalizacao::where('ciclo_id', $ciclo->id)
+                    ->where('id', '!=', $vistoria->id)
+                    ->whereIn('situacao', Fiscalizacao::NOTIFICACAO_EM_PRAZO)
+                    ->update(['situacao' => Fiscalizacao::RETORNO_REGISTRADO, 'updated_at' => $agora]);
+            }
 
             // O ambulante identificado ganha a posição desta ida ao ponto: é o
             // que move o pino dele no mapa (a última posição conhecida).
@@ -169,9 +200,14 @@ final class RegistroDeCampo
             }
 
             if ($demanda !== null) {
+                $notificou = $vistoria->situacao === Fiscalizacao::PRAZO_CORRENDO;
                 $passo = $demanda->registrar(
-                    acao: 'Vistoria em campo — retorno despachado',
-                    situacao: Demanda::EM_CAMPO,
+                    acao: match (true) {
+                        $notificou => 'Notificação Preliminar lavrada — aguardando a regularização no prazo',
+                        in_array($vistoria->desfecho, Fiscalizacao::DESFECHOS_DE_RETORNO, true) => 'Retorno ao ponto — despachado ao líder',
+                        default => 'Vistoria em campo — retorno despachado',
+                    },
+                    situacao: $notificou ? Demanda::AGUARDANDO_REGULARIZACAO : Demanda::EM_CAMPO,
                     papel: DemandaTramite::PAPEL_FISCAL,
                     autor: $user,
                     detalhe: $vistoria->relato,
@@ -179,6 +215,7 @@ final class RegistroDeCampo
                         'Registro de campo' => $vistoria->protocolo,
                         'Desfecho' => $vistoria->desfecho,
                         'Documento lavrado' => $vistoria->documento?->rotulo(),
+                        'Prazo para regularizar' => $notificou ? $vistoria->documento?->prazo_ate?->format('d/m/Y') : null,
                     ]),
                 );
 

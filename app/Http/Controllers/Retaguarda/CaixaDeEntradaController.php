@@ -15,6 +15,7 @@ use App\Support\Estrutura;
 use App\Support\ListagensDaRetaguarda;
 use App\Support\Papel;
 use App\Support\Protocolo;
+use App\Support\TriagemDeDemandas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -281,6 +282,14 @@ class CaixaDeEntradaController extends Controller
             'justificativa.min' => 'A justificativa está curta demais para explicar a decisão a quem ler depois.',
             'destino_retorno.required' => 'Diga se a demanda volta ao remetente ou é arquivada.',
         ]);
+
+        if (in_array($demanda->situacao, Demanda::FECHADAS, true)) {
+            return back()->with('flash.erro', "A demanda {$demanda->protocolo} já está encerrada ({$demanda->situacao}).");
+        }
+
+        if (($recusa = TriagemDeDemandas::recusaDeRetirada($demanda)) !== null) {
+            return back()->with('flash.erro', $recusa);
+        }
 
         $this->devolverDemanda($demanda, $dados['motivo'], $dados['justificativa'], $dados['destino_retorno']);
 

@@ -4,6 +4,7 @@ namespace App\Support\Aplicativo;
 
 use App\Models\Ambulante;
 use App\Models\Bairro;
+use App\Models\CicloDeFiscalizacao;
 use App\Models\Demanda;
 use App\Models\DocumentoCampo;
 use App\Models\Equipe;
@@ -278,10 +279,15 @@ final class AplicativoParaTela
     {
         $hoje = Date::today();
         $ultima = $demanda->fiscalizacoes->sortByDesc('aberta_em')->first();
+        // Esperando o retorno, o prazo que conta é o da Notificação, não o do atendimento.
+        $prazo = in_array($demanda->situacao, Demanda::ESPERANDO_RETORNO, true)
+            ? ($ultima?->documento?->prazo_ate ?? $demanda->prazo_em)
+            : $demanda->prazo_em;
 
         return [
             'id' => 'den-'.$demanda->id,
             'servidorId' => $demanda->id,
+            'cicloId' => null,
             'protocolo' => $demanda->protocolo,
             'documentoOrigem' => $demanda->numero_origem ?? '—',
             'origem' => $demanda->canal,
@@ -294,8 +300,8 @@ final class AplicativoParaTela
             'lat' => $demanda->latitude !== null ? (float) $demanda->latitude : null,
             'lng' => $demanda->longitude !== null ? (float) $demanda->longitude : null,
             'recebidaBr' => self::dataBr($demanda->recebida_em),
-            'prazoBr' => self::dataBr($demanda->prazo_em),
-            'prazoDias' => $demanda->prazo_em !== null ? (int) $hoje->diffInDays($demanda->prazo_em->copy()->startOfDay(), false) : 0,
+            'prazoBr' => self::dataBr($prazo),
+            'prazoDias' => $prazo !== null ? (int) $hoje->diffInDays($prazo->copy()->startOfDay(), false) : 0,
             'situacao' => $demanda->situacao,
             'area' => $demanda->area?->nome,
             'equipe' => $demanda->equipe?->codigo,
@@ -304,7 +310,8 @@ final class AplicativoParaTela
             // mesmo nome, e é por aqui que a tela da operação acha as denúncias dela.
             'operacaoId' => $demanda->operacao_id !== null ? 'op-'.$demanda->operacao_id : null,
             'desfecho' => $ultima?->desfecho,
-            // Já foi despachada e espera o líder: não é mais ato do fiscal.
+            // Já foi despachada e espera o líder: não é mais ato do fiscal. A
+            // Notificação Preliminar não espera o líder — espera o retorno.
             'aguardaLider' => $demanda->fiscalizacoes->contains(fn (Fiscalizacao $f) => $f->situacao === Fiscalizacao::AGUARDANDO_LEITURA),
             'campo' => $ultima === null || $ultima->despachada_em === null ? null : [
                 'quandoBr' => self::dataBr($ultima->despachada_em).' às '.$ultima->despachada_em->format('H:i'),
@@ -319,6 +326,67 @@ final class AplicativoParaTela
             'documento' => $ultima?->documento === null ? null : self::documento($ultima->documento),
             'anonima' => (bool) $demanda->anonima,
             'requerente' => $demanda->anonima ? null : $demanda->requerente,
+            'sgci' => null,
+        ];
+    }
+
+    /**
+     * A Fiscalização SEM demanda na fila do aplicativo — na MESMA forma da
+     * demanda, para a fila, o detalhe e o registro a lerem sem caminho à parte.
+     * O id leva o prefixo `fsc-`: é por ele que o registro vai com `ciclo_id`.
+     *
+     * @return array<string, mixed>
+     */
+    public static function fiscalizacaoNaFila(CicloDeFiscalizacao $ciclo): array
+    {
+        $ultima = $ciclo->vistorias->last();
+        $notificacao = $ciclo->notificacaoEmPrazo();
+        $prazo = $notificacao?->documento?->prazo_ate;
+        $hoje = Date::today();
+
+        return [
+            'id' => 'fsc-'.$ciclo->id,
+            'servidorId' => null,
+            'cicloId' => $ciclo->id,
+            'protocolo' => $ciclo->protocolo,
+            'documentoOrigem' => '—',
+            'origem' => 'ronda',
+            'assunto' => $notificacao !== null ? 'Retorno da Notificação Preliminar' : 'Nova vistoria determinada pelo líder',
+            // Na volta determinada, o que procurar é a justificativa do líder.
+            'detalhe' => (string) ($notificacao !== null ? ($ultima?->relato ?? '') : ($ultima?->decisao_detalhe ?? $ultima?->relato ?? '')),
+            'endereco' => trim((string) ($ultima?->logradouro ?? '')) ?: 'Endereço não informado',
+            'referencia' => null,
+            'bairro' => (string) ($ultima?->bairro ?? ''),
+            'regiao' => (string) ($ultima?->bairro ?? ''),
+            'lat' => $ultima?->latitude,
+            'lng' => $ultima?->longitude,
+            'recebidaBr' => self::dataBr($ciclo->aberto_em),
+            'prazoBr' => self::dataBr($prazo),
+            'prazoDias' => $prazo !== null ? (int) $hoje->diffInDays($prazo->copy()->startOfDay(), false) : 0,
+            'situacao' => match (true) {
+                $notificacao?->situacao === Fiscalizacao::PRAZO_VENCIDO => Demanda::RETORNO_VENCIDO,
+                $notificacao !== null => Demanda::AGUARDANDO_REGULARIZACAO,
+                default => Demanda::DIRECIONADA_AOS_FISCAIS,
+            },
+            'area' => $ciclo->equipe?->area?->nome,
+            'equipe' => $ciclo->equipe?->codigo,
+            'operacao' => null,
+            'operacaoId' => null,
+            'desfecho' => $ultima?->desfecho,
+            'aguardaLider' => false,
+            'campo' => $ultima === null || $ultima->despachada_em === null ? null : [
+                'quandoBr' => self::dataBr($ultima->despachada_em).' às '.$ultima->despachada_em->format('H:i'),
+                'encontrado' => (string) $ultima->desfecho,
+                'ambulante' => $ultima->alvo,
+                'equipamento' => $ultima->equipamento,
+                'relato' => (string) ($ultima->relato ?? $ultima->consideracoes),
+                'fotos' => $ultima->fotos->count(),
+                'gps' => $ultima->latitude !== null ? number_format($ultima->latitude, 5, '.', '').', '.number_format((float) $ultima->longitude, 5, '.', '') : null,
+                'precisaoM' => (int) ($ultima->precisao_m ?? 0),
+            ],
+            'documento' => $notificacao?->documento === null ? null : self::documento($notificacao->documento),
+            'anonima' => false,
+            'requerente' => null,
             'sgci' => null,
         ];
     }

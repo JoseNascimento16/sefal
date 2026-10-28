@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\CiclosDeFiscalizacao;
 use App\Support\Documento;
 use App\Support\RetornoAoCanal;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -260,6 +261,14 @@ class Demanda extends Model
         self::AGRUPADA,
     ];
 
+    /**
+     * As que esperam o RETORNO da equipe: Notificação Preliminar lavrada, com o
+     * prazo correndo ou já vencido. Nas duas, o ato do fiscal é o retorno.
+     *
+     * @var list<string>
+     */
+    public const ESPERANDO_RETORNO = [self::AGUARDANDO_REGULARIZACAO, self::RETORNO_VENCIDO];
+
     /** As que encerraram o caso. Prazo não corre mais nelas. */
     /** @var list<string> */
     public const FECHADAS = [self::CONCLUIDA, self::DEVOLVIDA, self::ARQUIVADA];
@@ -414,6 +423,15 @@ class Demanda extends Model
         }
 
         $this->save();
+
+        // Demanda fechada não deixa Fiscalização pendurada: respondida, devolvida
+        // ou arquivada, o processo acabou e as Fiscalizações dele vão para o
+        // Arquivo. Mora aqui, e não em cada ato do chefe, porque são vários os
+        // caminhos que fecham a demanda — e o que esqueceu a chamada deixava a
+        // Fiscalização parada em "Encaminhadas" para sempre (27/10/2026).
+        if (in_array($situacao, self::FECHADAS, true)) {
+            CiclosDeFiscalizacao::arquivarDa($this);
+        }
 
         return $this->tramites()->create([
             'ordem' => (int) $this->tramites()->max('ordem') + 1,

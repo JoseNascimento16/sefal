@@ -76,9 +76,11 @@ export function TelaRegistroRapido({ alvo }: { alvo: string | null }) {
 
     /* O mesmo endereço serve os dois caminhos, e o prefixo diz qual é: `amb-07`
        vem de um pino do mapa, `den-0029` vem da fila da equipe (o id da demanda
-       é derivado do protocolo `DEN-NNNN`, e é por isso que o prefixo é `den-`). */
+       é derivado do protocolo `DEN-NNNN`, e é por isso que o prefixo é `den-`), e
+       `fsc-12` é a ronda que voltou à fila (retorno da notificação, ou a volta
+       que o líder determinou). */
     const doMapa = alvo?.startsWith('amb-') ? (AMBULANTES.find((a) => a.id === alvo) ?? null) : null;
-    const daFila = alvo?.startsWith('den-') ? acharDemanda(alvo) : null;
+    const daFila = alvo?.startsWith('den-') || alvo?.startsWith('fsc-') ? acharDemanda(alvo) : null;
     /* `op-7` vem da tela da operação: a avulsa feita ali fica ligada a ela. */
     const daOperacao = alvo?.startsWith('op-') ? (OPERACOES.find((o) => o.id === alvo) ?? null) : null;
 

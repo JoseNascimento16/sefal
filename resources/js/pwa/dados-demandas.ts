@@ -30,7 +30,7 @@ import { EQUIPES } from './sessao';
  * sempre identificado. No Fala Salvador o relato é a transcrição do atendimento
  * e pode ser anônimo. As avulsas são o pedido de superior e o ofício.
  */
-export type Origem = 'e-salvador' | 'fala-salvador' | 'nova-licenca' | 'avulsa' | 'e-protocolo';
+export type Origem = 'e-salvador' | 'fala-salvador' | 'nova-licenca' | 'avulsa' | 'e-protocolo' | 'ronda';
 
 export const ORIGENS: Record<
     Origem,
@@ -65,6 +65,14 @@ export const ORIGENS: Record<
         curto: 'e-Protocolo',
         emoji: '📂',
         explica: 'Processo aberto no e-Protocolo do município.',
+    },
+    /* Não é canal: é a Fiscalização SEM denúncia (a ronda) que voltou à fila —
+       o retorno da notificação lavrada nela, ou a volta que o líder determinou. */
+    ronda: {
+        rotulo: 'Ronda da equipe',
+        curto: 'Ronda',
+        emoji: '🚶',
+        explica: 'Fiscalização sem denúncia, nascida na ronda da equipe, que voltou à fila: retorno da notificação ou volta determinada pelo líder.',
     },
 };
 
@@ -146,11 +154,11 @@ export const DESFECHOS_DE_RETORNO: Desfecho[] = [
  * Chefe de Setor: nomear sem explicar convidaria ao toque errado.
  */
 export const DESFECHOS_EXPLICADOS: Record<Desfecho, string> = {
-    'Regularizado no local': 'Orientou e a irregularidade cessou na hora. Sem documento.',
+    'Regularizado no local': 'Orientado, o ambulante desfez a montagem e saiu do local na hora. Sem documento.',
     'Nada encontrado no local': 'A equipe esteve no endereço e não constatou nada.',
     'Notificação Preliminar emitida': 'Aponta o que sanar e dá prazo. A Notificação é lavrada em seguida.',
-    'Regularizado após notificação': 'O prazo foi cumprido: o ponto está resolvido. Encerra a denúncia.',
-    'Retorno com a situação mantida': 'Prazo vencido e ponto igual. Volta ao Chefe de Setor para a próxima medida.',
+    'Regularizado após notificação': 'O prazo foi cumprido: o ponto está resolvido. O líder lê e encaminha o encerramento.',
+    'Retorno com a situação mantida': 'O prazo passou e o ponto continua igual. Volta ao líder, que decide a próxima medida.',
     'Auto de Apreensão lavrado': 'Recolhe material e mercadoria, com guarda no SEGUB.',
 };
 
@@ -318,7 +326,7 @@ export const SITUACOES_EXPLICADAS: Record<Situacao, string> = {
     'Em operação': 'Entra na varredura da operação, em vez de uma ida isolada ao local.',
     'Em campo': 'A equipe está no caso: vistoria em andamento ou retorno já despachado ao líder.',
     'Aguardando regularização': 'Prazo da Notificação correndo — a bola está com o notificado. A equipe volta ao vencer.',
-    'Retorno vencido': 'Prazo vencido com a situação mantida. Voltou ao Chefe de Setor para a próxima medida.',
+    'Retorno vencido': 'O prazo da Notificação venceu e a equipe ainda não voltou ao ponto. O retorno está atrasado e o líder foi avisado.',
     'Agrupada': 'Repete um caso que já está sendo tratado em outra demanda.',
     'Concluída': 'A vistoria teve desfecho e a demanda se encerrou.',
     'Devolvida': 'Devolvida ao canal de origem. Não chega ao campo.',
@@ -422,8 +430,13 @@ export type DocumentoDeCampo = {
 export type Demanda = {
     /** `den-<id do servidor>` — o prefixo diz às telas que é uma demanda. */
     id: string;
-    /** O id da demanda no servidor — é ele que vai no registro despachado. */
-    servidorId: number;
+    /** O id da demanda no servidor — é ele que vai no registro despachado. Nulo na ronda. */
+    servidorId: number | null;
+    /**
+     * A Fiscalização SEM denúncia que voltou à fila (id `fsc-<n>`): o registro
+     * vai com ela, e não com a demanda. Nulo quando o item é uma denúncia.
+     */
+    cicloId: number | null;
     /** Protocolo interno da denúncia (`DEN-NNNN`) — o mesmo dos dois lados. */
     protocolo: string;
     /** O número que o canal de origem deu (ESL-… no portal, 156-… no telefone). */
@@ -494,11 +507,12 @@ export const acharDemanda = (id: string | null): Demanda | null =>
  * semana passada com a vistoria que a equipe tem de fazer hoje.
  */
 const PESO_DA_SITUACAO: Record<Situacao, number> = {
+    /* O retorno atrasado vem antes de tudo: o prazo do notificado já passou. */
+    'Retorno vencido': -1,
     'Em campo': 0,
     'Direcionada aos fiscais': 1,
     'Em operação': 2,
     'Aguardando regularização': 3,
-    'Retorno vencido': 4,
     'Concluída': 5,
     'Em pré-triagem': 9,
     'Recebida': 9,
@@ -529,9 +543,9 @@ export const demandasDaEquipe = (): Demanda[] =>
 export const demandasAVistoriar = (): Demanda[] =>
     demandasDaEquipe().filter((d) => podeVistoriar(d));
 
-/** Notificação lavrada, prazo correndo: a equipe volta quando ele vencer. */
+/** Notificação lavrada: o prazo correndo, ou já vencido sem a equipe voltar. */
 export const demandasEmRegularizacao = (): Demanda[] =>
-    demandasDaEquipe().filter((d) => !d.aguardaLider && d.situacao === 'Aguardando regularização');
+    demandasDaEquipe().filter((d) => podeRegistrarRetorno(d));
 
 /**
  * Vistoriadas e despachadas: esperam a leitura do LÍDER, não o fiscal. Sem este
@@ -541,9 +555,9 @@ export const demandasEmRegularizacao = (): Demanda[] =>
 export const demandasComOLider = (): Demanda[] =>
     demandasDaEquipe().filter((d) => d.aguardaLider && d.situacao !== 'Concluída');
 
-/** O que a equipe já fechou — e o que subiu ao Chefe de Setor por retorno frustrado. */
+/** O que a equipe já fechou. */
 export const demandasEncerradas = (): Demanda[] =>
-    demandasDaEquipe().filter((d) => d.situacao === 'Concluída' || d.situacao === 'Retorno vencido');
+    demandasDaEquipe().filter((d) => d.situacao === 'Concluída');
 
 /** Vencidas são as que ainda pedem ato do fiscal — encerrada não vence mais. */
 export const demandasVencidas = (): Demanda[] =>
@@ -563,8 +577,9 @@ export function podeVistoriar(d: Demanda): boolean {
     return !d.aguardaLider && SITUACOES_A_VISTORIAR.includes(d.situacao);
 }
 
+/* Vencido o prazo, o retorno continua sendo o ato devido — agora atrasado. */
 export const podeRegistrarRetorno = (d: Demanda): boolean =>
-    !d.aguardaLider && d.situacao === 'Aguardando regularização';
+    !d.aguardaLider && (d.situacao === 'Aguardando regularização' || d.situacao === 'Retorno vencido');
 
 /** Os desfechos que o ato em curso pode produzir — vistoria ou retorno. */
 export const desfechosOferecidos = (d: Demanda | null): Desfecho[] =>

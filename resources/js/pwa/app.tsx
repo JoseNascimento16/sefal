@@ -237,6 +237,8 @@ function corpoDoEnvio(r: Registro, fotos: Blob[]): FormData {
 
     por('client_id', r.clientId);
     por('demanda_id', r.demandaId?.startsWith('den-') ? r.demandaId.slice(4) : null);
+    /* A ronda que voltou à fila: o registro entra na MESMA Fiscalização. */
+    por('ciclo_id', r.demandaId?.startsWith('fsc-') ? r.demandaId.slice(4) : null);
     por('operacao_id', r.demandaId ? null : r.operacaoId);
     por('desfecho', r.desfecho);
     por('relato', r.relato);

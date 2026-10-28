@@ -382,9 +382,7 @@ function AtoDevido({ demanda, emRetorno }: { demanda: Demanda; emRetorno: boolea
                 <p style={{ margin: 0, fontSize: 14.5 }}>
                     {demanda.aguardaLider
                         ? 'A vistoria já foi despachada e está com o líder da equipe. Se ele pedir nova vistoria, a demanda volta para a fila.'
-                        : demanda.situacao === 'Retorno vencido'
-                          ? 'O prazo venceu com a situação mantida, e a denúncia voltou ao Chefe de Setor da área para a próxima medida. A equipe não tem ato pendente aqui.'
-                          : 'Denúncia encerrada. Não há ato pendente para a equipe.'}
+                        : 'Denúncia encerrada. Não há ato pendente para a equipe.'}
                 </p>
             </div>
         );
