@@ -261,6 +261,14 @@ class Demanda extends Model
         self::AGRUPADA,
     ];
 
+    /**
+     * As que esperam o RETORNO da equipe: Notificação Preliminar lavrada, com o
+     * prazo correndo ou já vencido. Nas duas, o ato do fiscal é o retorno.
+     *
+     * @var list<string>
+     */
+    public const ESPERANDO_RETORNO = [self::AGUARDANDO_REGULARIZACAO, self::RETORNO_VENCIDO];
+
     /** As que encerraram o caso. Prazo não corre mais nelas. */
     /** @var list<string> */
     public const FECHADAS = [self::CONCLUIDA, self::DEVOLVIDA, self::ARQUIVADA];

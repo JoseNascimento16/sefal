@@ -2,6 +2,7 @@
 
 namespace App\Support\Aplicativo;
 
+use App\Models\CicloDeFiscalizacao;
 use App\Models\Demanda;
 use App\Models\Equipe;
 use App\Models\Fiscalizacao;
@@ -110,6 +111,29 @@ final class CampoDoFiscal
             })
             ->orderBy('prazo_em')
             ->get();
+    }
+
+    /**
+     * As Fiscalizações SEM demanda que estão na fila da equipe: a ronda cuja
+     * Notificação Preliminar espera o retorno, e a que o líder mandou refazer.
+     * Sem esta parte da fila, "mandar a equipe voltar" numa ronda não chegava a
+     * ninguém — a fila era só de demandas (dono, 28/10/2026).
+     *
+     * @return Collection<int, CicloDeFiscalizacao>
+     */
+    public function fiscalizacoesNaFila(): Collection
+    {
+        return CicloDeFiscalizacao::query()
+            ->with(['equipe.area', 'vistorias' => fn ($q) => $q->with(['documento', 'fotos'])])
+            ->whereNull('demanda_id')
+            ->whereNull('arquivado_em')
+            ->where('posse', CicloDeFiscalizacao::POSSE_EQUIPE)
+            ->whereIn('equipe_id', $this->equipes()->pluck('id')->all())
+            ->whereHas('vistorias', fn (Builder $v) => $v->whereIn('situacao', [...Fiscalizacao::NOTIFICACAO_EM_PRAZO, Fiscalizacao::NOVA_VISTORIA]))
+            ->orderBy('aberto_em')
+            ->get()
+            ->filter(static fn (CicloDeFiscalizacao $c): bool => $c->naFilaDoAplicativo())
+            ->values();
     }
 
     /** A demanda pode receber vistoria desta pessoa agora? */

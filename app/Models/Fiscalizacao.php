@@ -125,8 +125,10 @@ class Fiscalizacao extends Model
     public const DESFECHOS_DE_RETORNO = [self::REGULARIZADO_APOS_NOTIFICACAO, self::SITUACAO_MANTIDA];
 
     /**
-     * Os desfechos que o ATO em curso pode produzir: o retorno, na demanda que
-     * espera regularização; a vistoria, em todo o resto (inclusive a avulsa).
+     * Os desfechos que o ATO em curso pode produzir: o retorno, quando há
+     * Notificação Preliminar esperando a volta da equipe — na demanda aguardando
+     * regularização (ou com o retorno vencido), ou na Fiscalização sem demanda
+     * cuja notificação está em prazo —; a vistoria, em todo o resto.
      *
      * O aplicativo oferece a mesma lista (`desfechosOferecidos`), mas quem
      * decide é o servidor — o aparelho pode estar com uma versão antiga, e um
@@ -135,9 +137,13 @@ class Fiscalizacao extends Model
      *
      * @return list<string>
      */
-    public static function desfechosDoAto(?Demanda $demanda): array
+    public static function desfechosDoAto(?Demanda $demanda, ?CicloDeFiscalizacao $ciclo = null): array
     {
-        return $demanda?->situacao === Demanda::AGUARDANDO_REGULARIZACAO
+        $retorno = $demanda !== null
+            ? in_array($demanda->situacao, Demanda::ESPERANDO_RETORNO, true)
+            : ($ciclo?->notificacaoEmPrazo() !== null);
+
+        return $retorno
             ? self::DESFECHOS_DE_RETORNO
             : array_values(array_diff(self::DESFECHOS, self::DESFECHOS_DE_RETORNO));
     }
@@ -201,6 +207,22 @@ class Fiscalizacao extends Model
     /** O líder encaminhou o resultado ao Chefe de Setor (era "Devolvida à coordenação"). */
     public const DEVOLVIDA = 'Encaminhada ao Chefe de Setor';
 
+    /**
+     * A vistoria lavrou Notificação Preliminar e o prazo dela está correndo.
+     *
+     * Não espera a leitura do líder (dono, 28/10/2026): a notificação deixa o
+     * caso com o notificado, e a próxima ida ao ponto — o RETORNO — é que volta
+     * ao líder. Sem esta situação, a vistoria ficaria "aguardando leitura" e o
+     * aplicativo esconderia o retorno atrás do "com o líder".
+     */
+    public const PRAZO_CORRENDO = 'Prazo da notificação correndo';
+
+    /** O prazo da notificação passou sem retorno: alerta na mesa do líder. */
+    public const PRAZO_VENCIDO = 'Prazo da notificação vencido';
+
+    /** A equipe voltou ao ponto e registrou o retorno desta notificação. */
+    public const RETORNO_REGISTRADO = 'Retorno registrado';
+
     /** @var list<string> */
     public const SITUACOES = [
         self::EM_CAMPO,
@@ -208,7 +230,14 @@ class Fiscalizacao extends Model
         self::CIENTE,
         self::NOVA_VISTORIA,
         self::DEVOLVIDA,
+        self::PRAZO_CORRENDO,
+        self::PRAZO_VENCIDO,
+        self::RETORNO_REGISTRADO,
     ];
+
+    /** A notificação ainda esperando a volta da equipe ao ponto. */
+    /** @var list<string> */
+    public const NOTIFICACAO_EM_PRAZO = [self::PRAZO_CORRENDO, self::PRAZO_VENCIDO];
 
     /** As que a chefia ainda precisa decidir — a aba "A decidir". */
     /** @var list<string> */

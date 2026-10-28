@@ -115,6 +115,47 @@ class CicloDeFiscalizacao extends Model
         );
     }
 
+    /**
+     * A Notificação Preliminar que espera a volta da equipe ao ponto — com o
+     * prazo correndo ou já vencido —, se houver. Só a da Fiscalização que está
+     * com a equipe: encaminhada ao Chefe, o retorno deixou de ser da equipe.
+     */
+    public function notificacaoEmPrazo(): ?Fiscalizacao
+    {
+        if (! $this->comAEquipe()) {
+            return null;
+        }
+
+        $vistorias = $this->relationLoaded('vistorias') ? $this->vistorias : $this->vistorias()->get();
+
+        return $vistorias->last(
+            static fn (Fiscalizacao $v): bool => in_array($v->situacao, Fiscalizacao::NOTIFICACAO_EM_PRAZO, true),
+        );
+    }
+
+    /** O prazo da notificação passou sem retorno — alerta na mesa do líder. */
+    public function retornoVencido(): bool
+    {
+        return $this->notificacaoEmPrazo()?->situacao === Fiscalizacao::PRAZO_VENCIDO;
+    }
+
+    /**
+     * A Fiscalização SEM demanda (ronda, operação) que está na fila do
+     * aplicativo: a notificação dela espera o retorno, ou o líder mandou a
+     * equipe voltar. Com demanda, quem leva o caso à fila é a demanda.
+     */
+    public function naFilaDoAplicativo(): bool
+    {
+        if ($this->demanda_id !== null || ! $this->comAEquipe()) {
+            return false;
+        }
+
+        $vistorias = $this->relationLoaded('vistorias') ? $this->vistorias : $this->vistorias()->get();
+        $ultima = $vistorias->last();
+
+        return $ultima !== null && in_array($ultima->situacao, [...Fiscalizacao::NOTIFICACAO_EM_PRAZO, Fiscalizacao::NOVA_VISTORIA], true);
+    }
+
     /** Espera o líder mandar a equipe ao ponto? (a demanda está na mesa dele) */
     public function aguardaEnvioAEquipe(): bool
     {
@@ -137,6 +178,15 @@ class CicloDeFiscalizacao extends Model
             return 'Aguardando envio à equipe';
         }
 
+        if ($this->vistoriaPendente() === null && ($notificacao = $this->notificacaoEmPrazo()) !== null) {
+            return $notificacao->situacao === Fiscalizacao::PRAZO_VENCIDO ? 'Retorno vencido' : 'Aguardando regularização';
+        }
+
+        // Ronda que o líder mandou refazer: está de novo na fila do aplicativo.
+        if ($this->naFilaDoAplicativo()) {
+            return 'Nova vistoria em campo';
+        }
+
         $naRua = in_array($this->demanda?->situacao, [
             Demanda::DIRECIONADA_AOS_FISCAIS, Demanda::EM_OPERACAO, Demanda::EM_CAMPO,
         ], true);
@@ -148,10 +198,11 @@ class CicloDeFiscalizacao extends Model
         return $ultima?->desfecho ?? 'Sem vistoria';
     }
 
-    /** O líder tem algo a decidir nela? (enviar à equipe, ou ler o retorno) */
+    /** O líder tem algo a decidir nela? (enviar à equipe, ler o retorno, ou o retorno que venceu) */
     public function aDecidir(): bool
     {
-        return $this->comAEquipe() && ($this->aguardaEnvioAEquipe() || $this->vistoriaPendente() !== null);
+        return $this->comAEquipe()
+            && ($this->aguardaEnvioAEquipe() || $this->vistoriaPendente() !== null || $this->retornoVencido());
     }
 
     /** @param  Builder<static>  $query */

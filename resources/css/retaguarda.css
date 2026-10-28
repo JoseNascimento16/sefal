@@ -2536,6 +2536,14 @@ button.rt-numero:focus-visible {
     margin-top: 2px;
     color: var(--sm-info);
 }
+/* O mesmo aviso quando ele cobra um ato atrasado (ex.: retorno da notificação vencido). */
+.rt-sugestao.rt-sugestao-atraso {
+    border-color: color-mix(in srgb, var(--sm-perigo) 35%, transparent);
+    background: var(--sm-perigo-suave);
+}
+.rt-sugestao.rt-sugestao-atraso svg {
+    color: var(--sm-perigo);
+}
 
 /* Escolha entre CAMINHOS (encaminhar, devolver), não entre valores de um campo.
    Cartão em vez de lista de opções porque cada caminho tem consequência

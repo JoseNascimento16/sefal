@@ -13,3 +13,9 @@ Artisan::command('inspire', function () {
  * excluídas há mais de três dias que não têm histórico no sistema.
  */
 Schedule::command('sefal:purgar-usuarios-excluidos')->dailyAt('03:00');
+
+/*
+ * O prazo da Notificação Preliminar que passou sem a equipe voltar ao ponto vira
+ * "Retorno vencido" e cai na mesa do líder da equipe.
+ */
+Schedule::command('sefal:vencer-prazos-da-notificacao')->hourly();

@@ -118,6 +118,22 @@ class TriagemDeDemandas
     }
 
     /**
+     * Por que esta demanda NÃO pode ser devolvida nem arquivada — ou nulo, se pode.
+     *
+     * Devolver e arquivar são saídas da TRIAGEM, para a demanda que chegou e não
+     * deve ir à rua. A que já passou por fiscalização tem resultado de campo, e o
+     * destino dela é a resposta à origem (dono, 28/10/2026): devolvê-la "ao
+     * remetente" depois de a equipe ter ido ao ponto não faz sentido.
+     */
+    public static function recusaDeRetirada(Demanda $demanda): ?string
+    {
+        return $demanda->passouPorFiscalizacao()
+            ? "A demanda {$demanda->protocolo} já passou por fiscalização e não pode ser devolvida nem arquivada. "
+                .'Responda à origem com o resultado da vistoria, ou encaminhe de novo à equipe.'
+            : null;
+    }
+
+    /**
      * ENCAMINHAMENTO — o Chefe de Setor devolve ao canal de origem ou arquiva.
      *
      * @param  list<int>  $ids
@@ -130,7 +146,7 @@ class TriagemDeDemandas
         foreach ($ids as $id) {
             $demanda = $this->disponivel((int) $id);
 
-            if ($demanda === null) {
+            if ($demanda === null || self::recusaDeRetirada($demanda) !== null) {
                 $this->ignoradas++;
 
                 continue;

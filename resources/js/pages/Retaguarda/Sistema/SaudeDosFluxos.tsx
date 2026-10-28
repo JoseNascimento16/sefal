@@ -108,7 +108,7 @@ function Cabecalho({ children }: { children?: React.ReactNode }) {
                 <h1>Saúde dos Fluxos</h1>
                 <p>
                     O caminho do trabalho de ponta a ponta: da chegada da demanda, por cada canal, até cada destino final, passando pela
-                    Retaguarda e pelo aplicativo do fiscal. Contorno cheio é o que o sistema <strong>atende hoje</strong>; tracejado é o que está{' '}
+                    Retaguarda e pelo aplicativo do fiscal. Contorno cheio é o que o sistema <strong>atende hoje</strong>; cinza pontilhado é o que está{' '}
                     <strong>previsto</strong>. Clique num quadradinho para ver o passo a passo daquele trecho.
                 </p>
             </div>
@@ -191,7 +191,7 @@ function VisaoGeral({ abas, visaoGeral }: PropsVisao) {
                                                             padding: '2px 8px',
                                                             borderRadius: 8,
                                                             background: COR_ESTADO.previsto.fundo,
-                                                            border: `1px dashed ${COR_ESTADO.previsto.traco}`,
+                                                            border: `1px dotted ${COR_ESTADO.previsto.traco}`,
                                                         }}
                                                     >
                                                         {t}
@@ -279,7 +279,7 @@ function PainelDoFluxo({ abas, fluxoAtual, fluxo }: Props) {
                                         borderRadius: 3,
                                         display: 'inline-block',
                                         background: COR_ESTADO[e].fundo,
-                                        border: `1.5px ${e === 'previsto' ? 'dashed' : 'solid'} ${COR_ESTADO[e].traco}`,
+                                        border: `1.5px ${e === 'previsto' ? 'dotted' : 'solid'} ${COR_ESTADO[e].traco}`,
                                     }}
                                 />
                                 {COR_ESTADO[e].rotulo}: <b>{e === 'previsto' ? previstos : fluxo.nos.length - previstos}</b>
@@ -342,7 +342,7 @@ function PainelDoFluxo({ abas, fluxoAtual, fluxo }: Props) {
                                                         textAlign: 'left',
                                                         cursor: 'pointer',
                                                         background: COR_ESTADO[e].fundo,
-                                                        border: `1px ${e === 'previsto' ? 'dashed' : 'solid'} ${COR_ESTADO[e].traco}`,
+                                                        border: `1px ${e === 'previsto' ? 'dotted' : 'solid'} ${COR_ESTADO[e].traco}`,
                                                         color: 'var(--sm-texto)',
                                                     }}
                                                 >
@@ -430,7 +430,7 @@ function PainelDoFluxo({ abas, fluxoAtual, fluxo }: Props) {
                                     padding: '2px 9px',
                                     borderRadius: 999,
                                     background: COR_ESTADO[no.situacao].fundo,
-                                    border: `1px ${no.situacao === 'previsto' ? 'dashed' : 'solid'} ${COR_ESTADO[no.situacao].traco}`,
+                                    border: `1px ${no.situacao === 'previsto' ? 'dotted' : 'solid'} ${COR_ESTADO[no.situacao].traco}`,
                                 }}
                             >
                                 {COR_ESTADO[no.situacao].rotulo}

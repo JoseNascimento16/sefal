@@ -52,6 +52,12 @@ class CicloParaTela
             'a_decidir' => $c->aDecidir(),
             'aguarda_envio' => $c->aguardaEnvioAEquipe(),
             'vistoria_pendente' => $c->vistoriaPendente()?->id,
+            // A Notificação Preliminar esperando o retorno da equipe — e se o prazo já venceu.
+            'retorno' => ($notificacao = $c->notificacaoEmPrazo()) === null ? null : [
+                'protocolo' => $notificacao->protocolo,
+                'vence_em' => $notificacao->documento?->prazo_ate?->format('Y-m-d'),
+                'vencido' => $notificacao->situacao === Fiscalizacao::PRAZO_VENCIDO,
+            ],
             'encaminhado_ao_chefe_em' => $c->encaminhado_ao_chefe_em?->format('Y-m-d H:i'),
             'encaminhado_por' => $c->encaminhadoPor?->name,
             'motivo' => $c->motivo_do_encaminhamento,

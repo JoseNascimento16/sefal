@@ -207,7 +207,10 @@ class PwaFilaDeDenunciasTest extends TestCase
         preg_match('/export type Origem = (?<tipos>[^;]+);/u', $fonte, $bloco);
         preg_match_all("/'([a-z-]+)'/", $bloco['tipos'] ?? '', $canais);
 
-        $this->assertSame(Demanda::CANAIS, $canais[1]);
+        // Além dos canais, a origem `ronda`: a Fiscalização sem demanda que voltou à
+        // fila (retorno da notificação ou volta do líder). Não é canal — e é a única
+        // origem a mais (dono, 28/10/2026).
+        $this->assertSame([...Demanda::CANAIS, 'ronda'], $canais[1]);
     }
 
     public function test_as_ocorrencias_do_aplicativo_sao_as_do_catalogo_do_servidor()
