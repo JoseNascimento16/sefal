@@ -26,7 +26,7 @@ um fluxo só, o da fiscalização de ambulantes; um fluxo novo é uma classe em
 
 ### RN-02 — Cada quadradinho diz se o trecho é atendido ou previsto
 
-Contorno cheio é o trecho que o sistema **atende hoje**; tracejado em laranja é o **previsto** — tem
+Contorno cheio é o trecho que o sistema **atende hoje**; cinza pontilhado é o **previsto** — tem
 lugar no fluxo, mas o sistema ainda não o percorre. A legenda conta os dois. Hoje são previstos: a
 leitura automática do e-Salvador, a resposta pela API dele e o retorno da Notificação Preliminar
 (aguardando regularização, registrar retorno, retorno vencido).
@@ -70,3 +70,4 @@ existe: a tela só desenha o fluxo. O componente já tem os estados de saúde pr
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
 | 27/10/2026 | José Nascimento | Saúde dos Fluxos | Tela criada (RN-01 a RN-07), com o fluxo da fiscalização de ambulantes de ponta a ponta, incluindo o aplicativo do fiscal. | Pedido do dono: visualizar o que o sistema atende hoje ou está previsto de atender, da chegada das demandas aos destinos finais. |
+| 28/10/2026 | José Nascimento | Saúde dos Fluxos | O previsto passa a ser desenhado em **cinza pontilhado**. Entram as integrações previstas (e-Salvador, e-Protocolo, Fala Salvador e SGCI · licenças); o retorno da Notificação Preliminar passa a atendido, com o retorno vencido caindo no líder; o líder que devolve sem vistoria leva o caso de volta à triagem; a deliberação do Chefe depois da fiscalização deixa de levar a "Devolvida" e "Arquivada"; o desfecho deixa claro o "orientado, desfez a montagem e saiu". | Pedido do dono, 28/10/2026. |

@@ -77,6 +77,8 @@ interface Ciclo extends CicloResumo {
     a_decidir: boolean;
     aguarda_envio: boolean;
     vistoria_pendente: number | null;
+    /** A Notificação Preliminar esperando o retorno da equipe. */
+    retorno: { protocolo: string; vence_em: string | null; vencido: boolean } | null;
     encaminhado_ao_chefe_em: string | null;
     encaminhado_por: string | null;
     motivo: string | null;
@@ -611,6 +613,27 @@ export default function Fiscalizacoes({
                                 </div>
                             )}
                         </dl>
+
+                        {aberta.retorno !== null && aberta.vistoria_pendente === null && (
+                            <div className={cn('rt-sugestao', aberta.retorno.vencido && 'rt-sugestao-atraso')} style={{ margin: '14px 0' }}>
+                                <Info size={16} aria-hidden />
+                                <span>
+                                    {aberta.retorno.vencido ? (
+                                        <>
+                                            <strong>Retorno vencido.</strong> O prazo da Notificação Preliminar ({aberta.retorno.protocolo})
+                                            terminou em {dataBR(aberta.retorno.vence_em)} e a equipe ainda não voltou ao ponto. O retorno
+                                            continua na fila do aplicativo; cobre a equipe ou encaminhe ao Chefe de Setor.
+                                        </>
+                                    ) : (
+                                        <>
+                                            Aguardando regularização: o prazo da Notificação Preliminar ({aberta.retorno.protocolo}) vai
+                                            até {dataBR(aberta.retorno.vence_em)}. No fim dele, a equipe volta ao ponto e o retorno chega
+                                            aqui para você ler.
+                                        </>
+                                    )}
+                                </span>
+                            </div>
+                        )}
 
                         {conduz && aberta.aba === 'andamento' && (
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '14px 0' }}>{botoes([aberta.id])}</div>

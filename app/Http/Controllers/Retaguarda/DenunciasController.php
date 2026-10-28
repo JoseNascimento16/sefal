@@ -442,6 +442,17 @@ class DenunciasController extends Controller
             'destino.required' => 'Diga se a denúncia volta ao canal de origem ou é arquivada.',
         ]);
 
+        $recusas = Demanda::whereIn('id', array_map('intval', $dados['ids']))->get()
+            ->map(TriagemDeDemandas::recusaDeRetirada(...))
+            ->filter();
+
+        if ($recusas->isNotEmpty()) {
+            return back()->with('flash.erro', $recusas->count() === 1
+                ? $recusas->first()
+                : $recusas->count().' das denúncias escolhidas já passaram por fiscalização e não podem ser devolvidas nem arquivadas. '
+                    .'Responda à origem com o resultado da vistoria, ou encaminhe de novo à equipe.');
+        }
+
         $efeito = $this->triagem($request)->devolver(
             array_map('intval', $dados['ids']),
             $dados['motivo'],

@@ -82,7 +82,12 @@ class AplicativoController extends Controller
         $campo = new CampoDoFiscal($request->user());
 
         return response()->json([
-            'demandas' => $campo->fila()->map(AplicativoParaTela::demanda(...))->values()->all(),
+            // A fila: as demandas da equipe e as Fiscalizações sem demanda que
+            // voltaram a ela (retorno da ronda, volta determinada pelo líder).
+            'demandas' => [
+                ...$campo->fila()->map(AplicativoParaTela::demanda(...))->values()->all(),
+                ...$campo->fiscalizacoesNaFila()->map(AplicativoParaTela::fiscalizacaoNaFila(...))->all(),
+            ],
             'registros' => $campo->registros()->map(AplicativoParaTela::registro(...))->values()->all(),
             'bairros' => AplicativoParaTela::bairros(),
             'ambulantes' => AplicativoParaTela::ambulantes(),
@@ -177,6 +182,8 @@ class AplicativoController extends Controller
             'sem_gps_motivo' => ['nullable', 'required_without:latitude', Rule::in(array_keys((array) config('prototipo_denuncias.motivos_sem_gps', [])))],
             // A operação em que a avulsa foi feita (tela da operação no aplicativo).
             'operacao_id' => ['nullable', 'integer'],
+            // A Fiscalização sem demanda que voltou à fila (retorno da ronda, volta do líder).
+            'ciclo_id' => ['nullable', 'integer'],
             'endereco' => ['nullable', 'string', 'max:200'],
             'bairro' => ['nullable', 'string', 'max:120'],
             'aberta_em' => ['nullable', 'date'],

@@ -58,9 +58,15 @@ conferência, não a única.
 
 ### RN-03 — A fila é dividida pelo ATO DEVIDO, não numa lista corrida
 
-Três blocos, nesta ordem: **A vistoriar** (o que pede ida ao local, ou o fim de uma vistoria já
-aberta), **Aguardando regularização** (notificação lavrada, prazo correndo) e **Já encerradas**.
-Dentro de cada bloco, a ordem é por **prazo** — vencido primeiro.
+Blocos, nesta ordem: **A vistoriar** (o que pede ida ao local, ou o fim de uma vistoria já
+aberta), **Retorno da notificação** (notificação lavrada: prazo correndo, ou vencido sem retorno — os
+vencidos primeiro), **Com o líder** e **Já encerradas**. Dentro de cada bloco, a ordem é por
+**prazo** — vencido primeiro. No retorno, o prazo do cartão é o da **Notificação**, não o do
+atendimento.
+
+A fila tem também a **ronda que voltou** — a Fiscalização sem demanda cuja notificação espera o
+retorno, ou que o líder mandou refazer. Ela aparece com a origem **Ronda** e o protocolo da
+Fiscalização (`FSC-…`), e o registro feito nela entra na **mesma** Fiscalização (RN-29).
 
 Numa lista corrida, a vistoria de hoje ficaria ao lado de uma denúncia concluída na semana passada, e
 o número do topo contaria como trabalho pendente o que já foi feito. Por isso o contador de abertura
@@ -71,8 +77,8 @@ próprio.
 
 Cada situação vem com a frase que explica o que ela cobra e de quem (`SITUACOES_EXPLICADAS`).
 `Aguardando regularização` e `Retorno vencido` parecem a mesma coisa e são opostas: na primeira o
-prazo corre e a bola está com o **notificado**; na segunda o prazo venceu com a situação mantida e a
-denúncia voltou ao **Chefe de Setor** da área para a próxima medida — a equipe não tem ato pendente.
+prazo corre e a bola está com o **notificado**; na segunda o prazo venceu e **a equipe não voltou** —
+o retorno está atrasado, e o **líder** da equipe foi avisado (RN-30).
 
 ### RN-05 — O desfecho sai de uma lista FECHADA, a mesma da Retaguarda
 
@@ -100,9 +106,13 @@ Denúncia em `Aguardando regularização` mostra o **documento** lavrado (númer
 vencimento em `dd/mm/aaaa`) e oferece **Registrar retorno**. A tela é a mesma do registro — foto,
 coordenada, relato —, com o título, o crachá e os desfechos trocados: é disso que o retorno precisa.
 
-- **Regularizado após notificação** → o prazo foi cumprido e a denúncia se encerra.
-- **Retorno com a situação mantida** → prazo vencido e ponto igual: a denúncia sobe ao Chefe de Setor
-  da área (é o `Retorno vencido` do outro lado).
+- **Regularizado após notificação** → o prazo foi cumprido; o retorno vai ao **líder**, que encaminha
+  o encerramento ao Chefe de Setor.
+- **Retorno com a situação mantida** → o ambulante não resolveu: o retorno vai ao **líder**, que manda
+  a equipe voltar para a próxima medida (por exemplo, o Auto de Apreensão) ou encaminha ao Chefe.
+
+Lavrar a Notificação Preliminar **não** passa pelo líder: o caso fica aguardando a regularização até
+o fim do prazo (dono, 28/10/2026). Quem volta ao líder é o retorno.
 
 Sem esse caminho, o fiscal lavrava a notificação e não tinha por onde fechar o ciclo — o prazo corria
 para ninguém.
@@ -355,8 +365,10 @@ de deixar a seção vazia.
 
 A vistoria aceita **Regularizado no local**, **Nada encontrado no local**, **Notificação Preliminar
 emitida** e **Auto de Apreensão lavrado**; o retorno, só **Regularizado após notificação** e **Retorno
-com a situação mantida**. Retorno é o registro feito numa demanda **aguardando regularização** — ali,
-os desfechos de vistoria não cabem; fora dela (inclusive na avulsa), os de retorno não cabem. O
+com a situação mantida**. Retorno é o registro feito onde há **Notificação Preliminar esperando a
+volta da equipe** — a demanda aguardando regularização ou com o retorno vencido, ou a ronda cuja
+notificação está em prazo; ali, os desfechos de vistoria não cabem; fora disso, os de retorno não
+cabem. O
 aplicativo oferece essas listas, mas o servidor confere e recusa, com o motivo, o que vier fora delas
 (um aparelho com versão antiga não fecha o caso pelo motivo errado). Um teste compara as listas dos
 dois lados.
@@ -367,6 +379,21 @@ dois lados.
 origem diz "Na operação <nome>", a vistoria nasce com a operação e a origem *operação*, e o recibo diz
 "Avulsa — na operação <nome>". O servidor só aceita operação aberta para a equipe do fiscal (ou para
 ele); fora disso, recusa e pede que o registro seja refeito como avulso.
+
+### RN-29 — A ronda que volta à fila é registrada na MESMA Fiscalização
+
+A Fiscalização sem demanda (ronda) volta à fila do aplicativo da equipe em dois casos: a **Notificação
+Preliminar** lavrada nela espera o retorno, ou o **líder mandou a equipe voltar**. O registro feito a
+partir dela vai com a Fiscalização (`ciclo_id`) e entra nela, sem abrir outra. O servidor só aceita a
+Fiscalização da equipe do fiscal que ainda está na fila; fora disso, recusa e diz o motivo. Na volta
+determinada pelo líder, o detalhe mostra a justificativa dele — é o que a equipe vai procurar.
+
+### RN-30 — Prazo da notificação vencido sem retorno vira "Retorno vencido", na mesa do líder
+
+No dia **seguinte** ao fim do prazo da Notificação Preliminar (o próprio dia do prazo ainda é dia de
+voltar), se a equipe não registrou o retorno, o caso vira **Retorno vencido**: a demanda ganha o passo
+no trâmite, a Fiscalização conta como "a decidir" para o líder e mostra o aviso do atraso, e o retorno
+sobe ao topo da fila do aplicativo. O retorno continua possível. A conferência roda de hora em hora.
 
 ## Como demonstrar
 
@@ -412,6 +439,7 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 28/10/2026 | José Nascimento | Aplicativo do Fiscal (fila, registro, retorno) e Retaguarda (Fiscalizações) | A Notificação Preliminar deixa o caso **aguardando regularização** sem passar pelo líder; o retorno vai ao líder (RN-06, RN-27); prazo vencido sem retorno vira **Retorno vencido**, na mesa do líder (RN-30); a ronda volta à fila pela notificação ou pela volta determinada pelo líder, e o registro entra na mesma Fiscalização (RN-03, RN-29); "Regularizado no local" diz que o ambulante desfez a montagem e saiu. | Decisões do dono, 28/10/2026. |
 | 27/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, operação, recibo) | O servidor confere o desfecho do ato — vistoria ou retorno — e recusa com o motivo (RN-27); a avulsa feita na tela da operação fica ligada a ela (RN-28). Trechos desatualizados de RN-01, RN-02 e RN-12 corrigidos. | A regra estava só no aparelho; a avulsa da operação chegava sem a operação. |
 | 27/10/2026 | José Nascimento | Aplicativo do Fiscal e Retaguarda (Caixa, Denúncias, Fiscalizações, Operações, Áreas e Equipes, Ambulantes, mapas) | Sobras do protótipo removidas: a estrutura e os fiscais inventados saem do aplicativo; o selo "PROTÓTIPO · DADOS FICTÍCIOS" vira "DEMONSTRAÇÃO · DADOS DE EXEMPLO" e só aparece no ambiente de demonstração; Ambulantes diz que a carga do SGCI ainda não existe; textos que citavam o protótipo reescritos; seções "Como demonstrar" e "Pendências" deste doc atualizadas. | Pedido do dono: o aviso de dados fictícios era falso em homologação, onde os registros são os do banco. |
 | 14/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, mapa) e Retaguarda (vistoria, trâmite) | Coordenada sempre medida, com recaptura e alerta de margem; sem GPS, o registro vai sem coordenada e com o motivo, mostrado na Retaguarda (RN-24). Endereço do avulso escrito pelo fiscal (RN-25). Operação com tela própria e as denúncias anexadas (RN-26). | O aplicativo mandava o centro do bairro e uma rua fixa do protótipo como se fossem dados medidos. |

@@ -33,7 +33,7 @@ use Illuminate\Support\Carbon;
 ])]
 class DemandaTramite extends Model
 {
-    /** O passo que o SISTEMA deu: recebimento por integração, sem autor humano. */
+    /** O passo que o SISTEMA deu, sem autor humano: recebimento por integração, prazo vencido. */
     public const PAPEL_INTEGRACAO = 'integracao';
 
     /**

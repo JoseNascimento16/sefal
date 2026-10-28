@@ -40,7 +40,8 @@ const ORIGEM_Y = 34;
 /** Cor de cada situação — só variáveis do tema do SEFAL (o modo escuro troca sozinho). */
 export const COR_ESTADO: Record<EstadoNo, { traco: string; fundo: string; texto: string; rotulo: string }> = {
     atendido: { traco: 'var(--sm-primaria)', fundo: 'var(--sm-superficie)', texto: 'var(--sm-texto)', rotulo: 'Atendido hoje' },
-    previsto: { traco: 'var(--sm-aviso)', fundo: 'var(--sm-aviso-suave)', texto: 'var(--sm-texto)', rotulo: 'Previsto' },
+    // Cinza pontilhado: o que o sistema ainda não atende (dono, 28/10/2026).
+    previsto: { traco: 'var(--sm-texto-fraco)', fundo: 'var(--sm-superficie-2)', texto: 'var(--sm-texto-fraco)', rotulo: 'Previsto (ainda não atendido)' },
     ok: { traco: 'var(--sm-ok)', fundo: 'var(--sm-ok-suave)', texto: 'var(--sm-texto)', rotulo: 'Funcionando' },
     falha: { traco: 'var(--sm-perigo)', fundo: 'var(--sm-perigo-suave)', texto: 'var(--sm-texto)', rotulo: 'Quebrado' },
     aviso: { traco: 'var(--sm-aviso)', fundo: 'var(--sm-aviso-suave)', texto: 'var(--sm-texto)', rotulo: 'Atenção' },
@@ -50,6 +51,9 @@ export const COR_ESTADO: Record<EstadoNo, { traco: string; fundo: string; texto:
 
 /** Estados desenhados com contorno TRACEJADO: o trecho ainda não existe ou não foi verificado. */
 const TRACEJADO: EstadoNo[] = ['previsto', 'nao_verificado', 'sem_cobertura'];
+
+/** O traço de cada estado tracejado — o previsto é PONTILHADO, para não se confundir com os outros. */
+const traco = (e: EstadoNo): string | undefined => (e === 'previsto' ? '1.5 3.5' : TRACEJADO.includes(e) ? '5 4' : undefined);
 
 /** Estados cujas setas ganham os tons frios (cada seta com o seu), em vez da cor da situação. */
 const SETA_FRIA: EstadoNo[] = ['atendido', 'ok'];
@@ -281,7 +285,7 @@ function Desenho({ nos, arestas, estados, selecionado, onSelecionar, zoom }: Pro
 
                 return (
                     <g key={`${a.de}-${a.para}-${i}`} data-aresta={`${a.de}>${a.para}`} data-estado={e}>
-                        <path d={d} fill="none" stroke={cor} strokeWidth={e === 'falha' ? 2.4 : 1.7} strokeLinejoin="round" strokeDasharray={TRACEJADO.includes(e) ? '5 4' : undefined} markerEnd={`url(#${SETA_FRIA.includes(e) ? `seta-fria-${i % TONS_FRIOS.length}` : `seta-${e}`})`} />
+                        <path d={d} fill="none" stroke={cor} strokeWidth={e === 'falha' ? 2.4 : 1.7} strokeLinejoin="round" strokeDasharray={traco(e)} strokeLinecap={e === 'previsto' ? 'round' : undefined} markerEnd={`url(#${SETA_FRIA.includes(e) ? `seta-fria-${i % TONS_FRIOS.length}` : `seta-${e}`})`} />
                         {a.rotulo && (
                             <text x={rota.rotulo.x} y={rota.rotulo.y} textAnchor={rota.rotulo.ancora} style={{ fontSize: 10.5, fill: SETA_FRIA.includes(e) ? cor : 'var(--sm-texto-fraco)', fontWeight: 600, paintOrder: 'stroke', stroke: 'var(--sm-superficie)', strokeWidth: 4 }}>
                                 {a.rotulo}
@@ -318,7 +322,7 @@ function Desenho({ nos, arestas, estados, selecionado, onSelecionar, zoom }: Pro
                         style={{ cursor: 'pointer', outline: 'none' }}
                     >
                         <title>{`${n.rotulo.replace('\n', ' — ')} · ${cor.rotulo}`}</title>
-                        <rect x={x} y={y} width={NODE_W} height={NODE_H} rx={raio} fill={cor.fundo} stroke={ativo ? 'var(--sm-acao-forte)' : cor.traco} strokeWidth={ativo ? 3 : e === 'falha' ? 2.4 : 1.6} strokeDasharray={TRACEJADO.includes(e) ? '5 4' : undefined} />
+                        <rect x={x} y={y} width={NODE_W} height={NODE_H} rx={raio} fill={cor.fundo} stroke={ativo ? 'var(--sm-acao-forte)' : cor.traco} strokeWidth={ativo ? 3 : e === 'falha' ? 2.4 : 1.6} strokeDasharray={traco(e)} strokeLinecap={e === 'previsto' ? 'round' : undefined} />
                         {n.tipo === 'fim' && <rect x={x + 3} y={y + 3} width={NODE_W - 6} height={NODE_H - 6} rx={raio - 2} fill="none" stroke={cor.traco} strokeWidth={1} />}
                         {n.tipo === 'trava' && <rect x={x} y={y} width={6} height={NODE_H} rx={3} fill={cor.traco} />}
                         <text x={x + NODE_W / 2} y={y + NODE_H / 2 - (linhasTexto.length - 1) * 6.5 + 4} textAnchor="middle" style={{ fontSize: 11.5, fontWeight: 600, fill: cor.texto }}>

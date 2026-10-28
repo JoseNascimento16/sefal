@@ -201,10 +201,10 @@ export function TelaDemandas() {
 
                         {emPrazo.length > 0 && (
                             <>
-                                <p className="pw-titulo-secao">Aguardando regularização</p>
+                                <p className="pw-titulo-secao">Retorno da notificação</p>
                                 <p className="pw-fraco" style={{ margin: '0 0 10px', fontSize: 13.5 }}>
-                                    Notificação lavrada e prazo correndo: a bola está com o notificado. A
-                                    equipe volta ao ponto quando o prazo vencer.
+                                    Notificação lavrada: a bola está com o notificado até o fim do prazo. Aí a
+                                    equipe volta ao ponto e registra o retorno. Os vencidos vêm primeiro.
                                 </p>
                                 {emPrazo.map((demanda) => (
                                     <CartaoDemanda
@@ -266,8 +266,7 @@ export function CartaoDemanda({
     const origem = ORIGENS[demanda.origem];
     const emRetorno = podeRegistrarRetorno(demanda);
     /* Sem ato do fiscal: encerrada, ou já despachada e esperando o líder. */
-    const encerrada =
-        demanda.situacao === 'Concluída' || demanda.situacao === 'Retorno vencido' || demanda.aguardaLider;
+    const encerrada = demanda.situacao === 'Concluída' || demanda.aguardaLider;
     const documento = demanda.documento;
 
     return (

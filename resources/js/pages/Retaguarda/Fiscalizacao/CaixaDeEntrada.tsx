@@ -1525,6 +1525,19 @@ export default function CaixaDeEntrada({
 
                                 <hr className="rt-regua" />
 
+                                {/* Devolver e arquivar são saídas da TRIAGEM: a demanda que já
+                                    passou por fiscalização tem resultado de campo e é respondida
+                                    à origem (dono, 28/10/2026). O servidor recusa do mesmo jeito. */}
+                                {aberta.passou_por_fiscalizacao ? (
+                                    <div className="rt-sugestao">
+                                        <Info size={16} aria-hidden />
+                                        <span>
+                                            Esta demanda já passou por fiscalização: não se devolve nem se arquiva.
+                                            Responda à origem com o resultado da vistoria, ou encaminhe de novo à equipe.
+                                        </span>
+                                    </div>
+                                ) : (
+                                <>
                                 <div className="rt-form-linha">
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="retorno-motivo">
@@ -1609,6 +1622,8 @@ export default function CaixaDeEntrada({
                                         A justificativa é obrigatória para devolver
                                         ou arquivar.
                                     </p>
+                                )}
+                                </>
                                 )}
                             </>
                         )}
