@@ -77,7 +77,7 @@ function registroDoAplicativo(array $extra = []): array
         'endereco' => 'Rua A, 10',
         'bairro' => 'Pituba',
         'consideracoes' => 'Sem reincidência.',
-        'recomendacoes' => ['nada'],
+        'recomendacoes' => ['seab'],
         ...$extra,
     ];
 }
@@ -162,7 +162,7 @@ it('o registro despachado vira vistoria aguardando o líder, com fotos, e move a
         ->and($vistoria->relato)->toBe('Orientado, desmontou na hora.')
         ->and($vistoria->ocorrencias)->toBe(['calcada'])
         ->and($vistoria->precisao_m)->toBe(8)
-        ->and($vistoria->recomendacoes()->pluck('chave')->all())->toBe(['nada'])
+        ->and($vistoria->recomendacoes()->pluck('chave')->all())->toBe(['seab'])
         ->and($vistoria->fotos)->toHaveCount(1)
         ->and($demanda->fresh()->situacao)->toBe(Demanda::EM_CAMPO);
 
@@ -433,6 +433,17 @@ it('recomendação com chave fora do catálogo é recusada — a chave é o que 
     $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo(['recomendacoes' => ['chave-inventada']]))
         ->assertStatus(422)
         ->assertJsonValidationErrors('recomendacoes.0');
+
+    expect(Fiscalizacao::count())->toBe(0);
+});
+
+it('atalho do catálogo que não é mais oferecido é recusado em registro novo, com o motivo', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo();
+
+    // Dono, 28/10/2026: só o SEAB por enquanto. "nada" segue no catálogo para ler o que já foi gravado.
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), registroDoAplicativo(['recomendacoes' => ['nada']]))
+        ->assertStatus(422)
+        ->assertJsonPath('errors', fn (array $e): bool => str_contains((string) ($e['recomendacoes.0'][0] ?? ''), 'não é mais oferecida'));
 
     expect(Fiscalizacao::count())->toBe(0);
 });

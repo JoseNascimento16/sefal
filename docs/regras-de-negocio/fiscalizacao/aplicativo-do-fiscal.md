@@ -415,6 +415,10 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
    relato, ocorrências, fotos, coordenada (ou a marca de "sem GPS") e retorno combinado estão lá.
 5. De volta ao aplicativo, toque numa operação da tela inicial para ver as denúncias anexadas a ela
    (RN-26).
+6. **Retorno da notificação:** em **Minhas demandas › Retorno da notificação** estão uma denúncia com
+   a Notificação em prazo, outra com o **retorno vencido** (no topo, em vermelho) e uma **ronda** com a
+   Notificação em prazo; em **A vistoriar**, a ronda que o líder mandou refazer (RN-29, RN-30).
+   Como `lider1`, a Fiscalização do retorno vencido aparece em "a decidir", com o aviso do atraso.
 
 ---
 
@@ -429,9 +433,6 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 - **Redação dos impressos duplicada** (`dados-documentos.ts` ↔ `config/prototipo_documentos_campo.php`).
   Conferidas em 03/09/2026: motivos, penalidades, prazos, fundamentação, SEGUB e destinações estão
   iguais. A que fica é a do servidor.
-- **A lista de atalhos de recomendação é proposta**, exceto "Encaminhar ao SEAB", que veio do dono.
-  Os outros seis (SEGUB, SGCI, guarda municipal, operação na área, retorno da equipe…) precisam de
-  confirmação — inclusive se falta algum destino que o fiscal recomenda com frequência.
 
 ---
 
@@ -439,6 +440,7 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 28/10/2026 | José Nascimento | Aplicativo do Fiscal (conclusão do registro, demonstração) | Os atalhos de recomendação oferecidos ficam só "Encaminhar ao SEAB"; o servidor recusa os demais em registro novo, e o catálogo inteiro segue para ler os registros antigos. A demonstração ganha exemplos do retorno da notificação (em prazo, vencido e ronda na fila). | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (mapa, início) | O pino de "retorno vencido" e o contador do Início contam só a Notificação que ainda espera o retorno: feito o retorno, o ambulante deixa de aparecer como vencido. | Coerência com o retorno da notificação (RN-30). |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (fila, registro, retorno) e Retaguarda (Fiscalizações) | A Notificação Preliminar deixa o caso **aguardando regularização** sem passar pelo líder; o retorno vai ao líder (RN-06, RN-27); prazo vencido sem retorno vira **Retorno vencido**, na mesa do líder (RN-30); a ronda volta à fila pela notificação ou pela volta determinada pelo líder, e o registro entra na mesma Fiscalização (RN-03, RN-29); "Regularizado no local" diz que o ambulante desfez a montagem e saiu. | Decisões do dono, 28/10/2026. |
 | 27/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, operação, recibo) | O servidor confere o desfecho do ato — vistoria ou retorno — e recusa com o motivo (RN-27); a avulsa feita na tela da operação fica ligada a ela (RN-28). Trechos desatualizados de RN-01, RN-02 e RN-12 corrigidos. | A regra estava só no aparelho; a avulsa da operação chegava sem a operação. |

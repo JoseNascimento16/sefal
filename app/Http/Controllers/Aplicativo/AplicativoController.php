@@ -189,13 +189,15 @@ class AplicativoController extends Controller
             'aberta_em' => ['nullable', 'date'],
             'consideracoes' => ['nullable', 'string', 'max:4000'],
             'recomendacoes' => ['nullable', 'array'],
-            'recomendacoes.*' => ['string', Rule::in(RecomendacoesDoFiscal::chaves())],
+            // Só os atalhos oferecidos hoje; o catálogo inteiro serve para ler os antigos.
+            'recomendacoes.*' => ['string', Rule::in(RecomendacoesDoFiscal::oferecidas())],
             'fotos' => ['nullable', 'array', 'max:10'],
             'fotos.*' => ['file', 'max:10240', new ArquivoSeguro(['jpg', 'jpeg', 'png', 'webp'])],
             'documento' => ['nullable', 'string', 'max:60000'],
         ], [
             'desfecho.required' => 'Escolha o desfecho da vistoria.',
             'sem_gps_motivo.required_without' => 'O registro chegou sem a localização e sem o motivo. Abra o registro de novo para o aparelho tentar o GPS.',
+            'recomendacoes.*.in' => 'Esta recomendação não é mais oferecida no aplicativo. Atualize a página e escolha de novo.',
             'fotos.max' => 'No máximo 10 fotos por registro.',
             'fotos.*.max' => 'Cada foto pode ter no máximo 10 MB.',
         ]);

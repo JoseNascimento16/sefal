@@ -251,6 +251,17 @@ class PwaFilaDeDenunciasTest extends TestCase
         $this->assertSame(RecomendacoesDoFiscal::chaves(), self::RECOMENDACOES_DA_RETAGUARDA);
     }
 
+    public function test_o_aplicativo_oferece_so_os_atalhos_que_o_servidor_aceita()
+    {
+        // Dono, 28/10/2026: só o SEAB por enquanto. O catálogo inteiro fica para
+        // ler os registros antigos.
+        preg_match('/export const RECOMENDACOES_OFERECIDAS = \\[(?<itens>[^\\]]*)\\];/', $this->fonteDoAplicativo('dados-demandas.ts'), $bloco);
+        preg_match_all("/'([a-z-]+)'/", $bloco['itens'] ?? '', $chaves);
+
+        $this->assertSame(['seab'], RecomendacoesDoFiscal::oferecidas());
+        $this->assertSame(RecomendacoesDoFiscal::oferecidas(), $chaves[1]);
+    }
+
     public function test_o_protocolo_da_caixa_de_entrada_nao_sobrou_na_fila()
     {
         // `CXE-` é o protocolo da Caixa de Entrada (o que chega em papel). A fila

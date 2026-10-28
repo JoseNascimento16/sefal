@@ -71,4 +71,20 @@ class RecomendacoesDoFiscal
     {
         return array_keys(self::catalogo());
     }
+
+    /**
+     * As chaves que o aplicativo OFERECE e o servidor aceita em registro novo.
+     *
+     * Só as que existem no catálogo: uma chave oferecida sem redação chegaria à
+     * Retaguarda crua.
+     *
+     * @return list<string>
+     */
+    public static function oferecidas(): array
+    {
+        return array_values(array_intersect(
+            (array) config('prototipo_denuncias.recomendacoes_oferecidas', []),
+            self::chaves(),
+        ));
+    }
 }

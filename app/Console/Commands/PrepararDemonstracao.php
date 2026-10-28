@@ -12,6 +12,7 @@ use Database\Seeders\DemonstracaoSeeder;
 use Database\Seeders\EstruturaSeeder;
 use Database\Seeders\ParametrizacaoFiscalizacaoSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
+use Database\Seeders\RetornoDaNotificacaoSeeder;
 use Database\Seeders\SetoresSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\App;
@@ -126,6 +127,9 @@ class PrepararDemonstracao extends Command
             );
 
             $this->enxugarSePedido();
+            // Os exemplos do retorno da notificação entram também na base que já
+            // existe: é assim que o Render os ganha sem trocar o banco.
+            $this->exemplosDoRetornoDaNotificacao();
             // As fotos e os anexos semeados precisam de arquivo para ver e baixar —
             // e o disco do Render é apagado a cada deploy.
             Artisan::call('sefal:arquivos-de-demonstracao');
@@ -140,6 +144,7 @@ class PrepararDemonstracao extends Command
         });
 
         $this->enxugarSePedido();
+        $this->exemplosDoRetornoDaNotificacao();
         Artisan::call('sefal:arquivos-de-demonstracao');
 
         $this->components->info(sprintf(
@@ -241,6 +246,16 @@ class PrepararDemonstracao extends Command
      * passam a ele (`fiscal_id` é obrigatório e não tem `ON DELETE`). O resto das
      * referências a `users` é `nullOnDelete`/`cascadeOnDelete` e se resolve só.
      */
+    /** Notificação em prazo, retorno vencido e ronda na fila ({@see RetornoDaNotificacaoSeeder}). */
+    private function exemplosDoRetornoDaNotificacao(): void
+    {
+        $this->components->task('Retorno da notificação', function () {
+            Artisan::call('db:seed', ['--class' => RetornoDaNotificacaoSeeder::class, '--force' => true]);
+
+            return true;
+        });
+    }
+
     private function enxugarSePedido(): void
     {
         if (! $this->option('so-estas-contas')) {

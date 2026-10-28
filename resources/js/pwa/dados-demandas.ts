@@ -285,7 +285,7 @@ export const impedimentoParaConcluir = (
  * entre as duas listas é À MÃO, e o guarda é esta nota. Quando o aplicativo
  * falar com o servidor, o catálogo passa a vir de lá e esta cópia morre.
  */
-export const RECOMENDACOES: { id: string; rotulo: string; emoji: string }[] = [
+const TODAS_AS_RECOMENDACOES: { id: string; rotulo: string; emoji: string }[] = [
     { id: 'retorno', rotulo: 'Sugerir retorno da equipe', emoji: '🔁' },
     { id: 'reprogramar', rotulo: 'Reprogramar a vistoria', emoji: '📅' },
     { id: 'operacao', rotulo: 'Sugerir operação na área', emoji: '🚩' },
@@ -300,6 +300,15 @@ export const RECOMENDACOES: { id: string; rotulo: string; emoji: string }[] = [
 ];
 
 /**
+ * Os atalhos que o fiscal vê hoje (dono, 28/10/2026: "só SEAB por enquanto").
+ * Os demais ficam na lista acima só para o aparelho ler registros antigos. O
+ * servidor aceita a mesma lista (`recomendacoes_oferecidas`).
+ */
+export const RECOMENDACOES_OFERECIDAS = ['seab'];
+
+export const RECOMENDACOES = TODAS_AS_RECOMENDACOES.filter((r) => RECOMENDACOES_OFERECIDAS.includes(r.id));
+
+/**
  * A chave vira texto para quem lê o registro no APARELHO — sempre a redação
  * curta, que é a que cabe na pílula. A explícita é do outro lado.
  *
@@ -308,7 +317,7 @@ export const RECOMENDACOES: { id: string; rotulo: string; emoji: string }[] = [
  * atalhos e vendo um só.
  */
 export const rotuloDaRecomendacao = (id: string): string =>
-    RECOMENDACOES.find((r) => r.id === id)?.rotulo ?? id;
+    TODAS_AS_RECOMENDACOES.find((r) => r.id === id)?.rotulo ?? id;
 
 /**
  * O que cada situação cobra, e de quem — a frase que o aplicativo escreve
