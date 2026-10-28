@@ -1,10 +1,10 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import type * as L from 'leaflet';
 import { ArrowRight, Flame, Sparkles, Target } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import { CamadaDoMapa } from '@/components/retaguarda/camada-do-mapa';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { SeloDemonstracao } from '@/components/retaguarda/selo-demonstracao';
 import type {
     BairroDoCalor,
     Equipe,
@@ -59,9 +59,9 @@ import { index as rotaOperacoes } from '@/routes/retaguarda/operacoes';
  * provavelmente já tem operação de rotina. E ela escreve qual dos dois motivos
  * está mandando — recomendação sem motivo é adivinhação com aparência de dado.
  *
- * ⚠️ PROTÓTIPO: a incidência é inventada; as coordenadas e a estrutura de
- * equipes, não (ver `App\Support\Prototipo\MapasFicticios`). O botão de operação
- * LEVA ao Cadastro de Operação — quem cria a operação é aquela tela.
+ * A incidência é a das vistorias do banco ({@see \App\Support\Apresentacao\MapaDaCidade}).
+ * O botão de operação LEVA ao Cadastro de Operação — quem cria a operação é
+ * aquela tela.
  */
 export default function MapaDeCalor({
     bairros,
@@ -76,6 +76,7 @@ export default function MapaDeCalor({
     centro: { lat: number; lng: number };
     momento: string;
 }) {
+    const { demonstracao } = usePage().props;
     const caixa = useRef<HTMLDivElement>(null);
     const mapaRef = useRef<L.Map | null>(null);
     const camadaRef = useRef<CamadaCalor | null>(null);
@@ -275,10 +276,10 @@ export default function MapaDeCalor({
 
                 <div className="rt-mapa-corpo">
                     <div className="rt-mapa-coluna">
-                        <SeloPrototipo escuro>
-                            A incidência é inventada. As coordenadas são reais, e a
-                            área/equipe de cada bairro vem do cadastro de Áreas e Equipes.
-                        </SeloPrototipo>
+                        <SeloDemonstracao escuro>
+                            As vistorias desta demonstração são exemplos; a incidência é
+                            calculada a partir delas, como será com os registros reais.
+                        </SeloDemonstracao>
 
                         {/* A LEITURA — primeira coisa da tela, e de propósito. */}
                         <section className="rt-vidro">
@@ -345,7 +346,7 @@ export default function MapaDeCalor({
                                 <BotaoExportar
                                     titulo="Regiões mais quentes"
                                     subtitulo="Fiscalização › Mapa de Calor"
-                                    contexto={`Últimos ${janela} dias · ${recorteEmPalavras(equipe, equipes)} · apurado em ${momento} · PROTÓTIPO (dados fictícios)`}
+                                    contexto={`Últimos ${janela} dias · ${recorteEmPalavras(equipe, equipes)} · apurado em ${momento}${demonstracao ? ' · dados de exemplo da demonstração' : ''}`}
                                     colunas={[
                                         { chave: 'posicao', titulo: '#', alinhar: 'right' },
                                         { chave: 'bairro', titulo: 'Bairro' },

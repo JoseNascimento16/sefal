@@ -47,9 +47,8 @@ import { Icone } from '../icones';
       chega com foto e requerente identificado; o 156 é a transcrição de uma
       ligação, às vezes anônima e com endereço apurado por telefone.
 
-   ⚠️ O fiscal NUNCA vê denúncia em triagem. Elas existem no dado do protótipo
-   (para a fila poder provar o recorte), e a régua está em `dados-demandas.ts`:
-   só as situações que já estão na mão da equipe chegam aqui.
+   ⚠️ O fiscal NUNCA vê denúncia em triagem: o servidor só entrega o que já
+   está na mão da equipe, e a régua das situações está em `dados-demandas.ts`.
    ============================================================================ */
 
 type Filtro = 'todas' | Origem;

@@ -18,7 +18,7 @@ import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { SeloDemonstracao } from '@/components/retaguarda/selo-demonstracao';
 import { useAcoes } from '@/hooks/use-acoes';
 import { useEnvio } from '@/hooks/use-envio';
 import { casaTermos, parseConsulta } from '@/lib/busca';
@@ -34,7 +34,7 @@ import {
 } from '@/routes/retaguarda/operacoes';
 
 /**
- * Cadastro de Operação — PROTÓTIPO.
+ * Cadastro de Operação.
  *
  * "A operação é evento; a equipe é organização." A área e a equipe são a
  * estrutura permanente com que a SEMOP divide a cidade; a operação é o trabalho
@@ -575,12 +575,12 @@ export default function CadastroDeOperacao({
               * com trâmite. O que continua de mentira são os DADOS, e é disso que
               * quem avalia precisa ser avisado antes de tirar conclusão deles.
               */}
-            <SeloPrototipo>
-                Ambiente de demonstração: as operações já cadastradas são{' '}
+            <SeloDemonstracao>
+                As operações já cadastradas nesta demonstração são{' '}
                 <strong>exemplos</strong>, não operações reais de rua. O que você
                 criar, alterar ou excluir{' '}
                 <strong>é gravado de verdade</strong>.
-            </SeloPrototipo>
+            </SeloDemonstracao>
 
             {/* A informação que faz a tela ser entendida: é o MESMO catálogo que o
                 direcionamento das denúncias consome. Sem isto, ninguém liga o

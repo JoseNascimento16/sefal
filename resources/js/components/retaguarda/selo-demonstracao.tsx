@@ -1,22 +1,22 @@
+import { usePage } from '@inertiajs/react';
 import { FlaskConical } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 /**
- * Selo de PROTÓTIPO — a tela diz, em cima, que não é sistema pronto.
+ * Selo de DEMONSTRAÇÃO — a tela diz, em cima, que os registros são de exemplo.
  *
- * Protótipo que se disfarça de entrega vira decisão tomada por engano: alguém vê
- * a grade cheia, conclui que o módulo está no ar e planeja em cima disso. O selo
- * não é enfeite — é a única coisa que separa "aprovamos a forma" de "está
- * funcionando".
+ * Só aparece no ambiente de demonstração (Render, `APP_ENV=demonstracao`), que
+ * roda com cadastro inventado: lá, quem vê a grade cheia precisa saber que não
+ * são casos reais, e que o que fizer é gravado de verdade. Em homologação e em
+ * produção os registros são os do banco, e o aviso seria falso — então o selo
+ * não aparece.
  *
- * Ele carrega DUAS informações, e as duas importam: que os dados são fictícios, e
- * o que muda quando aquilo virar produção (`children`).
+ * Até 27/10/2026 ele se chamava "PROTÓTIPO · DADOS FICTÍCIOS" e aparecia em
+ * todo ambiente, de quando as telas ainda não liam o banco.
  *
- * Cores vêm dos tokens do Design System (`--sm-aviso*`), como o resto da casca:
- * nada de paleta paralela para uma tela de protótipo — a que se aprova é a tela
- * real, não uma parecida.
+ * Cores vêm dos tokens do Design System (`--sm-aviso*`), como o resto da casca.
  */
-export function SeloPrototipo({
+export function SeloDemonstracao({
     escuro = false,
     children,
 }: {
@@ -32,6 +32,12 @@ export function SeloPrototipo({
     escuro?: boolean;
     children?: ReactNode;
 }) {
+    const { demonstracao } = usePage().props;
+
+    if (!demonstracao) {
+        return null;
+    }
+
     return (
         <div
             role="note"
@@ -55,16 +61,10 @@ export function SeloPrototipo({
                 lineHeight: 1.55,
             }}
         >
-            <FlaskConical
-                size={17}
-                aria-hidden
-                style={{ flexShrink: 0, marginTop: 2 }}
-            />
+            <FlaskConical size={17} aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
 
             <div>
-                <strong style={{ letterSpacing: '.04em' }}>
-                    PROTÓTIPO · DADOS FICTÍCIOS
-                </strong>
+                <strong style={{ letterSpacing: '.04em' }}>DEMONSTRAÇÃO · DADOS DE EXEMPLO</strong>
                 {children ? <div>{children}</div> : null}
             </div>
         </div>

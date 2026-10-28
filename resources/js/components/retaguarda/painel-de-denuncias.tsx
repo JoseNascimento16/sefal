@@ -23,7 +23,7 @@ import { ListaDeArquivos } from '@/components/retaguarda/lista-de-arquivos';
 import { RegistroDeDemanda } from '@/components/retaguarda/registro-de-demanda';
 import type { CanalDeRegistro } from '@/components/retaguarda/registro-de-demanda';
 import { RetornoAoCanal } from '@/components/retaguarda/retorno-ao-canal';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { SeloDemonstracao } from '@/components/retaguarda/selo-demonstracao';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
@@ -61,7 +61,7 @@ import {
 } from '@/routes/retaguarda/denuncias';
 
 /**
- * Denúncias das ouvidorias — PROTÓTIPO. O miolo das DUAS telas do módulo.
+ * Denúncias das ouvidorias. O miolo das DUAS telas do módulo.
  *
  * As telas de canal (`e-Salvador` e `Fala Salvador`) são cascas de vinte linhas
  * que só declaram título e trilha: a mecânica é a mesma, e escrevê-la duas vezes
@@ -1167,13 +1167,13 @@ export function PainelDeDenuncias({
               * com trâmite. O que continua de mentira são os DADOS, e é disso que
               * quem avalia precisa ser avisado antes de tirar conclusão deles.
               */}
-            <SeloPrototipo>
-                Ambiente de demonstração: as denúncias são <strong>exemplos</strong>,
+            <SeloDemonstracao>
+                As denúncias desta demonstração são <strong>exemplos</strong>,
                 não casos reais, e a integração com o canal{' '}
                 <strong>não existe ainda</strong> — nada entra sozinho. O que você
                 encaminhar, direcionar ou devolver{' '}
                 <strong>é gravado de verdade</strong> e fica no trâmite da denúncia.
-            </SeloPrototipo>
+            </SeloDemonstracao>
 
             {registra && registroEm.length > 0 && (
                 <RegistroDeDemanda
@@ -2211,9 +2211,9 @@ export function PainelDeDenuncias({
                                     }
                                 />
                                 <p className="form-ajuda">
-                                    No protótipo a operação nasce só aqui, para a cena
-                                    fazer sentido. No sistema ela é o Cadastro de
-                                    Operação, com data, alvo e equipe.
+                                    A operação aberta aqui vai para o Cadastro de
+                                    Operação, onde se completam as datas, os bairros e
+                                    os fiscais.
                                 </p>
                             </div>
                         </>

@@ -134,7 +134,7 @@ export function TelaOperacao({ id }: { id: string | null }) {
                     type="button"
                     className="pw-btn pw-btn-acao"
                     style={{ marginTop: 18, minHeight: 58 }}
-                    onClick={() => irPara('registrar')}
+                    onClick={() => irPara(`registrar/${operacao.id}`)}
                 >
                     <Icone nome="mais" tamanho={20} />
                     Registrar fiscalização avulsa

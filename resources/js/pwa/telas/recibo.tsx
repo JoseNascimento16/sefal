@@ -50,7 +50,7 @@ export function TelaRecibo({ id }: { id: string | null }) {
                     <Vazio
                         icone="🧾"
                         titulo="Registro não encontrado"
-                        texto="Ele pode ter sido aberto noutra sessão do protótipo."
+                        texto="Ele pode ter sido feito em outro aparelho. Volte a Meus registros e abra por lá."
                     />
                 </div>
             </div>
@@ -172,7 +172,7 @@ function Conclusao({ registro }: { registro: Registro }) {
                                     </span>
                                 </>
                             ) : (
-                                'Avulsa — encontrada em ronda'
+                                registro.operacaoNome ? `Avulsa — na operação ${registro.operacaoNome}` : 'Avulsa — encontrada em ronda'
                             )}
                         </dd>
                         <dt>Como o local ficou</dt>
