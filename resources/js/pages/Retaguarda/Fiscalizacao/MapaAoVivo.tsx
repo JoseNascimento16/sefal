@@ -3,7 +3,7 @@ import * as L from 'leaflet';
 import { ArrowRight, Radio, Send, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CamadaDoMapa } from '@/components/retaguarda/camada-do-mapa';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { SeloDemonstracao } from '@/components/retaguarda/selo-demonstracao';
 import type {
     Equipe,
     FiscalEmCampo,
@@ -57,8 +57,7 @@ import { index as rotaAmbulantes } from '@/routes/retaguarda/ambulantes';
  * responder outra pergunta. O recorte vai dito em palavras embaixo dos números,
  * para ninguém ler "7 retornos vencidos" achando que é a cidade toda.
  *
- * ⚠️ PROTÓTIPO: pessoas, horários e situações são inventados; as coordenadas e a
- * estrutura de equipes, não (ver `App\Support\Prototipo\MapasFicticios`). Não há
+ * Os pinos vêm do banco ({@see \App\Support\Apresentacao\MapaDaCidade}). Não há
  * tempo real — a tela diz o instante que está mostrando.
  */
 
@@ -365,11 +364,10 @@ export default function MapaAoVivo({
 
                 <div className="rt-mapa-corpo">
                     <div className="rt-mapa-coluna">
-                        <SeloPrototipo escuro>
-                            Pessoas, horários e situações são inventados. As coordenadas
-                            são reais, e a área/equipe de cada bairro vem do cadastro de
-                            Áreas e Equipes. Não há tempo real: a tela mostra um instante.
-                        </SeloPrototipo>
+                        <SeloDemonstracao escuro>
+                            Os ambulantes e as vistorias desta demonstração são exemplos.
+                            Não há tempo real: a tela mostra um instante.
+                        </SeloDemonstracao>
 
                         <section className="rt-vidro">
                             <h2 className="rt-vidro-titulo">A cidade agora</h2>

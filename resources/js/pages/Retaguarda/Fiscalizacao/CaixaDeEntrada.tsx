@@ -27,7 +27,7 @@ import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import { ModalConfirm } from '@/components/retaguarda/modal-confirm';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { SeloDemonstracao } from '@/components/retaguarda/selo-demonstracao';
 import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
     Paginacao,
@@ -56,7 +56,7 @@ import {
 import { responderAoCanal as rotaResponderAoCanal } from '@/routes/retaguarda/denuncias';
 
 /**
- * Caixa de Entrada do Coordenador — PROTÓTIPO.
+ * Caixa de Entrada do Coordenador.
  *
  * É o começo da cadeia. A demanda chega de FORA e em PAPEL — e-Salvador, Fala
  * Salvador 156, pedido de nova licença, ofício —, o coordenador digita, e daí
@@ -603,13 +603,13 @@ export default function CaixaDeEntrada({
               * O que continua sendo de mentira são as DEMANDAS, e é disso que o
               * cliente precisa ser avisado antes de tirar conclusão dos números.
               */}
-            <SeloPrototipo>
-                Ambiente de demonstração: as demandas, os ambulantes e as
-                fiscalizações são <strong>exemplos</strong>, não casos reais. O
+            <SeloDemonstracao>
+                As demandas, os ambulantes e as fiscalizações desta
+                demonstração são <strong>exemplos</strong>, não casos reais. O
                 que você registrar, encaminhar ou devolver{' '}
                 <strong>é gravado de verdade</strong> e fica no histórico da
                 demanda.
-            </SeloPrototipo>
+            </SeloDemonstracao>
 
             <div className="card-premium">
                 <div className="abas" role="tablist" aria-label="Caixa de Entrada">
@@ -1095,9 +1095,8 @@ export default function CaixaDeEntrada({
                                 onChange={(e) => mudar('anexo', e.target.value)}
                             />
                             <p className="form-ajuda">
-                                No protótipo entra só o nome do arquivo. No sistema
-                                este campo será o envio do PDF digitalizado, com a
-                                mesma conferência de anexo das demais telas.
+                                Por enquanto entra só o nome do arquivo: o envio do
+                                PDF digitalizado ainda não existe nesta tela.
                             </p>
                         </div>
 

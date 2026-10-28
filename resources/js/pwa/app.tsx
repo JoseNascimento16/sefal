@@ -93,6 +93,9 @@ export type NovoRegistro = {
     origem: OrigemRegistro;
     demandaId: string | null;
     referencia: string | null;
+    /** A operação em que a avulsa foi feita, quando o registro saiu da tela dela. */
+    operacaoId: number | null;
+    operacaoNome: string | null;
 };
 
 type Contexto = {
@@ -234,6 +237,7 @@ function corpoDoEnvio(r: Registro, fotos: Blob[]): FormData {
 
     por('client_id', r.clientId);
     por('demanda_id', r.demandaId?.startsWith('den-') ? r.demandaId.slice(4) : null);
+    por('operacao_id', r.demandaId ? null : r.operacaoId);
     por('desfecho', r.desfecho);
     por('relato', r.relato);
     por('ambulante', r.ambulante);
@@ -574,6 +578,8 @@ export function App() {
             origem: novo.origem,
             demandaId: novo.demandaId,
             referencia: novo.referencia,
+            operacaoId: novo.operacaoId,
+            operacaoNome: novo.operacaoNome,
             /* O registro nasce ABERTO: quem escreve as considerações finais é
                a tela de conclusão, no passo seguinte. */
             consideracoes: '',

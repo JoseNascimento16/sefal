@@ -219,6 +219,21 @@ class PwaFilaDeDenunciasTest extends TestCase
         $this->assertSame(array_keys((array) config('prototipo_denuncias.ocorrencias_do_fiscal')), $ids[1]);
     }
 
+    public function test_os_desfechos_de_vistoria_e_de_retorno_do_aplicativo_sao_os_do_servidor()
+    {
+        $fonte = $this->fonteDoAplicativo('dados-demandas.ts');
+        $lista = function (string $nome) use ($fonte): array {
+            preg_match('/export const '.$nome.': Desfecho\[\] = \[(?<itens>.*?)\];/s', $fonte, $bloco);
+            preg_match_all("/'([^']+)'/u", $bloco['itens'] ?? '', $itens);
+
+            return $itens[1];
+        };
+
+        // Quem decide é o servidor; o aplicativo só oferece a mesma lista.
+        $this->assertSame(Fiscalizacao::desfechosDoAto(null), $lista('DESFECHOS_DE_VISTORIA'));
+        $this->assertSame(Fiscalizacao::DESFECHOS_DE_RETORNO, $lista('DESFECHOS_DE_RETORNO'));
+    }
+
     public function test_os_motivos_de_sem_gps_do_aplicativo_sao_os_do_servidor()
     {
         $fonte = $this->fonteDoAplicativo('gps.ts');

@@ -120,6 +120,9 @@ export type Registro = {
     origem: OrigemRegistro;
     /** Preenchido só quando a origem é dirigida. */
     demandaId: string | null;
+    /** A operação em que a avulsa foi feita (tela da operação), quando foi. */
+    operacaoId?: number | null;
+    operacaoNome?: string | null;
     /** O número do processo da demanda — vai para o campo REFERÊNCIA do papel. */
     referencia: string | null;
     /**

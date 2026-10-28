@@ -4,9 +4,9 @@ namespace App\Providers;
 
 use App\Models\PermissaoSetor;
 use App\Services\PermissaoService;
+use App\Support\TravaDeComandosDestrutivos;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -103,9 +103,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Date::use(CarbonImmutable::class);
 
-        DB::prohibitDestructiveCommands(
-            app()->isProduction(),
-        );
+        TravaDeComandosDestrutivos::aplicar();
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)

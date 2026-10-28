@@ -27,6 +27,8 @@ declare module '@inertiajs/core' {
             modoGerente: { pode: boolean; ativo: boolean };
             /** A demanda que acabou de ser registrada (vale uma vez). */
             demandaRegistrada: { protocolo: string; canal: string; proximo: string } | null;
+            /** O ambiente é a demonstração (Render), com cadastro de exemplo? */
+            demonstracao: boolean;
             [key: string]: unknown;
         };
     }

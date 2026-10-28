@@ -1,12 +1,11 @@
 import { Head } from '@inertiajs/react';
-import { Eye, List, Undo2, UserRound } from 'lucide-react';
+import { Eye, Info, List, Undo2, UserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { BuscaInteligente } from '@/components/retaguarda/busca-inteligente';
 import BotaoExportar from '@/components/retaguarda/exportar';
 import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
 import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import {
     Paginacao,
@@ -519,7 +518,7 @@ export default function Ambulantes({
                     <p>
                         Quem é fiscalizado em rua — <strong>com permissão da
                         SEMOP ou sem</strong>. O cadastro é do{' '}
-                        <strong>SGCI</strong> e chega aqui por integração: esta
+                        <strong>SGCI</strong>: esta
                         tela é <strong>consulta</strong>, e nela você procura a
                         pessoa, abre a ficha dela e exporta o recorte que estiver
                         vendo.
@@ -567,16 +566,15 @@ export default function Ambulantes({
                 editar o ambulante" nasce daí. O que se diz são três coisas: de
                 onde o dado vem, que aqui é leitura, e onde se corrige.
             */}
-            <SeloPrototipo>
-                O cadastro de ambulantes é do <strong>SGCI</strong> — o sistema do
-                comércio informal — e chega ao SEFAL por{' '}
-                <strong>integração</strong>. Aqui ele é <strong>espelho de
-                leitura</strong>: não há incluir, alterar nem excluir, e{' '}
-                <strong>a correção se faz na origem, no SGCI</strong> — feita aqui,
-                ela seria desfeita na carga seguinte. ⚠️ A integração{' '}
-                <strong>ainda não existe</strong> (PEND-001): o que você vê são
-                registros de exemplo, para aprovar a forma da consulta.
-            </SeloPrototipo>
+            <div className="rt-sugestao" style={{ marginBottom: 18 }}>
+                <Info size={16} aria-hidden />
+                <div>
+                    O cadastro de ambulantes é do <strong>SGCI</strong> — o sistema do comércio
+                    informal. Aqui ele é <strong>espelho de leitura</strong>: não há incluir,
+                    alterar nem excluir, e <strong>a correção se faz na origem, no SGCI</strong>.
+                    A carga automática a partir do SGCI <strong>ainda não existe</strong>.
+                </div>
+            </div>
 
             <div className="card-premium">
                 <div className="abas" role="tablist" aria-label="Ambulantes">

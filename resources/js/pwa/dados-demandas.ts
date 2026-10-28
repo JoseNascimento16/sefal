@@ -611,7 +611,6 @@ export const prazoDoRetornoEmPalavras = (dias: number): string => {
 export const tomDoPrazo = (dias: number): 'perigo' | 'alerta' | 'info' =>
     dias < 0 ? 'perigo' : dias <= 1 ? 'alerta' : 'info';
 
-/* A equipe e a estrutura moram nos módulos deles; reexportar aqui evita que as
-   telas que já liam a fila tenham de aprender dois caminhos novos. */
-export { AREAS_SEFAL } from './dados-equipes';
+/* A equipe mora na sessão; reexportar aqui evita que as telas que já liam a
+   fila tenham de aprender um caminho novo. */
 export { EQUIPE, EQUIPES, FISCAL } from './sessao';

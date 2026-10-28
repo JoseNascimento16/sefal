@@ -23,7 +23,7 @@ import type { Listagens } from '@/components/retaguarda/grade-enxuta';
 import { CabecaDaGrade, Celula } from '@/components/retaguarda/grade-enxuta';
 import type { Arquivo } from '@/components/retaguarda/lista-de-arquivos';
 import { ListaDeArquivos } from '@/components/retaguarda/lista-de-arquivos';
-import { SeloPrototipo } from '@/components/retaguarda/selo-prototipo';
+import { SeloDemonstracao } from '@/components/retaguarda/selo-demonstracao';
 import { Sobreposicao } from '@/components/retaguarda/sobreposicao';
 import type { AcessorOrd } from '@/components/retaguarda/th-ordenavel';
 import { Paginacao, useOrdenacao, usePaginacao } from '@/components/retaguarda/th-ordenavel';
@@ -427,11 +427,11 @@ export default function Fiscalizacoes({
                 </div>
             </div>
 
-            <SeloPrototipo>
-                Ambiente de demonstração: as vistorias já registradas são <strong>exemplos</strong>.
+            <SeloDemonstracao>
+                As vistorias já registradas nesta demonstração são <strong>exemplos</strong>.
                 O que você encaminhar ou pedir de nova vistoria <strong>é gravado de verdade</strong>{' '}
                 e fica no trâmite da demanda.
-            </SeloPrototipo>
+            </SeloDemonstracao>
 
             {recorteDeEquipe && (
                 <div className="rt-sugestao" style={{ marginBottom: 18 }}>

@@ -597,6 +597,17 @@ return [
                             // não têm decisão a tomar a partir dela.
                             'setores' => ['administrador'],
                         ],
+                        [
+                            'rotulo' => 'Saúde dos Fluxos',
+                            'rota' => 'retaguarda.saude-dos-fluxos.index',
+                            'icone' => 'fluxos',
+                            'curto' => 'FLUXOS',
+                            'slug' => 'saude-dos-fluxos',
+                            // Só o administrador (pedido do dono, 27/10/2026): o fluxograma
+                            // mostra como o sistema é montado por dentro, de ponta a ponta,
+                            // inclusive o que ainda é só previsto.
+                            'setores' => ['administrador'],
+                        ],
                     ],
                 ],
 
