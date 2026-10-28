@@ -30,16 +30,18 @@ function administradorDosFluxos(): User
     return User::factory()->create(['admin' => true, 'ativo' => true]);
 }
 
-it('abre na Visão geral para o administrador, com um fluxo e a sua aba', function () {
+it('abre na Visão geral para o administrador, com os fluxos e as suas abas', function () {
     $this->actingAs(administradorDosFluxos())
         ->get(route('retaguarda.saude-dos-fluxos.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $tela) => $tela
             ->component('Retaguarda/Sistema/SaudeDosFluxos')
             ->where('fluxoAtual', null)
-            ->has('abas', 1)
-            ->has('visaoGeral', 1)
-            ->where('visaoGeral.0.chave', 'fiscalizacao'));
+            // O fluxo do aplicativo do fiscal entrou como segunda aba (dono, 28/10/2026).
+            ->has('abas', 2)
+            ->has('visaoGeral', 2)
+            ->where('visaoGeral.0.chave', 'fiscalizacao')
+            ->where('visaoGeral.1.chave', 'aplicativo'));
 });
 
 it('abre o fluxo com o fluxograma, o passo a passo e as conclusões', function () {

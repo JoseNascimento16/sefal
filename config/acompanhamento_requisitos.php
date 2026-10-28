@@ -484,7 +484,9 @@ return [
                 .'do CODECON. O fluxograma do trabalho de ponta a ponta, da chegada da demanda por cada canal a '
                 .'cada destino final, passando pela Retaguarda e pelo aplicativo do fiscal; cada trecho diz se é '
                 .'atendido hoje ou só previsto e abre o passo a passo. Só o administrador. As verificações do '
-                .'ambiente que, no CODECON, pintam o trecho de vermelho ainda não existem aqui.',
+                .'ambiente que, no CODECON, pintam o trecho de vermelho ainda não existem aqui. Desde 28/10/2026 '
+                .'há uma segunda aba, o aplicativo do fiscal visto de dentro: tudo o que o fiscal faz no APP '
+                .'e o que ele ainda não atende.',
         ],
 
         [
