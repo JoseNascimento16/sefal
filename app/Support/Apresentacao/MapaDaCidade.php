@@ -198,10 +198,15 @@ class MapaDaCidade
      * É o único pino que grita na tela, e com razão: é o caso em que a própria
      * SEFAL prometeu voltar ao ponto e não voltou. Nulo quando não há promessa
      * vencida — a maioria.
+     *
+     * Só conta a Notificação que AINDA espera o retorno (dono, 28/10/2026): feito
+     * o retorno, o prazo passou mas a promessa foi cumprida, e o pino calava
+     * nunca — contava qualquer documento com prazo no passado.
      */
     public static function retornoVencidoHaDias(Ambulante $ambulante, CarbonInterface $hoje): ?int
     {
         $documento = $ambulante->fiscalizacoes()
+            ->whereIn('situacao', Fiscalizacao::NOTIFICACAO_EM_PRAZO)
             ->with('documento')
             ->get()
             ->map(static fn (Fiscalizacao $f) => $f->documento)

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Ambulante;
 use App\Models\Area;
 use App\Models\CicloDeFiscalizacao;
 use App\Models\Demanda;
@@ -247,4 +248,29 @@ it('a Fiscalização de outra equipe é recusada nominalmente, sem gravar nada',
 
     expect(Fiscalizacao::count())->toBe(1)
         ->and(itemDaFilaDoRetorno($outro, 'fsc-'.$ciclo->id))->toBeNull();
+});
+
+it('o pino do ambulante só grita "retorno vencido" enquanto ninguém voltou ao ponto', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoRetornoDaNotificacao();
+    $demanda = demandaDoRetornoDaNotificacao($equipe);
+    $ambulante = Ambulante::factory()->create(['apelido' => 'Zé do Coco']);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), notificacaoDoRetorno($fiscal, [
+        'demanda_id' => $demanda->id, 'ambulante_id' => $ambulante->id,
+    ]))->assertCreated();
+
+    $pino = fn (): ?int => collect(test()->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json('ambulantes'))
+        ->firstWhere('servidorId', $ambulante->id)['retornoHaDias'] ?? null;
+
+    $this->travelTo(Date::now()->addDays(3));
+    PrazosDaNotificacao::vencer();
+
+    expect($pino())->toBe(1);
+
+    $this->actingAs($fiscal)->postJson(route('aplicativo.fiscalizacoes'), envioDoRetornoDaNotificacao([
+        'demanda_id' => $demanda->id, 'ambulante_id' => $ambulante->id, 'desfecho' => Fiscalizacao::SITUACAO_MANTIDA,
+    ]))->assertCreated();
+
+    // A equipe voltou: o prazo passou, mas a promessa de voltar foi cumprida.
+    expect($pino())->toBeNull();
 });
