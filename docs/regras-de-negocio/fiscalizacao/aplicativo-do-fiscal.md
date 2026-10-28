@@ -454,6 +454,13 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 ## Pendências
 
 - **Ficha do SGCI na demanda.** Não há integração com o SGCI; a ficha do permissionário não aparece.
+- **O censo vira estatística** (decisão do dono, 28/10/2026). O levantamento de rua passa a: mover
+  para o ponto do censo o pino do ambulante não fixo que está na base do SGCI, quando o censo for mais
+  recente que a última fiscalização; alimentar o mapa de calor; e entrar na avaliação por IA que
+  sugere operações na Retaguarda (muitos ambulantes no censo e pouca fiscalização ganham pontos de
+  atenção). Hoje o levantamento só fica para consulta e exportação (RN-19).
+- **O SEFAL não cadastra ambulante.** A base é do SGCI e chega por integração (hoje, pelos processos
+  do e-Salvador); o aplicativo só vincula o registro a quem já está nela.
 - **Abrir sem sinal.** Sem versão instalável (decisão do dono, 13/10/2026), o aplicativo precisa de
   sinal para abrir. O que o fiscal fizer fica no aparelho e sobe quando o sinal volta.
 - **Impressão e ditado no aparelho.** A via sai pelo diálogo de impressão do Android e chega à
@@ -466,6 +473,7 @@ na Retaguarda o que o fiscal despachou. As contas da demonstração ficam no com
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 28/10/2026 | José Nascimento | Aplicativo do Fiscal (levantamento) | Registradas as decisões: o censo vira estatística (localização, calor, sugestão de operações por IA) e o SEFAL não cadastra ambulante. | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (registro, mapa de calor, demonstração) | O catálogo de ocorrências passa a vir do servidor (RN-33); saem as "regiões" fixas do protótipo, e sem catálogo de bairros o fiscal escreve o bairro em vez de receber um palpite de uma lista fixa; o mapa de calor abre na área da equipe; a demonstração ganha um caso com denúncias juntadas. | Fim das sobras do protótipo no aplicativo. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (fila, detalhe, impressos, conclusão) | O cartão e o detalhe mostram por quantas denúncias o caso responde e listam as juntadas (RN-31); a "nova vistoria" do líder chega ao aparelho com a justificativa (RN-32); a redação dos impressos e o catálogo de atalhos de recomendação passam a vir do servidor, sem cópia no aparelho (RN-33). | PEND-014, PEND-016 e PEND-022; fim da redação duplicada dos impressos. |
 | 28/10/2026 | José Nascimento | Aplicativo do Fiscal (conclusão do registro, demonstração) | Os atalhos de recomendação oferecidos ficam só "Encaminhar ao SEAB"; o servidor recusa os demais em registro novo, e o catálogo inteiro segue para ler os registros antigos. A demonstração ganha exemplos do retorno da notificação (em prazo, vencido e ronda na fila). | Decisão do dono, 28/10/2026. |
