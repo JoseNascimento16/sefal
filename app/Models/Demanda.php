@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\CiclosDeFiscalizacao;
 use App\Support\Documento;
 use App\Support\RetornoAoCanal;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -414,6 +415,15 @@ class Demanda extends Model
         }
 
         $this->save();
+
+        // Demanda fechada não deixa Fiscalização pendurada: respondida, devolvida
+        // ou arquivada, o processo acabou e as Fiscalizações dele vão para o
+        // Arquivo. Mora aqui, e não em cada ato do chefe, porque são vários os
+        // caminhos que fecham a demanda — e o que esqueceu a chamada deixava a
+        // Fiscalização parada em "Encaminhadas" para sempre (27/10/2026).
+        if (in_array($situacao, self::FECHADAS, true)) {
+            CiclosDeFiscalizacao::arquivarDa($this);
+        }
 
         return $this->tramites()->create([
             'ordem' => (int) $this->tramites()->max('ordem') + 1,
