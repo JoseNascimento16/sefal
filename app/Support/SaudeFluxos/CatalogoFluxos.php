@@ -3,13 +3,14 @@
 namespace App\Support\SaudeFluxos;
 
 use App\Support\SaudeFluxos\Fluxos\FluxoDaFiscalizacao;
+use App\Support\SaudeFluxos\Fluxos\FluxoDoAplicativo;
 
 /**
  * Registro dos fluxos da Saúde dos Fluxos — cada entrada é uma ABA da tela.
  *
- * No SEFAL há um fluxo só, o da fiscalização de ponta a ponta (decisão do dono, 27/10/2026), mas a
- * tela mantém a estrutura de abas do CODECON: um fluxo novo é uma classe {@see Fluxo} registrada
- * aqui, e ganha a sua aba e a sua linha na Visão geral sozinho.
+ * No SEFAL são dois: a fiscalização de ponta a ponta (27/10/2026) e o aplicativo do fiscal visto de
+ * dentro (28/10/2026). Um fluxo novo é uma classe {@see Fluxo} registrada aqui, e ganha a sua aba e
+ * a sua linha na Visão geral sozinho.
  */
 final class CatalogoFluxos
 {
@@ -21,6 +22,7 @@ final class CatalogoFluxos
     /** @var array<string, class-string<Fluxo>> */
     private const FLUXOS = [
         'fiscalizacao' => FluxoDaFiscalizacao::class,
+        'aplicativo' => FluxoDoAplicativo::class,
     ];
 
     /** @return list<string> */
