@@ -15,9 +15,10 @@ use App\Support\SaudeFluxos\Fluxo;
  * Retaguarda entra pelas bordas.
  *
  * PREVISTO (cinza pontilhado) é o que tem lugar no fluxo e o aplicativo ainda não faz: a ficha do
- * SGCI (sem integração) e o cadastro do ambulante em campo (a quarentena "Cadastrado em campo"
- * existe na Retaguarda, mas o aplicativo não a alimenta). Abrir sem sinal não é previsto: sem
- * versão instalável, por decisão do dono (13/10/2026) — está dito no quadradinho da entrada.
+ * SGCI (sem integração) e o censo virando estatística — a última localização do ambulante no mapa,
+ * o censo no mapa de calor e a sugestão de operações por IA na Retaguarda (dono, 28/10/2026).
+ * O SEFAL NÃO cadastra ambulante: a base é do SGCI e chega por integração. Abrir sem sinal não é
+ * previsto: sem versão instalável, por decisão do dono (13/10/2026).
  *
  * FONTE ÚNICA deste conhecimento: alterou o aplicativo? Atualize ESTE arquivo no mesmo commit — a
  * tela, o texto exportado e o passo a passo saem daqui.
@@ -39,7 +40,8 @@ final class FluxoDoAplicativo implements Fluxo
             'titulo' => 'Aplicativo do fiscal',
             'subtitulo' => 'Tudo o que o fiscal faz no APP',
             'resumo' => 'Do plantão aberto com a conta da Retaguarda ao plantão encerrado: a fila da equipe, o mapa de ambulantes, o calor, a operação, a ronda e o levantamento de rua, '
-                .'a vistoria no ponto com GPS, fotos e o documento impresso, o retorno da Notificação Preliminar e o envio — que, sem sinal, espera no aparelho.',
+                .'a vistoria no ponto com GPS, fotos e o documento impresso, o retorno da Notificação Preliminar e o envio — que, sem sinal, espera no aparelho. '
+                .'O censo da rua vira estatística: localização, calor e sugestão de operações.',
             'nos' => [
                 // ── O que chega da Retaguarda
                 ['id' => 'entrada-direcionada', 'rotulo' => "Demanda direcionada\npelo líder à equipe", 'tipo' => 'entrada', 'setor' => 'Líder de Equipe', 'col' => 0, 'lin' => 0, 'situacao' => $a,
@@ -102,17 +104,26 @@ final class FluxoDoAplicativo implements Fluxo
                 ['id' => 'app-concluir-levantamento', 'rotulo' => "Concluir levantamento\nou fila sem sinal", 'tipo' => 'etapa', 'setor' => 'APP do fiscal', 'col' => 5, 'lin' => 5, 'situacao' => $a,
                     'tela' => 'Aplicativo › Levantamento › Concluir levantamento',
                     'descricao' => 'O levantamento sobe com as fotos e os pontos. Sem sinal, fica na fila do aparelho e sobe com o envio; recusado pelo servidor, volta à tela com o motivo.'],
-                ['id' => 'fim-levantamento', 'rotulo' => "Levantamento no servidor\nprotocolo LEV", 'tipo' => 'fim', 'setor' => 'Chefe de Setor / Líder', 'col' => 5, 'lin' => 6, 'situacao' => $a,
+                ['id' => 'app-censo-servidor', 'rotulo' => "Censo no servidor\nprotocolo LEV", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 5, 'lin' => 6, 'situacao' => $a,
+                    'tela' => 'Retaguarda › Fiscalização › Levantamentos',
+                    'descricao' => 'O levantamento gravado: cabeçalho e linhas, com foto e ponto de GPS de cada ambulante. É a matéria da estatística do censo.'],
+                ['id' => 'fim-levantamento', 'rotulo' => "Consulta e exportação\nplanilha da rua", 'tipo' => 'fim', 'setor' => 'Chefe de Setor / Líder', 'col' => 6, 'lin' => 6, 'situacao' => $a,
                     'tela' => 'Retaguarda › Fiscalização › Levantamentos',
                     'descricao' => 'O censo concluído fica para consulta e exportação na Retaguarda (a planilha da rua), com o recorte do líder.'],
+                ['id' => 'censo-localizacao', 'rotulo' => "Última localização\ndo ambulante não fixo", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 5, 'lin' => 7, 'situacao' => $p,
+                    'tela' => 'Aplicativo › Mapa; Retaguarda › Mapa ao Vivo',
+                    'descricao' => 'Previsto: o ambulante levantado que está na base do SGCI tem o pino movido para o ponto do censo, quando ele é mais recente que a última fiscalização — é o que mostra onde está o ambulante que não tem ponto fixo. Hoje o pino só se move pela fiscalização.'],
+                ['id' => 'censo-calor', 'rotulo' => "Censo no mapa de calor\npresença de ambulantes", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 6, 'lin' => 7, 'situacao' => $p,
+                    'tela' => 'Aplicativo › Calor; Retaguarda',
+                    'descricao' => 'Previsto: os pontos do censo alimentam o mapa de calor — onde há muitos ambulantes. Hoje o calor é só das vistorias com irregularidade, e o levantamento fica de fora.'],
+                ['id' => 'censo-ia-operacoes', 'rotulo' => "Sugestão de operações\nIA na Retaguarda", 'tipo' => 'fim', 'setor' => 'Chefe de Setor / Líder', 'col' => 7, 'lin' => 7, 'situacao' => $p,
+                    'tela' => 'Retaguarda › Operações',
+                    'descricao' => 'Previsto: a avaliação por IA aponta regiões que pedem operação — muitos ambulantes no censo e pouca fiscalização ganham pontos de atenção — para o Chefe de Setor ou o líder planejar.'],
 
                 // ── A vistoria
                 ['id' => 'app-vistoria', 'rotulo' => "Fiscalizar no ponto\nGPS, fotos, ocorrências, relato", 'tipo' => 'etapa', 'setor' => 'APP do fiscal', 'col' => 2, 'lin' => 6, 'situacao' => $a,
                     'tela' => 'Aplicativo › Fiscalizar',
-                    'descricao' => 'A coordenada medida pelo GPS (sem GPS, o motivo vai junto), fotos, ocorrências marcadas, relato digitado ou ditado, o ambulante vinculado ao cadastro e, se quiser, o retorno combinado. O ditado foi conferido só no navegador, sem aparelho real.'],
-                ['id' => 'app-cadastro-campo', 'rotulo' => "Cadastrar ambulante em campo\nvai à conferência do Chefe", 'tipo' => 'etapa', 'setor' => 'APP do fiscal', 'col' => 4, 'lin' => 6, 'situacao' => $p,
-                    'tela' => 'Aplicativo › Fiscalizar › Ambulante',
-                    'descricao' => 'Previsto: cadastrar no ponto o ambulante que não está no cadastro, com a situação "Cadastrado em campo", para o Chefe de Setor conferir (aprovar, mesclar um duplicado ou corrigir). A quarentena existe na Retaguarda, mas hoje o aplicativo só vincula quem já está cadastrado.'],
+                    'descricao' => 'A coordenada medida pelo GPS (sem GPS, o motivo vai junto), fotos, ocorrências marcadas, relato digitado ou ditado, o ambulante vinculado à base do SGCI (o SEFAL não cadastra ambulante) e, se quiser, o retorno combinado. O ditado foi conferido só no navegador, sem aparelho real.'],
                 ['id' => 'app-desfecho', 'rotulo' => "Como terminou?\nlista fechada de desfechos", 'tipo' => 'decisao', 'setor' => 'APP do fiscal', 'col' => 2, 'lin' => 7, 'situacao' => $a,
                     'tela' => 'Aplicativo › Fiscalizar › Como a vistoria terminou',
                     'descricao' => 'Regularizado no local (orientado, o ambulante desfez a montagem e saiu) e nada encontrado não lavram documento. Notificação Preliminar emitida e Auto de Apreensão lavrado exigem o documento. No retorno, os desfechos são os do retorno.'],
@@ -171,8 +182,13 @@ final class FluxoDoAplicativo implements Fluxo
                 ['de' => 'app-ronda', 'para' => 'app-vistoria'],
                 ['de' => 'app-levantamento', 'para' => 'app-linhas'],
                 ['de' => 'app-linhas', 'para' => 'app-concluir-levantamento'],
-                ['de' => 'app-concluir-levantamento', 'para' => 'fim-levantamento'],
-                ['de' => 'app-vistoria', 'para' => 'app-cadastro-campo', 'rotulo' => 'ambulante sem cadastro'],
+                ['de' => 'app-concluir-levantamento', 'para' => 'app-censo-servidor'],
+                ['de' => 'app-censo-servidor', 'para' => 'fim-levantamento'],
+                ['de' => 'app-censo-servidor', 'para' => 'censo-localizacao'],
+                ['de' => 'app-censo-servidor', 'para' => 'censo-calor'],
+                ['de' => 'app-censo-servidor', 'para' => 'censo-ia-operacoes'],
+                ['de' => 'censo-localizacao', 'para' => 'app-mapa', 'rotulo' => 'move o pino'],
+                ['de' => 'censo-calor', 'para' => 'app-calor'],
                 ['de' => 'app-vistoria', 'para' => 'app-desfecho'],
                 ['de' => 'app-desfecho', 'para' => 'app-conclusao', 'rotulo' => 'sem documento'],
                 ['de' => 'app-desfecho', 'para' => 'app-documento', 'rotulo' => 'Notificação ou Auto'],
@@ -204,9 +220,9 @@ final class FluxoDoAplicativo implements Fluxo
                     'O **calor** mostra onde houve irregularidade nos últimos 7, 30 ou 90 dias e leva ao mapa da região.',
                     'Na **operação**, o fiscal vê as denúncias anexadas e registra a avulsa ligada a ela. O **registro avulso** (ronda) é o que ele encontra andando a rua, sem demanda.',
                 ]],
-                ['setor' => 'APP do fiscal', 'titulo' => 'A vistoria no ponto', 'nos' => ['app-vistoria', 'app-cadastro-campo', 'app-desfecho', 'app-documento', 'app-via', 'app-conclusao', 'app-envio', 'fim-lider'], 'itens' => [
+                ['setor' => 'APP do fiscal', 'titulo' => 'A vistoria no ponto', 'nos' => ['app-vistoria', 'app-desfecho', 'app-documento', 'app-via', 'app-conclusao', 'app-envio', 'fim-lider'], 'itens' => [
                     'O registro leva a **coordenada medida pelo GPS** (ou o motivo de não haver), fotos, ocorrências e o relato, digitado ou **ditado**.',
-                    'O ambulante é vinculado a quem já está no cadastro. **Cadastrar no ponto** quem não está (a quarentena "Cadastrado em campo") está previsto.',
+                    'O ambulante é vinculado à **base do SGCI**: o SEFAL não cadastra ambulante.',
                     'O **desfecho** é de uma lista fechada; Notificação Preliminar e Auto de Apreensão são **lavrados** com o número reservado, e a **via sai na térmica** pelo diálogo de impressão do Android.',
                     'Na **conclusão**, as considerações e o atalho de recomendação. O registro **sobe ao servidor** ou espera no aparelho até o sinal voltar, e vai ao **líder**.',
                 ]],
@@ -215,9 +231,10 @@ final class FluxoDoAplicativo implements Fluxo
                     'No fim do prazo, a equipe **registra o retorno**: regularizado ou situação mantida. O retorno vai ao líder.',
                     'Prazo passado sem retorno vira **retorno vencido**: topo da fila e alerta ao líder.',
                 ]],
-                ['setor' => 'APP do fiscal', 'titulo' => 'O levantamento de rua', 'nos' => ['app-levantamento', 'app-linhas', 'app-concluir-levantamento', 'fim-levantamento'], 'itens' => [
+                ['setor' => 'APP do fiscal', 'titulo' => 'O levantamento de rua', 'nos' => ['app-levantamento', 'app-linhas', 'app-concluir-levantamento', 'app-censo-servidor', 'fim-levantamento', 'censo-localizacao', 'censo-calor', 'censo-ia-operacoes'], 'itens' => [
                     'O **censo por rua**: o cabeçalho (rua, bairro, equipes) e uma linha por ambulante, com **foto e GPS**.',
                     'Concluído, sobe ao servidor — ou espera no aparelho sem sinal — e fica para **consulta e exportação** na Retaguarda. Não gera demanda nem fiscalização.',
+                    'Previsto: o censo **vira estatística** — move o pino do ambulante não fixo para a **última localização**, alimenta o **mapa de calor** e entra na avaliação por **IA** que sugere operações (muitos ambulantes e pouca fiscalização ganham pontos de atenção).',
                 ]],
                 ['setor' => 'APP do fiscal', 'titulo' => 'Registros e fim do plantão', 'nos' => ['app-registros', 'app-perfil', 'fim-plantao'], 'itens' => [
                     'Em **Meus registros**, o fiscal reabre a conclusão e reimprime a via.',
@@ -227,7 +244,8 @@ final class FluxoDoAplicativo implements Fluxo
             'conclusoes' => [
                 ['conclusao' => 'Registro com o líder', 'quem' => 'Fiscal', 'caminho' => 'Vistoria (dirigida, avulsa, no pino ou na operação) concluída e enviada; o retorno da notificação também chega aqui.'],
                 ['conclusao' => 'Aguardando regularização', 'quem' => 'Notificado', 'caminho' => 'Vistoria com Notificação Preliminar: o caso espera o fim do prazo para o retorno.'],
-                ['conclusao' => 'Levantamento no servidor', 'quem' => 'Fiscal', 'caminho' => 'Censo por rua concluído, para consulta e exportação na Retaguarda.'],
+                ['conclusao' => 'Levantamento para consulta', 'quem' => 'Fiscal', 'caminho' => 'Censo por rua concluído, para consulta e exportação na Retaguarda.'],
+                ['conclusao' => 'Sugestão de operações (previsto)', 'quem' => 'Chefe de Setor / Líder', 'caminho' => 'Censo e fiscalizações avaliados por IA apontam as regiões que pedem operação.'],
                 ['conclusao' => 'Plantão encerrado', 'quem' => 'Fiscal', 'caminho' => 'Saída pelo Perfil, com o aviso do que ficou no aparelho.'],
             ],
         ];
