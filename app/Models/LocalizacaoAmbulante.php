@@ -40,6 +40,12 @@ class LocalizacaoAmbulante extends Model
     /** Alguem registrou a posicao do ponto de trabalho, sem ida a campo. */
     public const FONTE_CADASTRO = 'cadastro';
 
+    /**
+     * O censo da rua achou o ambulante ali: ha GPS, sem fiscalizacao. E o que
+     * mostra onde esta o ambulante sem ponto fixo (dono, 28/10/2026).
+     */
+    public const FONTE_LEVANTAMENTO = 'levantamento';
+
     protected $table = 'localizacoes_ambulante';
 
     /** @return array<string, string> */

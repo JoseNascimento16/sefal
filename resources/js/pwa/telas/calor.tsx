@@ -3,7 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { irPara, useApp } from '../app';
 import { Topo, atalhoDoPerfil } from '../componentes';
-import { CENTRO_SALVADOR, FISCAL, pontosDoCalor, regioesMaisQuentes } from '../dados-prototipo';
+import {
+    CENTRO_SALVADOR,
+    FISCAL,
+    pontosDoCalor,
+    regioesMaisQuentes,
+    type CamadaDoCalor,
+} from '../dados-prototipo';
 import { Icone } from '../icones';
 import { camadaDeCalor, criarMapa, type CamadaCalor } from '../mapa';
 import { centroDaArea } from '../sessao';
@@ -23,6 +29,22 @@ const JANELAS = [
     { dias: 90, rotulo: '90 dias' },
 ];
 
+/* As duas camadas e o que cada uma conta — a frase da tela muda junto. */
+const CAMADAS: Record<CamadaDoCalor, { rotulo: string; subtitulo: string; conta: [string, string]; doQue: string }> = {
+    irregularidade: {
+        rotulo: 'Irregularidade',
+        subtitulo: 'Incidência de registros irregulares',
+        conta: ['registro', 'registros'],
+        doQue: 'dos registros irregulares',
+    },
+    presenca: {
+        rotulo: 'Presença (censo)',
+        subtitulo: 'Ambulantes que o censo encontrou',
+        conta: ['ambulante', 'ambulantes'],
+        doQue: 'dos ambulantes levantados',
+    },
+};
+
 const GRADIENTE = {
     0.2: '#2b83ba',
     0.4: '#7fcdbb',
@@ -36,10 +58,13 @@ export function TelaCalor() {
     const mapaRef = useRef<L.Map | null>(null);
     const camadaRef = useRef<CamadaCalor | null>(null);
     const [dias, setDias] = useState(30);
+    const [camada, setCamada] = useState<CamadaDoCalor>('irregularidade');
+    const texto = CAMADAS[camada];
+    const contar = (n: number) => `${n} ${n === 1 ? texto.conta[0] : texto.conta[1]}`;
 
     const { versao } = useApp();
-    const pontos = useMemo(() => pontosDoCalor(dias), [dias, versao]);
-    const regioes = useMemo(() => regioesMaisQuentes(dias), [dias, versao]);
+    const pontos = useMemo(() => pontosDoCalor(dias, camada), [dias, camada, versao]);
+    const regioes = useMemo(() => regioesMaisQuentes(dias, camada), [dias, camada, versao]);
     const lider = regioes[0];
 
     useEffect(() => {
@@ -104,7 +129,7 @@ export function TelaCalor() {
         <div className="pw-tela">
             <Topo
                 titulo="Onde a rua está quente"
-                subtitulo="Incidência de registros irregulares"
+                subtitulo={texto.subtitulo}
                 perfil={atalhoDoPerfil(() => irPara('perfil'), FISCAL.iniciais)}
             />
 
@@ -120,6 +145,22 @@ export function TelaCalor() {
             </div>
 
             <div className="pw-corpo" style={{ paddingTop: 14 }}>
+                {/* Lado a lado, as duas camadas mostram onde há muitos ambulantes
+                    e pouca fiscalização. */}
+                <div className="pw-periodo" style={{ marginBottom: 10 }}>
+                    {(Object.keys(CAMADAS) as CamadaDoCalor[]).map((c) => (
+                        <button
+                            key={c}
+                            type="button"
+                            className={c === camada ? 'pw-periodo-ativo' : undefined}
+                            onClick={() => setCamada(c)}
+                            aria-pressed={c === camada}
+                        >
+                            {CAMADAS[c].rotulo}
+                        </button>
+                    ))}
+                </div>
+
                 <div className="pw-periodo">
                     {JANELAS.map((j) => (
                         <button
@@ -135,14 +176,22 @@ export function TelaCalor() {
 
                 {lider && (
                     <p className="pw-leitura" style={{ marginTop: 14 }}>
-                        <strong>{lider.nome}</strong> concentra <strong>{lider.fatia}%</strong> dos registros
-                        irregulares dos últimos {dias} dias — {lider.registros} de {pontos.length} pontos.
+                        <strong>{lider.nome}</strong> concentra <strong>{lider.fatia}%</strong> {texto.doQue}{' '}
+                        dos últimos {dias} dias — {lider.registros} de {pontos.length} pontos.
                         {regioes[1] && (
                             <>
                                 {' '}
                                 Em seguida vem {regioes[1].nome}, com {regioes[1].fatia}%.
                             </>
                         )}
+                    </p>
+                )}
+
+                {!lider && (
+                    <p className="pw-fraco" style={{ marginTop: 14 }}>
+                        {camada === 'presenca'
+                            ? `Nenhum levantamento de rua com GPS nos últimos ${dias} dias.`
+                            : `Nenhum registro irregular com GPS nos últimos ${dias} dias.`}
                     </p>
                 )}
 
@@ -156,7 +205,7 @@ export function TelaCalor() {
                                     {i + 1}. {r.nome}
                                 </p>
                                 <p className="pw-fraco" style={{ margin: 0 }}>
-                                    {r.registros === 1 ? '1 registro' : `${r.registros} registros`} ·{' '}
+                                    {contar(r.registros)} ·{' '}
                                     {r.fatia}% do período
                                 </p>
                             </div>
