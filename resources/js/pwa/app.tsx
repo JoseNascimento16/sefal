@@ -229,6 +229,8 @@ type Kit = {
     ocorrencias: { id: string; rotulo: string }[];
     ambulantes: (Omit<Ambulante, 'emoji'> & { emoji: string | null })[];
     incidencias: IncidenciaCalor[];
+    /** O censo no calor, em camada própria de presença. */
+    presencas: IncidenciaCalor[];
     operacoes: Operacao[];
     levantamentos: Levantamento[];
     equipesDaCidade: { equipe: string; regiao: string; encarregado: string }[];

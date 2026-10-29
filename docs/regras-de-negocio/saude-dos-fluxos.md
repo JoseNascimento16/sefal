@@ -30,9 +30,8 @@ dois: a **fiscalização de ambulantes** de ponta a ponta e o **aplicativo do fi
 Contorno cheio é o trecho que o sistema **atende hoje**; cinza pontilhado é o **previsto** — tem
 lugar no fluxo, mas o sistema ainda não o percorre. A legenda conta os dois. Hoje são previstos: na
 fiscalização, a chegada das demandas e o envio da resposta pelas integrações (API) do e-Salvador, do
-e-Protocolo, do Fala Salvador e do SGCI; no aplicativo, a ficha do SGCI e o censo virando
-estatística (última localização do ambulante no mapa, o censo no mapa de calor e a sugestão de
-operações por IA na Retaguarda).
+e-Protocolo, do Fala Salvador e do SGCI; no aplicativo, a ficha do SGCI e a sugestão de operações
+por IA na Retaguarda a partir do censo.
 
 ### RN-03 — Clicar num quadradinho abre o trecho
 
@@ -72,6 +71,8 @@ existe: a tela só desenha o fluxo. O componente já tem os estados de saúde pr
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 29/10/2026 | José Nascimento | Saúde dos Fluxos | Fiscalização: as quatro respostas pelas APIs (e-Salvador, e-Protocolo, Fala Salvador, SGCI) ficam empilhadas numa coluna, abaixo do "Retorno vencido". | Pedido do dono: o trecho estava desalinhado. |
+| 28/10/2026 | José Nascimento | Saúde dos Fluxos | Aplicativo do fiscal: a última localização do ambulante pelo censo e o censo no mapa de calor passam a atendidos. | Entregues no mesmo dia. |
 | 28/10/2026 | José Nascimento | Saúde dos Fluxos | Aplicativo do fiscal: sai o "cadastrar ambulante em campo" (o SEFAL não cadastra ambulante; a base é do SGCI) e o censo ganha os destinos previstos — última localização no mapa, mapa de calor e sugestão de operações por IA. | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Saúde dos Fluxos | Nova aba **Aplicativo do fiscal**: tudo o que o fiscal faz no APP — entrar no plantão, a fila, o mapa, o calor, a operação, a ronda, o levantamento de rua, a vistoria até a via impressa, o retorno da notificação e o fim do plantão. Previstos: a ficha do SGCI e o cadastro do ambulante em campo. | Pedido do dono: visualizar o que os fiscais podem fazer no APP e o que ele já atende. |
 | 27/10/2026 | José Nascimento | Saúde dos Fluxos | Tela criada (RN-01 a RN-07), com o fluxo da fiscalização de ambulantes de ponta a ponta, incluindo o aplicativo do fiscal. | Pedido do dono: visualizar o que o sistema atende hoje ou está previsto de atender, da chegada das demandas aos destinos finais. |

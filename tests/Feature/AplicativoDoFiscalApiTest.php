@@ -3,6 +3,7 @@
 use App\Console\Commands\PrepararDemonstracao;
 use App\Models\Ambulante;
 use App\Models\Area;
+use App\Models\AreaBairro;
 use App\Models\Demanda;
 use App\Models\DemandaTramite;
 use App\Models\Equipe;
@@ -16,6 +17,7 @@ use App\Models\User;
 use App\Support\Aplicativo\ReservaDeNumeros;
 use App\Support\Apresentacao\FiscalizacaoParaTela;
 use App\Support\CiclosDeFiscalizacao;
+use Database\Seeders\CensoDaRuaSeeder;
 use Database\Seeders\DenunciasJuntasSeeder;
 use Database\Seeders\PermissoesSetorSeeder;
 use Database\Seeders\SetoresSeeder;
@@ -480,6 +482,91 @@ it('o levantamento da rua é gravado com as linhas numeradas, a foto e os encarr
     $kit = $this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json();
     expect($kit['levantamentos'][0]['rua'])->toBe('Rua Barão de Mauá')
         ->and(collect($kit['equipesDaCidade'])->pluck('equipe')->all())->toContain('Z1');
+});
+
+/** @param  list<array<string, mixed>>  $linhas */
+function censoDoAplicativo(string $clientId, array $linhas): array
+{
+    return ['client_id' => $clientId, 'rua' => 'Rua Barão de Mauá', 'bairro' => 'Arenoso', 'equipes' => ['Z1'], 'linhas' => json_encode($linhas)];
+}
+
+it('o censo move o pino do ambulante da base que casa pelo documento, e só ele', function () {
+    // Dono, 28/10/2026: o censo vira estatística — mostra no mapa onde está o
+    // ambulante que não tem ponto fixo. O casamento é pelo documento; a linha sem
+    // documento, sem GPS ou fora da base entra só na estatística.
+    ['fiscal' => $fiscal] = campoDoAplicativo('Z1');
+    $maria = Ambulante::factory()->create(['nome' => 'Maria do Acarajé', 'documento' => '529.982.247-25']);
+    $outro = Ambulante::factory()->create(['documento' => '111.444.777-35']);
+    LocalizacaoAmbulante::create([
+        'ambulante_id' => $maria->id, 'latitude' => -12.90, 'longitude' => -38.40, 'fonte' => LocalizacaoAmbulante::FONTE_FISCALIZACAO,
+        'bairro' => 'Pituba', 'registrada_em' => Date::now()->subDays(2),
+    ]);
+
+    $dados = censoDoAplicativo('lev-censo', [
+        ['id' => 'a', 'nome' => 'Maria do Acarajé', 'documento' => '52998224725', 'latitude' => -12.95, 'longitude' => -38.47],
+        ['id' => 'b', 'nome' => 'Sem GPS', 'documento' => '111.444.777-35'],
+        ['id' => 'c', 'nome' => 'Fora da base', 'documento' => '39053344705', 'latitude' => -12.96, 'longitude' => -38.48],
+        ['id' => 'd', 'nome' => 'Sem documento', 'latitude' => -12.97, 'longitude' => -38.49],
+    ]);
+
+    $this->actingAs($fiscal)->post(route('aplicativo.levantamentos'), $dados, ['Accept' => 'application/json'])->assertCreated();
+    $this->actingAs($fiscal)->post(route('aplicativo.levantamentos'), $dados, ['Accept' => 'application/json'])->assertOk();
+
+    $doCenso = LocalizacaoAmbulante::where('fonte', LocalizacaoAmbulante::FONTE_LEVANTAMENTO)->get();
+    $pino = collect($this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json('ambulantes'))->firstWhere('servidorId', $maria->id);
+
+    expect($doCenso)->toHaveCount(1)
+        ->and($doCenso->first()->ambulante_id)->toBe($maria->id)
+        ->and($outro->localizacoes()->count())->toBe(0)
+        ->and($pino['lat'])->toBe(-12.95)
+        ->and($pino['regiao'])->toBe('Arenoso');
+});
+
+it('o censo entra no calor como camada própria de presença, sem misturar com a irregularidade', function () {
+    ['fiscal' => $fiscal] = campoDoAplicativo('Z1');
+
+    $this->actingAs($fiscal)->post(route('aplicativo.levantamentos'), censoDoAplicativo('lev-calor', [
+        ['id' => 'a', 'nome' => 'Ana', 'latitude' => -12.95, 'longitude' => -38.47],
+        ['id' => 'b', 'nome' => 'Bia', 'latitude' => -12.951, 'longitude' => -38.471],
+        ['id' => 'c', 'nome' => 'Sem GPS'],
+    ]), ['Accept' => 'application/json'])->assertCreated();
+
+    // O censo antigo, fora da maior janela da tela, não entra.
+    $antigo = Levantamento::create([
+        'protocolo' => 'LEV-ANTIGO', 'client_id' => 'lev-antigo', 'user_id' => $fiscal->id, 'rua' => 'Rua B', 'bairro' => 'Pituba',
+        'equipes' => ['Z1'], 'encarregados' => [], 'iniciado_em' => Date::now()->subDays(100), 'concluido_em' => Date::now()->subDays(100),
+    ]);
+    $antigo->linhas()->create(['item' => '001', 'nome' => 'Velho', 'latitude' => -12.99, 'longitude' => -38.45]);
+
+    $kit = $this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json();
+
+    expect($kit['presencas'])->toHaveCount(2)
+        ->and(collect($kit['presencas'])->pluck('regiao')->unique()->all())->toBe(['Arenoso'])
+        ->and($kit['presencas'][0]['haDias'])->toBe(1)
+        ->and($kit['incidencias'])->toHaveCount(0);
+});
+
+it('a demonstração ganha um censo de rua que move dois pinos e enche a camada de presença, e só uma vez', function () {
+    ['fiscal' => $fiscal, 'equipe' => $equipe] = campoDoAplicativo(PrepararDemonstracao::EQUIPE_DO_LIDER);
+    AreaBairro::create(['area_id' => $equipe->area_id, 'bairro' => 'Calçada', 'latitude' => -12.93, 'longitude' => -38.50]);
+    foreach ([1, 2] as $n) {
+        $ambulante = Ambulante::factory()->create(['documento' => null]);
+        LocalizacaoAmbulante::create([
+            'ambulante_id' => $ambulante->id, 'latitude' => -12.93, 'longitude' => -38.50, 'fonte' => LocalizacaoAmbulante::FONTE_FISCALIZACAO,
+            'bairro' => 'Calçada', 'registrada_em' => Date::now()->subDays(3),
+        ]);
+    }
+
+    $this->seed(CensoDaRuaSeeder::class);
+    $this->seed(CensoDaRuaSeeder::class);
+
+    $kit = $this->actingAs($fiscal)->getJson(route('aplicativo.kit'))->json();
+
+    expect(Levantamento::count())->toBe(1)
+        ->and(Levantamento::first()->linhas()->count())->toBe(8)
+        ->and($kit['presencas'])->toHaveCount(8)
+        ->and(LocalizacaoAmbulante::where('fonte', LocalizacaoAmbulante::FONTE_LEVANTAMENTO)->count())->toBe(2)
+        ->and(Ambulante::whereNotNull('documento')->count())->toBe(2);
 });
 
 it('levantamento sem nenhum ambulante é recusado dizendo o que falta', function () {

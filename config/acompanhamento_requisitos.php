@@ -874,7 +874,8 @@ return [
                 .'Desde 28/10/2026 o cartão e o detalhe dizem por quantas denúncias o caso responde '
                 .'(as juntadas pela triagem), a "nova vistoria" do líder chega com a justificativa, e '
                 .'a redação da Notificação Preliminar e do Auto de Apreensão vem do servidor — o '
-                .'aparelho não guarda cópia.',
+                .'aparelho não guarda cópia. O censo de rua vira estatística: move o pino do ambulante da base '
+                .'que casa pelo documento e forma a camada de presença do mapa de calor.',
         ],
 
     ],

@@ -10,6 +10,7 @@ use App\Models\DocumentoCampo;
 use App\Models\Equipe;
 use App\Models\Fiscalizacao;
 use App\Models\Levantamento;
+use App\Models\LevantamentoLinha;
 use App\Models\Operacao;
 use App\Models\User;
 use App\Support\Apresentacao\MapaDaCidade;
@@ -152,6 +153,37 @@ final class AplicativoParaTela
                 // A tela recorta por "até N dias": a de hoje conta como 1.
                 'haDias' => (int) $f->concluida_em->copy()->startOfDay()->diffInDays($hoje) + 1,
                 'regiao' => (string) $f->bairro,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Os ambulantes que o CENSO achou nos últimos {@see DIAS_DE_CALOR} dias, com
+     * GPS — a camada de PRESENÇA do mapa de calor ("onde há muitos ambulantes"),
+     * separada da de irregularidade (dono, 28/10/2026). Somar as duas misturaria
+     * "onde há gente" com "onde há problema"; lado a lado, mostram onde há muitos
+     * ambulantes e pouca fiscalização.
+     *
+     * @return list<array{lat: float, lng: float, peso: float, haDias: int, regiao: string}>
+     */
+    public static function presencas(): array
+    {
+        $hoje = Date::today();
+
+        return LevantamentoLinha::query()
+            ->join('levantamentos', 'levantamentos.id', '=', 'levantamento_linhas.levantamento_id')
+            ->whereNotNull('levantamento_linhas.latitude')
+            ->whereNotNull('levantamento_linhas.longitude')
+            ->where('levantamentos.concluido_em', '>=', $hoje->copy()->subDays(self::DIAS_DE_CALOR))
+            ->get(['levantamento_linhas.latitude', 'levantamento_linhas.longitude', 'levantamentos.bairro', 'levantamentos.concluido_em'])
+            ->map(fn (LevantamentoLinha $l) => [
+                'lat' => (float) $l->latitude,
+                'lng' => (float) $l->longitude,
+                'peso' => 1.0,
+                // A tela recorta por "até N dias": o de hoje conta como 1.
+                'haDias' => (int) Date::parse($l->getAttribute('concluido_em'))->startOfDay()->diffInDays($hoje) + 1,
+                'regiao' => (string) $l->getAttribute('bairro'),
             ])
             ->values()
             ->all();
