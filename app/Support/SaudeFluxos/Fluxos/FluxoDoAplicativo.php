@@ -15,8 +15,8 @@ use App\Support\SaudeFluxos\Fluxo;
  * Retaguarda entra pelas bordas.
  *
  * PREVISTO (cinza pontilhado) é o que tem lugar no fluxo e o aplicativo ainda não faz: a ficha do
- * SGCI (sem integração) e o censo virando estatística — a última localização do ambulante no mapa,
- * o censo no mapa de calor e a sugestão de operações por IA na Retaguarda (dono, 28/10/2026).
+ * SGCI (sem integração) e a sugestão de operações por IA na Retaguarda. O censo já vira estatística
+ * na localização do ambulante e no mapa de calor (dono, 28/10/2026).
  * O SEFAL NÃO cadastra ambulante: a base é do SGCI e chega por integração. Abrir sem sinal não é
  * previsto: sem versão instalável, por decisão do dono (13/10/2026).
  *
@@ -80,7 +80,7 @@ final class FluxoDoAplicativo implements Fluxo
                     'descricao' => 'As últimas cinco idas da fiscalização ao ponto e o retorno vencido, quando há. Registrar a partir do pino leva o ambulante identificado e move o pino para onde o fiscal esteve.'],
                 ['id' => 'app-calor', 'rotulo' => "Mapa de calor\nonde a rua está quente", 'tipo' => 'etapa', 'setor' => 'APP do fiscal', 'col' => 2, 'lin' => 4, 'situacao' => $a,
                     'tela' => 'Aplicativo › Calor',
-                    'descricao' => 'As vistorias com irregularidade dos últimos 7, 30 ou 90 dias e as regiões mais quentes. "Fiscalizar" numa região abre o mapa nela.'],
+                    'descricao' => 'Duas camadas: a irregularidade das vistorias e a presença de ambulantes no censo, nos últimos 7, 30 ou 90 dias, com as regiões mais quentes. "Fiscalizar" numa região abre o mapa nela.'],
                 ['id' => 'app-operacao', 'rotulo' => "Operação\ndenúncias anexadas", 'tipo' => 'etapa', 'setor' => 'APP do fiscal', 'col' => 3, 'lin' => 3, 'situacao' => $a,
                     'tela' => 'Aplicativo › Início › operação',
                     'descricao' => 'A operação aberta para a equipe (ou para o fiscal), com tipo, período, bairros e as denúncias anexadas a ela. A avulsa registrada aqui fica ligada à operação.'],
@@ -110,12 +110,12 @@ final class FluxoDoAplicativo implements Fluxo
                 ['id' => 'fim-levantamento', 'rotulo' => "Consulta e exportação\nplanilha da rua", 'tipo' => 'fim', 'setor' => 'Chefe de Setor / Líder', 'col' => 6, 'lin' => 6, 'situacao' => $a,
                     'tela' => 'Retaguarda › Fiscalização › Levantamentos',
                     'descricao' => 'O censo concluído fica para consulta e exportação na Retaguarda (a planilha da rua), com o recorte do líder.'],
-                ['id' => 'censo-localizacao', 'rotulo' => "Última localização\ndo ambulante não fixo", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 5, 'lin' => 7, 'situacao' => $p,
+                ['id' => 'censo-localizacao', 'rotulo' => "Última localização\ndo ambulante não fixo", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 5, 'lin' => 7, 'situacao' => $a,
                     'tela' => 'Aplicativo › Mapa; Retaguarda › Mapa ao Vivo',
-                    'descricao' => 'Previsto: o ambulante levantado que está na base do SGCI tem o pino movido para o ponto do censo, quando ele é mais recente que a última fiscalização — é o que mostra onde está o ambulante que não tem ponto fixo. Hoje o pino só se move pela fiscalização.'],
-                ['id' => 'censo-calor', 'rotulo' => "Censo no mapa de calor\npresença de ambulantes", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 6, 'lin' => 7, 'situacao' => $p,
+                    'descricao' => 'A linha do censo que casa, pelo documento, com um ambulante da base do SGCI e tem GPS move o pino dele para o ponto do censo — nos dois mapas, o do aplicativo e o Mapa ao Vivo. Vale o ponto mais recente, do censo ou da fiscalização. É o que mostra onde está o ambulante que não tem ponto fixo; a linha sem documento ou fora da base fica só na estatística.'],
+                ['id' => 'censo-calor', 'rotulo' => "Censo no mapa de calor\npresença de ambulantes", 'tipo' => 'etapa', 'setor' => 'Sistema', 'col' => 6, 'lin' => 7, 'situacao' => $a,
                     'tela' => 'Aplicativo › Calor; Retaguarda',
-                    'descricao' => 'Previsto: os pontos do censo alimentam o mapa de calor — onde há muitos ambulantes. Hoje o calor é só das vistorias com irregularidade, e o levantamento fica de fora.'],
+                    'descricao' => 'Os pontos do censo dos últimos 90 dias formam a camada "Presença (censo)" do mapa de calor — onde há muitos ambulantes —, ao lado da camada de irregularidade das vistorias. Ficam separadas para não misturar "muita gente" com "muito problema".'],
                 ['id' => 'censo-ia-operacoes', 'rotulo' => "Sugestão de operações\nIA na Retaguarda", 'tipo' => 'fim', 'setor' => 'Chefe de Setor / Líder', 'col' => 7, 'lin' => 7, 'situacao' => $p,
                     'tela' => 'Retaguarda › Operações',
                     'descricao' => 'Previsto: a avaliação por IA aponta regiões que pedem operação — muitos ambulantes no censo e pouca fiscalização ganham pontos de atenção — para o Chefe de Setor ou o líder planejar.'],
@@ -234,7 +234,7 @@ final class FluxoDoAplicativo implements Fluxo
                 ['setor' => 'APP do fiscal', 'titulo' => 'O levantamento de rua', 'nos' => ['app-levantamento', 'app-linhas', 'app-concluir-levantamento', 'app-censo-servidor', 'fim-levantamento', 'censo-localizacao', 'censo-calor', 'censo-ia-operacoes'], 'itens' => [
                     'O **censo por rua**: o cabeçalho (rua, bairro, equipes) e uma linha por ambulante, com **foto e GPS**.',
                     'Concluído, sobe ao servidor — ou espera no aparelho sem sinal — e fica para **consulta e exportação** na Retaguarda. Não gera demanda nem fiscalização.',
-                    'Previsto: o censo **vira estatística** — move o pino do ambulante não fixo para a **última localização**, alimenta o **mapa de calor** e entra na avaliação por **IA** que sugere operações (muitos ambulantes e pouca fiscalização ganham pontos de atenção).',
+                    'O censo **vira estatística**: move o pino do ambulante da base para a **última localização** e forma a camada **Presença (censo)** do mapa de calor. Previsto: a avaliação por **IA** que sugere operações (muitos ambulantes e pouca fiscalização ganham pontos de atenção).',
                 ]],
                 ['setor' => 'APP do fiscal', 'titulo' => 'Registros e fim do plantão', 'nos' => ['app-registros', 'app-perfil', 'fim-plantao'], 'itens' => [
                     'Em **Meus registros**, o fiscal reabre a conclusão e reimprime a via.',

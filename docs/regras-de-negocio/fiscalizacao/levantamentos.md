@@ -48,4 +48,5 @@ levantamento é gravado — não do que o aparelho mandou.
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 28/10/2026 | José Nascimento | Levantamentos | O censo passa a mover o pino do ambulante da base que casa pelo documento e a formar a camada de presença do mapa de calor do aplicativo (ver aplicativo-do-fiscal.md, RN-18 e RN-19). A consulta não muda. | Decisão do dono, 28/10/2026. |
 | 13/10/2026 | José Nascimento | Levantamentos | Nasce a tela de consulta (RN-01 a RN-05), com rota de foto própria e concessão por migration (`2026_10_13_110000_concede_a_tela_de_levantamentos`). | Pedido do dono: manter o levantamento do aplicativo e criar a tela na Retaguarda. |
