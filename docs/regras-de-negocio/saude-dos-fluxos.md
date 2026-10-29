@@ -71,6 +71,7 @@ existe: a tela só desenha o fluxo. O componente já tem os estados de saúde pr
 
 | Data | Autor | Tela | Alteração | Motivo |
 |---|---|---|---|---|
+| 29/10/2026 | José Nascimento | Saúde dos Fluxos | Fiscalização: as quatro respostas pelas APIs (e-Salvador, e-Protocolo, Fala Salvador, SGCI) ficam empilhadas numa coluna, abaixo do "Retorno vencido". | Pedido do dono: o trecho estava desalinhado. |
 | 28/10/2026 | José Nascimento | Saúde dos Fluxos | Aplicativo do fiscal: a última localização do ambulante pelo censo e o censo no mapa de calor passam a atendidos. | Entregues no mesmo dia. |
 | 28/10/2026 | José Nascimento | Saúde dos Fluxos | Aplicativo do fiscal: sai o "cadastrar ambulante em campo" (o SEFAL não cadastra ambulante; a base é do SGCI) e o censo ganha os destinos previstos — última localização no mapa, mapa de calor e sugestão de operações por IA. | Decisão do dono, 28/10/2026. |
 | 28/10/2026 | José Nascimento | Saúde dos Fluxos | Nova aba **Aplicativo do fiscal**: tudo o que o fiscal faz no APP — entrar no plantão, a fila, o mapa, o calor, a operação, a ronda, o levantamento de rua, a vistoria até a via impressa, o retorno da notificação e o fim do plantão. Previstos: a ficha do SGCI e o cadastro do ambulante em campo. | Pedido do dono: visualizar o que os fiscais podem fazer no APP e o que ele já atende. |
